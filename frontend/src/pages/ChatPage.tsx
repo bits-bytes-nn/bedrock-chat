@@ -157,7 +157,8 @@ const ChatPage: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { open: openSnackbar } = useSnackbar();
-  const { errorDetail } = usePostMessageStreaming();
+  const { errorDetail, truncatedConversationId } =
+    usePostMessageStreaming();
   const { isAdmin } = useLoginUser();
   const { pinBot, unpinBot } = useBotPinning();
 
@@ -625,6 +626,15 @@ const ChatPage: React.FC = () => {
                   ))}
                 </>
               )}
+              {!postingMessage &&
+                !hasError &&
+                !getShouldContinue() &&
+                truncatedConversationId === conversationId && (
+                  <div className="mb-12 mt-2 flex items-center justify-center px-4 text-sm text-aws-font-color-light/80 dark:text-aws-font-color-dark/80">
+                    <PiWarningCircleFill className="mr-1 shrink-0 text-xl text-yellow" />
+                    {t('error.maxTokensReached')}
+                  </div>
+                )}
               {hasError && (
                 <div className="mb-12 mt-2 flex flex-col items-center">
                   <div className="flex items-center font-bold text-red">

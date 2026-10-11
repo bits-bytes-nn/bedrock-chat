@@ -1007,7 +1007,11 @@ const translation: typeof en = {
       predict: {
         general: '推論中にエラーが発生しました。',
         invalidResponse: '想定外のResponseが返ってきました。',
+        connectionClosed:
+          '回答が完了する前に接続が切断されました。ページを再読み込みすると保存された回答を確認できます。',
       },
+      maxTokensReached:
+        '最大出力長に達したため回答が途中で終了しました。ボットの生成設定で最大トークン数を増やしてください。',
       notSupportedImage: '選択しているモデルは、画像を利用できません。',
       unsupportedFileFormat: '選択したファイル形式はサポートされていません。',
       totalFileSizeToSendExceeded:
