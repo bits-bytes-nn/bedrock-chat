@@ -2942,7 +2942,7 @@ version = "6.0.3"
 description = "YAML parser and emitter for Python"
 optional = false
 python-versions = ">=3.8"
-groups = ["dev"]
+groups = ["main", "dev"]
 files = [
     {file = "PyYAML-6.0.3-cp38-cp38-macosx_10_13_x86_64.whl", hash = "sha256:c2514fceb77bc5e7a2f7adfaa1feb2fb311607c9cb518dbc378688ec73d8292f"},
     {file = "PyYAML-6.0.3-cp38-cp38-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:9c57bb8c96f6d1808c030b1687b9b5fb476abaa47f0db9c0101f5e9f394e97f4"},
@@ -3375,42 +3375,55 @@ full = ["httpx (>=0.27.0,<0.29.0)", "httpx2 (>=2.0.0)", "itsdangerous", "jinja2"
 
 [[package]]
 name = "strands-agents"
-version = "1.9.0"
+version = "1.59.0"
 description = "A model-driven approach to building AI agents in just a few lines of code"
 optional = false
 python-versions = ">=3.10"
 groups = ["main"]
 files = [
-    {file = "strands_agents-1.9.0-py3-none-any.whl", hash = "sha256:a7a7c51d71278ee6daf7d47089456abc6de3a62e7cd433c08031a97c6b2e59f3"},
-    {file = "strands_agents-1.9.0.tar.gz", hash = "sha256:84610b855bc79236ce822626b852c6f5a3c1a1de63592445a704a4f8a7249695"},
+    {file = "strands_agents-1.59.0-py3-none-any.whl", hash = "sha256:d1720c6cf3220bd632b3a1cb27e3907f1c5424d5bba8be830ee3e32b6cef5170"},
+    {file = "strands_agents-1.59.0.tar.gz", hash = "sha256:617eb2c925ab94542f03902435577917c106e46665a7196fa7e13790c20b2f55"},
 ]
 
 [package.dependencies]
 boto3 = ">=1.26.0,<2.0.0"
 botocore = ">=1.29.0,<2.0.0"
 docstring-parser = ">=0.15,<1.0"
-mcp = ">=1.11.0,<2.0.0"
+httpx = ">=0.28.1,<1.0.0"
+jsonschema = ">=4.0.0,<5.0.0"
+mcp = ">=1.23.0,<2.2"
 opentelemetry-api = ">=1.30.0,<2.0.0"
 opentelemetry-instrumentation-threading = ">=0.51b0,<1.00b0"
 opentelemetry-sdk = ">=1.30.0,<2.0.0"
 pydantic = ">=2.4.0,<3.0.0"
+pyyaml = ">=6.0.0,<7.0.0"
 typing-extensions = ">=4.13.2,<5.0.0"
 watchdog = ">=6.0.0,<7.0.0"
 
 [package.extras]
-a2a = ["a2a-sdk (>=0.3.0,<0.4.0)", "a2a-sdk[sql] (>=0.3.0,<0.4.0)", "fastapi (>=0.115.12,<1.0.0)", "httpx (>=0.28.1,<1.0.0)", "starlette (>=0.46.2,<1.0.0)", "uvicorn (>=0.34.2,<1.0.0)"]
-all = ["a2a-sdk (>=0.3.0,<0.4.0)", "a2a-sdk[sql] (>=0.3.0,<0.4.0)", "anthropic (>=0.21.0,<1.0.0)", "boto3-stubs[sagemaker-runtime] (>=1.26.0,<2.0.0)", "fastapi (>=0.115.12,<1.0.0)", "httpx (>=0.28.1,<1.0.0)", "litellm (>=1.75.9,<2.0.0)", "llama-api-client (>=0.1.0,<1.0.0)", "mistralai (>=1.8.2)", "ollama (>=0.4.8,<1.0.0)", "openai (>=1.68.0,<1.108.0)", "openai (>=1.68.0,<2.0.0)", "opentelemetry-exporter-otlp-proto-http (>=1.30.0,<2.0.0)", "sphinx (>=5.0.0,<6.0.0)", "sphinx-autodoc-typehints (>=1.12.0,<2.0.0)", "sphinx-rtd-theme (>=1.0.0,<2.0.0)", "starlette (>=0.46.2,<1.0.0)", "uvicorn (>=0.34.2,<1.0.0)", "writer-sdk (>=2.2.0,<3.0.0)"]
+a2a = ["a2a-sdk (>=0.3.0,<0.4.0)", "a2a-sdk[sql] (>=0.3.0,<0.4.0)", "fastapi (>=0.133.0,<1.0.0)", "httpx (>=0.28.1,<1.0.0)", "starlette (>=1.0.0,<2.0.0)", "uvicorn (>=0.34.2,<1.0.0)"]
+all = ["a2a-sdk (>=0.3.0,<0.4.0)", "a2a-sdk[sql] (>=0.3.0,<0.4.0)", "anthropic (>=0.21.0,<1.0.0)", "aws-bedrock-token-generator (>=1.1.0,<2.0.0)", "aws-sdk-bedrock-runtime[awscrt] (>=0.11.0,<0.12.0) ; python_version >= \"3.12\"", "awscrt (==0.32.2) ; python_version >= \"3.12\"", "beautifulsoup4 (>=4.9.0,<5.0.0)", "boto3-stubs[sagemaker-runtime] (>=1.26.0,<2.0.0)", "cedar-policy-mcp-schema-generator (==0.6.1)", "cedarpy (==4.12.0)", "fastapi (>=0.133.0,<1.0.0)", "google-genai (>=1.67.0,<3.0.0)", "google-genai (>=2.0.0,<3.0.0)", "httpx (>=0.28.1,<1.0.0)", "litellm (>=1.75.9,<2.0.0)", "llama-api-client (>=0.1.0,<1.0.0)", "markdownify (>=1.1.0,<2.0.0)", "mistralai (>=2.0.0,<4.0.0)", "numpy (>=2.0.0,<3.0.0)", "ollama (>=0.4.8,<1.0.0)", "openai (>=1.68.0,<3.0.0)", "opentelemetry-exporter-otlp-proto-http (>=1.30.0,<2.0.0)", "prompt-toolkit (>=3.0.0,<4.0.0)", "pywebrtc-audio (>=0.2.0,<0.3.0)", "rich (>=15.0.0,<16.0.0)", "smithy-aws-core (>=0.11.0,<0.12.0) ; python_version >= \"3.12\"", "smithy-core (>=0.8.0,<0.9.0) ; python_version >= \"3.12\"", "smithy-http[awscrt] (==0.5.0) ; python_version >= \"3.12\"", "sphinx (>=5.0.0,<10.0.0)", "sphinx-autodoc-typehints (>=1.12.0,<4.0.0)", "sphinx-rtd-theme (>=1.0.0,<4.0.0)", "starlette (>=1.0.0,<2.0.0)", "uvicorn (>=0.34.2,<1.0.0)", "websockets (>=16.0.0,<17.0.0)", "writer-sdk (>=2.2.0,<4.0.0)"]
 anthropic = ["anthropic (>=0.21.0,<1.0.0)"]
-dev = ["commitizen (>=4.4.0,<5.0.0)", "hatch (>=1.0.0,<2.0.0)", "moto (>=5.1.0,<6.0.0)", "mypy (>=1.15.0,<2.0.0)", "pre-commit (>=3.2.0,<4.4.0)", "pytest (>=8.0.0,<9.0.0)", "pytest-asyncio (>=1.0.0,<1.2.0)", "pytest-cov (>=7.0.0,<8.0.0)", "pytest-xdist (>=3.0.0,<4.0.0)", "ruff (>=0.13.0,<0.14.0)"]
-docs = ["sphinx (>=5.0.0,<6.0.0)", "sphinx-autodoc-typehints (>=1.12.0,<2.0.0)", "sphinx-rtd-theme (>=1.0.0,<2.0.0)"]
-litellm = ["litellm (>=1.75.9,<2.0.0)", "openai (>=1.68.0,<1.108.0)"]
+bidi = ["aws-sdk-bedrock-runtime[awscrt] (>=0.11.0,<0.12.0) ; python_version >= \"3.12\"", "awscrt (==0.32.2) ; python_version >= \"3.12\"", "smithy-aws-core (>=0.11.0,<0.12.0) ; python_version >= \"3.12\"", "smithy-core (>=0.8.0,<0.9.0) ; python_version >= \"3.12\"", "smithy-http[awscrt] (==0.5.0) ; python_version >= \"3.12\""]
+bidi-aec = ["numpy (>=2.0.0,<3.0.0)", "pywebrtc-audio (>=0.2.0,<0.3.0)"]
+bidi-all = ["a2a-sdk (>=0.3.0,<0.4.0)", "a2a-sdk[sql] (>=0.3.0,<0.4.0)", "aws-sdk-bedrock-runtime[awscrt] (>=0.11.0,<0.12.0) ; python_version >= \"3.12\"", "awscrt (==0.32.2) ; python_version >= \"3.12\"", "fastapi (>=0.133.0,<1.0.0)", "google-genai (>=2.0.0,<3.0.0)", "httpx (>=0.28.1,<1.0.0)", "numpy (>=2.0.0,<3.0.0)", "opentelemetry-exporter-otlp-proto-http (>=1.30.0,<2.0.0)", "prompt-toolkit (>=3.0.0,<4.0.0)", "pywebrtc-audio (>=0.2.0,<0.3.0)", "rich (>=15.0.0,<16.0.0)", "smithy-aws-core (>=0.11.0,<0.12.0) ; python_version >= \"3.12\"", "smithy-core (>=0.8.0,<0.9.0) ; python_version >= \"3.12\"", "smithy-http[awscrt] (==0.5.0) ; python_version >= \"3.12\"", "sphinx (>=5.0.0,<10.0.0)", "sphinx-autodoc-typehints (>=1.12.0,<4.0.0)", "sphinx-rtd-theme (>=1.0.0,<4.0.0)", "starlette (>=1.0.0,<2.0.0)", "uvicorn (>=0.34.2,<1.0.0)", "websockets (>=16.0.0,<17.0.0)"]
+bidi-google = ["google-genai (>=2.0.0,<3.0.0)"]
+bidi-io = ["prompt-toolkit (>=3.0.0,<4.0.0)", "rich (>=15.0.0,<16.0.0)"]
+bidi-openai = ["websockets (>=16.0.0,<17.0.0)"]
+bidi-pyaudio = ["pyaudio (>=0.2.0,<0.3.0)"]
+cedar = ["cedar-policy-mcp-schema-generator (==0.6.1)", "cedarpy (==4.12.0)"]
+dev = ["commitizen (>=4.4.0,<5.0.0)", "hatch (>=1.0.0,<2.0.0)", "moto (>=5.1.0,<6.0.0)", "mypy (>=1.15.0,<2.4.0)", "pre-commit (>=3.2.0,<4.7.0)", "pytest (>=9.0.0,<10.0.0)", "pytest-asyncio (>=1.0.0,<1.5.0)", "pytest-cov (>=7.0.0,<8.0.0)", "pytest-timeout (>=2.0.0,<3.0.0)", "pytest-xdist (>=3.0.0,<4.0.0)", "ruff (>=0.16.0,<0.17.0)", "tenacity (>=9.0.0,<10.0.0)"]
+docs = ["sphinx (>=5.0.0,<10.0.0)", "sphinx-autodoc-typehints (>=1.12.0,<4.0.0)", "sphinx-rtd-theme (>=1.0.0,<4.0.0)"]
+gemini = ["google-genai (>=1.67.0,<3.0.0)"]
+litellm = ["litellm (>=1.75.9,<2.0.0)", "openai (>=1.68.0,<3.0.0)"]
 llamaapi = ["llama-api-client (>=0.1.0,<1.0.0)"]
-mistral = ["mistralai (>=1.8.2)"]
+mistral = ["mistralai (>=2.0.0,<4.0.0)"]
 ollama = ["ollama (>=0.4.8,<1.0.0)"]
-openai = ["openai (>=1.68.0,<2.0.0)"]
+openai = ["aws-bedrock-token-generator (>=1.1.0,<2.0.0)", "openai (>=1.68.0,<3.0.0)"]
 otel = ["opentelemetry-exporter-otlp-proto-http (>=1.30.0,<2.0.0)"]
-sagemaker = ["boto3-stubs[sagemaker-runtime] (>=1.26.0,<2.0.0)", "openai (>=1.68.0,<2.0.0)"]
-writer = ["writer-sdk (>=2.2.0,<3.0.0)"]
+sagemaker = ["boto3-stubs[sagemaker-runtime] (>=1.26.0,<2.0.0)", "openai (>=1.68.0,<3.0.0)"]
+web-fetch = ["beautifulsoup4 (>=4.9.0,<5.0.0)", "markdownify (>=1.1.0,<2.0.0)"]
+writer = ["writer-sdk (>=2.2.0,<4.0.0)"]
 
 [[package]]
 name = "tenacity"

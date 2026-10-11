@@ -291,6 +291,15 @@ You can define parameters for your deployment in two ways: using `cdk.json` or u
 
 The traditional way to configure parameters is by editing the `cdk.json` file. This approach is simple but lacks type checking:
 
+To keep deployment-specific values out of Git, put them in `cdk/cdk.context.json` instead. The file is ignored by Git, and its values override the ones in `cdk.json`:
+
+```json
+{
+  "bedrockRegion": "ap-northeast-2",
+  "selfSignUpEnabled": false
+}
+```
+
 ```json
 {
   "app": "npx ts-node --prefer-ts-exts bin/bedrock-chat.ts",
@@ -544,6 +553,20 @@ bedrockChatParams.set("default", {
 
 > [!Note]
 > The `titleModel` is only used internally for generating short conversation titles. Using a smaller, cheaper model for this purpose is recommended as it reduces costs without affecting the user's chat experience.
+
+### Alarms and API Throttling
+
+CloudWatch alarms notify an SNS topic (output `AlarmTopicArn`) when the REST API or chat streaming handler fails repeatedly, when chat requests are throttled, or when a bot knowledge sync fails. Set `alarmEmail` to subscribe an email address; AWS sends a confirmation email first.
+
+The REST and WebSocket APIs are limited to `apiThrottleRateLimit` requests per second (default 500) with a burst of `apiThrottleBurstLimit` (default 1000). Raise them for large deployments.
+
+```typescript
+bedrockChatParams.set("default", {
+  alarmEmail: "ops@example.com",
+  apiThrottleRateLimit: 500,
+  apiThrottleBurstLimit: 1000,
+});
+```
 
 ### Lambda SnapStart
 

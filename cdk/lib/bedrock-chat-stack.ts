@@ -28,6 +28,8 @@ import { BedrockCustomBotCodebuild } from "./constructs/bedrock-custom-bot-codeb
 import { BedrockSharedKnowledgeBasesCodebuild } from "./constructs/bedrock-shared-knowledge-bases-codebuild";
 import { BotStore, Language } from "./constructs/bot-store";
 import { Duration } from "aws-cdk-lib";
+import { Monitoring } from "./constructs/monitoring";
+import { ThrottleSettings } from "aws-cdk-lib/aws-apigatewayv2";
 
 export interface BedrockChatStackProps extends StackProps {
   readonly envName: string;
@@ -61,6 +63,8 @@ export interface BedrockChatStackProps extends StackProps {
   readonly devAccessIamRoleArn?: string;
   readonly allowedCountries?: string[];
   readonly logoPath?: string;
+  readonly alarmEmail: string;
+  readonly apiThrottle: ThrottleSettings;
 }
 
 export class BedrockChatStack extends cdk.Stack {
@@ -259,6 +263,7 @@ export class BedrockChatStack extends cdk.Stack {
       defaultModel: props.defaultModel,
       titleModel: props.titleModel,
       logoPath: props.logoPath,
+      throttle: props.apiThrottle,
     });
     props.documentBucket.grantReadWrite(backendApi.handler);
     // Add permissions to API handler for BotStore
@@ -311,7 +316,16 @@ export class BedrockChatStack extends cdk.Stack {
       globalAvailableModels: props.globalAvailableModels,
       defaultModel: props.defaultModel,
       titleModel: props.titleModel,
+      throttle: props.apiThrottle,
     });
+
+    new Monitoring(this, "Monitoring", {
+      alarmEmail: props.alarmEmail,
+      apiHandler: backendApi.handler,
+      webSocketHandler: websocket.handler,
+      embeddingStateMachine: embedding.stateMachine,
+    });
+
     frontend.buildViteApp({
       backendApiEndpoint: backendApi.api.apiEndpoint,
       webSocketApiEndpoint: websocket.apiEndpoint,

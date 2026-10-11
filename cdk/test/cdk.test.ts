@@ -70,6 +70,8 @@ describe("Bedrock Chat Stack Test", () => {
         enableBotStoreReplicas: false,
         botStoreLanguage: "en",
         tokenValidMinutes: 60,
+        alarmEmail: "",
+        apiThrottle: { rateLimit: 500, burstLimit: 1000 },
       }
     );
     const hasGoogleProviderTemplate = Template.fromStack(
@@ -149,6 +151,8 @@ describe("Bedrock Chat Stack Test", () => {
         enableBotStoreReplicas: false,
         botStoreLanguage: "en",
         tokenValidMinutes: 60,
+        alarmEmail: "",
+        apiThrottle: { rateLimit: 500, burstLimit: 1000 },
       }
     );
     const hasOidcProviderTemplate = Template.fromStack(hasOidcProviderStack);
@@ -216,6 +220,8 @@ describe("Bedrock Chat Stack Test", () => {
       enableBotStoreReplicas: false,
       botStoreLanguage: "en",
       tokenValidMinutes: 60,
+      alarmEmail: "",
+      apiThrottle: { rateLimit: 500, burstLimit: 1000 },
     });
     const template = Template.fromStack(stack);
 
@@ -240,6 +246,17 @@ describe("Bedrock Chat Stack Test", () => {
       )
     );
     expect(actions).not.toContain("bedrock:*");
+
+    // Alarms and API throttling.
+    template.resourceCountIs("AWS::CloudWatch::Alarm", 4);
+    template.hasResourceProperties("AWS::ApiGatewayV2::Stage", {
+      StageName: "dev",
+      DefaultRouteSettings: Match.objectLike({ ThrottlingRateLimit: 500 }),
+    });
+    template.hasResourceProperties("AWS::ApiGatewayV2::Stage", {
+      StageName: "$default",
+      DefaultRouteSettings: Match.objectLike({ ThrottlingBurstLimit: 1000 }),
+    });
     expect(actions).toContain("bedrock:InvokeModelWithResponseStream");
   });
 
@@ -287,6 +304,8 @@ describe("Bedrock Chat Stack Test", () => {
       enableBotStoreReplicas: false,
       botStoreLanguage: "en",
       tokenValidMinutes: 60,
+      alarmEmail: "",
+      apiThrottle: { rateLimit: 500, burstLimit: 1000 },
     });
 
     const template = Template.fromStack(customDomainStack);
@@ -369,6 +388,8 @@ describe("Bedrock Chat Stack Test", () => {
       enableBotStoreReplicas: false,
       botStoreLanguage: "en",
       tokenValidMinutes: 60,
+      alarmEmail: "",
+      apiThrottle: { rateLimit: 500, burstLimit: 1000 },
     });
 
     const template = Template.fromStack(noDomainStack);
@@ -426,6 +447,8 @@ describe("Bedrock Chat Stack Test", () => {
       enableBotStoreReplicas: false,
       botStoreLanguage: "en",
       tokenValidMinutes: 60,
+      alarmEmail: "",
+      apiThrottle: { rateLimit: 500, burstLimit: 1000 },
     });
 
     const template = Template.fromStack(stack);
@@ -477,6 +500,8 @@ describe("Bedrock Chat Stack Test", () => {
       enableBotStoreReplicas: false,
       botStoreLanguage: "en",
       tokenValidMinutes: 60,
+      alarmEmail: "",
+      apiThrottle: { rateLimit: 500, burstLimit: 1000 },
     });
 
     const template = Template.fromStack(stack);
