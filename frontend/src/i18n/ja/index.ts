@@ -300,6 +300,7 @@ const translation: typeof en = {
         removeEssential: '利用推奨ボットを解除',
       },
       help: {
+        adminOnly: 'この設定は管理者のみ変更できます。',
         overview:
           'ボットはあらかじめ定義したインストラクションに従って動作します。チャットではメッセージ内にコンテキストを定義しなければ意図した振る舞いをしませんが、ボットを利用すればコンテキストの定義が不要になります。',
         instructions:

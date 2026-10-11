@@ -613,8 +613,11 @@ class BotModel(BaseModel):
                 ]
             ),
             bedrock_knowledge_base=(
+                # The knowledge base ID is managed by the embedding state machine.
                 BedrockKnowledgeBaseModel.model_validate(
-                    bot_input.bedrock_knowledge_base.model_dump()
+                    bot_input.bedrock_knowledge_base.model_dump(
+                        exclude={"knowledge_base_id"}
+                    )
                 )
                 if bot_input.bedrock_knowledge_base
                 else None

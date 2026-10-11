@@ -45,6 +45,7 @@ from app.routes.schemas.admin import (
 from app.routes.schemas.bot import (
     ActiveModelsOutput,
     Agent,
+    AgentInput,
     AllVisibilityInput,
     BedrockAgentTool,
     BotInput,
@@ -105,10 +106,57 @@ def _update_s3_documents_by_diff(
         delete_file_from_s3(DOCUMENT_BUCKET, document_path, ignore_not_exist=True)
 
 
+def _bedrock_agent_ids(agent: AgentInput | AgentModel | None) -> set[str]:
+    if agent is None:
+        return set()
+    return {
+        tool.bedrockAgentConfig.agent_id
+        for tool in agent.tools
+        if tool.tool_type == "bedrock_agent" and tool.bedrockAgentConfig
+    }
+
+
+def validate_external_resource_references(
+    user: User, bot_input: BotInput | BotModifyInput, current_bot: BotModel | None
+) -> None:
+    """Only administrators can point a bot at resources outside of the application.
+
+    S3 data sources, existing knowledge bases and Bedrock agents are accessed with the
+    application's role, so a user could otherwise read resources they cannot access.
+    References that the bot already has are kept.
+
+    Raises:
+        PermissionError: If a non-admin user adds such a reference.
+    """
+    if user.is_admin():
+        return
+
+    current_s3_urls = set(current_bot.knowledge.s3_urls) if current_bot else set()
+    s3_urls = set(bot_input.knowledge.s3_urls) if bot_input.knowledge else set()
+    if s3_urls - current_s3_urls:
+        raise PermissionError("Only administrators can add S3 data sources.")
+
+    current_kb = current_bot.bedrock_knowledge_base if current_bot else None
+    existing_kb_id = (
+        bot_input.bedrock_knowledge_base.exist_knowledge_base_id
+        if bot_input.bedrock_knowledge_base
+        else None
+    )
+    if existing_kb_id and existing_kb_id != (
+        current_kb.exist_knowledge_base_id if current_kb else None
+    ):
+        raise PermissionError("Only administrators can use an existing knowledge base.")
+
+    current_agent_ids = _bedrock_agent_ids(current_bot.agent if current_bot else None)
+    if _bedrock_agent_ids(bot_input.agent) - current_agent_ids:
+        raise PermissionError("Only administrators can add Bedrock agents.")
+
+
 def create_new_bot(user: User, bot_input: BotInput) -> BotOutput:
     """Create a new bot.
     Bot is created as private.
     """
+    validate_external_resource_references(user, bot_input, current_bot=None)
 
     # Create initial knowledge
     source_urls = []
@@ -167,6 +215,7 @@ def modify_owned_bot(
         raise PermissionError(
             f"User {user.id} is not authorized to modify bot {bot_id}"
         )
+    validate_external_resource_references(user, modify_input, current_bot=bot)
 
     source_urls = []
     sitemap_urls = []
@@ -229,14 +278,14 @@ def modify_owned_bot(
     current_bot_kb = bot.bedrock_knowledge_base
     updated_kb: BedrockKnowledgeBaseModel | None = None
     if modify_input.bedrock_knowledge_base:
+        # The knowledge base ID is managed by the embedding state machine.
+        kb_input = modify_input.bedrock_knowledge_base.model_dump(
+            exclude={"knowledge_base_id"}
+        )
         updated_kb = (
-            current_bot_kb.model_copy(
-                update=modify_input.bedrock_knowledge_base.model_dump()
-            )
+            current_bot_kb.model_copy(update=kb_input)
             if current_bot_kb
-            else BedrockKnowledgeBaseModel(
-                **modify_input.bedrock_knowledge_base.model_dump()
-            )
+            else BedrockKnowledgeBaseModel(**kb_input)
         )
     else:
         updated_kb = current_bot_kb

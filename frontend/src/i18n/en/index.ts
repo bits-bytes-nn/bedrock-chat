@@ -299,6 +299,7 @@ const translation = {
         removeEssential: 'Remove Essential Status',
       },
       help: {
+        adminOnly: 'Only administrators can configure this.',
         overview:
           'Bots operate according to predefined instructions. Chat does not work as intended unless the context is defined in the message, but with bots, there is no need to define the context.',
         instructions:
