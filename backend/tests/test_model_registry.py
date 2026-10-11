@@ -111,6 +111,16 @@ class TestGenerationParamsToConverseConfiguration(unittest.TestCase):
             config["additionalModelRequestFields"], {"inferenceConfig": {"topK": 128}}
         )
 
+    def test_falls_back_to_default_stop_sequences(self):
+        config = generation_params_to_converse_configuration(
+            "mistral-large", generation_params(stop_sequences=[])
+        )
+
+        self.assertEqual(
+            config["inferenceConfig"]["stopSequences"], ["[INST]", "[/INST]"]
+        )
+        self.assertNotIn("additionalModelRequestFields", config)
+
     def test_uses_model_default_max_tokens_without_params(self):
         config = generation_params_to_converse_configuration("claude-v5.5-haiku")
 

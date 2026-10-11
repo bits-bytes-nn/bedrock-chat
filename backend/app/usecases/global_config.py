@@ -2,6 +2,7 @@ import json
 import logging
 import os
 
+from app.model_registry import MODELS
 from app.routes.schemas.conversation import type_model_name
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s:%(name)s - %(message)s")
@@ -43,9 +44,20 @@ def get_global_available_models() -> list[str]:
     return []
 
 
+def _first_available_model(*candidates: str | None) -> str | None:
+    for candidate in candidates:
+        model = (candidate or "").strip()
+        if not model:
+            continue
+        if model in MODELS:
+            return model
+        logger.warning("Ignoring configured model %s: it is retired or unknown", model)
+    return None
+
+
 def get_default_model() -> type_model_name:
     """Return the configured default model, falling back to claude-v5.5-sonnet."""
-    return (DEFAULT_MODEL or "").strip() or "claude-v5.5-sonnet"  # type: ignore[return-value]
+    return _first_available_model(DEFAULT_MODEL) or "claude-v5.5-sonnet"  # type: ignore[return-value]
 
 
 def get_title_model() -> type_model_name:
@@ -53,7 +65,7 @@ def get_title_model() -> type_model_name:
 
     Falls back to: TITLE_MODEL -> DEFAULT_MODEL -> claude-v5.5-haiku
     """
-    return (TITLE_MODEL or "").strip() or (DEFAULT_MODEL or "").strip() or "claude-v5.5-haiku"  # type: ignore[return-value]
+    return _first_available_model(TITLE_MODEL, DEFAULT_MODEL) or "claude-v5.5-haiku"  # type: ignore[return-value]
 
 
 def get_logo_path() -> str:

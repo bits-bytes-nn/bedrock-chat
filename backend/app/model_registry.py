@@ -200,7 +200,7 @@ MODELS: dict[str, ModelSpec] = {
     "gpt-5.6-luna": _gpt("openai.gpt-5.6-luna", None),
     "gpt-5.6-sol": _gpt("openai.gpt-5.6-sol", None),
     "gpt-5.6-terra": _gpt("openai.gpt-5.6-terra", None),
-    "gpt-6-astra": _gpt("openai.gpt-6-astra", ModelPrice(0.01, 0.05, 0.001)),
+    "gpt-6-astra": _gpt("openai.gpt-6-astra", ModelPrice(0.01, 0.05, 0.001, 0.0125)),
     "gpt-6-luna": _gpt("openai.gpt-6-luna", None),
     "gpt-6-sol": _gpt("openai.gpt-6-sol", None),
     "gpt-6.1-sol": _gpt("openai.gpt-6.1-sol", None),

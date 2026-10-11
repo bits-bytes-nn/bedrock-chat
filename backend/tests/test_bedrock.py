@@ -16,6 +16,8 @@ import unittest
 from pprint import pprint
 from unittest.mock import patch
 
+from botocore.exceptions import ClientError
+
 from app import bedrock
 from app.bedrock import call_converse_api, compose_args_for_converse_api, get_model_id
 from app.repositories.models.conversation import SimpleMessageModel, TextContentModel
@@ -81,6 +83,24 @@ class TestGetModelId(unittest.TestCase):
             ),
             "mistral.mistral-large-2402-v1:0",
         )
+
+    def test_tries_global_profile_when_lookup_fails(self):
+        with patch.object(
+            bedrock,
+            "_list_system_inference_profile_ids",
+            side_effect=ClientError(
+                {"Error": {"Code": "AccessDeniedException", "Message": "denied"}},
+                "ListInferenceProfiles",
+            ),
+        ):
+            model_id = get_model_id(
+                "claude-v4.6-sonnet",
+                enable_global=True,
+                enable_cross_region=True,
+                bedrock_region="us-east-1",
+            )
+
+        self.assertEqual(model_id, "global.anthropic.claude-sonnet-4-6")
 
     def test_rejects_retired_model(self):
         with self.assertRaises(ValueError):

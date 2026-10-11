@@ -13,6 +13,8 @@ from typing import (
 )
 
 import boto3
+from botocore.config import Config
+from botocore.exceptions import BotoCoreError, ClientError
 from app.config import DEFAULT_GENERATION_CONFIG
 from app.model_registry import get_model_spec
 from app.repositories.models.custom_bot import GenerationParamsModel
@@ -238,7 +240,9 @@ def generation_params_to_converse_configuration(
         inference_config["topP"] = param("top_p")
 
     stop_sequences = param("stop_sequences")
-    if spec.supports_stop_sequences and stop_sequences and any(stop_sequences):
+    if not (stop_sequences and any(stop_sequences)):
+        stop_sequences = defaults.get("stop_sequences", [])
+    if spec.supports_stop_sequences and stop_sequences:
         inference_config["stopSequences"] = stop_sequences
 
     top_k = param("top_k")
@@ -420,7 +424,15 @@ def calculate_price(
 @functools.cache
 def _list_system_inference_profile_ids(region: str) -> frozenset[str]:
     """Return the IDs of the system-defined inference profiles in the region."""
-    client = boto3.client("bedrock", region_name=region)
+    client = boto3.client(
+        "bedrock",
+        region_name=region,
+        config=Config(
+            connect_timeout=3,
+            read_timeout=5,
+            retries={"mode": "standard", "max_attempts": 3},
+        ),
+    )
     profile_ids: set[str] = set()
     kwargs: dict[str, Any] = {"typeEquals": "SYSTEM_DEFINED"}
     while True:
@@ -450,8 +462,17 @@ def get_model_id(
     if not (enable_global or enable_cross_region):
         return base_model_id
 
-    profile_ids = _list_system_inference_profile_ids(bedrock_region)
     global_profile_id = f"global.{base_model_id}"
+    try:
+        profile_ids = _list_system_inference_profile_ids(bedrock_region)
+    except (BotoCoreError, ClientError):
+        # Most current models are offered through a global profile, so try it rather
+        # than failing every request while the lookup is unavailable.
+        logger.warning(
+            "Failed to list inference profiles in %s", bedrock_region, exc_info=True
+        )
+        return global_profile_id if enable_global else base_model_id
+
     if enable_global and global_profile_id in profile_ids:
         return global_profile_id
 
@@ -466,8 +487,9 @@ def get_model_id(
         if regional_profile_ids:
             return regional_profile_ids[0]
 
-    logger.info(
-        "No inference profile for %s in %s. Using the base model ID.",
+    logger.warning(
+        "No inference profile for %s in %s. Using the base model ID, which only works "
+        "if the model supports on-demand throughput in this region.",
         model,
         bedrock_region,
     )
