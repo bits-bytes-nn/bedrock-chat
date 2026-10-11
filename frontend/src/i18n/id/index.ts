@@ -16,31 +16,6 @@ const translation = {
       adminConsoles: 'Hanya Admin',
     },
     model: {
-      'claude-v3-haiku': {
-        label: 'Claude 3 (Haiku)',
-        description:
-          'Versi sebelumnya yang dioptimalkan untuk kecepatan dan kekompakan, memberikan respons hampir instan.',
-      },
-      'claude-v3.5-sonnet': {
-        label: 'Claude 3.5 (Sonnet) v1',
-        description:
-          'Versi awal dari Claude 3.5. Mendukung berbagai tugas, tetapi v2 menawarkan akurasi yang lebih baik.',
-      },
-      'claude-v3.5-sonnet-v2': {
-        label: 'Claude 3.5 (Sonnet) v2',
-        description:
-          'Versi terbaru dari Claude 3.5. Model yang ditingkatkan yang membangun dari v1 dengan akurasi dan performa yang lebih tinggi.',
-      },
-      'claude-v3.5-haiku': {
-        label: 'Claude 3.5 (Haiku)',
-        description:
-          'Versi terbaru, menawarkan respons yang lebih cepat dan kemampuan yang ditingkatkan dibandingkan Haiku 3.',
-      },
-      'claude-v4.1-opus': {
-        label: 'Claude 4.1 (Opus)',
-        description:
-          'Model Opus dengan kemampuan penalaran yang ditingkatkan.',
-      },
       'claude-v4.5-opus': {
         label: 'Claude 4.5 (Opus)',
         description:
@@ -55,20 +30,6 @@ const translation = {
         label: 'Claude 4.7 (Opus)',
         description:
           'Model Opus berkemampuan tinggi yang dibuat untuk coding, alur kerja perusahaan, dan tugas agen jangka panjang.',
-      },
-      'claude-v3-opus': {
-        label: 'Claude 3 (Opus)',
-        description: 'Model yang kuat untuk tugas-tugas yang sangat kompleks.',
-      },
-      'mistral-7b-instruct': {
-        label: 'Mistral 7B',
-        description:
-          'Dapat menghasilkan teks bahasa Inggris dengan kemampuan coding alami',
-      },
-      'mixtral-8x7b-instruct': {
-        label: 'Mixtral-8x7B',
-        description:
-          'Model Mixture-of-Experts (MoE) yang populer, berkualitas tinggi, dan ideal untuk merangkum teks, tanya jawab, klasifikasi teks, melengkapi teks, dan menghasilkan kode',
       },
       'mistral-large': {
         label: 'Mistral Large',

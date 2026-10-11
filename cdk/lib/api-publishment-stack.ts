@@ -16,6 +16,7 @@ import { bedrockChatPolicyStatement } from "./utils/bedrock-policies";
 
 interface ApiPublishmentStackProps extends StackProps {
   readonly bedrockRegion: string;
+  readonly enableBedrockGlobalInference: boolean;
   readonly enableBedrockCrossRegionInference: boolean;
   readonly conversationTableName: string;
   readonly botTableName: string;
@@ -125,7 +126,10 @@ export class ApiPublishmentStack extends Stack {
           ),
           ACCOUNT: Stack.of(this).account,
           REGION: Stack.of(this).region,
-          ENABLE_BEDROCK_CROSS_REGION_INFERENCE: props.enableBedrockCrossRegionInference.toString(),
+          ENABLE_BEDROCK_GLOBAL_INFERENCE:
+            props.enableBedrockGlobalInference.toString(),
+          ENABLE_BEDROCK_CROSS_REGION_INFERENCE:
+            props.enableBedrockCrossRegionInference.toString(),
           BEDROCK_REGION: props.bedrockRegion,
           TABLE_ACCESS_ROLE_ARN: props.tableAccessRoleArn,
         },

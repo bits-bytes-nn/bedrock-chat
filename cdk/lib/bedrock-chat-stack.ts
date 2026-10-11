@@ -133,6 +133,9 @@ export class BedrockChatStack extends cdk.Stack {
         envName: props.envName,
         envPrefix: props.envPrefix,
         bedrockRegion: props.bedrockRegion,
+        enableBedrockGlobalInference: props.enableBedrockGlobalInference,
+        enableBedrockCrossRegionInference:
+          props.enableBedrockCrossRegionInference,
       }
     );
     // CodeBuild used for KnowledgeBase
@@ -305,6 +308,9 @@ export class BedrockChatStack extends cdk.Stack {
       enableBedrockCrossRegionInference:
         props.enableBedrockCrossRegionInference,
       enableLambdaSnapStart: props.enableLambdaSnapStart,
+      globalAvailableModels: props.globalAvailableModels,
+      defaultModel: props.defaultModel,
+      titleModel: props.titleModel,
     });
     frontend.buildViteApp({
       backendApiEndpoint: backendApi.api.apiEndpoint,

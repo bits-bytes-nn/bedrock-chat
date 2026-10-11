@@ -5,10 +5,12 @@ from app.stream import ToolRunResult
 from app.strands_integration.chat_strands import converse_with_strands
 from app.bedrock import (
     call_converse_api,
+    get_text_from_converse_response,
     compose_args_for_converse_api,
     is_prefill_supported,
     is_tooluse_supported,
 )
+from app.model_registry import get_model_spec
 from app.prompt import build_rag_prompt, get_prompt_to_cite_tool_results
 from app.repositories.conversation import (
     RecordNotFoundError,
@@ -216,8 +218,11 @@ def validate_model_is_available(model: str, bot: BotModel | None) -> None:
     bypass them.
 
     Raises:
+        ValueError: If the model is retired or unknown.
         PermissionError: If the model is disabled globally or for the bot.
     """
+    get_model_spec(model)
+
     global_models = get_global_available_models()
     if global_models and model not in global_models:
         raise PermissionError(f"Model {model} is not available.")
@@ -550,15 +555,7 @@ def propose_conversation_title(
         stream=False,
     )
     response = call_converse_api(args)
-    reply_txt = (
-        response["output"]["message"]["content"][0]["text"]
-        if "message" in response["output"]
-        and len(response["output"]["message"]["content"]) > 0
-        and "text" in response["output"]["message"]["content"][0]
-        else ""
-    )
-
-    return reply_txt
+    return get_text_from_converse_response(response)
 
 
 def fetch_conversation(user_id: str, conversation_id: str) -> Conversation:
