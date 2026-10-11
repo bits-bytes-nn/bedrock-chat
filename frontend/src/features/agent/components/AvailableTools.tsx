@@ -19,6 +19,7 @@ import { FirecrawlConfig as FirecrawlConfigComponent } from './FirecrawlConfig';
 import { BedrockAgentConfig as BedrockAgentConfigComponent } from './BedrockAgentConfig';
 import ExpandableDrawerGroup from '../../../components/ExpandableDrawerGroup';
 import RadioButton from '../../../components/RadioButton';
+import useLoginUser from '../../../hooks/useLoginUser';
 import { DEFAULT_FIRECRAWL_CONFIG } from '../constants';
 
 type Props = {
@@ -29,6 +30,8 @@ type Props = {
 
 export const AvailableTools = ({ availableTools, tools, setTools }: Props) => {
   const { t } = useTranslation();
+  // Bedrock agents run with the application's role, so only admins can add them.
+  const { isAdmin } = useLoginUser();
   const [searchEngine, setSearchEngine] = useState<SearchEngine>('duckduckgo');
 
   const handleChangeTool = useCallback(
@@ -206,10 +209,18 @@ export const AvailableTools = ({ availableTools, tools, setTools }: Props) => {
           <div className="flex items-center">
             <Toggle
               value={!!tools?.map(({ name }) => name).includes(tool.name)}
+              disabled={
+                tool.name === 'bedrock_agent' &&
+                !isAdmin &&
+                !tools?.some(({ name }) => name === 'bedrock_agent')
+              }
               onChange={handleChangeTool(tool)}
             />
             <div className="whitespace-pre-wrap text-sm text-aws-font-color-light/50 dark:text-aws-font-color-dark">
               {formatDescription(tool, t)}
+              {tool.name === 'bedrock_agent' && !isAdmin && (
+                <div>{t('bot.help.adminOnly')}</div>
+              )}
             </div>
           </div>
           {tool.name === 'internet_search' &&

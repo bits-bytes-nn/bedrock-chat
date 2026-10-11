@@ -1,3 +1,4 @@
+import useLoginUser from '../../../hooks/useLoginUser';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 import InputText from '../../../components/InputText';
@@ -76,6 +77,9 @@ const defaultGenerationConfig = DEFAULT_GENERATION_CONFIG;
 
 const BotKbEditPage: React.FC = () => {
   const { i18n, t } = useTranslation();
+  // S3 data sources and existing knowledge bases are read with the application's
+  // role, so only admins can add them.
+  const { isAdmin } = useLoginUser();
   const navigate = useNavigate();
   const { botId: paramsBotId } = useParams();
   const { getMyBot, registerBot, updateBot } = useBot();
@@ -1619,6 +1623,7 @@ const BotKbEditPage: React.FC = () => {
                     name="knowledgeBaseType"
                     value="existing"
                     checked={knowledgeBaseType === 'existing'}
+                    disabled={!isAdmin && knowledgeBaseType !== 'existing'}
                     label={t(
                       'knowledgeBaseSettings.advancedConfigration.useExistingKnowledgeBase.label'
                     )}
@@ -1695,6 +1700,7 @@ const BotKbEditPage: React.FC = () => {
                               </div>
                               <div className="text-sm text-aws-font-color-light/50 dark:text-aws-font-color-dark">
                                 {t('bot.help.knowledge.s3url')}
+                                {!isAdmin && <div>{t('bot.help.adminOnly')}</div>}
                               </div>
                               <div className="mt-2 flex w-full flex-col gap-1">
                                 {s3Urls.map((s3Url, idx) => (
@@ -1702,7 +1708,9 @@ const BotKbEditPage: React.FC = () => {
                                     <InputText
                                       className="w-full"
                                       type="text"
-                                      disabled={isLoading || disabledKnowledgeEdit}
+                                      disabled={
+                                        isLoading || disabledKnowledgeEdit || !isAdmin
+                                      }
                                       value={s3Url}
                                       placeholder={
                                         's3://example-bucket/path/to/data-source/'
@@ -1732,7 +1740,9 @@ const BotKbEditPage: React.FC = () => {
                                   outlined
                                   icon={<PiPlus />}
                                   disabled={
-                                    s3Urls.length >= 4 || disabledKnowledgeEdit
+                                    s3Urls.length >= 4 ||
+                                    disabledKnowledgeEdit ||
+                                    !isAdmin
                                   }
                                   onClick={onClickAddS3Url}>
                                   {t('button.add')}
