@@ -47,6 +47,11 @@ function getEnvVar(name: string, defaultValue?: string): string | undefined {
   return value !== undefined ? value : defaultValue;
 }
 
+function getBooleanEnvVar(name: string): boolean | undefined {
+  const value = getEnvVar(name);
+  return value === undefined ? undefined : value === "true";
+}
+
 /**
  * Parameters schema for the main Bedrock Chat application
  */
@@ -340,10 +345,10 @@ export function resolveApiPublishParameters(): ApiPublishParameters {
     envName: getEnvVar("ENV_NAME"),
     envPrefix: getEnvVar("ENV_PREFIX"),
     bedrockRegion: getEnvVar("BEDROCK_REGION"),
-    enableBedrockGlobalInference: getEnvVar(
+    enableBedrockGlobalInference: getBooleanEnvVar(
       "ENABLE_BEDROCK_GLOBAL_INFERENCE"
     ),
-    enableBedrockCrossRegionInference: getEnvVar(
+    enableBedrockCrossRegionInference: getBooleanEnvVar(
       "ENABLE_BEDROCK_CROSS_REGION_INFERENCE"
     ),
     publishedApiThrottleRateLimit: getEnvVar(

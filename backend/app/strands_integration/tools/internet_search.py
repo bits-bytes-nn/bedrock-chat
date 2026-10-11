@@ -1,7 +1,8 @@
-import json
 import logging
 
+from app.bedrock import call_converse_api, get_model_id, get_text_from_converse_response
 from app.repositories.models.custom_bot import BotModel
+from app.usecases.global_config import get_title_model
 from strands import tool
 from strands.types.tools import AgentTool as StrandsAgentTool
 
@@ -127,14 +128,10 @@ def _summarize_content_standalone(
 ) -> str:
     """Standalone content summarization."""
     try:
-        from app.utils import get_bedrock_runtime_client
-
         # Truncate content if too long
         max_input_length = 8000
         if len(content) > max_input_length:
             content = content[:max_input_length] + "..."
-
-        client = get_bedrock_runtime_client()
 
         prompt = f"""Please provide a concise summary of the following web content in 500-800 tokens maximum. Focus on information that directly answers or relates to the user's query: "{query}"
 
@@ -144,21 +141,15 @@ Content: {content}
 
 Summary:"""
 
-        response = client.invoke_model(
-            modelId="anthropic.claude-3-haiku-20240307-v1:0",
-            contentType="application/json",
-            accept="application/json",
-            body=json.dumps(
-                {
-                    "anthropic_version": "bedrock-2023-05-31",
-                    "max_tokens": 800,
-                    "messages": [{"role": "user", "content": prompt}],
-                }
-            ),
+        # Summaries are short, so they use the same lightweight model as titles.
+        response = call_converse_api(
+            {
+                "modelId": get_model_id(get_title_model()),
+                "messages": [{"role": "user", "content": [{"text": prompt}]}],
+                "inferenceConfig": {"maxTokens": 800},
+            }
         )
-
-        response_body = json.loads(response["body"].read())
-        summary = response_body["content"][0]["text"].strip()
+        summary = get_text_from_converse_response(response).strip()
 
         logger.info(
             f"Summarized content from {len(content)} chars to {len(summary)} chars"

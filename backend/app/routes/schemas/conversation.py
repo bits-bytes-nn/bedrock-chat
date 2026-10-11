@@ -5,41 +5,61 @@ from app.routes.schemas.base import BaseSchema
 from mypy_boto3_bedrock_runtime.literals import DocumentFormatType, ImageFormatType
 from pydantic import Discriminator, Field, JsonValue, root_validator
 
+# Every model name ever offered. Retired models stay here so that stored
+# conversations and bots remain readable; see app/model_registry.py.
 type_model_name = Literal[
-    "claude-v4-opus",
-    "claude-v4.1-opus",
+    # Anthropic Claude
     "claude-v4.5-opus",
     "claude-v4.6-opus",
     "claude-v4.7-opus",
-    "claude-v4-sonnet",
+    "claude-v4.8-opus",
+    "claude-v5-opus",
+    "claude-v5.5-opus",
     "claude-v4.5-sonnet",
     "claude-v4.6-sonnet",
+    "claude-v5-sonnet",
+    "claude-v5.5-sonnet",
     "claude-v4.5-haiku",
+    "claude-v5.5-haiku",
+    # OpenAI
+    "gpt-5.5",
+    "gpt-5.6-luna",
+    "gpt-5.6-sol",
+    "gpt-5.6-terra",
+    "gpt-6-astra",
+    "gpt-6-luna",
+    "gpt-6-sol",
+    "gpt-6.1-sol",
+    "gpt-oss-20b",
+    "gpt-oss-120b",
+    # Amazon Nova
+    "amazon-nova-pro",
+    "amazon-nova-lite",
+    "amazon-nova-micro",
+    "amazon-nova-2-lite",
+    # Mistral
+    "mistral-large",
+    "mistral-large-2",
+    # DeepSeek
+    "deepseek-r1",
+    # Meta Llama
+    "llama3-3-70b-instruct",
+    # Retired
+    "claude-v4-opus",
+    "claude-v4.1-opus",
+    "claude-v4-sonnet",
+    "mistral-7b-instruct",
+    "mixtral-8x7b-instruct",
     "claude-v3.5-sonnet",
     "claude-v3.5-sonnet-v2",
     "claude-v3.7-sonnet",
     "claude-v3.5-haiku",
     "claude-v3-haiku",
     "claude-v3-opus",
-    # Mistral
-    "mistral-7b-instruct",
-    "mixtral-8x7b-instruct",
-    "mistral-large",
-    "mistral-large-2",
-    # New Amazon Nova models
-    "amazon-nova-pro",
-    "amazon-nova-lite",
-    "amazon-nova-micro",
-    # DeepSeek models
-    "deepseek-r1",
-    # Meta Llama 3 models
-    "llama3-3-70b-instruct",
     "llama3-2-1b-instruct",
     "llama3-2-3b-instruct",
     "llama3-2-11b-instruct",
     "llama3-2-90b-instruct",
-    "gpt-oss-20b",
-    "gpt-oss-120b",
 ]
 
 

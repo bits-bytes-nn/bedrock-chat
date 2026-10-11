@@ -23,15 +23,71 @@ const translation: typeof en = {
       backChat: 'チャットに戻る',
     },
     model: {
-      'claude-v4-opus': {
-        label: 'Claude 4 (Opus)',
+      'claude-v4.8-opus': {
+        label: 'Claude 4.8 (Opus)',
         description:
-          '複雑なタスク、コーディング、AIエージェント向けの強力なハイブリッド推論モデル（200Kトークンコンテキストウィンドウ）',
+          '複雑な推論、コーディング、長時間のエージェントタスク向けのOpusモデル。',
       },
-      'claude-v4.1-opus': {
-        label: 'Claude 4.1 (Opus)',
+      'claude-v5-opus': {
+        label: 'Claude 5 (Opus)',
         description:
-          '推論能力が向上した高性能なOpusモデル。',
+          '最も高度な推論とエージェント作業向けの第5世代Opusモデル。',
+      },
+      'claude-v5.5-opus': {
+        label: 'Claude 5.5 (Opus)',
+        description:
+          '複雑な推論、コーディング、長時間のエージェント向けの最も高性能なClaudeモデル。',
+      },
+      'claude-v5-sonnet': {
+        label: 'Claude 5 (Sonnet)',
+        description:
+          '性能、速度、コストのバランスに優れた第5世代Sonnetモデル。',
+      },
+      'claude-v5.5-sonnet': {
+        label: 'Claude 5.5 (Sonnet)',
+        description:
+          'コーディングとエージェント性能に優れた最新のSonnetモデル。',
+      },
+      'claude-v5.5-haiku': {
+        label: 'Claude 5.5 (Haiku)',
+        description: '大量処理向けの最も高速でコスト効率の高いClaudeモデル。',
+      },
+      'gpt-5.5': {
+        label: 'GPT-5.5',
+        description: '汎用タスク向けのOpenAI推論モデル。',
+      },
+      'gpt-5.6-luna': {
+        label: 'GPT-5.6 Luna',
+        description: '速度とコストに最適化されたOpenAI GPT-5.6モデル。',
+      },
+      'gpt-5.6-sol': {
+        label: 'GPT-5.6 Sol',
+        description: '複雑な推論向けのOpenAI GPT-5.6モデル。',
+      },
+      'gpt-5.6-terra': {
+        label: 'GPT-5.6 Terra',
+        description: '性能とコストのバランスに優れたOpenAI GPT-5.6モデル。',
+      },
+      'gpt-6-astra': {
+        label: 'GPT-6 Astra',
+        description: '最も高度なタスク向けのOpenAI GPT-6フラッグシップモデル。',
+      },
+      'gpt-6-luna': {
+        label: 'GPT-6 Luna',
+        description: '速度とコストに最適化されたOpenAI GPT-6モデル。',
+      },
+      'gpt-6-sol': {
+        label: 'GPT-6 Sol',
+        description: '複雑な推論向けのOpenAI GPT-6モデル。',
+      },
+      'gpt-6.1-sol': {
+        label: 'GPT-6.1 Sol',
+        description: '複雑な推論向けの最新OpenAI GPT-6.1モデル。',
+      },
+      'amazon-nova-2-lite': {
+        label: 'Amazon Nova 2 Lite',
+        description:
+          '日常的なタスクを高速に処理する低コストのマルチモーダルAmazon Novaモデル。',
       },
       'claude-v4.5-opus': {
         label: 'Claude 4.5 (Opus)',
@@ -48,11 +104,6 @@ const translation: typeof en = {
         description:
           'コーディング、エンタープライズワークフロー、長時間のエージェントタスク向けに構築された高性能Opusモデル。',
       },
-      'claude-v4-sonnet': {
-        label: 'Claude 4 (Sonnet)',
-        description:
-          '効率性とスケールを最適化したバランスの取れたハイブリッド推論モデル（200Kトークンコンテキストウィンドウ）',
-      },
       'claude-v4.5-sonnet': {
         label: 'Claude 4.5 (Sonnet)',
         description:
@@ -67,43 +118,6 @@ const translation: typeof en = {
         label: 'Claude 4.5 (Haiku)',
         description:
           'Haikuシリーズ最速かつ最高性能。フロンティアレベルの性能と拡張思考機能を搭載',
-      },
-      'claude-v3-haiku': {
-        label: 'Claude 3 (Haiku)',
-        description:
-          '旧バージョンで、スピードとコンパクトさを最適化しており、ほぼ瞬時の応答を提供',
-      },
-      'claude-v3.5-sonnet': {
-        label: 'Claude 3.5 (Sonnet) v1',
-        description:
-          'Claude 3.5の初期バージョン。幅広いタスクに対応しますが、v2の方が精度が向上',
-      },
-      'claude-v3.5-sonnet-v2': {
-        label: 'Claude 3.5 (Sonnet) v2',
-        description:
-          'Claude 3.5の最新バージョン。v1をさらに強化し、より高い精度とパフォーマンスを提供',
-      },
-      'claude-v3.7-sonnet': {
-        label: 'Claude 3.7 Sonnet',
-        description: '迅速な応答と深い分析能力を両立するハイブリッド推論モデル',
-      },
-      'claude-v3.5-haiku': {
-        label: 'Claude 3.5 (Haiku) v1',
-        description: 'Haiku最新バージョン。精度を保ち、高速な応答を実現',
-      },
-      'claude-v3-opus': {
-        label: 'Claude 3 (Opus)',
-        description: '非常に複雑なタスクに対応するパワフルなモデル',
-      },
-      'mistral-7b-instruct': {
-        label: 'Mistral 7B',
-        description:
-          '自然なコーディング機能で英語のテキスト生成タスクをサポートします',
-      },
-      'mixtral-8x7b-instruct': {
-        label: 'Mistral-8x7B',
-        description:
-          'Mixtral-8x7BはMistral AIによって開発された基盤モデルで、英語、フランス語、ドイツ語、イタリア語、スペイン語のテキストをサポートし、コード生成機能を備えています。',
       },
       'mistral-large': {
         label: 'Mistral Large',
@@ -140,26 +154,6 @@ const translation: typeof en = {
         label: 'Meta Llama 3.3 70B Instruct',
         description:
           '405Bモデルと同等のパフォーマンスを低コストで提供する最新のLlama 3モデル。優れた推論能力と指示追従能力を備える',
-      },
-      'llama3-2-1b-instruct': {
-        label: 'Meta Llama 3.2 1B Instruct',
-        description:
-          'エッジデバイスに最適化された軽量モデル。個人情報管理や多言語知識検索に対応し、効率的なローカル処理を実現',
-      },
-      'llama3-2-3b-instruct': {
-        label: 'Meta Llama 3.2 3B Instruct',
-        description:
-          'テキスト生成、要約、感情分析などの機能を低遅延で提供するコンパクトモデル。モバイルAIアプリケーションに最適',
-      },
-      'llama3-2-11b-instruct': {
-        label: 'Meta Llama 3.2 11B Instruct',
-        description:
-          '画像理解と視覚的推論に優れたマルチモーダルモデル。画像キャプション生成や視覚的質問応答など高度なタスクに対応',
-      },
-      'llama3-2-90b-instruct': {
-        label: 'Meta Llama 3.2 90B Instruct',
-        description:
-          '高度な画像理解と視覚的推論機能を備えた大規模マルチモーダルモデル。複雑な推論と画像テキスト検索に優れた性能を発揮する',
       },
       'gpt-oss-20b': {
         label: 'GPT-OSS 20B',
@@ -551,7 +545,8 @@ const translation: typeof en = {
         title: 'プロンプトキャッシュ',
         promptCachingEnabled: {
           title: 'モデルが対応している場合、プロンプトキャッシュを利用する。',
-          description: '有効にすると、このボットと繰り返し会話した際のコストとレイテンシーを削減できます。',
+          description:
+            '有効にすると、このボットと繰り返し会話した際のコストとレイテンシーを削減できます。',
         },
       },
     },
@@ -981,8 +976,7 @@ const translation: typeof en = {
       advancedConfigration: {
         existingKnowledgeBaseId: {
           label: '既存のAmazon Bedrock Knowledge BaseのID',
-          description:
-            '既存のAmazon Bedrock Knowledge Baseを利用できます',
+          description: '既存のAmazon Bedrock Knowledge Baseを利用できます',
         },
         createDedicatedKnowledgeBase: {
           label: '専用のKnowledge Baseを作成する',
@@ -1034,7 +1028,7 @@ const translation: typeof en = {
             'このボットは管理者によってAPIとして公開されています。APIを公開するためには、全ユーザーに共有する必要があります。',
         },
       },
-      invalidMermaidFormat: "ダイアグラム描画時にエラーが発生しました"
+      invalidMermaidFormat: 'ダイアグラム描画時にエラーが発生しました',
     },
     validation: {
       title: 'バリデーションエラー',

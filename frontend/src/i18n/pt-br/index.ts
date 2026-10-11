@@ -18,36 +18,6 @@ const translation = {
       userGroups: 'Grupos de Usuários',
     },
     model: {
-      'claude-v3-haiku': {
-        label: 'Claude 3 (Haiku)',
-        description:
-          'Versão anterior otimizada para velocidade e compactação, proporcionando resposta quase instantânea.',
-      },
-      'claude-v3.5-sonnet': {
-        label: 'Claude 3.5 (Sonnet) v1',
-        description:
-          'Uma versão anterior do Claude 3.5. Suporta uma ampla variedade de tarefas, mas a v2 oferece maior precisão.',
-      },
-      'claude-v3.5-sonnet-v2': {
-        label: 'Claude 3.5 (Sonnet) v2',
-        description:
-          'A versão mais recente do Claude 3.5. Um modelo aprimorado que melhora a v1 com maior precisão e desempenho.',
-      },
-      'claude-v3.7-sonnet': {
-        label: 'Claude 3.7 Sonnet',
-        description:
-          'Modelo de raciocínio híbrido que equilibra respostas rápidas e capacidades analíticas profundas.',
-      },
-      'claude-v3.5-haiku': {
-        label: 'Claude 3.5 (Haiku) v1',
-        description:
-          'A versão mais recente, oferecendo respostas ainda mais rápidas e capacidades aprimoradas em relação ao Haiku 3.',
-      },
-      'claude-v4.1-opus': {
-        label: 'Claude 4.1 (Opus)',
-        description:
-          'Modelo Opus com capacidades de raciocínio aprimoradas.',
-      },
       'claude-v4.5-opus': {
         label: 'Claude 4.5 (Opus)',
         description:
@@ -62,20 +32,6 @@ const translation = {
         label: 'Claude 4.7 (Opus)',
         description:
           'Modelo Opus de alta capacidade criado para codificação, fluxos de trabalho empresariais e tarefas de agente de longa duração.',
-      },
-      'claude-v3-opus': {
-        label: 'Claude 3 (Opus)',
-        description: 'Modelo poderoso para tarefas altamente complexas.',
-      },
-      'mistral-7b-instruct': {
-        label: 'Mistral 7B',
-        description:
-          'Suporta tarefas de geração de texto em inglês com capacidades naturais de codificação',
-      },
-      'mixtral-8x7b-instruct': {
-        label: 'Mistral-8x7B',
-        description:
-          'Um modelo popular e de alta qualidade, esparso de Mistura de Especialistas (MoE), ideal para resumo de texto, perguntas e respostas, classificação de texto, conclusão de texto e geração de código.',
       },
       'mistral-large': {
         label: 'Mistral Large',
@@ -112,26 +68,6 @@ const translation = {
         label: 'Meta Llama 3.3 70B Instruct',
         description:
           'O modelo Llama 3 mais recente, oferecendo desempenho comparável ao modelo 405B a um custo menor, com excelentes capacidades de raciocínio e seguimento de instruções.',
-      },
-      'llama3-2-1b-instruct': {
-        label: 'Meta Llama 3.2 1B Instruct',
-        description:
-          'Modelo leve otimizado para dispositivos de borda com processamento eficiente no dispositivo para gerenciamento de informações pessoais e recuperação de conhecimento multilíngue.',
-      },
-      'llama3-2-3b-instruct': {
-        label: 'Meta Llama 3.2 3B Instruct',
-        description:
-          'Modelo compacto que oferece geração de texto, resumo e análise de sentimento com baixa latência, ideal para aplicações de IA móvel.',
-      },
-      'llama3-2-11b-instruct': {
-        label: 'Meta Llama 3.2 11B Instruct',
-        description:
-          'Modelo multimodal que se destaca na compreensão de imagens e raciocínio visual para legendagem de imagens, resposta a perguntas visuais e processamento de documentos.',
-      },
-      'llama3-2-90b-instruct': {
-        label: 'Meta Llama 3.2 90B Instruct',
-        description:
-          'Modelo multimodal grande com capacidades avançadas de compreensão de imagens e raciocínio visual para aplicações sofisticadas de inteligência visual.',
       },
     },
     agent: {

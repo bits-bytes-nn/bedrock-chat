@@ -563,6 +563,8 @@ describe("resolveApiPublishParameters", () => {
         BEDROCK_REGION: "us-east-1",
         PUBLISHED_API_THROTTLE_RATE_LIMIT: "200",
         PUBLISHED_API_ALLOWED_ORIGINS: '["https://test.com"]',
+        ENABLE_BEDROCK_GLOBAL_INFERENCE: "false",
+        ENABLE_BEDROCK_CROSS_REGION_INFERENCE: "true",
       };
 
       try {
@@ -573,6 +575,8 @@ describe("resolveApiPublishParameters", () => {
         expect(result.bedrockRegion).toBe("us-east-1");
         expect(result.publishedApiThrottleRateLimit).toBe(200);
         expect(result.publishedApiAllowedOrigins).toBe('["https://test.com"]');
+        expect(result.enableBedrockGlobalInference).toBe(false);
+        expect(result.enableBedrockCrossRegionInference).toBe(true);
       } finally {
         // Restore original environment
         process.env = originalEnv;

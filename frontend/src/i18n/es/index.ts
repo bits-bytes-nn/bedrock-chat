@@ -16,31 +16,6 @@ const translation = {
       adminConsoles: 'Solo Administrador',
     },
     model: {
-      'claude-v3-haiku': {
-        label: 'Claude 3 (Haiku)',
-        description:
-          'Versión anterior optimizada para velocidad y compacidad, brindando respuesta casi instantánea.',
-      },
-      'claude-v3.5-sonnet': {
-        label: 'Claude 3.5 (Sonnet) v1',
-        description:
-          'Versión anterior de Claude 3.5. Soporta una amplia gama de tareas, pero la v2 ofrece mayor precisión.',
-      },
-      'claude-v3.5-sonnet-v2': {
-        label: 'Claude 3.5 (Sonnet) v2',
-        description:
-          'La última versión de Claude 3.5. Un modelo mejorado que supera a la v1 en precisión y rendimiento.',
-      },
-      'claude-v3.5-haiku': {
-        label: 'Claude 3.5 (Haiku)',
-        description:
-          'La última versión, con una capacidad de respuesta aún más rápida y mejor rendimiento respecto a Haiku 3.',
-      },
-      'claude-v4.1-opus': {
-        label: 'Claude 4.1 (Opus)',
-        description:
-          'Modelo Opus con capacidades de razonamiento mejoradas.',
-      },
       'claude-v4.5-opus': {
         label: 'Claude 4.5 (Opus)',
         description:
@@ -55,16 +30,6 @@ const translation = {
         label: 'Claude 4.7 (Opus)',
         description:
           'Modelo Opus de alta capacidad diseñado para codificación, flujos de trabajo empresariales y tareas de agente de larga duración.',
-      },
-      'claude-v3-opus': {
-        label: 'Claude 3 (Opus)',
-        description: 'Modelo potente para tareas altamente complejas.',
-      },
-      'mistral-7b-instruct': {
-        label: 'Mistral 7B',
-      },
-      'mixtral-8x7b-instruct': {
-        label: 'Mistral-8x7B',
       },
       'mistral-large': {
         label: 'Mistral Grande',

@@ -16,31 +16,6 @@ const translation = {
       adminConsoles: 'Chỉ dành cho Quản trị',
     },
     model: {
-      'claude-v3-haiku': {
-        label: 'Claude 3 (Haiku)',
-        description:
-          'Phiên bản trước được tối ưu hóa cho tốc độ và gọn nhẹ, cho phép phản hồi gần như tức thời.',
-      },
-      'claude-v3.5-sonnet': {
-        label: 'Claude 3.5 (Sonnet) v1',
-        description:
-          'Phiên bản đầu của Claude 3.5. Hỗ trợ nhiều tác vụ, nhưng v2 mang lại độ chính xác được cải thiện.',
-      },
-      'claude-v3.5-sonnet-v2': {
-        label: 'Claude 3.5 (Sonnet) v2',
-        description:
-          'Phiên bản mới nhất của Claude 3.5. Một mô hình nâng cao dựa trên v1 với độ chính xác và hiệu suất cao hơn.',
-      },
-      'claude-v3.5-haiku': {
-        label: 'Claude 3.5 (Haiku) v1',
-        description:
-          'Phiên bản mới nhất, phản hồi nhanh hơn và cải tiến khả năng so với Haiku 3.',
-      },
-      'claude-v4.1-opus': {
-        label: 'Claude 4.1 (Opus)',
-        description:
-          'Mô hình Opus với khả năng lý luận được cải thiện.',
-      },
       'claude-v4.5-opus': {
         label: 'Claude 4.5 (Opus)',
         description:
@@ -55,20 +30,6 @@ const translation = {
         label: 'Claude 4.7 (Opus)',
         description:
           'Mô hình Opus hiệu suất cao được xây dựng cho việc lập trình, quy trình doanh nghiệp và các tác vụ agent dài hạn.',
-      },
-      'claude-v3-opus': {
-        label: 'Claude 3 (Opus)',
-        description: 'Mô hình mạnh mẽ cho các tác vụ cực kỳ phức tạp.',
-      },
-      'mistral-7b-instruct': {
-        label: 'Mistral 7B',
-        description:
-          'Hỗ trợ tạo văn bản tiếng Anh với khả năng mã hóa tự nhiên',
-      },
-      'mixtral-8x7b-instruct': {
-        label: 'Mistral-8x7B',
-        description:
-          'Mô hình MoE thưa phổ biến, chất lượng cao, lý tưởng cho tóm tắt văn bản, hỏi đáp, phân loại, hoàn thành văn bản và sinh mã.',
       },
       'mistral-large': {
         label: 'Mistral Large',
