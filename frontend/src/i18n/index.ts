@@ -1,4 +1,5 @@
 import i18next from 'i18next';
+import { toAppLanguage, toBcp47 } from './languageCodes';
 import detector from 'i18next-browser-languagedetector';
 import { initReactI18next } from 'react-i18next';
 import en from './en';
@@ -109,7 +110,7 @@ const resources = {
 
 // Keep the document language in sync for screen readers and CJK font selection.
 i18next.on('languageChanged', (language) => {
-  document.documentElement.lang = language;
+  document.documentElement.lang = toBcp47(language);
 });
 
 // Settings i18n
@@ -119,6 +120,9 @@ const i18n = i18next
   .init({
     resources,
     fallbackLng: 'en',
+    detection: {
+      convertDetectedLanguage: toAppLanguage,
+    },
     interpolation: {
       escapeValue: false, // react already safes from xss => https://www.i18next.com/translation-function/interpolation#unescape
     },

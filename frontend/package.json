@@ -14,8 +14,6 @@
   "dependencies": {
     "@aws-amplify/ui-react": "^6.15.3",
     "@headlessui/react": "^1.7.15",
-    "@ladle/react": "^5.0.1",
-    "@react-icons/all-files": "^4.1.0",
     "@xstate/react": "^4.1.1",
     "aws-amplify": "^6.16.2",
     "axios": "^1.18.0",
@@ -24,6 +22,7 @@
     "i18next": "^23.6.0",
     "i18next-browser-languagedetector": "^7.1.0",
     "immer": "^10.0.2",
+    "katex": "^0.16.47",
     "react": "^18.2.0",
     "react-children-utilities": "^2.10.0",
     "react-device-detect": "^2.2.3",
@@ -45,12 +44,12 @@
     "tailwind-merge": "^2.2.0",
     "ulid": "^2.3.0",
     "use-debounce": "^10.0.4",
-    "use-immer": "^0.9.0",
     "xstate": "^5.13.0",
     "xstate-v4": "npm:xstate@4.38.3",
     "zustand": "^4.3.9"
   },
   "devDependencies": {
+    "@ladle/react": "^5.1.1",
     "@tailwindcss/typography": "^0.5.9",
     "@types/node": "^22.18.13",
     "@types/react": "^18.2.15",
