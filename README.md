@@ -9,7 +9,7 @@
   </a>
 </p>
 
-[English](https://github.com/aws-samples/bedrock-chat/blob/v3/README.md) | [日本語](https://github.com/aws-samples/bedrock-chat/blob/v3/docs/README_ja-JP.md) | [한국어](https://github.com/aws-samples/bedrock-chat/blob/v3/docs/README_ko-KR.md) | [中文](https://github.com/aws-samples/bedrock-chat/blob/v3/docs/README_zh-CN.md) | [Français](https://github.com/aws-samples/bedrock-chat/blob/v3/docs/README_fr-FR.md) | [Deutsch](https://github.com/aws-samples/bedrock-chat/blob/v3/docs/README_de-DE.md) | [Español](https://github.com/aws-samples/bedrock-chat/blob/v3/docs/README_es-ES.md) | [Italian](https://github.com/aws-samples/bedrock-chat/blob/v3/docs/README_it-IT.md) | [Norsk](https://github.com/aws-samples/bedrock-chat/blob/v3/docs/README_nb-NO.md) | [ไทย](https://github.com/aws-samples/bedrock-chat/blob/v3/docs/README_th-TH.md) | [Bahasa Indonesia](https://github.com/aws-samples/bedrock-chat/blob/v3/docs/README_id-ID.md) | [Bahasa Melayu](https://github.com/aws-samples/bedrock-chat/blob/v3/docs/README_ms-MY.md) | [Tiếng Việt](https://github.com/aws-samples/bedrock-chat/blob/v3/docs/README_vi-VN.md) | [Polski](https://github.com/aws-samples/bedrock-chat/blob/v3/docs/README_pl-PL.md) | [Português Brasil](https://github.com/aws-samples/bedrock-chat/blob/v3/docs/README_pt-BR.md)
+[English](https://github.com/aws-samples/bedrock-chat/blob/v3/README.md) | [日本語](https://github.com/aws-samples/bedrock-chat/blob/v3/docs/README_ja-JP.md) | [한국어](https://github.com/aws-samples/bedrock-chat/blob/v3/docs/README_ko-KR.md) | [中文](https://github.com/aws-samples/bedrock-chat/blob/v3/docs/README_zh-CN.md) | [Français](https://github.com/aws-samples/bedrock-chat/blob/v3/docs/README_fr-FR.md) | [Deutsch](https://github.com/aws-samples/bedrock-chat/blob/v3/docs/README_de-DE.md) | [Español](https://github.com/aws-samples/bedrock-chat/blob/v3/docs/README_es-ES.md) | [Italian](https://github.com/aws-samples/bedrock-chat/blob/v3/docs/README_it-IT.md) | [Norsk](https://github.com/aws-samples/bedrock-chat/blob/v3/docs/README_nb-NO.md) | [ไทย](https://github.com/aws-samples/bedrock-chat/blob/v3/docs/README_th-TH.md) | [Bahasa Melayu](https://github.com/aws-samples/bedrock-chat/blob/v3/docs/README_ms-MY.md) | [Tiếng Việt](https://github.com/aws-samples/bedrock-chat/blob/v3/docs/README_vi-VN.md) | [Polski](https://github.com/aws-samples/bedrock-chat/blob/v3/docs/README_pl-PL.md) | [Português Brasil](https://github.com/aws-samples/bedrock-chat/blob/v3/docs/README_pt-BR.md)
 
 A multilingual generative AI platform powered by [Amazon Bedrock](https://aws.amazon.com/bedrock/).
 Supports chat, custom bots with knowledge (RAG), bot sharing via a bot store, and task automation using agents.
@@ -179,7 +179,7 @@ The override JSON must follow the same structure as cdk.json. You can override a
 #### Example command with parameters:
 
 ```sh
-./bin.sh --disable-self-register --ipv4-ranges "192.0.2.0/25,192.0.2.128/25" --ipv6-ranges "2001:db8:1:2::/64,2001:db8:1:3::/64" --allowed-signup-email-domains "example.com,anotherexample.com" --bedrock-region "us-west-2" --version "v1.2.6"
+./bin.sh --disable-self-register --ipv4-ranges "192.0.2.0/25,192.0.2.128/25" --ipv6-ranges "2001:db8:1:2::/64,2001:db8:1:3::/64" --allowed-signup-email-domains "example.com,anotherexample.com" --bedrock-region "us-west-2" --version "v3"
 ```
 
 - After about 35 minutes, you will get the following output, which you can access from your browser
@@ -342,107 +342,6 @@ bedrockChatParams.set("prod", {
   enableLambdaSnapStart: true,
   enableRagReplicas: true, // Enhanced availability for production
   enableBotStoreReplicas: true, // Enhanced availability for production
-});
-```
-
-> [!Note]
-> Existing users can continue using `cdk.json` without any changes. The `parameter.ts` approach is recommended for new deployments or when you need to manage multiple environments.
-
-### Deploying Multiple Environments
-
-You can deploy multiple environments from the same codebase using the `parameter.ts` file and the `-c envName` option.
-
-#### Prerequisites
-
-1. Define your environments in `parameter.ts` as shown above
-2. Each environment will have its own set of resources with environment-specific prefixes
-
-#### Deployment Commands
-
-To deploy a specific environment:
-
-```bash
-# Deploy the dev environment
-npx cdk deploy --all -c envName=dev
-
-# Deploy the prod environment
-npx cdk deploy --all -c envName=prod
-```
-
-If no environment is specified, the "default" environment is used:
-
-```bash
-# Deploy the default environment
-npx cdk deploy --all
-```
-
-#### Important Notes
-
-1. **Stack Naming**:
-
-   - The main stacks for each environment will be prefixed with the environment name (e.g., `dev-BedrockChatStack`, `prod-BedrockChatStack`)
-   - However, custom bot stacks (`BrChatKbStack*`) and API publishing stacks (`ApiPublishmentStack*`) do not receive environment prefixes as they are created dynamically at runtime
-
-2. **Resource Naming**:
-
-   - Only some resources receive environment prefixes in their names (e.g., `dev_ddb_export` table, `dev-FrontendWebAcl`)
-   - Most resources maintain their original names but are isolated by being in different stacks
-
-3. **Environment Identification**:
-
-   - All resources are tagged with a `CDKEnvironment` tag containing the environment name
-   - You can use this tag to identify which environment a resource belongs to
-   - Example: `CDKEnvironment: dev` or `CDKEnvironment: prod`
-
-4. **Default Environment Override**: If you define a "default" environment in `parameter.ts`, it will override the settings in `cdk.json`. To continue using `cdk.json`, don't define a "default" environment in `parameter.ts`.
-
-5. **Environment Requirements**: To create environments other than "default", you must use `parameter.ts`. The `-c envName` option alone is not sufficient without corresponding environment definitions.
-
-6. **Resource Isolation**: Each environment creates its own set of resources, allowing you to have development, testing, and production environments in the same AWS account without conflicts.
-
-## Others
-
-You can define parameters for your deployment in two ways: using `cdk.json` or using the type-safe `parameter.ts` file.
-
-#### Using cdk.json (Traditional Method)
-
-The traditional way to configure parameters is by editing the `cdk.json` file. This approach is simple but lacks type checking:
-
-```json
-{
-  "app": "npx ts-node --prefer-ts-exts bin/bedrock-chat.ts",
-  "context": {
-    "bedrockRegion": "us-east-1",
-    "allowedIpV4AddressRanges": ["0.0.0.0/1", "128.0.0.0/1"],
-    "selfSignUpEnabled": true
-  }
-}
-```
-
-#### Using parameter.ts (Recommended Type-Safe Method)
-
-For better type safety and developer experience, you can use the `parameter.ts` file to define your parameters:
-
-```typescript
-// Define parameters for the default environment
-bedrockChatParams.set("default", {
-  bedrockRegion: "us-east-1",
-  allowedIpV4AddressRanges: ["192.168.0.0/16"],
-  selfSignUpEnabled: true,
-});
-
-// Define parameters for additional environments
-bedrockChatParams.set("dev", {
-  bedrockRegion: "us-west-2",
-  allowedIpV4AddressRanges: ["10.0.0.0/8"],
-  enableRagReplicas: false, // Cost-saving for dev environment
-});
-
-bedrockChatParams.set("prod", {
-  bedrockRegion: "us-east-1",
-  allowedIpV4AddressRanges: ["172.16.0.0/12"],
-  enableLambdaSnapStart: true,
-  enableRagReplicas: true, // Enhanced availability for production
 });
 ```
 
