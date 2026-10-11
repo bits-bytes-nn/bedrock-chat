@@ -291,6 +291,15 @@ You can define parameters for your deployment in two ways: using `cdk.json` or u
 
 The traditional way to configure parameters is by editing the `cdk.json` file. This approach is simple but lacks type checking:
 
+To keep deployment-specific values out of Git, put them in `cdk/cdk.context.json` instead. The file is ignored by Git, and its values override the ones in `cdk.json`:
+
+```json
+{
+  "bedrockRegion": "ap-northeast-2",
+  "selfSignUpEnabled": false
+}
+```
+
 ```json
 {
   "app": "npx ts-node --prefer-ts-exts bin/bedrock-chat.ts",
