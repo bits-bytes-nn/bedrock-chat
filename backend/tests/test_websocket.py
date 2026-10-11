@@ -5,6 +5,8 @@ import unittest
 from types import SimpleNamespace
 from unittest.mock import patch
 
+from botocore.exceptions import ClientError
+
 sys.path.insert(0, ".")
 os.environ.setdefault("WEBSOCKET_SESSION_TABLE_NAME", "test-websocket-session")
 
@@ -138,6 +140,32 @@ class TestProcessChatInput(unittest.TestCase):
             gatewayapi.sent,
             [{"status": "ERROR", "reason": "Failed to generate the answer."}],
         )
+
+    def test_passes_through_bedrock_model_errors(self):
+        sender = NotificationSender(
+            endpoint_url="https://example.com/dev", connection_id="connection"
+        )
+        chat_input = SimpleNamespace(
+            conversation_id="conversation",
+            bot_id=None,
+            message=SimpleNamespace(model="claude-v4.7-opus"),
+        )
+        error = ClientError(
+            {"Error": {"Code": "AccessDeniedException", "Message": "No access"}},
+            "ConverseStream",
+        )
+
+        with patch.object(websocket, "chat", side_effect=error):
+            process_chat_input(
+                user=None,  # type: ignore[arg-type]
+                chat_input=chat_input,  # type: ignore[arg-type]
+                notificator=sender,
+            )
+
+        gatewayapi = FakeGatewayApi()
+        run_sender(sender, gatewayapi)
+
+        self.assertEqual(gatewayapi.sent, [{"status": "ERROR", "reason": "No access"}])
 
 
 if __name__ == "__main__":

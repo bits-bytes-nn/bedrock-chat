@@ -17,6 +17,7 @@ from app.usecases.chat import chat
 from app.user import User
 from boto3.dynamodb.conditions import Attr, Key
 from botocore.config import Config
+from botocore.exceptions import ClientError
 
 WEBSOCKET_SESSION_TABLE_NAME = os.environ["WEBSOCKET_SESSION_TABLE_NAME"]
 
@@ -274,6 +275,13 @@ def process_chat_input(
     except (PermissionError, ValueError) as e:
         logger.exception("Rejected chat input")
         return error_response(400, str(e))
+
+    except ClientError as e:
+        logger.exception("Bedrock request failed")
+        if e.operation_name in ("Converse", "ConverseStream"):
+            # Model errors such as missing model access are actionable for the user.
+            return error_response(502, e.response["Error"]["Message"])
+        return error_response(500, "Failed to generate the answer.")
 
     except Exception:
         # Unexpected errors may contain resource names and account details.
