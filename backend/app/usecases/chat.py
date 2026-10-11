@@ -1,10 +1,9 @@
 import logging
 from typing import Callable
 
-from app.agents.tools.agent_tool import ToolRunResult
-from app.agents.utils import get_tools
+from app.stream import ToolRunResult
+from app.strands_integration.chat_strands import converse_with_strands
 from app.bedrock import (
-    BedrockGuardrailsModel,
     call_converse_api,
     compose_args_for_converse_api,
     is_prefill_supported,
@@ -32,7 +31,6 @@ from app.repositories.models.conversation import (
 from app.repositories.models.custom_bot import (
     BotAliasModel,
     BotModel,
-    GenerationParamsModel,
 )
 from app.routes.schemas.conversation import (
     ChatInput,
@@ -43,9 +41,8 @@ from app.routes.schemas.conversation import (
     FeedbackOutput,
     MessageOutput,
     SearchHighlight,
-    type_model_name,
 )
-from app.stream import ConverseApiStreamHandler, OnStopInput, OnThinking
+from app.stream import OnStopInput, OnThinking
 from app.usecases.bot import fetch_bot, modify_bot_last_used_time, modify_bot_stats
 from app.usecases.global_config import get_title_model
 from app.user import User
@@ -55,7 +52,6 @@ from app.vector_search import (
     search_related_docs,
     search_result_to_related_document,
 )
-from typing_extensions import deprecated
 from ulid import ULID
 
 logger = logging.getLogger(__name__)
@@ -324,46 +320,20 @@ def chat(
         if on_tool_result:
             on_tool_result(run_result)
 
-    """
-    Routes to Strands or legacy implementation based on USE_STRANDS environment variable.
-    """
-    import os
-
-    use_strands = os.environ.get("USE_STRANDS", "true").lower() == "true"
-
-    if use_strands:
-        from app.strands_integration.chat_strands import converse_with_strands
-
-        result = converse_with_strands(
-            bot=bot,
-            chat_input=chat_input,
-            instructions=instructions,
-            generation_params=generation_params,
-            guardrail=guardrail,
-            display_citation=display_citation,
-            messages=messages,
-            search_results=search_results,
-            on_stream=on_stream,
-            on_thinking=on_thinking,
-            on_tool_result=on_tool_run_result,
-            on_reasoning=on_reasoning,
-        )
-
-    else:
-        result = converse_legacy(
-            bot=bot,
-            chat_input=chat_input,
-            instructions=instructions,
-            generation_params=generation_params,
-            guardrail=guardrail,
-            display_citation=display_citation,
-            messages=messages,
-            search_results=search_results,
-            on_stream=on_stream,
-            on_thinking=on_thinking,
-            on_tool_result=on_tool_run_result,
-            on_reasoning=on_reasoning,
-        )
+    result = converse_with_strands(
+        bot=bot,
+        chat_input=chat_input,
+        instructions=instructions,
+        generation_params=generation_params,
+        guardrail=guardrail,
+        display_citation=display_citation,
+        messages=messages,
+        search_results=search_results,
+        on_stream=on_stream,
+        on_thinking=on_thinking,
+        on_tool_result=on_tool_run_result,
+        on_reasoning=on_reasoning,
+    )
 
     # Post handling: process the result and update conversation
     return post_process_result(
@@ -378,136 +348,6 @@ def chat(
         related_documents=related_documents,
         on_stop=on_stop,
     )
-
-
-@deprecated("Use chat() instead")
-def converse_legacy(
-    bot: BotModel | None,
-    chat_input: ChatInput,
-    instructions: list[str],
-    generation_params: GenerationParamsModel | None,
-    guardrail: BedrockGuardrailsModel | None,
-    display_citation: bool,
-    messages: list[SimpleMessageModel],
-    search_results: list[SearchResult],
-    on_stream: Callable[[str], None] | None = None,
-    on_thinking: Callable[[OnThinking], None] | None = None,
-    on_tool_result: Callable[[ToolRunResult], None] | None = None,
-    on_reasoning: Callable[[str], None] | None = None,
-) -> OnStopInput:
-    """
-    Legacy converse implementation.
-
-    WARNING: This implementation is deprecated and will be removed in a future version.
-    Please migrate to the Strands-based implementation by setting USE_STRANDS=true.
-    """
-    tools = get_tools(bot, chat_input.message.model)
-    stream_handler = ConverseApiStreamHandler(
-        model=chat_input.message.model,
-        instructions=instructions,
-        generation_params=generation_params,
-        guardrail=guardrail,
-        tools=tools,
-        on_stream=on_stream,
-        on_thinking=on_thinking,
-        on_reasoning=on_reasoning,
-    )
-
-    thinking_log: list[SimpleMessageModel] = []
-
-    continue_generate = chat_input.continue_generate
-    input_token_count = 0
-    output_token_count = 0
-    cache_read_input_count = 0
-    cache_write_input_count = 0
-    price = 0.0
-
-    while True:
-        result: OnStopInput = stream_handler.run(
-            messages=messages,
-            search_results=search_results,
-            enable_reasoning=chat_input.enable_reasoning,
-            prompt_caching_enabled=(
-                bot.prompt_caching_enabled if bot is not None else True
-            ),
-        )
-
-        message = result["message"]
-        stop_reason = result["stop_reason"]
-
-        input_token_count += result["input_token_count"]
-        output_token_count += result["output_token_count"]
-        cache_read_input_count += result["cache_read_input_count"]
-        cache_write_input_count += result["cache_write_input_count"]
-        price += result["price"]
-
-        if stop_reason != "tool_use":  # Tool use converged
-            # Retain tool use and its result logs
-            tool_logs = [
-                log
-                for log in thinking_log
-                if any(
-                    isinstance(content, (ToolUseContentModel, ToolResultContentModel))
-                    for content in log.content
-                )
-            ]
-            if tool_logs:
-                message.thinking_log = tool_logs
-
-            return OnStopInput(
-                message=message,
-                stop_reason=stop_reason,
-                input_token_count=input_token_count,
-                output_token_count=output_token_count,
-                cache_read_input_count=cache_read_input_count,
-                cache_write_input_count=cache_write_input_count,
-                price=price,
-            )
-
-        tool_use_message = SimpleMessageModel.from_message_model(message=message)
-        if continue_generate:
-            messages[-1] = tool_use_message
-
-            continue_generate = False
-
-        else:
-            messages.append(tool_use_message)
-
-        thinking_log.append(tool_use_message)
-
-        tool_use_contents = [
-            content
-            for content in tool_use_message.content
-            if isinstance(content, ToolUseContentModel)
-        ]
-
-        run_results: list[ToolRunResult] = []
-        for content in tool_use_contents:
-            tool = tools[content.body.name]
-            run_result = tool.run(
-                tool_use_id=content.body.tool_use_id,
-                input=content.body.input,
-                model=chat_input.message.model,
-                bot=bot,
-            )
-            run_results.append(run_result)
-
-            if on_tool_result:
-                on_tool_result(run_result)
-
-        tool_result_message = SimpleMessageModel(
-            role="user",
-            content=[
-                ToolResultContentModel.from_tool_run_result(
-                    run_result=result,
-                    model=chat_input.message.model,
-                    display_citation=display_citation,
-                )
-                for result in run_results
-            ],
-        )
-        messages.append(tool_result_message)
-        thinking_log.append(tool_result_message)
 
 
 def post_process_result(

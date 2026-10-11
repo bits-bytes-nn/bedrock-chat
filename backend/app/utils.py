@@ -28,11 +28,6 @@ USER_POOL_ID = os.environ.get("USER_POOL_ID", "")
 EMBEDDING_STATE_MACHINE_ARN = os.environ.get("EMBEDDING_STATE_MACHINE_ARN")
 
 
-def snake_to_camel(snake_str):
-    components = snake_str.split("_")
-    return components[0] + "".join(x.title() for x in components[1:])
-
-
 def is_running_on_lambda():
     return "AWS_EXECUTION_ENV" in os.environ
 
@@ -134,21 +129,6 @@ def delete_files_with_prefix_from_s3(bucket: str, prefix: str):
 
     for obj in response["Contents"]:
         client.delete_object(Bucket=bucket, Key=obj["Key"])
-
-
-def check_if_file_exists_in_s3(bucket: str, key: str):
-    client = boto3.client("s3", region_name=BEDROCK_REGION)
-
-    # Check if the file exists
-    try:
-        client.head_object(Bucket=bucket, Key=key)
-    except ClientError as e:
-        if e.response["Error"]["Code"] == "404":
-            return False
-        else:
-            raise
-
-    return True
 
 
 def move_file_in_s3(bucket: str, key: str, new_key: str):

@@ -10,13 +10,6 @@ class GenerationParams(TypedDict):
     reasoning_params: NotRequired[dict[str, int]]
 
 
-class EmbeddingConfig(TypedDict):
-    model_id: str
-    chunk_size: int
-    chunk_overlap: int
-    enable_partition_pdf: bool
-
-
 # Configure generation parameter for Claude chat response.
 # Adjust the values according to your application.
 # See: https://docs.anthropic.com/claude/reference/complete_post

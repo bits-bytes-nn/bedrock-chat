@@ -6,7 +6,7 @@ import json
 import logging
 from typing import Callable
 
-from app.agents.tools.agent_tool import ToolRunResult
+from app.stream import ToolRunResult
 from app.bedrock import calculate_price, BedrockGuardrailsModel
 from app.repositories.models.conversation import SimpleMessageModel
 from app.repositories.models.custom_bot import (

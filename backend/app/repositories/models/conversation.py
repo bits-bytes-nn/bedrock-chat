@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-import json
 import logging
 import re
 from pathlib import Path
-from typing import TYPE_CHECKING, Annotated, Any, Literal, Self, TypeGuard
+from typing import Annotated, Any, Literal, Self, TypeGuard
 from urllib.parse import urlparse, unquote
 
 from app.repositories.models.common import Base64EncodedBytes
@@ -45,9 +44,6 @@ from pydantic import (
     field_validator,
     model_validator,
 )
-
-if TYPE_CHECKING:
-    from app.agents.tools.agent_tool import ToolRunResult
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -436,40 +432,6 @@ def tool_result_model_from_tool_result(tool_result: ToolResult) -> ToolResultMod
         raise ValueError(f"Unknown tool result type")
 
 
-def tool_result_model_from_tool_result_content(
-    content: ToolResultContentBlockOutputTypeDef,
-) -> ToolResultModel:
-    if "text" in content:
-        return TextToolResultModel(text=content["text"])
-
-    elif "json" in content:
-        return JsonToolResultModel(json=content["json"])
-
-    elif "image" in content:
-        return ImageToolResultModel(
-            format=content["image"]["format"],
-            image=(
-                content["image"]["source"]["bytes"]
-                if "bytes" in content["image"]["source"]
-                else b""
-            ),
-        )
-
-    elif "document" in content:
-        if "format" in content["document"]:
-            return DocumentToolResultModel(
-                format=content["document"]["format"],
-                name=content["document"]["name"],
-                document=(
-                    content["document"]["source"]["bytes"]
-                    if "bytes" in content["document"]["source"]
-                    else b""
-                ),
-            )
-
-    raise ValueError(f"Unknown tool result type")
-
-
 class ToolResultContentModelBody(BaseModel):
     tool_use_id: str
     content: list[ToolResultModel]
@@ -522,61 +484,6 @@ class ToolResultContentModel(BaseModel):
         return cls(
             content_type="toolResult",
             body=ToolResultContentModelBody.from_tool_result_content_body(content.body),
-        )
-
-    @classmethod
-    def from_tool_run_result(
-        cls,
-        run_result: ToolRunResult,
-        model: type_model_name,
-        display_citation: bool,
-    ) -> Self:
-        result_contents = [
-            related_document.to_tool_result_model(
-                display_citation=display_citation,
-            )
-            for related_document in run_result["related_documents"]
-        ]
-
-        from app.bedrock import is_nova_model
-
-        if is_nova_model(model=model):
-            text_or_json_contents = [
-                result_content
-                for result_content in result_contents
-                if isinstance(result_content, TextToolResultModel)
-                or isinstance(result_content, JsonToolResultModel)
-            ]
-            if len(text_or_json_contents) > 1:
-                return cls(
-                    content_type="toolResult",
-                    body=ToolResultContentModelBody(
-                        tool_use_id=run_result["tool_use_id"],
-                        content=[
-                            TextToolResultModel(
-                                text=json.dumps(
-                                    [
-                                        (
-                                            content.json_
-                                            if isinstance(content, JsonToolResultModel)
-                                            else content.text
-                                        )
-                                        for content in text_or_json_contents
-                                    ]
-                                ),
-                            ),
-                        ],
-                        status=run_result["status"],
-                    ),
-                )
-
-        return cls(
-            content_type="toolResult",
-            body=ToolResultContentModelBody(
-                tool_use_id=run_result["tool_use_id"],
-                content=result_contents,
-                status=run_result["status"],
-            ),
         )
 
     def to_content(self) -> Content:

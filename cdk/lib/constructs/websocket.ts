@@ -130,7 +130,6 @@ export class WebSocket extends Construct {
           props.enableBedrockGlobalInference.toString(),
         ENABLE_BEDROCK_CROSS_REGION_INFERENCE:
           props.enableBedrockCrossRegionInference.toString(),
-        USE_STRANDS: "true",
       },
       role: handlerRole,
       snapStart: props.enableLambdaSnapStart

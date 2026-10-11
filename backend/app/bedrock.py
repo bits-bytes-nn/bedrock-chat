@@ -27,10 +27,8 @@ from app.vector_search import SearchResult
 
 from botocore.exceptions import ClientError
 from reretry import retry
-from typing_extensions import deprecated
 
 if TYPE_CHECKING:
-    from app.agents.tools.agent_tool import AgentTool
     from app.repositories.models.conversation import ContentModel, SimpleMessageModel
     from mypy_boto3_bedrock_runtime.literals import ConversationRoleType
     from mypy_boto3_bedrock_runtime.type_defs import (
@@ -40,7 +38,6 @@ if TYPE_CHECKING:
         GuardrailConverseContentBlockTypeDef,
         MessageTypeDef,
         SystemContentBlockTypeDef,
-        ToolTypeDef,
     )
 
 
@@ -1179,7 +1176,6 @@ def generation_params_to_converse_configuration(
     return converse_configuration
 
 
-@deprecated("Use strands instead")
 def compose_args_for_converse_api(
     messages: list[SimpleMessageModel],
     model: type_model_name,
@@ -1187,7 +1183,6 @@ def compose_args_for_converse_api(
     generation_params: GenerationParamsModel | None = None,
     guardrail: BedrockGuardrailsModel | None = None,
     search_results: list[SearchResult] | None = None,
-    tools: dict[str, AgentTool] | None = None,
     stream: bool = True,
     enable_reasoning: bool = False,
     prompt_caching_enabled: bool = False,
@@ -1199,17 +1194,6 @@ def compose_args_for_converse_api(
         search_results=search_results,
         prompt_caching_enabled=prompt_caching_enabled,
     )
-    tool_specs: list[ToolTypeDef] | None = (
-        [
-            {
-                "toolSpec": tool.to_converse_spec(),
-            }
-            for tool in tools.values()
-        ]
-        if tools
-        else None
-    )
-
     # Prepare model-specific parameters
     converse_config = generation_params_to_converse_configuration(
         model=model,
@@ -1241,26 +1225,18 @@ def compose_args_for_converse_api(
             else []
         )
 
-    if prompt_caching_enabled and not (
-        tool_specs and not is_prompt_caching_supported(model, target="tool")
+    if (
+        prompt_caching_enabled
+        and is_prompt_caching_supported(model, "system")
+        and len(system_prompts) > 0
     ):
-        if is_prompt_caching_supported(model, "system") and len(system_prompts) > 0:
-            system_prompts.append(
-                {
-                    "cachePoint": {
-                        "type": "default",
-                    },
-                }
-            )
-
-        if is_prompt_caching_supported(model, target="tool") and tool_specs:
-            tool_specs.append(
-                {
-                    "cachePoint": {
-                        "type": "default",
-                    },
-                }
-            )
+        system_prompts.append(
+            {
+                "cachePoint": {
+                    "type": "default",
+                },
+            }
+        )
 
     # Construct the base arguments
     args: ConverseStreamRequestTypeDef = {
@@ -1291,12 +1267,6 @@ def compose_args_for_converse_api(
     if "guardrailConfig" in converse_config:
         args["guardrailConfig"] = converse_config["guardrailConfig"]
 
-    # NOTE: Some models doesn't support tool use. https://docs.aws.amazon.com/bedrock/latest/userguide/conversation-inference-supported-models-features.html
-    if tool_specs:
-        args["toolConfig"] = {
-            "tools": tool_specs,
-        }
-
     return args
 
 
@@ -1308,7 +1278,6 @@ def compose_args_for_converse_api(
     jitter=(0, 2),
     logger=logger,
 )
-@deprecated("Use strands instead")
 def call_converse_api(
     args: ConverseStreamRequestTypeDef,
 ) -> ConverseResponseTypeDef:
