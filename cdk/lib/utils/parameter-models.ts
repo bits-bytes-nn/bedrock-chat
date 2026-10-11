@@ -130,6 +130,14 @@ const BedrockChatParametersSchema = BaseParametersSchema.extend({
   // Frontend branding
   logoPath: z.string().default(""),
 
+  // Operations
+  // Email address subscribed to alarm notifications. Leave empty to only create the topic.
+  alarmEmail: z.string().default(""),
+  // Requests per second for the REST and WebSocket APIs. API Gateway's account limit
+  // still applies; these defaults only stop runaway clients.
+  apiThrottleRateLimit: z.number().default(500),
+  apiThrottleBurstLimit: z.number().default(1000),
+
   // debug parameter
   devAccessIamRoleArn: z.string().default("")
 });
@@ -286,6 +294,9 @@ export function resolveBedrockChatParameters(
     logoPath: app.node.tryGetContext("logoPath"),
     devAccessIamRoleArn: app.node.tryGetContext("devAccessIamRoleArn"),
     tokenValidMinutes: app.node.tryGetContext("tokenValidMinutes"),
+    alarmEmail: app.node.tryGetContext("alarmEmail"),
+    apiThrottleRateLimit: app.node.tryGetContext("apiThrottleRateLimit"),
+    apiThrottleBurstLimit: app.node.tryGetContext("apiThrottleBurstLimit"),
   };
 
   return BedrockChatParametersSchema.parse(contextParams);

@@ -545,6 +545,20 @@ bedrockChatParams.set("default", {
 > [!Note]
 > The `titleModel` is only used internally for generating short conversation titles. Using a smaller, cheaper model for this purpose is recommended as it reduces costs without affecting the user's chat experience.
 
+### Alarms and API Throttling
+
+CloudWatch alarms notify an SNS topic (output `AlarmTopicArn`) when the REST API or chat streaming handler fails repeatedly, when chat requests are throttled, or when a bot knowledge sync fails. Set `alarmEmail` to subscribe an email address; AWS sends a confirmation email first.
+
+The REST and WebSocket APIs are limited to `apiThrottleRateLimit` requests per second (default 500) with a burst of `apiThrottleBurstLimit` (default 1000). Raise them for large deployments.
+
+```typescript
+bedrockChatParams.set("default", {
+  alarmEmail: "ops@example.com",
+  apiThrottleRateLimit: 500,
+  apiThrottleBurstLimit: 1000,
+});
+```
+
 ### Lambda SnapStart
 
 [Lambda SnapStart](https://docs.aws.amazon.com/lambda/latest/dg/snapstart.html) improves cold start times for Lambda functions, providing faster response times for better user experience. On the other hand, for Python functions, there is a [charge depending on cache size](https://aws.amazon.com/lambda/pricing/#SnapStart_Pricing) and [not available in some regions](https://docs.aws.amazon.com/lambda/latest/dg/snapstart.html#snapstart-supported-regions) currently. To disable SnapStart, edit `cdk.json`.
