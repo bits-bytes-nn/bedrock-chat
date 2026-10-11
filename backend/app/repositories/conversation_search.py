@@ -1,6 +1,5 @@
 import logging
 import os
-from typing import Optional
 
 from app.repositories.common import get_opensearch_client
 from app.repositories.models.conversation_search import ConversationSearchModel

@@ -1,6 +1,4 @@
-import json
 import os
-from time import sleep
 
 import boto3
 from app.routes.schemas.conversation import ChatInput, Conversation, MessageInput
@@ -9,7 +7,7 @@ from app.routes.schemas.published_api import (
     ChatOutputWithoutBotId,
     MessageRequestedResponse,
 )
-from app.usecases.chat import chat, fetch_conversation
+from app.usecases.chat import fetch_conversation
 from app.user import User
 from fastapi import APIRouter, HTTPException, Request
 from ulid import ULID

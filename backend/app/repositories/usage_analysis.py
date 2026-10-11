@@ -2,16 +2,14 @@ import asyncio
 import logging
 import os
 import re
-import time
-from datetime import date, timedelta
+from datetime import date
 from functools import partial
-from typing import Any
 
 import boto3
 from app.repositories.common import get_bot_table_client
 from app.repositories.models.custom_bot import BotMetaWithStackInfo
 from app.repositories.models.usage_analysis import UsagePerBot, UsagePerUser
-from boto3.dynamodb.conditions import Attr, Key
+from boto3.dynamodb.conditions import Key
 
 REGION = os.environ.get("REGION", "us-east-1")
 USAGE_ANALYSIS_DATABASE = os.environ.get(

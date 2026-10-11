@@ -1,4 +1,3 @@
-from decimal import Decimal
 from app.routes.schemas.base import BaseSchema
 from app.repositories.models.common import Float
 

@@ -1,7 +1,7 @@
 from app.routes.schemas.bot import BotMetaOutput
 from app.usecases.bot_store import fetch_pickup_bots, fetch_popular_bots, search_bots
 from app.user import User
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Request
 
 router = APIRouter(tags=["bot_store"])
 

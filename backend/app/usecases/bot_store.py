@@ -6,8 +6,6 @@ from app.repositories.bot_store import (
     find_random_bots,
 )
 from app.routes.schemas.bot import BotMetaOutput
-from app.routes.schemas.bot_guardrails import BedrockGuardrailsOutput
-from app.routes.schemas.bot_kb import BedrockKnowledgeBaseOutput
 from app.user import User
 
 logger = logging.getLogger(__name__)
