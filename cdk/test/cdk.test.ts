@@ -220,6 +220,27 @@ describe("Bedrock Chat Stack Test", () => {
     const template = Template.fromStack(stack);
 
     template.resourceCountIs("AWS::Cognito::UserPoolIdentityProvider", 0);
+
+    // User data survives stack deletion. The WebSocket session table is temporary.
+    template.resourcePropertiesCountIs(
+      "AWS::DynamoDB::Table",
+      { DeletionProtectionEnabled: true },
+      2
+    );
+    template.hasResource("AWS::Cognito::UserPool", {
+      DeletionPolicy: "Retain",
+      Properties: Match.objectLike({ DeletionProtection: "ACTIVE" }),
+    });
+
+    // Lambda roles must not get the Bedrock control plane.
+    const policies = template.findResources("AWS::IAM::Policy");
+    const actions = Object.values(policies).flatMap((policy: any) =>
+      policy.Properties.PolicyDocument.Statement.flatMap((statement: any) =>
+        [statement.Action].flat()
+      )
+    );
+    expect(actions).not.toContain("bedrock:*");
+    expect(actions).toContain("bedrock:InvokeModelWithResponseStream");
   });
 
   test("custom domain configuration", () => {

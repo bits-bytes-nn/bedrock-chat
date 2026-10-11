@@ -14,6 +14,7 @@ import * as s3 from "aws-cdk-lib/aws-s3";
 import { excludeDockerImage } from "../constants/docker";
 import { PythonFunction } from "@aws-cdk/aws-lambda-python-alpha";
 import { Database } from "./database";
+import { bedrockChatPolicyStatement } from "../utils/bedrock-policies";
 
 export interface WebSocketProps {
   readonly database: Database;
@@ -73,12 +74,7 @@ export class WebSocket extends Construct {
         resources: [tableAccessRole.roleArn],
       })
     );
-    handlerRole.addToPolicy(
-      new iam.PolicyStatement({
-        actions: ["bedrock:*"],
-        resources: ["*"],
-      })
-    );
+    handlerRole.addToPolicy(bedrockChatPolicyStatement());
     handlerRole.addToPolicy(
       new iam.PolicyStatement({
         effect: iam.Effect.ALLOW,

@@ -17,7 +17,6 @@ const publishedApiAllowedOrigins = JSON.parse(
 );
 
 // Log all parameters at once for debugging
-console.log("API Publish Parameters:", JSON.stringify(params));
 
 const webAclArn = cdk.Fn.importValue(
   `${params.envPrefix}${sepHyphen}PublishedApiWebAclArn`

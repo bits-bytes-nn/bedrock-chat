@@ -197,9 +197,9 @@ export class BedrockChatStack extends cdk.Stack {
       encryption: BucketEncryption.S3_MANAGED,
       blockPublicAccess: BlockPublicAccess.BLOCK_ALL,
       enforceSSL: true,
-      removalPolicy: RemovalPolicy.DESTROY,
+      // Stores large conversations, so keep it when the stack is deleted.
+      removalPolicy: RemovalPolicy.RETAIN,
       objectOwnership: ObjectOwnership.OBJECT_WRITER,
-      autoDeleteObjects: true,
       serverAccessLogsBucket: accessLogBucket,
       serverAccessLogsPrefix: "LargeMessageBucket",
     });

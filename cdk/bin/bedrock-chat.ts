@@ -28,11 +28,8 @@ const params = getBedrockChatParameters(
 
 const sepHyphen = params.envPrefix ? "-" : "";
 
-// Enable or disable creating the Frontend WAF via context 'enableFrontendWaf' (defaults to true)
-const enableFrontendWaf = (app.node.tryGetContext("enableFrontendWaf") as boolean | undefined) ?? true;
-
 let waf: FrontendWafStack | undefined;
-if (enableFrontendWaf) {
+if (params.enableFrontendWaf) {
   // WAF for frontend
   // 2023/9: Currently, the WAF for CloudFront needs to be created in the North America region (us-east-1), so the stacks are separated
   // https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-wafv2-webacl.html

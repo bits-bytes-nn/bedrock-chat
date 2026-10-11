@@ -17,6 +17,7 @@ import * as sfn from "aws-cdk-lib/aws-stepfunctions";
 import * as tasks from "aws-cdk-lib/aws-stepfunctions-tasks";
 import { Platform } from "aws-cdk-lib/aws-ecr-assets";
 import { Database } from "./database";
+import { bedrockIngestionPolicyStatement } from "../utils/bedrock-policies";
 
 export interface EmbeddingProps {
   readonly database: Database;
@@ -57,12 +58,7 @@ export class Embedding extends Construct {
         resources: [props.database.tableAccessRole.roleArn],
       })
     );
-    handlerRole.addToPolicy(
-      new iam.PolicyStatement({
-        actions: ["bedrock:*"],
-        resources: ["*"],
-      })
-    );
+    handlerRole.addToPolicy(bedrockIngestionPolicyStatement());
     handlerRole.addToPolicy(
       new iam.PolicyStatement({
         actions: [
