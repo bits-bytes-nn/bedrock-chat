@@ -5,6 +5,7 @@ from datetime import datetime
 from typing import Literal
 
 import boto3
+from botocore.config import Config
 from botocore.client import Config
 from botocore.exceptions import ClientError
 
@@ -38,7 +39,17 @@ def get_bedrock_client(region=BEDROCK_REGION):
 
 
 def get_bedrock_runtime_client(region=BEDROCK_REGION):
-    client = boto3.client("bedrock-runtime", region_name=region)
+    # Synchronous callers sit behind API Gateway with a 30-second limit, so fail
+    # fast and let botocore retry throttling with short backoff.
+    client = boto3.client(
+        "bedrock-runtime",
+        region_name=region,
+        config=Config(
+            connect_timeout=5,
+            read_timeout=25,
+            retries={"mode": "standard", "max_attempts": 3},
+        ),
+    )
     return client
 
 

@@ -42,6 +42,7 @@ new ApiPublishmentStack(app, `ApiPublishmentStack${params.publishedApiId}`, {
     region: process.env.CDK_DEFAULT_REGION,
   },
   bedrockRegion: params.bedrockRegion,
+  enableBedrockGlobalInference: params.enableBedrockGlobalInference,
   enableBedrockCrossRegionInference: params.enableBedrockCrossRegionInference,
   conversationTableName: conversationTableName,
   botTableName: botTableName,

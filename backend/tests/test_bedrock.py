@@ -16,114 +16,77 @@ import unittest
 from pprint import pprint
 from unittest.mock import patch
 
+from app import bedrock
 from app.bedrock import call_converse_api, compose_args_for_converse_api, get_model_id
 from app.repositories.models.conversation import SimpleMessageModel, TextContentModel
 from app.repositories.models.custom_bot_guardrails import BedrockGuardrailsModel
 from app.routes.schemas.conversation import type_model_name
 
-# MODEL: type_model_name = "claude-v3-haiku"
-MODEL: type_model_name = "claude-v3.7-sonnet"
+MODEL: type_model_name = "claude-v5.5-haiku"
 
 
 class TestGetModelId(unittest.TestCase):
-    def test_get_model_id_with_cross_region_supported_model(self):
-        model = "claude-v3.5-sonnet"
-        # Prefix with "us." to enable cross-region
-        expected_model_id = "us.anthropic.claude-3-5-sonnet-20240620-v1:0"
+    PROFILES = frozenset(
+        {
+            "global.anthropic.claude-sonnet-4-6",
+            "us.anthropic.claude-sonnet-4-6",
+            "us.amazon.nova-pro-v1:0",
+            "apac.amazon.nova-pro-v1:0",
+        }
+    )
+
+    def get_model_id(self, model, **kwargs) -> str:
+        with patch.object(
+            bedrock, "_list_system_inference_profile_ids", return_value=self.PROFILES
+        ):
+            return get_model_id(model, bedrock_region="us-east-1", **kwargs)
+
+    def test_prefers_global_profile(self):
         self.assertEqual(
-            get_model_id(
-                model,
-                enable_global=True,
-                enable_cross_region=True,
-                bedrock_region="us-east-1",
+            self.get_model_id(
+                "claude-v4.6-sonnet", enable_global=True, enable_cross_region=True
             ),
-            expected_model_id,
+            "global.anthropic.claude-sonnet-4-6",
         )
 
-    def test_get_model_id_without_cross_region(self):
-        model = "claude-v3.5-sonnet"
-        # No prefix to disable cross-region
-        expected_model_id = "anthropic.claude-3-5-sonnet-20240620-v1:0"
+    def test_uses_geographic_profile_without_global(self):
         self.assertEqual(
-            get_model_id(
-                model,
-                enable_global=False,
-                enable_cross_region=False,
-                bedrock_region="us-east-1",
+            self.get_model_id(
+                "claude-v4.6-sonnet", enable_global=False, enable_cross_region=True
             ),
-            expected_model_id,
+            "us.anthropic.claude-sonnet-4-6",
         )
 
-    def test_get_model_id_with_unsupported_region_for_cross_region(self):
-        model = "claude-v3.5-sonnet"
-        # Cross region is disabled because the region is not supported
-        expected_model_id = "apac.anthropic.claude-3-5-sonnet-20240620-v1:0"
+    def test_falls_back_to_geographic_profile_when_global_is_missing(self):
         self.assertEqual(
-            get_model_id(
-                model,
-                enable_global=True,
-                enable_cross_region=True,
-                bedrock_region="ap-northeast-1",
+            self.get_model_id(
+                "amazon-nova-pro", enable_global=True, enable_cross_region=True
             ),
-            expected_model_id,
+            "apac.amazon.nova-pro-v1:0",
         )
 
-    def test_get_model_id_with_global_inference_priority(self):
-        """Global inference is selected for supported model and region"""
-        model = "claude-v4-sonnet"
-        expected_model_id = "global.anthropic.claude-sonnet-4-20250514-v1:0"
+    def test_uses_base_model_id_when_profiles_are_disabled(self):
+        with patch.object(bedrock, "_list_system_inference_profile_ids") as profiles:
+            model_id = get_model_id(
+                "claude-v4.6-sonnet", enable_global=False, enable_cross_region=False
+            )
+
+        self.assertEqual(model_id, "anthropic.claude-sonnet-4-6")
+        profiles.assert_not_called()
+
+    def test_uses_base_model_id_without_profile(self):
         self.assertEqual(
-            get_model_id(
-                model,
-                enable_global=True,
-                enable_cross_region=True,
-                bedrock_region="us-east-1",
+            self.get_model_id(
+                "mistral-large", enable_global=True, enable_cross_region=True
             ),
-            expected_model_id,
+            "mistral.mistral-large-2402-v1:0",
         )
 
-    def test_get_model_id_without_global_with_cross_region_inference_priority(self):
-        """Global inference is selected for supported model and region"""
-        model = "claude-v4-sonnet"
-        expected_model_id = "us.anthropic.claude-sonnet-4-20250514-v1:0"
-        self.assertEqual(
-            get_model_id(
-                model,
-                enable_global=False,
-                enable_cross_region=True,
-                bedrock_region="us-east-1",
-            ),
-            expected_model_id,
-        )
-
-    def test_get_model_id_with_regional_fallback(self):
-        """Falls back to regional cross-region for non-global supported models"""
-        model = "claude-v3.5-sonnet"  # Non-global supported
-        expected_model_id = "us.anthropic.claude-3-5-sonnet-20240620-v1:0"
-        self.assertEqual(
-            get_model_id(
-                model,
-                enable_global=True,
-                enable_cross_region=True,
-                bedrock_region="us-east-1",
-            ),
-            expected_model_id,
-        )
-
-    def test_get_model_id_with_unsupported_region_fallback(self):
-        """Falls back to regional for global-supported model in unsupported region"""
-        model = "claude-v4-sonnet"
-        # ap-south-1 is not global-supported but APAC regional-supported
-        expected_model_id = "apac.anthropic.claude-sonnet-4-20250514-v1:0"
-        self.assertEqual(
-            get_model_id(
-                model,
-                enable_global=True,
-                enable_cross_region=True,
-                bedrock_region="ap-south-1",
-            ),
-            expected_model_id,
-        )
+    def test_rejects_retired_model(self):
+        with self.assertRaises(ValueError):
+            self.get_model_id(
+                "claude-v3.7-sonnet", enable_global=True, enable_cross_region=True
+            )
 
 
 @pytest.mark.aws
@@ -143,12 +106,12 @@ class TestCallConverseApi(unittest.TestCase):
         # Use global inference supported model
         arg = compose_args_for_converse_api(
             [message],
-            "claude-v4-sonnet",  # Global inference supported
+            "claude-v5.5-haiku",
             stream=False,
         )
 
         # Verify modelId is global profile
-        expected_model_id = "global.anthropic.claude-sonnet-4-20250514-v1:0"
+        expected_model_id = "global.anthropic.claude-haiku-5-5"
         self.assertEqual(arg["modelId"], expected_model_id)
 
         # Actual API call
@@ -176,12 +139,12 @@ class TestCallConverseApi(unittest.TestCase):
         # Use non-global supported model
         arg = compose_args_for_converse_api(
             [message],
-            "claude-v3.5-sonnet",  # Non-global supported, regional supported
+            "amazon-nova-pro",  # No global profile
             stream=False,
         )
 
         # Verify modelId is regional profile
-        expected_model_id = "us.anthropic.claude-3-5-sonnet-20240620-v1:0"
+        expected_model_id = "us.amazon.nova-pro-v1:0"
         self.assertEqual(arg["modelId"], expected_model_id)
 
         # Actual API call

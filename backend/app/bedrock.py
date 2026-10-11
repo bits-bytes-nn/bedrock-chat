@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import functools
 import logging
 import os
 from typing import (
@@ -7,26 +8,18 @@ from typing import (
     Any,
     Literal,
     NotRequired,
-    Optional,
     TypedDict,
     TypeGuard,
 )
 
-from app.config import (
-    BEDROCK_PRICING,
-    DEFAULT_DEEP_SEEK_GENERATION_CONFIG,
-    DEFAULT_GENERATION_CONFIG,
-    DEFAULT_LLAMA_GENERATION_CONFIG,
-    DEFAULT_MISTRAL_GENERATION_CONFIG,
-)
+import boto3
+from app.config import DEFAULT_GENERATION_CONFIG
+from app.model_registry import get_model_spec
 from app.repositories.models.custom_bot import GenerationParamsModel
 from app.repositories.models.custom_bot_guardrails import BedrockGuardrailsModel
 from app.routes.schemas.conversation import type_model_name
 from app.utils import get_bedrock_runtime_client
 from app.vector_search import SearchResult
-
-from botocore.exceptions import ClientError
-from reretry import retry
 
 if TYPE_CHECKING:
     from app.repositories.models.conversation import ContentModel, SimpleMessageModel
@@ -53,474 +46,6 @@ ENABLE_BEDROCK_CROSS_REGION_INFERENCE = (
 )
 
 # Base model IDs mapping
-BASE_MODEL_IDS = {
-    "claude-v4-opus": "anthropic.claude-opus-4-20250514-v1:0",
-    "claude-v4.1-opus": "anthropic.claude-opus-4-1-20250805-v1:0",
-    "claude-v4.5-opus": "anthropic.claude-opus-4-5-20251101-v1:0",
-    "claude-v4.6-opus": "anthropic.claude-opus-4-6-v1",
-    "claude-v4.7-opus": "anthropic.claude-opus-4-7",
-    "claude-v4-sonnet": "anthropic.claude-sonnet-4-20250514-v1:0",
-    "claude-v4.5-sonnet": "anthropic.claude-sonnet-4-5-20250929-v1:0",
-    "claude-v4.6-sonnet": "anthropic.claude-sonnet-4-6",
-    "claude-v4.5-haiku": "anthropic.claude-haiku-4-5-20251001-v1:0",
-    "claude-v3-haiku": "anthropic.claude-3-haiku-20240307-v1:0",
-    "claude-v3-opus": "anthropic.claude-3-opus-20240229-v1:0",
-    "claude-v3.5-sonnet": "anthropic.claude-3-5-sonnet-20240620-v1:0",
-    "claude-v3.5-sonnet-v2": "anthropic.claude-3-5-sonnet-20241022-v2:0",
-    "claude-v3.7-sonnet": "anthropic.claude-3-7-sonnet-20250219-v1:0",
-    "claude-v3.5-haiku": "anthropic.claude-3-5-haiku-20241022-v1:0",
-    "mistral-7b-instruct": "mistral.mistral-7b-instruct-v0:2",
-    "mixtral-8x7b-instruct": "mistral.mixtral-8x7b-instruct-v0:1",
-    "mistral-large": "mistral.mistral-large-2402-v1:0",
-    "mistral-large-2": "mistral.mistral-large-2407-v1:0",
-    "amazon-nova-pro": "amazon.nova-pro-v1:0",
-    "amazon-nova-lite": "amazon.nova-lite-v1:0",
-    "amazon-nova-micro": "amazon.nova-micro-v1:0",
-    "deepseek-r1": "deepseek.r1-v1:0",
-    "llama3-3-70b-instruct": "meta.llama3-3-70b-instruct-v1:0",
-    "llama3-2-1b-instruct": "meta.llama3-2-1b-instruct-v1:0",
-    "llama3-2-3b-instruct": "meta.llama3-2-3b-instruct-v1:0",
-    "llama3-2-11b-instruct": "meta.llama3-2-11b-instruct-v1:0",
-    "llama3-2-90b-instruct": "meta.llama3-2-90b-instruct-v1:0",
-    # OpenAI GPT-OSS models
-    "gpt-oss-20b": "openai.gpt-oss-20b-1:0",
-    "gpt-oss-120b": "openai.gpt-oss-120b-1:0",
-}
-
-# Global inference profiles
-GLOBAL_INFERENCE_PROFILES = {
-    "claude-v4.5-opus": {
-        "supported_regions": [
-            "us-west-2",
-            "us-west-1",
-            "us-east-2",
-            "us-east-1",
-            "sa-east-1",
-            "eu-west-3",
-            "eu-west-2",
-            "eu-west-1",
-            "eu-south-2",
-            "eu-south-1",
-            "eu-north-1",
-            "eu-central-2",
-            "eu-central-1",
-            "ca-central-1",
-            "ap-southeast-4",
-            "ap-southeast-3",
-            "ap-southeast-2",
-            "ap-southeast-1",
-            "ap-south-2",
-            "ap-south-1",
-            "ap-northeast-3",
-            "ap-northeast-2",
-            "ap-northeast-1",
-        ]
-    },
-    "claude-v4.6-opus": {
-        "supported_regions": [
-            "us-west-2",
-            "us-west-1",
-            "us-east-2",
-            "us-east-1",
-            "sa-east-1",
-            "eu-west-3",
-            "eu-west-2",
-            "eu-west-1",
-            "eu-south-2",
-            "eu-south-1",
-            "eu-north-1",
-            "eu-central-2",
-            "eu-central-1",
-            "ca-central-1",
-            "ap-southeast-4",
-            "ap-southeast-3",
-            "ap-southeast-2",
-            "ap-southeast-1",
-            "ap-south-2",
-            "ap-south-1",
-            "ap-northeast-3",
-            "ap-northeast-2",
-            "ap-northeast-1",
-        ]
-    },
-    "claude-v4.6-sonnet": {
-        "supported_regions": [
-            "us-west-2",
-            "us-west-1",
-            "us-east-2",
-            "us-east-1",
-            "sa-east-1",
-            "eu-west-3",
-            "eu-west-2",
-            "eu-west-1",
-            "eu-south-2",
-            "eu-south-1",
-            "eu-north-1",
-            "eu-central-2",
-            "eu-central-1",
-            "ca-central-1",
-            "ap-southeast-4",
-            "ap-southeast-3",
-            "ap-southeast-2",
-            "ap-southeast-1",
-            "ap-south-2",
-            "ap-south-1",
-            "ap-northeast-3",
-            "ap-northeast-2",
-            "ap-northeast-1",
-        ]
-    },
-    "claude-v4.7-opus": {
-        "supported_regions": [
-            "us-west-2",
-            "us-west-1",
-            "us-east-2",
-            "us-east-1",
-            "sa-east-1",
-            "eu-west-3",
-            "eu-west-2",
-            "eu-west-1",
-            "eu-south-2",
-            "eu-south-1",
-            "eu-north-1",
-            "eu-central-2",
-            "eu-central-1",
-            "ca-central-1",
-            "ca-west-1",
-            "ap-southeast-4",
-            "ap-southeast-3",
-            "ap-southeast-2",
-            "ap-southeast-1",
-            "ap-south-2",
-            "ap-south-1",
-            "ap-northeast-3",
-            "ap-northeast-2",
-            "ap-northeast-1",
-        ]
-    },
-    "claude-v4-sonnet": {
-        "supported_regions": [
-            "us-west-2",
-            "us-east-1",
-            "us-east-2",
-            "eu-west-1",
-            "ap-northeast-1",
-        ]
-    },
-    "claude-v4.5-sonnet": {
-        "supported_regions": [
-            "us-west-2",
-            "us-west-1",
-            "us-east-2",
-            "us-east-1",
-            "sa-east-1",
-            "eu-west-3",
-            "eu-west-2",
-            "eu-west-1",
-            "eu-south-2",
-            "eu-south-1",
-            "eu-north-1",
-            "eu-central-2",
-            "eu-central-1",
-            "ca-central-1",
-            "ap-southeast-4",
-            "ap-southeast-3",
-            "ap-southeast-2",
-            "ap-southeast-1",
-            "ap-south-2",
-            "ap-south-1",
-            "ap-northeast-3",
-            "ap-northeast-2",
-            "ap-northeast-1",
-        ]
-    },
-    "claude-v4.5-haiku": {
-        "supported_regions": [
-            "us-west-2",
-            "us-west-1",
-            "us-east-2",
-            "us-east-1",
-            "sa-east-1",
-            "eu-west-3",
-            "eu-west-2",
-            "eu-west-1",
-            "eu-south-2",
-            "eu-south-1",
-            "eu-north-1",
-            "eu-central-2",
-            "eu-central-1",
-            "ca-central-1",
-            "ap-southeast-4",
-            "ap-southeast-3",
-            "ap-southeast-2",
-            "ap-southeast-1",
-            "ap-south-2",
-            "ap-south-1",
-            "ap-northeast-3",
-            "ap-northeast-2",
-            "ap-northeast-1",
-        ]
-    },
-}
-
-# Regional inference profiles
-REGIONAL_INFERENCE_PROFILES = {
-    "claude-v4-opus": {
-        "supported_regions": {"us-east-1": "us", "us-east-2": "us", "us-west-2": "us"}
-    },
-    "claude-v4.1-opus": {
-        "supported_regions": {"us-east-1": "us", "us-east-2": "us", "us-west-2": "us"}
-    },
-    # "claude-v4.5-opus" only available on global endpoint
-    "claude-v4.7-opus": {
-        "supported_regions": {
-            "us-east-1": "us",
-            "us-east-2": "us",
-            "us-west-1": "us",
-            "us-west-2": "us",
-            "ca-central-1": "us",
-            "ca-west-1": "us",
-            "eu-central-1": "eu",
-            "eu-central-2": "eu",
-            "eu-north-1": "eu",
-            "eu-south-1": "eu",
-            "eu-south-2": "eu",
-            "eu-west-1": "eu",
-            "eu-west-2": "eu",
-            "eu-west-3": "eu",
-            "ap-northeast-1": "jp",
-            "ap-northeast-3": "jp",
-            "ap-southeast-2": "au",
-            "ap-southeast-4": "au",
-        }
-    },
-    "claude-v4.6-opus": {
-        "supported_regions": {
-            "us-east-1": "us",
-            "us-east-2": "us",
-            "us-west-1": "us",
-            "us-west-2": "us",
-            "ca-central-1": "us",
-            "eu-central-1": "eu",
-            "eu-central-2": "eu",
-            "eu-north-1": "eu",
-            "eu-south-1": "eu",
-            "eu-south-2": "eu",
-            "eu-west-1": "eu",
-            "eu-west-2": "eu",
-            "eu-west-3": "eu",
-            "ap-southeast-2": "au",
-            "ap-southeast-4": "au",
-        }
-    },
-    "claude-v4.6-sonnet": {
-        "supported_regions": {
-            "us-east-1": "us",
-            "us-east-2": "us",
-            "us-west-1": "us",
-            "us-west-2": "us",
-            "ca-central-1": "us",
-            "eu-central-1": "eu",
-            "eu-central-2": "eu",
-            "eu-north-1": "eu",
-            "eu-south-1": "eu",
-            "eu-south-2": "eu",
-            "eu-west-1": "eu",
-            "eu-west-2": "eu",
-            "eu-west-3": "eu",
-            "ap-southeast-2": "au",
-            "ap-southeast-4": "au",
-        }
-    },
-    "claude-v4-sonnet": {
-        "supported_regions": {
-            "us-east-1": "us",
-            "us-east-2": "us",
-            "us-west-2": "us",
-            "eu-central-1": "eu",
-            "eu-west-1": "eu",
-            "eu-west-3": "eu",
-            "ap-south-1": "apac",
-            "ap-northeast-1": "apac",
-            "ap-northeast-2": "apac",
-            "ap-southeast-1": "apac",
-            "ap-southeast-2": "apac",
-        }
-    },
-    "claude-v4.5-sonnet": {
-        "supported_regions": {
-            "us-east-1": "us",
-            "us-east-2": "us",
-            "us-west-1": "us",
-            "us-west-2": "us",
-            "eu-central-1": "eu",
-            "eu-north-1": "eu",
-            "eu-west-1": "eu",
-            "eu-west-2": "eu",
-            "eu-west-3": "eu",
-            "eu-south-1": "eu",
-            "eu-south-2": "eu",
-            "ap-northeast-1": "jp",
-            "ap-northeast-3": "jp",
-        }
-    },
-    "claude-v4.5-haiku": {
-        "supported_regions": {
-            "us-east-1": "us",
-            "us-east-2": "us",
-            "us-west-1": "us",
-            "us-west-2": "us",
-            "ap-northeast-1": "jp",
-            "ap-northeast-3": "jp",
-            "eu-central-1": "eu",
-            "eu-central-2": "eu",
-            "eu-north-1": "eu",
-            "eu-west-1": "eu",
-            "eu-west-3": "eu",
-            "eu-south-1": "eu",
-            "eu-south-2": "eu",
-        }
-    },
-    "claude-v3-haiku": {
-        "supported_regions": {
-            "us-east-1": "us",
-            "us-east-2": "us",
-            "us-west-2": "us",
-            "eu-central-1": "eu",
-            "eu-west-1": "eu",
-            "eu-west-3": "eu",
-            "ap-south-1": "apac",
-            "ap-northeast-1": "apac",
-            "ap-northeast-2": "apac",
-            "ap-southeast-1": "apac",
-            "ap-southeast-2": "apac",
-        }
-    },
-    "claude-v3-opus": {"supported_regions": {"us-east-1": "us", "us-west-2": "us"}},
-    "claude-v3.5-sonnet": {
-        "supported_regions": {
-            "us-east-1": "us",
-            "us-east-2": "us",
-            "us-west-2": "us",
-            "eu-central-1": "eu",
-            "eu-west-1": "eu",
-            "eu-west-3": "eu",
-            "ap-south-1": "apac",
-            "ap-northeast-1": "apac",
-            "ap-northeast-2": "apac",
-            "ap-southeast-1": "apac",
-            "ap-southeast-2": "apac",
-        }
-    },
-    "claude-v3.5-sonnet-v2": {
-        "supported_regions": {
-            "us-east-1": "us",
-            "us-east-2": "us",
-            "us-west-2": "us",
-            "ap-south-1": "apac",
-            "ap-northeast-1": "apac",
-            "ap-northeast-2": "apac",
-            "ap-northeast-3": "apac",
-            "ap-southeast-1": "apac",
-            "ap-southeast-2": "apac",
-        }
-    },
-    "claude-v3.7-sonnet": {
-        "supported_regions": {
-            "us-east-1": "us",
-            "us-east-2": "us",
-            "us-west-2": "us",
-            "eu-central-1": "eu",
-            "eu-west-1": "eu",
-            "eu-west-3": "eu",
-        }
-    },
-    "claude-v3.5-haiku": {
-        "supported_regions": {"us-east-1": "us", "us-east-2": "us", "us-west-2": "us"}
-    },
-    "amazon-nova-pro": {
-        "supported_regions": {
-            "us-east-1": "us",
-            "us-east-2": "us",
-            "us-west-1": "us",
-            "us-west-2": "us",
-            "eu-central-1": "eu",
-            "eu-west-1": "eu",
-            "eu-west-3": "eu",
-            "eu-north-1": "eu",
-            "ap-south-1": "apac",
-            "ap-northeast-1": "apac",
-            "ap-northeast-2": "apac",
-            "ap-southeast-1": "apac",
-            "ap-southeast-2": "apac",
-        }
-    },
-    "amazon-nova-lite": {
-        "supported_regions": {
-            "us-east-2": "us",
-            "us-west-1": "us",
-            "us-west-2": "us",
-            "eu-central-1": "eu",
-            "eu-west-1": "eu",
-            "eu-west-3": "eu",
-            "eu-north-1": "eu",
-            "ap-south-1": "apac",
-            "ap-northeast-1": "apac",
-            "ap-northeast-2": "apac",
-            "ap-southeast-1": "apac",
-            "ap-southeast-2": "apac",
-        }
-    },
-    "amazon-nova-micro": {
-        "supported_regions": {
-            "us-east-2": "us",
-            "us-west-2": "us",
-            "eu-north-1": "eu",
-            "ap-south-1": "apac",
-            "ap-northeast-1": "apac",
-            "ap-northeast-2": "apac",
-            "ap-southeast-1": "apac",
-            "ap-southeast-2": "apac",
-        }
-    },
-    "deepseek-r1": {
-        "supported_regions": {"us-east-1": "us", "us-east-2": "us", "us-west-2": "us"}
-    },
-    "llama3-3-70b-instruct": {
-        "supported_regions": {"us-east-1": "us", "us-east-2": "us", "us-west-2": "us"}
-    },
-    "llama3-2-1b-instruct": {
-        "supported_regions": {
-            "us-east-1": "us",
-            "us-east-2": "us",
-            "us-west-2": "us",
-            "eu-central-1": "eu",
-            "eu-west-1": "eu",
-            "eu-west-3": "eu",
-        }
-    },
-    "llama3-2-3b-instruct": {
-        "supported_regions": {
-            "us-east-1": "us",
-            "us-east-2": "us",
-            "us-west-2": "us",
-            "eu-central-1": "eu",
-            "eu-west-1": "eu",
-            "eu-west-3": "eu",
-        }
-    },
-    "llama3-2-11b-instruct": {
-        "supported_regions": {"us-east-1": "us", "us-east-2": "us", "us-west-2": "us"}
-    },
-    "llama3-2-90b-instruct": {
-        "supported_regions": {"us-east-1": "us", "us-east-2": "us", "us-west-2": "us"}
-    },
-}
-
-client = get_bedrock_runtime_client()
-
-
-class BedrockThrottlingException(Exception): ...
 
 
 def _is_conversation_role(role: str) -> TypeGuard[ConversationRoleType]:
@@ -529,141 +54,29 @@ def _is_conversation_role(role: str) -> TypeGuard[ConversationRoleType]:
 
 def is_nova_model(model: type_model_name) -> bool:
     """Check if the model is an Amazon Nova model"""
-    return "amazon-nova" in model
-
-
-def is_deepseek_model(model: type_model_name) -> bool:
-    """Check if the model is a DeepSeek model"""
-    return "deepseek" in model
-
-
-def is_llama_model(model: type_model_name) -> bool:
-    """Check if the model is a Meta Llama model"""
-    return "llama" in model
-
-
-def is_mistral(model: type_model_name) -> bool:
-    """Check if the model is a Mistral model"""
-    return "mistral" in model
-
-
-def is_gpt_oss_model(model: type_model_name) -> bool:
-    """Check if the model is an OpenAI GPT-OSS model"""
-    return "gpt-oss" in model
+    return get_model_spec(model).provider == "amazon"
 
 
 def is_tooluse_supported(model: type_model_name) -> bool:
-    """Check if the model is supported for tool use"""
-    return model not in [
-        "deepseek-r1",
-        "llama3-2-1b-instruct",
-        "llama3-2-3b-instruct",
-        "",
-    ]
-
-
-def is_adaptive_thinking_model(model: type_model_name) -> bool:
-    """Claude 4.6+ models use adaptive thinking instead of extended thinking with budget_tokens."""
-    return model in [
-        "claude-v4.6-opus",
-        "claude-v4.6-sonnet",
-        "claude-v4.7-opus",
-    ]
+    return get_model_spec(model).supports_tool_use
 
 
 def is_prefill_supported(model: type_model_name) -> bool:
-    """Claude 4.6+ models do not support assistant message prefilling."""
-    return model not in [
-        "claude-v4.6-opus",
-        "claude-v4.6-sonnet",
-        "claude-v4.7-opus",
-    ]
-
-
-def is_specify_both_temperature_and_top_p_supported(model: type_model_name) -> bool:
-    return model not in [
-        "claude-v4.1-opus",
-        "claude-v4.5-opus",
-        "claude-v4.6-opus",
-        "claude-v4.7-opus",
-        "claude-v4.5-sonnet",
-        "claude-v4.6-sonnet",
-        "claude-v4.5-haiku",
-    ]
-
-
-def is_top_k_supported(model: type_model_name) -> bool:
-    """Claude Opus 4.7+ deprecates top_k parameter."""
-    return model not in [
-        "claude-v4.7-opus",
-    ]
-
-
-def is_top_p_supported(model: type_model_name) -> bool:
-    """Claude Opus 4.7+ deprecates top_p parameter."""
-    return model not in [
-        "claude-v4.7-opus",
-    ]
-
-
-def is_temperature_supported(model: type_model_name) -> bool:
-    """Claude Opus 4.7+ deprecates temperature parameter."""
-    return model not in [
-        "claude-v4.7-opus",
-    ]
+    return get_model_spec(model).supports_prefill
 
 
 def is_prompt_caching_supported(
     model: type_model_name, target: Literal["system", "message", "tool"]
 ) -> bool:
-    if target == "tool":
-        return model in [
-            "claude-v4-opus",
-            "claude-v4.1-opus",
-            "claude-v4.5-opus",
-            "claude-v4.6-opus",
-            "claude-v4.7-opus",
-            "claude-v4-sonnet",
-            "claude-v4.5-sonnet",
-            "claude-v4.6-sonnet",
-            "claude-v4.5-haiku",
-            "claude-v3.7-sonnet",
-            "claude-v3.5-sonnet-v2",
-            "claude-v3.5-haiku",
-        ]
-
-    else:
-        return model in [
-            "claude-v4-opus",
-            "claude-v4.1-opus",
-            "claude-v4.5-opus",
-            "claude-v4.6-opus",
-            "claude-v4.7-opus",
-            "claude-v4-sonnet",
-            "claude-v4.5-sonnet",
-            "claude-v4.6-sonnet",
-            "claude-v4.5-haiku",
-            "claude-v3.7-sonnet",
-            "claude-v3.5-sonnet-v2",
-            "claude-v3.5-haiku",
-            "amazon-nova-pro",
-            "amazon-nova-lite",
-            "amazon-nova-micro",
-        ]
+    return target in get_model_spec(model).prompt_caching
 
 
-def is_multiple_system_prompt_content_supported(model: type_model_name):
-    return not (
-        is_nova_model(model)
-        or is_deepseek_model(model)
-        or is_llama_model(model)
-        or is_mistral(model)
-        or is_gpt_oss_model(model)
-    )
+def is_multiple_system_prompt_content_supported(model: type_model_name) -> bool:
+    return get_model_spec(model).supports_multiple_system_prompts
 
 
-def is_unsigned_reasoning_content_supported(model: type_model_name):
-    return not (is_deepseek_model(model) or is_gpt_oss_model(model))
+def is_unsigned_reasoning_content_supported(model: type_model_name) -> bool:
+    return get_model_spec(model).accepts_unsigned_reasoning
 
 
 class InferenceConfiguration(TypedDict):
@@ -684,227 +97,6 @@ class ConverseConfiguration(TypedDict):
     inferenceConfig: InferenceConfiguration
     guardrailConfig: NotRequired[GuardrailConfiguration]
     additionalModelRequestFields: NotRequired[dict[str, Any]]
-
-
-def _prepare_deepseek_model_params(
-    model: type_model_name, generation_params: Optional[GenerationParamsModel] = None
-) -> ConverseConfiguration:
-    """
-    Prepare inference configuration and additional model request fields for DeepSeek models
-    > Note that DeepSeek models expect inference parameters as a JSON object under an inferenceConfig attribute,
-    > similar to Amazon Nova models.
-    """
-    # Base inference configuration
-    inference_config: InferenceConfiguration = {
-        "maxTokens": (
-            generation_params.max_tokens
-            if generation_params
-            else DEFAULT_DEEP_SEEK_GENERATION_CONFIG["max_tokens"]
-        ),
-        "temperature": (
-            generation_params.temperature
-            if generation_params
-            else DEFAULT_DEEP_SEEK_GENERATION_CONFIG["temperature"]
-        ),
-        "topP": (
-            generation_params.top_p
-            if generation_params
-            else DEFAULT_DEEP_SEEK_GENERATION_CONFIG["top_p"]
-        ),
-    }
-
-    inference_config["stopSequences"] = (
-        generation_params.stop_sequences
-        if (
-            generation_params
-            and generation_params.stop_sequences
-            and any(generation_params.stop_sequences)
-        )
-        else DEFAULT_DEEP_SEEK_GENERATION_CONFIG.get("stop_sequences", [])
-    )
-
-    return {
-        "inferenceConfig": inference_config,
-    }
-
-
-def _prepare_mistral_model_params(
-    model: type_model_name, generation_params: Optional[GenerationParamsModel] = None
-) -> ConverseConfiguration:
-    """
-    Prepare inference configuration and additional model request fields for Mistral models
-    > Note that Mistral models expect inference parameters as a JSON object under an inferenceConfig attribute,
-    > similar to other models.
-    """
-    # Base inference configuration
-    inference_config: InferenceConfiguration = {
-        "maxTokens": (
-            generation_params.max_tokens
-            if generation_params
-            else DEFAULT_MISTRAL_GENERATION_CONFIG["max_tokens"]
-        ),
-        "temperature": (
-            generation_params.temperature
-            if generation_params
-            else DEFAULT_MISTRAL_GENERATION_CONFIG["temperature"]
-        ),
-        "topP": (
-            generation_params.top_p
-            if generation_params
-            else DEFAULT_MISTRAL_GENERATION_CONFIG["top_p"]
-        ),
-    }
-
-    inference_config["stopSequences"] = (
-        generation_params.stop_sequences
-        if (
-            generation_params
-            and generation_params.stop_sequences
-            and any(generation_params.stop_sequences)
-        )
-        else DEFAULT_MISTRAL_GENERATION_CONFIG.get("stop_sequences", [])
-    )
-
-    converse_config: ConverseConfiguration = {
-        "inferenceConfig": inference_config,
-    }
-
-    # Add top_k if specified in generation params
-    if generation_params and generation_params.top_k is not None:
-        converse_config["additionalModelRequestFields"] = {
-            "topK": generation_params.top_k
-        }
-
-    return converse_config
-
-
-def _prepare_gpt_oss_model_params(
-    model: type_model_name, generation_params: Optional[GenerationParamsModel] = None
-) -> ConverseConfiguration:
-    """
-    Prepare inference configuration for OpenAI GPT-OSS models
-    Note: GPT-OSS models don't support stopSequences
-    """
-    # Base inference configuration
-    inference_config: InferenceConfiguration = {
-        "maxTokens": (
-            generation_params.max_tokens
-            if generation_params
-            else DEFAULT_GENERATION_CONFIG["max_tokens"]
-        ),
-        "temperature": (
-            generation_params.temperature
-            if generation_params
-            else DEFAULT_GENERATION_CONFIG["temperature"]
-        ),
-        "topP": (
-            generation_params.top_p
-            if generation_params
-            else DEFAULT_GENERATION_CONFIG["top_p"]
-        ),
-    }
-
-    # Note: GPT-OSS models don't support stopSequences, so we don't add it
-
-    # No additional fields for GPT-OSS models
-
-    return {
-        "inferenceConfig": inference_config,
-    }
-
-
-def _prepare_llama_model_params(
-    model: type_model_name, generation_params: Optional[GenerationParamsModel] = None
-) -> ConverseConfiguration:
-    """
-    Prepare inference configuration and additional model request fields for Meta Llama models
-    > Note that Llama models expect inference parameters as a JSON object under an inferenceConfig attribute,
-    > similar to Amazon Nova models.
-    """
-    # Base inference configuration
-    inference_config: InferenceConfiguration = {
-        "maxTokens": (
-            generation_params.max_tokens
-            if generation_params
-            else DEFAULT_LLAMA_GENERATION_CONFIG["max_tokens"]
-        ),
-        "temperature": (
-            generation_params.temperature
-            if generation_params
-            else DEFAULT_LLAMA_GENERATION_CONFIG["temperature"]
-        ),
-        "topP": (
-            generation_params.top_p
-            if generation_params
-            else DEFAULT_LLAMA_GENERATION_CONFIG["top_p"]
-        ),
-    }
-
-    inference_config["stopSequences"] = (
-        generation_params.stop_sequences
-        if (
-            generation_params
-            and generation_params.stop_sequences
-            and any(generation_params.stop_sequences)
-        )
-        else DEFAULT_LLAMA_GENERATION_CONFIG.get("stop_sequences", [])
-    )
-
-    # No additional fields for Llama models
-
-    return {
-        "inferenceConfig": inference_config,
-    }
-
-
-def _prepare_nova_model_params(
-    model: type_model_name, generation_params: Optional[GenerationParamsModel] = None
-) -> ConverseConfiguration:
-    """
-    Prepare inference configuration and additional model request fields for Nova models
-    > Note that Amazon Nova expects inference parameters as a JSON object under a inferenceConfig attribute. Amazon Nova also has an additional parameter "topK" that can be passed as an additional inference parameters. This parameter follows the same structure and is passed through the additionalModelRequestFields, as shown below.
-    https://docs.aws.amazon.com/nova/latest/userguide/getting-started-converse.html
-    """
-    # Base inference configuration
-    inference_config: InferenceConfiguration = {
-        "maxTokens": (
-            generation_params.max_tokens
-            if generation_params
-            else DEFAULT_GENERATION_CONFIG["max_tokens"]
-        ),
-        "temperature": (
-            generation_params.temperature
-            if generation_params
-            else DEFAULT_GENERATION_CONFIG["temperature"]
-        ),
-        "topP": (
-            generation_params.top_p
-            if generation_params
-            else DEFAULT_GENERATION_CONFIG["top_p"]
-        ),
-    }
-
-    converse_config: ConverseConfiguration = {
-        "inferenceConfig": inference_config,
-    }
-
-    # Additional model request fields specific to Nova models
-    # Add top_k if specified in generation params
-    if generation_params and generation_params.top_k is not None:
-        top_k = generation_params.top_k
-        if top_k > 128:
-            logger.warning(
-                "In Amazon Nova, an 'unexpected error' occurs if topK exceeds 128. To avoid errors, the upper limit of A is set to 128."
-            )
-            top_k = 128
-
-        converse_config["additionalModelRequestFields"] = {
-            "inferenceConfig": {
-                "topK": top_k,
-            },
-        }
-
-    return converse_config
 
 
 def _to_guardrails_grounding_source(
@@ -998,169 +190,82 @@ def generation_params_to_converse_configuration(
     stream: bool = True,
     enable_reasoning: bool = False,
 ) -> ConverseConfiguration:
-    converse_configuration: ConverseConfiguration
+    """Build the Converse inference configuration, sending only the parameters that
+    the model accepts."""
+    spec = get_model_spec(model)
+    defaults = spec.defaults
 
-    if is_nova_model(model):
-        # Special handling for Nova models
-        converse_configuration = _prepare_nova_model_params(model, generation_params)
+    def param(name: str) -> Any:
+        if generation_params is not None:
+            return getattr(generation_params, name)
+        return defaults.get(name)
 
-    elif is_deepseek_model(model):
-        # Special handling for DeepSeek models
-        converse_configuration = _prepare_deepseek_model_params(
-            model, generation_params
+    max_tokens: int = (
+        generation_params.max_tokens if generation_params else spec.default_max_tokens
+    )
+    inference_config: InferenceConfiguration = {}
+    additional_fields: dict[str, Any] = {}
+
+    thinking = enable_reasoning and spec.reasoning in ("budget", "adaptive")
+    if thinking and spec.reasoning == "adaptive":
+        additional_fields["thinking"] = {"type": "adaptive"}
+    elif thinking:
+        budget_tokens = (
+            generation_params.reasoning_params.budget_tokens
+            if generation_params and generation_params.reasoning_params
+            else DEFAULT_GENERATION_CONFIG["reasoning_params"]["budget_tokens"]  # type: ignore[index]
         )
-
-    elif is_llama_model(model):
-        # Special handling for Llama models
-        converse_configuration = _prepare_llama_model_params(model, generation_params)
-
-    elif is_mistral(model):
-        # Special handling for Mistral models
-        converse_configuration = _prepare_mistral_model_params(model, generation_params)
-
-    elif is_gpt_oss_model(model):
-        # Special handling for GPT-OSS models
-        converse_configuration = _prepare_gpt_oss_model_params(model, generation_params)
-
-    else:
-        # Standard handling for non-Nova models
-        if enable_reasoning:
-            max_tokens = (
-                generation_params.max_tokens
-                if generation_params
-                else DEFAULT_GENERATION_CONFIG["max_tokens"]
+        if max_tokens <= budget_tokens:
+            logger.warning(
+                "max_tokens (%d) must be greater than budget_tokens (%d). Using %d.",
+                max_tokens,
+                budget_tokens,
+                budget_tokens + 1024,
             )
+            max_tokens = budget_tokens + 1024
+        additional_fields["thinking"] = {
+            "type": "enabled",
+            "budget_tokens": budget_tokens,
+        }
 
-            if is_adaptive_thinking_model(model):
-                # Claude 4.6 uses adaptive thinking instead of budget_tokens
-                converse_configuration = {
-                    "inferenceConfig": {
-                        "maxTokens": max_tokens,
-                        "stopSequences": (
-                            generation_params.stop_sequences
-                            if (
-                                generation_params
-                                and generation_params.stop_sequences
-                                and any(generation_params.stop_sequences)
-                            )
-                            else DEFAULT_GENERATION_CONFIG.get("stop_sequences", [])
-                        ),
-                    },
-                    "additionalModelRequestFields": {
-                        "thinking": {
-                            "type": "adaptive",
-                        },
-                    },
-                }
-                if is_temperature_supported(model):
-                    converse_configuration["inferenceConfig"]["temperature"] = 1.0
+    inference_config["maxTokens"] = max_tokens
 
-                if is_top_p_supported(model):
-                    converse_configuration["inferenceConfig"]["topP"] = (
-                        generation_params.top_p
-                        if generation_params
-                        else DEFAULT_GENERATION_CONFIG["top_p"]
-                    )
+    if spec.supports_temperature:
+        # Extended thinking requires temperature 1.0.
+        inference_config["temperature"] = 1.0 if thinking else param("temperature")
 
-            else:
-                budget_tokens = (
-                    generation_params.reasoning_params.budget_tokens
-                    if generation_params and generation_params.reasoning_params
-                    else DEFAULT_GENERATION_CONFIG["reasoning_params"]["budget_tokens"]  # type: ignore
-                )
+    if spec.supports_top_p:
+        inference_config["topP"] = param("top_p")
 
-                if max_tokens <= budget_tokens:
-                    logger.warning(
-                        f"max_tokens ({max_tokens}) must be greater than budget_tokens ({budget_tokens}). "
-                        f"Setting max_tokens to {budget_tokens + 1024}"
-                    )
-                    max_tokens = budget_tokens + 1024
+    stop_sequences = param("stop_sequences")
+    if spec.supports_stop_sequences and stop_sequences and any(stop_sequences):
+        inference_config["stopSequences"] = stop_sequences
 
-                converse_configuration = {
-                    "inferenceConfig": {
-                        "maxTokens": max_tokens,
-                        "stopSequences": (
-                            generation_params.stop_sequences
-                            if (
-                                generation_params
-                                and generation_params.stop_sequences
-                                and any(generation_params.stop_sequences)
-                            )
-                            else DEFAULT_GENERATION_CONFIG.get("stop_sequences", [])
-                        ),
-                    },
-                    "additionalModelRequestFields": {
-                        # top_k cannot be used with reasoning
-                        "thinking": {
-                            "type": "enabled",
-                            "budget_tokens": budget_tokens,
-                        },
-                    },
-                }
-                if is_temperature_supported(model):
-                    converse_configuration["inferenceConfig"]["temperature"] = 1.0
-
-                if is_top_p_supported(model):
-                    converse_configuration["inferenceConfig"]["topP"] = (
-                        generation_params.top_p
-                        if generation_params
-                        else DEFAULT_GENERATION_CONFIG["top_p"]
-                    )
-
+    top_k = param("top_k")
+    # top_k cannot be used with extended thinking.
+    if spec.top_k_field is not None and top_k is not None and not thinking:
+        if spec.top_k_field == "claude":
+            additional_fields["top_k"] = top_k
         else:
-            converse_configuration = {
-                "inferenceConfig": {
-                    "maxTokens": (
-                        generation_params.max_tokens
-                        if generation_params
-                        else DEFAULT_GENERATION_CONFIG["max_tokens"]
-                    ),
-                    "stopSequences": (
-                        generation_params.stop_sequences
-                        if (
-                            generation_params
-                            and generation_params.stop_sequences
-                            and any(generation_params.stop_sequences)
-                        )
-                        else DEFAULT_GENERATION_CONFIG.get("stop_sequences", [])
-                    ),
-                },
-                "additionalModelRequestFields": {},
-            }
+            # Amazon Nova returns an unexpected error if topK exceeds 128.
+            additional_fields["inferenceConfig"] = {"topK": min(top_k, 128)}
 
-            if is_top_k_supported(model):
-                converse_configuration["additionalModelRequestFields"]["top_k"] = (
-                    generation_params.top_k
-                    if generation_params
-                    else DEFAULT_GENERATION_CONFIG["top_k"]
-                )
-
-            if is_temperature_supported(model):
-                converse_configuration["inferenceConfig"]["temperature"] = (
-                    generation_params.temperature
-                    if generation_params
-                    else DEFAULT_GENERATION_CONFIG["temperature"]
-                )
-
-            if is_top_p_supported(model):
-                converse_configuration["inferenceConfig"]["topP"] = (
-                    generation_params.top_p
-                    if generation_params
-                    else DEFAULT_GENERATION_CONFIG["top_p"]
-                )
-
-    # "claude-v4.5-sonnet" cannot specify temperature and top_p together due to specifications.
-    # https://docs.aws.amazon.com/bedrock/latest/userguide/model-parameters-anthropic-claude-messages-request-response.html
-    if not is_specify_both_temperature_and_top_p_supported(model):
-        inference_config = converse_configuration["inferenceConfig"]
+    if spec.exclusive_temperature_top_p:
+        # Keep top_p only when the user changed it and left temperature at the default.
         if (
             inference_config.get("temperature")
             == DEFAULT_GENERATION_CONFIG["temperature"]
             and inference_config.get("topP") != DEFAULT_GENERATION_CONFIG["top_p"]
         ):
-            del inference_config["temperature"]
+            inference_config.pop("temperature", None)
         else:
             inference_config.pop("topP", None)
+
+    converse_configuration: ConverseConfiguration = {
+        "inferenceConfig": inference_config,
+    }
+    if additional_fields:
+        converse_configuration["additionalModelRequestFields"] = additional_fields
 
     if guardrail and guardrail.guardrail_arn and guardrail.guardrail_version:
         converse_configuration["guardrailConfig"] = {
@@ -1270,26 +375,19 @@ def compose_args_for_converse_api(
     return args
 
 
-@retry(
-    exceptions=(BedrockThrottlingException,),
-    tries=3,
-    delay=60,
-    backoff=2,
-    jitter=(0, 2),
-    logger=logger,
-)
+def get_text_from_converse_response(response: ConverseResponseTypeDef) -> str:
+    """Return the first text block. Reasoning models may put a reasoning block first."""
+    message = response["output"].get("message")
+    if message is None:
+        return ""
+    return next((block["text"] for block in message["content"] if "text" in block), "")
+
+
 def call_converse_api(
     args: ConverseStreamRequestTypeDef,
 ) -> ConverseResponseTypeDef:
-    client = get_bedrock_runtime_client()
-    try:
-        return client.converse(**args)
-    except ClientError as e:
-        if e.response["Error"]["Code"] == "ThrottlingException":
-            raise BedrockThrottlingException(
-                "Bedrock API is throttling requests"
-            ) from e
-        raise
+    # Retries are handled by the client configuration.
+    return get_bedrock_runtime_client().converse(**args)
 
 
 def calculate_price(
@@ -1298,69 +396,42 @@ def calculate_price(
     output_tokens: int,
     cache_read_input_tokens: int,
     cache_write_input_tokens: int,
-    region: str = BEDROCK_REGION,
 ) -> float:
-    input_price = (
-        BEDROCK_PRICING.get(region, {})
-        .get(model, {})
-        .get("input", BEDROCK_PRICING["default"][model]["input"])
-    )
-    output_price = (
-        BEDROCK_PRICING.get(region, {})
-        .get(model, {})
-        .get("output", BEDROCK_PRICING["default"][model]["output"])
-    )
-    cache_read_input_price = (
-        BEDROCK_PRICING.get(region, {})
-        .get(model, {})
-        .get(
-            "cache_read_input",
-            BEDROCK_PRICING["default"][model].get("cache_read_input", input_price),
-        )
-    )
-    cache_write_input_price = (
-        BEDROCK_PRICING.get(region, {})
-        .get(model, {})
-        .get(
-            "cache_write_input",
-            BEDROCK_PRICING["default"][model].get("cache_write_input", input_price),
-        )
-    )
+    """Estimate the price in USD from the token usage."""
+    price = get_model_spec(model).price
+    if price is None:
+        logger.warning("No price is defined for model %s. Reporting 0.", model)
+        return 0.0
 
+    cache_read_price = (
+        price.cache_read_input if price.cache_read_input is not None else price.input
+    )
+    cache_write_price = (
+        price.cache_write_input if price.cache_write_input is not None else price.input
+    )
     return (
-        input_price * input_tokens / 1000.0
-        + output_price * output_tokens / 1000.0
-        + cache_read_input_price * cache_read_input_tokens / 1000.0
-        + cache_write_input_price * cache_write_input_tokens / 1000.0
-    )
+        input_tokens * price.input
+        + output_tokens * price.output
+        + cache_read_input_tokens * cache_read_price
+        + cache_write_input_tokens * cache_write_price
+    ) / 1000.0
 
 
-def get_global_inference_profile_id(
-    model: type_model_name, source_region: str
-) -> str | None:
-    """Get global inference profile ID if supported"""
-    profile_info = GLOBAL_INFERENCE_PROFILES.get(model)
-    if not profile_info or source_region not in profile_info["supported_regions"]:
-        return None
-
-    base_model_id = BASE_MODEL_IDS.get(model)
-    return f"global.{base_model_id}" if base_model_id else None
-
-
-def get_regional_inference_profile_id(
-    model: type_model_name, source_region: str
-) -> str | None:
-    """Get regional cross-region inference profile ID if supported"""
-    profile_info = REGIONAL_INFERENCE_PROFILES.get(model)
-    if not profile_info or source_region not in profile_info["supported_regions"]:
-        return None
-
-    base_model_id = BASE_MODEL_IDS.get(model)
-    if not base_model_id:
-        return None
-
-    area = profile_info["supported_regions"][source_region]
-    return f"{area}.{base_model_id}"
+@functools.cache
+def _list_system_inference_profile_ids(region: str) -> frozenset[str]:
+    """Return the IDs of the system-defined inference profiles in the region."""
+    client = boto3.client("bedrock", region_name=region)
+    profile_ids: set[str] = set()
+    kwargs: dict[str, Any] = {"typeEquals": "SYSTEM_DEFINED"}
+    while True:
+        response = client.list_inference_profiles(**kwargs)
+        profile_ids.update(
+            profile["inferenceProfileId"]
+            for profile in response["inferenceProfileSummaries"]
+        )
+        if "nextToken" not in response:
+            return frozenset(profile_ids)
+        kwargs["nextToken"] = response["nextToken"]
 
 
 def get_model_id(
@@ -1369,32 +440,35 @@ def get_model_id(
     enable_cross_region: bool = ENABLE_BEDROCK_CROSS_REGION_INFERENCE,
     bedrock_region: str = BEDROCK_REGION,
 ) -> str:
-    base_model_id = BASE_MODEL_IDS.get(model)
-    if not base_model_id:
-        raise ValueError(f"Unsupported model: {model}")
+    """Resolve the model ID to invoke, preferring global, then geographic
+    cross-Region inference profiles that exist in the region.
 
-    # 1. First, try to use global inference profile if enabled and available
-    if enable_global:
-        global_profile_id = get_global_inference_profile_id(model, bedrock_region)
-        if global_profile_id:
-            logger.info(
-                f"Using global inference profile: {global_profile_id} for model '{model}'"
-            )
-            return global_profile_id
+    Raises:
+        ValueError: If the model is retired or unknown.
+    """
+    base_model_id = get_model_spec(model).bedrock_id
+    if not (enable_global or enable_cross_region):
+        return base_model_id
 
-    # 2. Fallback to regional cross-region inference profile if enabled and available
+    profile_ids = _list_system_inference_profile_ids(bedrock_region)
+    global_profile_id = f"global.{base_model_id}"
+    if enable_global and global_profile_id in profile_ids:
+        return global_profile_id
+
     if enable_cross_region:
-        regional_profile_id = get_regional_inference_profile_id(model, bedrock_region)
-        if regional_profile_id:
-            logger.info(
-                f"Using regional cross-region model ID: {regional_profile_id} for model '{model}' in region '{bedrock_region}'"
-            )
-            return regional_profile_id
-        else:
-            logger.warning(
-                f"Region '{bedrock_region}' does not support cross-region inference for model '{model}'."
-            )
+        # Geographic profiles are named "<geo>.<base model id>", for example "us." or "apac.".
+        regional_profile_ids = sorted(
+            profile_id
+            for profile_id in profile_ids
+            if profile_id.split(".", 1)[-1] == base_model_id
+            and profile_id != global_profile_id
+        )
+        if regional_profile_ids:
+            return regional_profile_ids[0]
 
-    # 3. Use standalone model (no global or cross-region inference)
-    logger.info(f"Using local model ID: {base_model_id} for model '{model}'")
+    logger.info(
+        "No inference profile for %s in %s. Using the base model ID.",
+        model,
+        bedrock_region,
+    )
     return base_model_id

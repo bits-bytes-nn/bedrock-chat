@@ -16,31 +16,6 @@ const translation = {
       adminConsoles: 'Administrator',
     },
     model: {
-      'claude-v3-haiku': {
-        label: 'Claude 3 (Haiku)',
-        description:
-          'Poprzednia wersja zoptymalizowana pod kątem szybkości i zwięzłości, zapewniająca niemal natychmiastową odpowiedź.',
-      },
-      'claude-v3.5-sonnet': {
-        label: 'Claude 3.5 (Sonnet) v1',
-        description:
-          'Wcześniejsza wersja Claude 3.5. Obsługuje szeroki zakres zadań, ale v2 oferuje lepszą dokładność.',
-      },
-      'claude-v3.5-sonnet-v2': {
-        label: 'Claude 3.5 (Sonnet) v2',
-        description:
-          'Najnowsza wersja Claude 3.5. Ulepszony model, który bazuje na v1 z większą dokładnością i wydajnością.',
-      },
-      'claude-v3.5-haiku': {
-        label: 'Claude 3.5 (Haiku) v1',
-        description:
-          'Najnowsza wersja, oferująca jeszcze szybsze odpowiedzi i ulepszone możliwości w porównaniu do Haiku 3.',
-      },
-      'claude-v4.1-opus': {
-        label: 'Claude 4.1 (Opus)',
-        description:
-          'Model Opus z ulepszonymi możliwościami rozumowania.',
-      },
       'claude-v4.5-opus': {
         label: 'Claude 4.5 (Opus)',
         description:
@@ -55,19 +30,6 @@ const translation = {
         label: 'Claude 4.7 (Opus)',
         description:
           'Wysoko wydajny model Opus stworzony do kodowania, przepływów pracy w przedsiębiorstwach i długotrwałych zadań agentowych.',
-      },
-      'claude-v3-opus': {
-        label: 'Claude 3 (Opus)',
-        description: 'Potężny model do wysoce złożonych zadań.',
-      },
-      'mistral-7b-instruct': {
-        label: 'Mistral 7B',
-        description: 'Wspiera generowanie tekstu w języku angielskim oraz kodu',
-      },
-      'mixtral-8x7b-instruct': {
-        label: 'Mistral-8x7B',
-        description:
-          'Popularny, wysokiej jakości model Mixture-of-Experts (MoE), idealny do podsumowywania tekstu, pytań i odpowiedzi, klasyfikacji tekstu, uzupełniania tekstu i generowania kodu.',
       },
       'mistral-large': {
         label: 'Mistral Large',

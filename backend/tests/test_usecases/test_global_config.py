@@ -143,7 +143,7 @@ class TestGetDefaultModel(unittest.TestCase):
         from app.usecases.global_config import get_default_model
 
         result = get_default_model()
-        self.assertEqual(result, "claude-v3.7-sonnet")
+        self.assertEqual(result, "claude-v5.5-sonnet")
 
     @patch.object(global_config, "DEFAULT_MODEL", "")
     def test_falls_back_to_default_when_empty_string(self):
@@ -151,7 +151,7 @@ class TestGetDefaultModel(unittest.TestCase):
         from app.usecases.global_config import get_default_model
 
         result = get_default_model()
-        self.assertEqual(result, "claude-v3.7-sonnet")
+        self.assertEqual(result, "claude-v5.5-sonnet")
 
     @patch.object(global_config, "DEFAULT_MODEL", "   ")
     def test_falls_back_to_default_when_whitespace(self):
@@ -159,7 +159,7 @@ class TestGetDefaultModel(unittest.TestCase):
         from app.usecases.global_config import get_default_model
 
         result = get_default_model()
-        self.assertEqual(result, "claude-v3.7-sonnet")
+        self.assertEqual(result, "claude-v5.5-sonnet")
 
     @patch.object(global_config, "DEFAULT_MODEL", "  amazon-nova-pro  ")
     def test_strips_whitespace_from_configured_model(self):
@@ -203,29 +203,29 @@ class TestGetTitleModel(unittest.TestCase):
     @patch.object(global_config, "TITLE_MODEL", None)
     @patch.object(global_config, "DEFAULT_MODEL", None)
     def test_falls_back_to_haiku_when_both_none(self):
-        """Test that claude-v3-haiku is returned when both TITLE_MODEL and DEFAULT_MODEL are None."""
+        """Test that claude-v5.5-haiku is returned when both TITLE_MODEL and DEFAULT_MODEL are None."""
         from app.usecases.global_config import get_title_model
 
         result = get_title_model()
-        self.assertEqual(result, "claude-v3-haiku")
+        self.assertEqual(result, "claude-v5.5-haiku")
 
     @patch.object(global_config, "TITLE_MODEL", "")
     @patch.object(global_config, "DEFAULT_MODEL", "")
     def test_falls_back_to_haiku_when_both_empty(self):
-        """Test that claude-v3-haiku is returned when both TITLE_MODEL and DEFAULT_MODEL are empty."""
+        """Test that claude-v5.5-haiku is returned when both TITLE_MODEL and DEFAULT_MODEL are empty."""
         from app.usecases.global_config import get_title_model
 
         result = get_title_model()
-        self.assertEqual(result, "claude-v3-haiku")
+        self.assertEqual(result, "claude-v5.5-haiku")
 
     @patch.object(global_config, "TITLE_MODEL", "   ")
     @patch.object(global_config, "DEFAULT_MODEL", "   ")
     def test_falls_back_to_haiku_when_both_whitespace(self):
-        """Test that claude-v3-haiku is returned when both contain only whitespace."""
+        """Test that claude-v5.5-haiku is returned when both contain only whitespace."""
         from app.usecases.global_config import get_title_model
 
         result = get_title_model()
-        self.assertEqual(result, "claude-v3-haiku")
+        self.assertEqual(result, "claude-v5.5-haiku")
 
     @patch.object(global_config, "TITLE_MODEL", "  mistral-7b-instruct  ")
     @patch.object(global_config, "DEFAULT_MODEL", "claude-v3.7-sonnet")

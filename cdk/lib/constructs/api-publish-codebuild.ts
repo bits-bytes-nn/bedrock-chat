@@ -10,6 +10,8 @@ export interface ApiPublishCodebuildProps {
   readonly envName: string;
   readonly envPrefix: string;
   readonly bedrockRegion: string;
+  readonly enableBedrockGlobalInference: boolean;
+  readonly enableBedrockCrossRegionInference: boolean;
   readonly sourceBucket: s3.Bucket;
 }
 
@@ -36,6 +38,12 @@ export class ApiPublishCodebuild extends Construct {
         ENV_NAME: { value: props.envName },
         ENV_PREFIX: { value: props.envPrefix },
         BEDROCK_REGION: { value: props.bedrockRegion },
+        ENABLE_BEDROCK_GLOBAL_INFERENCE: {
+          value: props.enableBedrockGlobalInference.toString(),
+        },
+        ENABLE_BEDROCK_CROSS_REGION_INFERENCE: {
+          value: props.enableBedrockCrossRegionInference.toString(),
+        },
       },
       buildSpec: codebuild.BuildSpec.fromObject({
         version: 0.2,

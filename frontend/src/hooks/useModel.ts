@@ -9,25 +9,152 @@ import useGlobalConfig from './useGlobalConfig';
 import { ActiveModels } from '../@types/bot';
 import { toCamelCase } from '../utils/StringUtils';
 
-const CLAUDE_SUPPORTED_MEDIA_TYPES = [
+const IMAGE_MEDIA_TYPES = [
   'image/jpeg',
   'image/png',
   'image/gif',
   'image/webp',
 ];
 
-const NOVA_SUPPORTED_MEDIA_TYPES = [
-  'image/jpeg',
-  'image/png',
-  'image/gif',
-  'image/webp',
-];
+// These models return reasoning on every request, so the toggle is always on.
+const ALWAYS_REASONING = {
+  supportReasoning: true,
+  forceReasoningEnabled: true,
+};
 
-const LLAMA_SUPPORTED_MEDIA_TYPES = [
-  'image/jpeg',
-  'image/png',
-  'image/gif',
-  'image/webp',
+// Capabilities shown in the UI. The backend keeps the request parameters for each
+// model in backend/app/model_registry.py, and a backend test keeps both lists in sync.
+const MODELS: Omit<ModelItem, 'label' | 'description'>[] = [
+  {
+    modelId: 'claude-v4.5-opus',
+    supportMediaType: IMAGE_MEDIA_TYPES,
+    supportReasoning: true,
+  },
+  {
+    modelId: 'claude-v4.6-opus',
+    supportMediaType: IMAGE_MEDIA_TYPES,
+    supportReasoning: true,
+  },
+  {
+    modelId: 'claude-v4.7-opus',
+    supportMediaType: IMAGE_MEDIA_TYPES,
+    supportReasoning: true,
+  },
+  {
+    modelId: 'claude-v4.8-opus',
+    supportMediaType: IMAGE_MEDIA_TYPES,
+    supportReasoning: true,
+  },
+  {
+    modelId: 'claude-v5-opus',
+    supportMediaType: IMAGE_MEDIA_TYPES,
+    supportReasoning: true,
+  },
+  {
+    modelId: 'claude-v5.5-opus',
+    supportMediaType: IMAGE_MEDIA_TYPES,
+    supportReasoning: true,
+  },
+  {
+    modelId: 'claude-v4.5-sonnet',
+    supportMediaType: IMAGE_MEDIA_TYPES,
+    supportReasoning: true,
+  },
+  {
+    modelId: 'claude-v4.6-sonnet',
+    supportMediaType: IMAGE_MEDIA_TYPES,
+    supportReasoning: true,
+  },
+  {
+    modelId: 'claude-v5-sonnet',
+    supportMediaType: IMAGE_MEDIA_TYPES,
+    supportReasoning: true,
+  },
+  {
+    modelId: 'claude-v5.5-sonnet',
+    supportMediaType: IMAGE_MEDIA_TYPES,
+    supportReasoning: true,
+  },
+  {
+    modelId: 'claude-v4.5-haiku',
+    supportMediaType: IMAGE_MEDIA_TYPES,
+    supportReasoning: true,
+  },
+  {
+    modelId: 'claude-v5.5-haiku',
+    supportMediaType: IMAGE_MEDIA_TYPES,
+    supportReasoning: true,
+  },
+  {
+    modelId: 'gpt-5.5',
+    supportMediaType: IMAGE_MEDIA_TYPES,
+    ...ALWAYS_REASONING,
+  },
+  {
+    modelId: 'gpt-5.6-luna',
+    supportMediaType: IMAGE_MEDIA_TYPES,
+    ...ALWAYS_REASONING,
+  },
+  {
+    modelId: 'gpt-5.6-sol',
+    supportMediaType: IMAGE_MEDIA_TYPES,
+    ...ALWAYS_REASONING,
+  },
+  {
+    modelId: 'gpt-5.6-terra',
+    supportMediaType: IMAGE_MEDIA_TYPES,
+    ...ALWAYS_REASONING,
+  },
+  {
+    modelId: 'gpt-6-astra',
+    supportMediaType: IMAGE_MEDIA_TYPES,
+    ...ALWAYS_REASONING,
+  },
+  {
+    modelId: 'gpt-6-luna',
+    supportMediaType: IMAGE_MEDIA_TYPES,
+    ...ALWAYS_REASONING,
+  },
+  {
+    modelId: 'gpt-6-sol',
+    supportMediaType: IMAGE_MEDIA_TYPES,
+    ...ALWAYS_REASONING,
+  },
+  {
+    modelId: 'gpt-6.1-sol',
+    supportMediaType: IMAGE_MEDIA_TYPES,
+    ...ALWAYS_REASONING,
+  },
+  { modelId: 'gpt-oss-20b', supportMediaType: [], ...ALWAYS_REASONING },
+  { modelId: 'gpt-oss-120b', supportMediaType: [], ...ALWAYS_REASONING },
+  {
+    modelId: 'amazon-nova-pro',
+    supportMediaType: IMAGE_MEDIA_TYPES,
+    supportReasoning: false,
+  },
+  {
+    modelId: 'amazon-nova-lite',
+    supportMediaType: IMAGE_MEDIA_TYPES,
+    supportReasoning: false,
+  },
+  {
+    modelId: 'amazon-nova-micro',
+    supportMediaType: [],
+    supportReasoning: false,
+  },
+  {
+    modelId: 'amazon-nova-2-lite',
+    supportMediaType: IMAGE_MEDIA_TYPES,
+    supportReasoning: false,
+  },
+  { modelId: 'deepseek-r1', supportMediaType: [], ...ALWAYS_REASONING },
+  {
+    modelId: 'llama3-3-70b-instruct',
+    supportMediaType: [],
+    supportReasoning: false,
+  },
+  { modelId: 'mistral-large', supportMediaType: [], supportReasoning: false },
+  { modelId: 'mistral-large-2', supportMediaType: [], supportReasoning: false },
 ];
 
 const useModelState = create<{
@@ -75,226 +202,11 @@ const useModel = (botId?: string | null, activeModels?: ActiveModels) => {
   const previousBotId = usePreviousBotId(botId);
 
   const availableModels = useMemo<ModelItem[]>(() => {
-    return [
-      {
-        modelId: 'claude-v4-opus',
-        label: t('model.claude-v4-opus.label'),
-        description: t('model.claude-v4-opus.description'),
-        supportMediaType: CLAUDE_SUPPORTED_MEDIA_TYPES,
-        supportReasoning: true,
-      },
-      {
-        modelId: 'claude-v4.1-opus',
-        label: t('model.claude-v4.1-opus.label'),
-        description: t('model.claude-v4.1-opus.description'),
-        supportMediaType: CLAUDE_SUPPORTED_MEDIA_TYPES,
-        supportReasoning: true,
-      },
-      {
-        modelId: 'claude-v4.5-opus',
-        label: t('model.claude-v4.5-opus.label'),
-        description: t('model.claude-v4.5-opus.description'),
-        supportMediaType: CLAUDE_SUPPORTED_MEDIA_TYPES,
-        supportReasoning: true,
-      },
-      {
-        modelId: 'claude-v4.6-opus',
-        label: t('model.claude-v4.6-opus.label'),
-        description: t('model.claude-v4.6-opus.description'),
-        supportMediaType: CLAUDE_SUPPORTED_MEDIA_TYPES,
-        supportReasoning: true,
-      },
-      {
-        modelId: 'claude-v4.7-opus',
-        label: t('model.claude-v4.7-opus.label'),
-        description: t('model.claude-v4.7-opus.description'),
-        supportMediaType: CLAUDE_SUPPORTED_MEDIA_TYPES,
-        supportReasoning: true,
-      },
-      {
-        modelId: 'claude-v4-sonnet',
-        label: t('model.claude-v4-sonnet.label'),
-        description: t('model.claude-v4-sonnet.description'),
-        supportMediaType: CLAUDE_SUPPORTED_MEDIA_TYPES,
-        supportReasoning: true,
-      },
-      {
-        modelId: 'claude-v4.5-sonnet',
-        label: t('model.claude-v4.5-sonnet.label'),
-        description: t('model.claude-v4.5-sonnet.description'),
-        supportMediaType: CLAUDE_SUPPORTED_MEDIA_TYPES,
-        supportReasoning: true,
-      },
-      {
-        modelId: 'claude-v4.6-sonnet',
-        label: t('model.claude-v4.6-sonnet.label'),
-        description: t('model.claude-v4.6-sonnet.description'),
-        supportMediaType: CLAUDE_SUPPORTED_MEDIA_TYPES,
-        supportReasoning: true,
-      },
-      {
-        modelId: 'claude-v4.5-haiku',
-        label: t('model.claude-v4.5-haiku.label'),
-        description: t('model.claude-v4.5-haiku.description'),
-        supportMediaType: CLAUDE_SUPPORTED_MEDIA_TYPES,
-        supportReasoning: true,
-      },
-      {
-        modelId: 'claude-v3-haiku',
-        label: t('model.claude-v3-haiku.label'),
-        description: t('model.claude-v3-haiku.description'),
-        supportMediaType: CLAUDE_SUPPORTED_MEDIA_TYPES,
-        supportReasoning: false,
-      },
-      {
-        modelId: 'claude-v3.5-haiku',
-        label: t('model.claude-v3.5-haiku.label'),
-        description: t('model.claude-v3.5-haiku.description'),
-        supportMediaType: CLAUDE_SUPPORTED_MEDIA_TYPES,
-        supportReasoning: false,
-      },
-      {
-        modelId: 'claude-v3.5-sonnet',
-        label: t('model.claude-v3.5-sonnet.label'),
-        description: t('model.claude-v3.5-sonnet.description'),
-        supportMediaType: CLAUDE_SUPPORTED_MEDIA_TYPES,
-        supportReasoning: false,
-      },
-      {
-        modelId: 'claude-v3.5-sonnet-v2',
-        label: t('model.claude-v3.5-sonnet-v2.label'),
-        description: t('model.claude-v3.5-sonnet-v2.description'),
-        supportMediaType: CLAUDE_SUPPORTED_MEDIA_TYPES,
-        supportReasoning: false,
-      },
-      {
-        modelId: 'claude-v3.7-sonnet',
-        label: t('model.claude-v3.7-sonnet.label'),
-        description: t('model.claude-v3.7-sonnet.description'),
-        supportMediaType: CLAUDE_SUPPORTED_MEDIA_TYPES,
-        supportReasoning: true,
-      },
-      {
-        modelId: 'claude-v3-opus',
-        label: t('model.claude-v3-opus.label'),
-        description: t('model.claude-v3-opus.description'),
-        supportMediaType: CLAUDE_SUPPORTED_MEDIA_TYPES,
-        supportReasoning: false,
-      },
-      // New Amazon Nova models
-      {
-        modelId: 'amazon-nova-pro',
-        label: t('model.amazon-nova-pro.label'),
-        description: t('model.amazon-nova-pro.description'),
-        supportMediaType: NOVA_SUPPORTED_MEDIA_TYPES,
-        supportReasoning: false,
-      },
-      {
-        modelId: 'amazon-nova-lite',
-        label: t('model.amazon-nova-lite.label'),
-        description: t('model.amazon-nova-lite.description'),
-        supportMediaType: NOVA_SUPPORTED_MEDIA_TYPES,
-        supportReasoning: false,
-      },
-      {
-        modelId: 'amazon-nova-micro',
-        label: t('model.amazon-nova-micro.label'),
-        description: t('model.amazon-nova-micro.description'),
-        supportMediaType: [],
-        supportReasoning: false,
-      },
-      // DeepSeek models
-      {
-        modelId: 'deepseek-r1',
-        label: t('model.deepseek-r1.label'),
-        description: t('model.deepseek-r1.description'),
-        supportMediaType: [],
-        supportReasoning: true,
-        forceReasoningEnabled: true, // Deep Seek always return reasoning contents.
-      },
-      // Meta Llama 3 models
-      {
-        modelId: 'llama3-3-70b-instruct',
-        label: t('model.llama3-3-70b-instruct.label'),
-        description: t('model.llama3-3-70b-instruct.description'),
-        supportMediaType: [],
-        supportReasoning: false,
-      },
-      {
-        modelId: 'llama3-2-1b-instruct',
-        label: t('model.llama3-2-1b-instruct.label'),
-        description: t('model.llama3-2-1b-instruct.description'),
-        supportMediaType: [],
-        supportReasoning: false,
-      },
-      {
-        modelId: 'llama3-2-3b-instruct',
-        label: t('model.llama3-2-3b-instruct.label'),
-        description: t('model.llama3-2-3b-instruct.description'),
-        supportMediaType: [],
-        supportReasoning: false,
-      },
-      {
-        modelId: 'llama3-2-11b-instruct',
-        label: t('model.llama3-2-11b-instruct.label'),
-        description: t('model.llama3-2-11b-instruct.description'),
-        supportMediaType: LLAMA_SUPPORTED_MEDIA_TYPES,
-        supportReasoning: false,
-      },
-      {
-        modelId: 'llama3-2-90b-instruct',
-        label: t('model.llama3-2-90b-instruct.label'),
-        description: t('model.llama3-2-90b-instruct.description'),
-        supportMediaType: LLAMA_SUPPORTED_MEDIA_TYPES,
-        supportReasoning: false,
-      },
-      // OpenAI GPT-OSS models
-      {
-        modelId: 'gpt-oss-20b',
-        label: t('model.gpt-oss-20b.label'),
-        description: t('model.gpt-oss-20b.description'),
-        supportMediaType: [],
-        supportReasoning: true,
-        forceReasoningEnabled: true, // GPT-OSS always return reasoning contents.
-      },
-      {
-        modelId: 'gpt-oss-120b',
-        label: t('model.gpt-oss-120b.label'),
-        description: t('model.gpt-oss-120b.description'),
-        supportMediaType: [],
-        supportReasoning: true,
-        forceReasoningEnabled: true, // GPT-OSS always return reasoning contents.
-      },
-      // Mistral
-      {
-        modelId: 'mistral-7b-instruct',
-        label: t('model.mistral-7b-instruct.label'),
-        description: t('model.mistral-7b-instruct.description'),
-        supportMediaType: [],
-        supportReasoning: false,
-      },
-      {
-        modelId: 'mixtral-8x7b-instruct',
-        label: t('model.mixtral-8x7b-instruct.label'),
-        description: t('model.mixtral-8x7b-instruct.description'),
-        supportMediaType: [],
-        supportReasoning: false,
-      },
-      {
-        modelId: 'mistral-large',
-        label: t('model.mistral-large.label'),
-        description: t('model.mistral-large.description'),
-        supportMediaType: [],
-        supportReasoning: false,
-      },
-      {
-        modelId: 'mistral-large-2',
-        label: t('model.mistral-large-2.label'),
-        description: t('model.mistral-large-2.description'),
-        supportMediaType: [],
-        supportReasoning: false,
-      },
-    ].filter((model) => {
+    return MODELS.map((model) => ({
+      ...model,
+      label: t(`model.${model.modelId}.label`),
+      description: t(`model.${model.modelId}.description`),
+    })).filter((model) => {
       // Filter based on global configuration if available
       if (
         globalConfig?.globalAvailableModels &&
@@ -356,7 +268,11 @@ const useModel = (botId?: string | null, activeModels?: ActiveModels) => {
       const modelExists = filteredModels.some(
         (m: ModelItem) => toCamelCase(m.modelId) === toCamelCase(targetModelId)
       );
-      return modelExists ? targetModelId : (getDefaultModel() ?? filteredModels[0]?.modelId ?? 'amazon-nova-lite');
+      return modelExists
+        ? targetModelId
+        : (getDefaultModel() ??
+            filteredModels[0]?.modelId ??
+            'amazon-nova-lite');
     },
     [filteredModels, getDefaultModel]
   );
@@ -415,7 +331,9 @@ const useModel = (botId?: string | null, activeModels?: ActiveModels) => {
   }, [botId]);
 
   const model = useMemo(() => {
-    if (!modelId) { return undefined; }
+    if (!modelId) {
+      return undefined;
+    }
     return filteredModels.find(
       (model: ModelItem) => toCamelCase(model.modelId) === toCamelCase(modelId)
     );

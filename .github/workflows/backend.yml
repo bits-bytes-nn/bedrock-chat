@@ -6,12 +6,20 @@ on:
       - v3
     paths:
       - "backend/**"
+      # tests/test_model_registry.py checks the frontend model list.
+      - "frontend/src/constants/index.ts"
+      - "frontend/src/hooks/useModel.ts"
+      - "frontend/src/i18n/en/index.ts"
       - ".github/workflows/backend.yml"
   push:
     branches:
       - v3
     paths:
       - "backend/**"
+      # tests/test_model_registry.py checks the frontend model list.
+      - "frontend/src/constants/index.ts"
+      - "frontend/src/hooks/useModel.ts"
+      - "frontend/src/i18n/en/index.ts"
       - ".github/workflows/backend.yml"
   workflow_dispatch: {}
 

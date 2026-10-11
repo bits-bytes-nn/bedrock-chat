@@ -133,6 +133,9 @@ export class BedrockChatStack extends cdk.Stack {
         envName: props.envName,
         envPrefix: props.envPrefix,
         bedrockRegion: props.bedrockRegion,
+        enableBedrockGlobalInference: props.enableBedrockGlobalInference,
+        enableBedrockCrossRegionInference:
+          props.enableBedrockCrossRegionInference,
       }
     );
     // CodeBuild used for KnowledgeBase
