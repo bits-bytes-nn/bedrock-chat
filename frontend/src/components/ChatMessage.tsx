@@ -42,6 +42,9 @@ type Props = BaseProps & {
   onSubmitFeedback?: (messageId: string, feedback: PutFeedbackRequest) => void;
 };
 
+// Citation tags such as [^1] are rendered as footnotes and are not part of the answer.
+const CITATION_TAG_PATTERN = /\[\^[^\]]*\]/g;
+
 const ChatMessage: React.FC<Props> = (props) => {
   const { t } = useTranslation();
   const [isEdit, setIsEdit] = useState(false);
@@ -152,6 +155,7 @@ const ChatMessage: React.FC<Props> = (props) => {
           <div className="flex items-center justify-start text-sm lg:justify-end">
             <ButtonIcon
               className="text-xs"
+              label={t('button.previous')}
               disabled={nodeIndex === 0}
               onClick={() => {
                 onClickChange(nodeIndex - 1);
@@ -163,6 +167,7 @@ const ChatMessage: React.FC<Props> = (props) => {
             {chatContent?.sibling.length}
             <ButtonIcon
               className="text-xs"
+              label={t('button.next')}
               disabled={nodeIndex >= (chatContent?.sibling.length ?? 0) - 1}
               onClick={() => {
                 onClickChange(nodeIndex + 1);
@@ -350,6 +355,7 @@ const ChatMessage: React.FC<Props> = (props) => {
           {chatContent?.role === 'user' && !isEdit && (
             <ButtonIcon
               className="text-dark-gray dark:text-light-gray"
+              label={t('button.edit')}
               onClick={() => {
                 const textContent = chatContent.content[
                   firstTextContent
@@ -364,6 +370,7 @@ const ChatMessage: React.FC<Props> = (props) => {
             <div className="flex">
               <ButtonIcon
                 className="text-dark-gray dark:text-light-gray"
+                label={t('button.feedback')}
                 onClick={() => setIsFeedbackOpen(true)}>
                 {chatContent.feedback && !chatContent.feedback.thumbsUp ? (
                   <PiThumbsDownFill />
@@ -373,15 +380,10 @@ const ChatMessage: React.FC<Props> = (props) => {
               </ButtonIcon>
               <ButtonCopy
                 className="text-dark-gray dark:text-light-gray"
-                text={
-                  chatContent.content.find((c) => c.contentType === 'text')
-                    ? (
-                        chatContent.content.find(
-                          (c) => c.contentType === 'text'
-                        ) as TextContent
-                      ).body
-                    : ''
-                }
+                text={chatContent.content
+                  .filter((c): c is TextContent => c.contentType === 'text')
+                  .map((c) => c.body.replace(CITATION_TAG_PATTERN, ''))
+                  .join('\n')}
               />
             </div>
           )}

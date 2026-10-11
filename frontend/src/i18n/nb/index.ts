@@ -6,8 +6,7 @@ const translation = {
       },
     },
     app: {
-      name: 'ACO-gpt',
-      nameWithoutClaude: 'ACO-gpt',
+      name: 'Bedrock Chat',
       inputMessage: 'Send en melding',
       pinnedBots: 'Faste boter',
       starredBots: 'Favorittbot',
@@ -33,16 +32,6 @@ const translation = {
           running: 'Kjører...',
           success: 'Suksess',
           error: 'Feil',
-        },
-        app: {
-          name: 'Bedrock Chat',
-          inputMessage: 'Send en melding',
-          pinnedBots: 'Faste boter',
-          starredBots: 'Favorittbot',
-          recentlyUsedBots: 'Nylig brukte boter',
-          conversationHistory: 'Historikk',
-          chatWaitingSymbol: '▍',
-          adminConsoles: 'Kun administrator',
         },
         sql_db_query: {
           name: 'Databaseforespørsel',

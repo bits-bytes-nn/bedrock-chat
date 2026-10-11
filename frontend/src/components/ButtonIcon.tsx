@@ -3,6 +3,8 @@ import { BaseProps } from '../@types/common';
 import { twMerge } from 'tailwind-merge';
 
 type Props = BaseProps & {
+  /** Accessible name, also shown as a tooltip. Required for icon-only buttons. */
+  label?: string;
   disabled?: boolean;
   onClick: (e: React.MouseEvent) => void;
   children: React.ReactNode;
@@ -22,6 +24,8 @@ const ButtonIcon: React.FC<Props> = (props) => {
         e.preventDefault();
         props.onClick(e);
       }}
+      aria-label={props.label}
+      title={props.label}
       disabled={props.disabled}>
       {props.children}
     </button>

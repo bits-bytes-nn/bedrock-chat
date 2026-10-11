@@ -528,6 +528,7 @@ const InputChatContent = forwardRef<HTMLElement, Props>(
                   />
                   <ButtonIcon
                     className="absolute left-0 top-0 -m-2 border border-aws-sea-blue-light bg-white p-1 text-xs text-aws-sea-blue-light dark:border-aws-sea-blue-dark dark:text-aws-sea-blue-dark"
+                    label={t('button.remove')}
                     onClick={() => {
                       removeBase64EncodedImage(idx);
                     }}>
@@ -557,6 +558,7 @@ const InputChatContent = forwardRef<HTMLElement, Props>(
                   <UploadedAttachedFile fileName={file.name} />
                   <ButtonIcon
                     className="absolute left-2 top-1 -m-2 border border-aws-sea-blue-light bg-white p-1 text-xs text-aws-sea-blue-light dark:border-aws-sea-blue-dark dark:text-aws-sea-blue-dark"
+                    label={t('button.remove')}
                     onClick={() => {
                       removeTextFile(idx);
                     }}>
