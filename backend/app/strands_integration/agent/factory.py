@@ -10,7 +10,7 @@ from app.repositories.models.custom_bot import BotModel, GenerationParamsModel
 from app.repositories.models.custom_bot_guardrails import BedrockGuardrailsModel
 from app.strands_integration.utils import get_strands_tools
 from strands import Agent
-from strands.hooks import HookProvider
+from strands.hooks import HookCallback, HookProvider
 from strands.models import BedrockModel
 
 from app.strands_integration.agent.config import get_bedrock_model_config
@@ -49,10 +49,11 @@ def create_strands_agent(
     # Strands does not support list of instructions, so we join them into a single string.
     system_prompt = "\n\n".join(instructions).strip() if instructions else None
 
+    agent_hooks: list[HookProvider | HookCallback] = list(hooks or [])
     agent = Agent(
         model=model,
         tools=get_strands_tools(bot, model_name),  # type: ignore
-        hooks=hooks or [],
+        hooks=agent_hooks,
         system_prompt=system_prompt,
     )
     return agent
