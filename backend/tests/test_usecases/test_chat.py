@@ -1,3 +1,4 @@
+import pytest
 import os
 import sys
 
@@ -182,6 +183,7 @@ class TestTraceToRoot(unittest.TestCase):
         self.assertEqual(messages[4].content[0].body, "user_3b")
 
 
+@pytest.mark.aws
 class TestStartChat(unittest.TestCase):
     user = create_test_user("user1")
 
@@ -267,6 +269,7 @@ class TestStartChat(unittest.TestCase):
         delete_conversation_by_id("user1", self.output.conversation_id)
 
 
+@pytest.mark.aws
 class TestAttachmentChat(unittest.TestCase):
     user = create_test_user("user1")
 
@@ -305,6 +308,7 @@ class TestAttachmentChat(unittest.TestCase):
         self.output = output
 
 
+@pytest.mark.aws
 class TestMultimodalChat(unittest.TestCase):
     user = create_test_user("user1")
 
@@ -347,6 +351,7 @@ class TestMultimodalChat(unittest.TestCase):
         self.output = output
 
 
+@pytest.mark.aws
 class TestContinueChat(unittest.TestCase):
     user = create_test_user("user1")
 
@@ -504,6 +509,7 @@ class TestContinueChat(unittest.TestCase):
         delete_conversation_by_id(self.user.id, self.output.conversation_id)
 
 
+@pytest.mark.aws
 class TestRegenerateChat(unittest.TestCase):
     user = create_test_user("user1")
 
@@ -649,6 +655,7 @@ class TestRegenerateChat(unittest.TestCase):
         delete_conversation_by_id(self.user.id, self.conversation_id)
 
 
+@pytest.mark.aws
 class TestProposeTitle(unittest.TestCase):
     user = create_test_user("user1")
 
@@ -685,6 +692,7 @@ class TestProposeTitle(unittest.TestCase):
         delete_conversation_by_id(self.user.id, self.output.conversation_id)
 
 
+@pytest.mark.aws
 class TestChatWithCustomizedBot(unittest.TestCase):
     first_user = create_test_user("user1")
     second_user = create_test_user("user2")
@@ -900,6 +908,7 @@ def on_reasoning(x: str):
     print(f"Reasoning: {x}")
 
 
+@pytest.mark.aws
 class TestAgentChat(unittest.TestCase):
     user = create_test_user("user1")
     bot_id = "bot1"
@@ -957,6 +966,7 @@ class TestAgentChat(unittest.TestCase):
         print("Thinking log: ", assistant_message.thinking_log)
 
 
+@pytest.mark.aws
 class TestGuardrailChat(unittest.TestCase):
     user = create_test_user("user1")
     bot_id = "bot1"

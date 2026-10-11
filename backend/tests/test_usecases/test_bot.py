@@ -1,3 +1,4 @@
+import pytest
 import sys
 
 sys.path.insert(0, ".")
@@ -62,6 +63,7 @@ class TestIssuePresignedUrl(unittest.TestCase):
         self.assertTrue(url.startswith("https://"))
 
 
+@pytest.mark.aws
 class TestModifyBotVisibility(unittest.TestCase):
     user = create_test_user("user1")
 
@@ -138,6 +140,7 @@ class TestModifyBotVisibility(unittest.TestCase):
         self.assertEqual(updated_bot.allowed_cognito_groups, [])
 
 
+@pytest.mark.aws
 class TestModifyPinnedBotVisibilityNarrowing(unittest.TestCase):
     user = create_test_user("user1")
 
@@ -175,6 +178,7 @@ class TestModifyPinnedBotVisibilityNarrowing(unittest.TestCase):
             modify_bot_visibility(self.user, "2", input_data)
 
 
+@pytest.mark.aws
 class TestModifyPinningStatus(unittest.TestCase):
     def setUp(self) -> None:
         self.public_bot = create_test_public_bot(
@@ -221,6 +225,7 @@ class TestModifyPinningStatus(unittest.TestCase):
             modify_pinning_status("2", input_data)
 
 
+@pytest.mark.aws
 class TestScenario(unittest.TestCase):
     user1 = create_test_user("user1")
     user2 = create_test_user("user2")
@@ -384,6 +389,7 @@ class TestScenario(unittest.TestCase):
                 self.assertFalse(bot_meta.available)
 
 
+@pytest.mark.aws
 class TestSharing(unittest.TestCase):
     def setUp(self) -> None:
         self.publisher = create_test_user("test_user_pub")

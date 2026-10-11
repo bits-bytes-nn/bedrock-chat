@@ -1,12 +1,11 @@
 import json
 import logging
 import os
-import traceback
 from datetime import datetime
 from decimal import Decimal as decimal
-from queue import SimpleQueue
+from queue import Empty, SimpleQueue
 from threading import Thread
-from typing import BinaryIO, Literal, TypedDict
+from typing import Literal, TypedDict
 
 import boto3
 from app.stream import ToolRunResult
@@ -17,8 +16,18 @@ from app.stream import OnStopInput, OnThinking
 from app.usecases.chat import chat
 from app.user import User
 from boto3.dynamodb.conditions import Attr, Key
+from botocore.config import Config
+from botocore.exceptions import ClientError
 
 WEBSOCKET_SESSION_TABLE_NAME = os.environ["WEBSOCKET_SESSION_TABLE_NAME"]
+
+# Consecutive tokens are merged into one frame while the sender is busy, which keeps
+# the number of post_to_connection calls bounded for fast models. The limit keeps a
+# merged frame well below the API Gateway WebSocket frame size (32 KB).
+MAX_MERGED_COMPLETION_CHARS = 8 * 1024
+
+# Time reserved for Lambda to return after the sender has drained.
+SENDER_DRAIN_MARGIN_SECONDS = 5
 
 dynamodb_client = boto3.resource("dynamodb")
 table = dynamodb_client.Table(WEBSOCKET_SESSION_TABLE_NAME)
@@ -29,14 +38,20 @@ logger.setLevel(logging.INFO)
 
 class _NotifyCommand(TypedDict):
     type: Literal["notify"]
-    payload: bytes | BinaryIO
+    payload: bytes
+
+
+class _CompletionCommand(TypedDict):
+    type: Literal["completion"]
+    status: Literal["STREAMING", "REASONING"]
+    completion: str
 
 
 class _FinishCommand(TypedDict):
     type: Literal["finish"]
 
 
-_Command = _NotifyCommand | _FinishCommand
+_Command = _NotifyCommand | _CompletionCommand | _FinishCommand
 
 
 class NotificationSender:
@@ -44,77 +59,92 @@ class NotificationSender:
         self.commands = SimpleQueue[_Command]()
         self.endpoint_url = endpoint_url
         self.connection_id = connection_id
+        self.stream_ended = False
 
     def run(self):
-        import boto3
-
         gatewayapi = boto3.client(
             "apigatewaymanagementapi",
             endpoint_url=self.endpoint_url,
+            config=Config(
+                connect_timeout=5,
+                read_timeout=10,
+                retries={"mode": "standard", "max_attempts": 5},
+            ),
         )
 
+        pending: _Command | None = None
         while True:
-            command = self.commands.get()
-            if command["type"] == "notify":
-                try:
-                    logger.debug(
-                        f"[WEBSOCKET_SEND] Sending to connection {self.connection_id}: {command['payload'][:200]}..."
-                    )
-                    gatewayapi.post_to_connection(
-                        ConnectionId=self.connection_id,
-                        Data=command["payload"],
-                    )
-                    logger.debug(
-                        f"[WEBSOCKET_SEND] Successfully sent to connection {self.connection_id}"
-                    )
+            command = pending if pending is not None else self.commands.get()
+            pending = None
 
-                except (
-                    gatewayapi.exceptions.GoneException,
-                    gatewayapi.exceptions.ForbiddenException,
-                ) as e:
-                    logger.exception(
-                        f"Shutdown the notification sender due to an exception: {e}"
-                    )
-                    break
-
-                except Exception as e:
-                    logger.exception(f"Failed to send notification: {e}")
-
-            elif command["type"] == "finish":
+            if command["type"] == "finish":
                 break
 
-    def finish(self):
-        self.commands.put(
-            {
-                "type": "finish",
-            }
-        )
+            if command["type"] == "completion":
+                payload, pending = self._merge_completions(command)
+            else:
+                payload = command["payload"]
 
-    def notify(self, payload: bytes | BinaryIO):
-        logger.debug(
-            f"[WEBSOCKET_NOTIFY] Adding payload to queue: {len(str(payload))} chars"
-        )
-        self.commands.put(
-            {
-                "type": "notify",
-                "payload": payload,
-            }
-        )
-        logger.debug(f"[WEBSOCKET_NOTIFY] Payload added to queue successfully")
+            try:
+                gatewayapi.post_to_connection(
+                    ConnectionId=self.connection_id,
+                    Data=payload,
+                )
+
+            except (
+                gatewayapi.exceptions.GoneException,
+                gatewayapi.exceptions.ForbiddenException,
+            ):
+                logger.warning(
+                    "Connection %s is closed. Stop sending notifications.",
+                    self.connection_id,
+                )
+                break
+
+            except Exception:
+                logger.exception(
+                    "Failed to send a notification of %d bytes", len(payload)
+                )
+
+    def _merge_completions(
+        self, first: _CompletionCommand
+    ) -> tuple[bytes, _Command | None]:
+        """Merge queued completions of the same status into one payload.
+
+        Returns:
+            The encoded payload and the first queued command that was not merged.
+        """
+        completion = first["completion"]
+        pending: _Command | None = None
+        while len(completion) < MAX_MERGED_COMPLETION_CHARS:
+            try:
+                command = self.commands.get_nowait()
+            except Empty:
+                break
+
+            if command["type"] == "completion" and command["status"] == first["status"]:
+                completion += command["completion"]
+            else:
+                pending = command
+                break
+
+        payload = json.dumps(
+            dict(status=first["status"], completion=completion)
+        ).encode("utf-8")
+        return payload, pending
+
+    def finish(self):
+        self.commands.put({"type": "finish"})
+
+    def notify(self, payload: bytes):
+        self.commands.put({"type": "notify", "payload": payload})
 
     def on_stream(self, token: str):
-        # Send completion
-        payload = json.dumps(
-            dict(
-                status="STREAMING",
-                completion=token,
-            )
-        ).encode("utf-8")
-
-        self.notify(payload=payload)
+        self.commands.put(
+            {"type": "completion", "status": "STREAMING", "completion": token}
+        )
 
     def on_stop(self, arg: OnStopInput):
-        logger.debug(f"[WEBSOCKET_ON_STOP] WebSocket on_stop called with: {arg}")
         payload = json.dumps(
             dict(
                 status="STREAMING_END",
@@ -130,11 +160,8 @@ class NotificationSender:
             )
         ).encode("utf-8")
 
-        logger.debug(
-            f"[WEBSOCKET_ON_STOP] Sending STREAMING_END payload: {payload.decode('utf-8')}"
-        )
+        self.stream_ended = True
         self.notify(payload=payload)
-        logger.debug(f"[WEBSOCKET_ON_STOP] STREAMING_END payload sent successfully")
 
     def on_agent_thinking(self, tool_use: OnThinking):
         payload = json.dumps(
@@ -180,13 +207,22 @@ class NotificationSender:
             )
 
     def on_reasoning(self, token: str):
-        payload = json.dumps(
-            dict(
-                status="REASONING",
-                completion=token,
-            )
-        ).encode("utf-8")
-        self.notify(payload=payload)
+        self.commands.put(
+            {"type": "completion", "status": "REASONING", "completion": token}
+        )
+
+    def on_error(self, reason: str):
+        """Send an error to the client unless the stream has already ended.
+
+        The route response cannot carry errors after the API Gateway integration
+        timeout (29 seconds), so errors are also pushed over the connection.
+        """
+        if self.stream_ended:
+            return
+
+        self.notify(
+            payload=json.dumps(dict(status="ERROR", reason=reason)).encode("utf-8")
+        )
 
 
 def process_chat_input(
@@ -195,7 +231,19 @@ def process_chat_input(
     notificator: NotificationSender,
 ) -> dict:
     """Process chat input and send the message to the client."""
-    logger.info(f"Received chat input: {chat_input}")
+    logger.info(
+        "Received chat input: conversation_id=%s, bot_id=%s, model=%s",
+        chat_input.conversation_id,
+        chat_input.bot_id,
+        chat_input.message.model,
+    )
+
+    def error_response(status_code: int, reason: str) -> dict:
+        notificator.on_error(reason)
+        return {
+            "statusCode": status_code,
+            "body": json.dumps(dict(status="ERROR", reason=reason)),
+        }
 
     try:
         chat(
@@ -220,42 +268,34 @@ def process_chat_input(
 
     except RecordNotFoundError:
         if chat_input.bot_id:
-            return {
-                "statusCode": 404,
-                "body": json.dumps(
-                    dict(
-                        status="ERROR",
-                        reason=f"bot {chat_input.bot_id} not found.",
-                    )
-                ),
-            }
+            return error_response(404, f"bot {chat_input.bot_id} not found.")
         else:
-            return {
-                "statusCode": 400,
-                "body": json.dumps(
-                    dict(
-                        status="ERROR",
-                        reason="Invalid request.",
-                    )
-                ),
-            }
+            return error_response(400, "Invalid request.")
 
-    except Exception as e:
-        logger.exception(f"Failed to run stream handler: {e}")
-        return {
-            "statusCode": 500,
-            "body": json.dumps(
-                dict(
-                    status="ERROR",
-                    reason=f"Failed to run stream handler: {e}",
-                )
-            ),
-        }
+    except (PermissionError, ValueError) as e:
+        logger.exception("Rejected chat input")
+        return error_response(400, str(e))
+
+    except ClientError as e:
+        logger.exception("Bedrock request failed")
+        if e.operation_name in ("Converse", "ConverseStream"):
+            # Model errors such as missing model access are actionable for the user.
+            return error_response(502, e.response["Error"]["Message"])
+        return error_response(500, "Failed to generate the answer.")
+
+    except Exception:
+        # Unexpected errors may contain resource names and account details.
+        logger.exception("Failed to run stream handler")
+        return error_response(500, "Failed to generate the answer.")
 
 
 def handler(event, context):
-    logger.info(f"Received event: {event}")
     route_key = event["requestContext"]["routeKey"]
+    logger.info(
+        "Received event: route_key=%s, connection_id=%s",
+        route_key,
+        event["requestContext"].get("connectionId"),
+    )
 
     if route_key == "$connect":
         return {"statusCode": 200, "body": "Connected."}
@@ -297,8 +337,8 @@ def handler(event, context):
             try:
                 # Verify JWT token
                 decoded = verify_token(token)
-            except Exception as e:
-                logger.exception(f"Invalid token: {e}")
+            except Exception:
+                logger.exception("Invalid token")
                 return {
                     "statusCode": 403,
                     "body": json.dumps(
@@ -358,7 +398,7 @@ def handler(event, context):
                 else:
                     break
 
-            logger.info(f"Number of message chunks: {len(message_parts)}")
+            logger.info("Number of message chunks: %d", len(message_parts))
             message_parts.sort(key=lambda x: x["MessagePartId"])
             full_message = "".join(item["MessagePart"] for item in message_parts)
 
@@ -388,7 +428,7 @@ def handler(event, context):
             return {"statusCode": 200, "body": "Message part received."}
 
     except Exception as e:
-        logger.exception(f"Operation failed: {e}")
+        logger.exception("Operation failed")
         return {
             "statusCode": 500,
             "body": json.dumps(
@@ -401,4 +441,11 @@ def handler(event, context):
 
     finally:
         notificator.finish()
-        notification_thread.join(timeout=60)
+        # Wait until every queued notification is delivered. Returning earlier freezes
+        # the sender thread and drops the tail of the response, including STREAMING_END.
+        drain_timeout = (
+            context.get_remaining_time_in_millis() / 1000 - SENDER_DRAIN_MARGIN_SECONDS
+        )
+        notification_thread.join(timeout=max(drain_timeout, 0))
+        if notification_thread.is_alive():
+            logger.error("Notification sender did not drain before the deadline")

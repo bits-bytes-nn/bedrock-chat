@@ -157,7 +157,8 @@ const ChatPage: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { open: openSnackbar } = useSnackbar();
-  const { errorDetail } = usePostMessageStreaming();
+  const { errorDetail, truncatedConversationId } =
+    usePostMessageStreaming();
   const { isAdmin } = useLoginUser();
   const { pinBot, unpinBot } = useBotPinning();
 
@@ -625,6 +626,15 @@ const ChatPage: React.FC = () => {
                   ))}
                 </>
               )}
+              {!postingMessage &&
+                !hasError &&
+                !getShouldContinue() &&
+                truncatedConversationId === conversationId && (
+                  <div className="mb-12 mt-2 flex items-center justify-center px-4 text-sm text-aws-font-color-light/80 dark:text-aws-font-color-dark/80">
+                    <PiWarningCircleFill className="mr-1 shrink-0 text-xl text-yellow" />
+                    {t('error.maxTokensReached')}
+                  </div>
+                )}
               {hasError && (
                 <div className="mb-12 mt-2 flex flex-col items-center">
                   <div className="flex items-center font-bold text-red">
@@ -668,9 +678,10 @@ const ChatPage: React.FC = () => {
         {messages.length === 0 && (
           <div className="mb-3 flex w-11/12 flex-wrap-reverse justify-start gap-2 md:w-10/12 lg:w-4/6 xl:w-3/6">
             {bot?.conversationQuickStarters?.map((qs, idx) => (
-              <div
+              <button
+                type="button"
                 key={idx}
-                className="w-[calc(33.333%-0.5rem)] cursor-pointer rounded-2xl border border-aws-squid-ink-light/20 bg-white p-2 text-sm  text-dark-gray hover:shadow-lg hover:shadow-gray  dark:border-aws-squid-ink-dark/20 dark:text-light-gray"
+                className="w-full rounded-2xl border border-aws-squid-ink-light/20 bg-white p-2 text-left text-sm text-dark-gray hover:shadow-lg hover:shadow-gray dark:border-aws-squid-ink-dark/20 dark:bg-aws-ui-color-dark dark:text-light-gray sm:w-[calc(50%-0.5rem)] lg:w-[calc(33.333%-0.5rem)]"
                 onClick={() => {
                   onSend(qs.example, reasoningEnabled);
                 }}>
@@ -678,7 +689,7 @@ const ChatPage: React.FC = () => {
                   <PiPenNib />
                 </div>
                 {qs.title}
-              </div>
+              </button>
             ))}
           </div>
         )}

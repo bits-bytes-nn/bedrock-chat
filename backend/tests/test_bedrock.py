@@ -1,3 +1,4 @@
+import pytest
 import os
 import sys
 
@@ -125,6 +126,7 @@ class TestGetModelId(unittest.TestCase):
         )
 
 
+@pytest.mark.aws
 class TestCallConverseApi(unittest.TestCase):
     def test_call_converse_api_with_global_inference(self):
         """Actual LLM call using global inference profile"""
@@ -214,6 +216,7 @@ class TestCallConverseApi(unittest.TestCase):
         pprint(response)
 
 
+@pytest.mark.aws
 class TestCallConverseApiWithGuardrails(unittest.TestCase):
     def setUp(self):
         # Note that the region must be the same as the one used in the bedrock client

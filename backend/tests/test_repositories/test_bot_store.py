@@ -1,3 +1,4 @@
+import pytest
 import sys
 import unittest
 
@@ -22,6 +23,8 @@ from tests.test_repositories.utils.bot_factory import (
     create_test_private_bot,
     create_test_public_bot,
 )
+
+pytestmark = pytest.mark.aws
 
 
 class TestFindBotsWithOpenSearch(unittest.TestCase):

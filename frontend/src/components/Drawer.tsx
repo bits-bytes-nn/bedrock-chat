@@ -70,6 +70,7 @@ type ItemProps = BaseProps & {
 };
 
 const Item: React.FC<ItemProps> = (props) => {
+  const { t } = useTranslation();
   const { pathname } = useLocation();
   const { conversationId: pathParam } = useParams();
   const { conversationId } = useChat();
@@ -169,23 +170,33 @@ const Item: React.FC<ItemProps> = (props) => {
         <>
           {active && !editing && (
             <>
-              <ButtonIcon className="text-base" onClick={onClickEdit}>
+              <ButtonIcon
+                className="text-base"
+                label={t('button.rename')}
+                onClick={onClickEdit}>
                 <PiPencilLine />
               </ButtonIcon>
 
-              <ButtonIcon className="text-base" onClick={onClickDelete}>
+              <ButtonIcon
+                className="text-base"
+                label={t('button.delete')}
+                onClick={onClickDelete}>
                 <PiTrash />
               </ButtonIcon>
             </>
           )}
           {editing && (
             <>
-              <ButtonIcon className="text-base" onClick={onClickUpdate}>
+              <ButtonIcon
+                className="text-base"
+                label={t('button.done')}
+                onClick={onClickUpdate}>
                 <PiCheck />
               </ButtonIcon>
 
               <ButtonIcon
                 className="text-base"
+                label={t('button.cancel')}
                 onClick={() => {
                   setEditing(false);
                 }}>
@@ -567,6 +578,7 @@ const Drawer: React.FC<Props> = (props) => {
         className={`lg:hidden ${opened ? 'visible' : 'hidden'}`}>
         <ButtonIcon
           className="fixed left-64 top-0 z-50 text-white"
+          label={t('button.close')}
           onClick={switchOpen}>
           <PiX />
         </ButtonIcon>

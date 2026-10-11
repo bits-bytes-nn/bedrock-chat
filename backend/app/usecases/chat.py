@@ -44,7 +44,7 @@ from app.routes.schemas.conversation import (
 )
 from app.stream import OnStopInput, OnThinking
 from app.usecases.bot import fetch_bot, modify_bot_last_used_time, modify_bot_stats
-from app.usecases.global_config import get_title_model
+from app.usecases.global_config import get_global_available_models, get_title_model
 from app.user import User
 from app.utils import get_current_time
 from app.vector_search import (
@@ -68,7 +68,6 @@ def prepare_conversation(
     try:
         # Fetch existing conversation
         conversation = find_conversation_by_id(user.id, chat_input.conversation_id)
-        logger.info(f"Found conversation: {conversation}")
         parent_id = chat_input.message.parent_message_id
         if chat_input.message.parent_message_id == "system" and chat_input.bot_id:
             # The case editing first user message and use bot
@@ -158,6 +157,9 @@ def prepare_conversation(
 
         if chat_input.message.message_id:
             message_id = chat_input.message.message_id
+            # Reusing an existing id would overwrite a message or create a cycle.
+            if message_id in conversation.message_map:
+                raise ValueError(f"Message id {message_id} already exists.")
         else:
             message_id = str(ULID())
 
@@ -182,8 +184,13 @@ def trace_to_root(
     if not node_id or node_id == "system":
         node_id = "instruction" if "instruction" in message_map else "system"
 
+    visited: set[str] = set()
     current_node = message_map.get(node_id)
     while current_node:
+        if node_id in visited:
+            raise ValueError(f"Message tree has a cycle at {node_id}.")
+        visited.add(node_id)
+
         result.append(SimpleMessageModel.from_message_model(message=current_node))
         if current_node.thinking_log:
             result.extend(
@@ -196,12 +203,29 @@ def trace_to_root(
                 )
             )
 
-        parent_id = current_node.parent
-        if parent_id is None:
+        if current_node.parent is None:
             break
-        current_node = message_map.get(parent_id)
+        node_id = current_node.parent
+        current_node = message_map.get(node_id)
 
     return result[::-1]
+
+
+def validate_model_is_available(model: str, bot: BotModel | None) -> None:
+    """Enforce the model allowlists that the UI applies, so that API clients cannot
+    bypass them.
+
+    Raises:
+        PermissionError: If the model is disabled globally or for the bot.
+    """
+    global_models = get_global_available_models()
+    if global_models and model not in global_models:
+        raise PermissionError(f"Model {model} is not available.")
+
+    if bot is not None:
+        field_name = model.replace("-", "_").replace(".", "_")
+        if not getattr(bot.active_models, field_name, True):
+            raise PermissionError(f"Model {model} is not active for this bot.")
 
 
 def chat(
@@ -214,6 +238,7 @@ def chat(
     on_reasoning: Callable[[str], None] | None = None,
 ) -> tuple[ConversationModel, MessageModel]:
     user_msg_id, conversation, bot = prepare_conversation(user, chat_input)
+    validate_model_is_available(chat_input.message.model, bot)
     display_citation = bot is not None and bot.display_retrieved_chunks
 
     message_map = conversation.message_map
@@ -256,7 +281,7 @@ def chat(
                     )
 
                 search_results = search_related_docs(bot=bot, query=content.body)
-                logger.info(f"Search results from vector store: {search_results}")
+                logger.info("Found %d related documents", len(search_results))
 
                 if on_tool_result:
                     on_tool_result(

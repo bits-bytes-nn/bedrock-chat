@@ -9,6 +9,8 @@ permissions:
 
 jobs:
   close-issues:
+    # Upstream maintenance only; forks have no Pages site or triage process.
+    if: github.repository == 'aws-samples/bedrock-chat'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6

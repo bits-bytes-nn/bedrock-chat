@@ -11,7 +11,7 @@ from app.routes.schemas.bot_kb import BedrockKnowledgeBaseOutput
 from app.user import User
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 
 
 def search_bots(

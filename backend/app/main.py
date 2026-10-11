@@ -83,7 +83,9 @@ def error_handler_factory(status_code: int) -> Callable[[Request, Exception], Re
     def error_handler(_: Request, exc: Exception) -> JSONResponse:
         logger.error(exc)
         logger.error("".join(traceback.format_tb(exc.__traceback__)))
-        return JSONResponse({"errors": [str(exc)]}, status_code=status_code)
+        # Unexpected errors may contain resource names and account details.
+        message = str(exc) if status_code < 500 else "Internal server error"
+        return JSONResponse({"errors": [message]}, status_code=status_code)
 
     return error_handler  # type: ignore
 
@@ -131,12 +133,8 @@ def add_current_user_to_request(request: Request, call_next: ASGIApp):
 
 @app.middleware("http")
 async def add_log_requests(request: Request, call_next: ASGIApp):
-    logger.info(f"Request path: {request.url.path}")
-    logger.info(f"Request method: {request.method}")
-    logger.info(f"Request headers: {request.headers}")
-
-    body = await request.body()
-    logger.info(f"Request body: {body.decode('utf-8')[:100]}...")
+    # Headers and bodies are not logged because they contain tokens and user content.
+    logger.info("Request: %s %s", request.method, request.url.path)
 
     response = await call_next(request)  # type: ignore
 

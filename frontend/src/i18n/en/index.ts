@@ -704,6 +704,13 @@ How would you categorize this email?`,
       ],
     },
     button: {
+      copy: 'Copy',
+      edit: 'Edit',
+      feedback: 'Feedback',
+      previous: 'Previous',
+      next: 'Next',
+      remove: 'Remove',
+      rename: 'Rename',
       newChat: 'New Chat',
       backToConversationHistory: 'Back to Chat History',
       botConsole: 'Bot Console',
@@ -996,7 +1003,11 @@ How would you categorize this email?`,
         general: 'An error occurred while predicting.',
         invalidResponse:
           'Unexpected response received. The response format does not match the expected format.',
+        connectionClosed:
+          'The connection was closed before the answer was complete. Reload the page to see the saved answer.',
       },
+      maxTokensReached:
+        'The answer was cut off because it reached the maximum output length. Increase Max Tokens in the bot generation settings.',
       notSupportedImage: 'The selected model does not support images.',
       unsupportedFileFormat: 'The selected file format is not supported.',
       totalFileSizeToSendExceeded:
