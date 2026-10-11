@@ -40,8 +40,12 @@ export interface AuthProps {
 export class Auth extends Construct {
   readonly userPool: UserPool;
   readonly client: UserPoolClient;
+  /** Whether users can create their own accounts. */
+  readonly selfSignUpEnabled: boolean;
   constructor(scope: Construct, id: string, props: AuthProps) {
     super(scope, id);
+    // Self sign-up is disabled when an external identity provider is configured.
+    this.selfSignUpEnabled = props.selfSignUpEnabled && !props.idp.isExist();
     const userPool = new UserPool(this, "UserPool", {
       passwordPolicy: {
         requireUppercase: true,
@@ -49,8 +53,7 @@ export class Auth extends Construct {
         requireDigits: true,
         minLength: 8,
       },
-      // Disable id selfSignUpEnabled is given as false or if selfSignUpEnabled is true and idp is provided
-      selfSignUpEnabled: props.selfSignUpEnabled && !props.idp.isExist(),
+      selfSignUpEnabled: this.selfSignUpEnabled,
       signInAliases: {
         username: false,
         email: true,

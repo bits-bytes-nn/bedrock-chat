@@ -291,22 +291,13 @@ You can define parameters for your deployment in two ways: using `cdk.json` or u
 
 The traditional way to configure parameters is by editing the `cdk.json` file. This approach is simple but lacks type checking:
 
-To keep deployment-specific values out of Git, put them in `cdk/cdk.context.json` instead. The file is ignored by Git, and its values override the ones in `cdk.json`:
-
-```json
-{
-  "bedrockRegion": "ap-northeast-2",
-  "selfSignUpEnabled": false
-}
-```
-
 ```json
 {
   "app": "npx ts-node --prefer-ts-exts bin/bedrock-chat.ts",
   "context": {
     "bedrockRegion": "us-east-1",
     "allowedIpV4AddressRanges": ["0.0.0.0/1", "128.0.0.0/1"],
-    "selfSignUpEnabled": true,
+    "selfSignUpEnabled": false,
     "globalAvailableModels": [
       "claude-v5.5-sonnet",
       "claude-v5.5-haiku",
@@ -318,6 +309,12 @@ To keep deployment-specific values out of Git, put them in `cdk/cdk.context.json
 }
 ```
 
+To keep deployment-specific values out of Git, pass them with `-c` when you deploy. Command-line context overrides `cdk.json`; values in `cdk.context.json` do not:
+
+```sh
+npx cdk deploy --all -c bedrockRegion=ap-northeast-2
+```
+
 #### Using parameter.ts (Recommended Type-Safe Method)
 
 For better type safety and developer experience, you can use the `parameter.ts` file to define your parameters:
@@ -327,7 +324,7 @@ For better type safety and developer experience, you can use the `parameter.ts` 
 bedrockChatParams.set("default", {
   bedrockRegion: "us-east-1",
   allowedIpV4AddressRanges: ["192.168.0.0/16"],
-  selfSignUpEnabled: true,
+  selfSignUpEnabled: false,
   globalAvailableModels: [
     "claude-v5.5-sonnet",
     "claude-v5.5-haiku",
@@ -425,7 +422,7 @@ This asset automatically detects the language using [i18next-browser-languageDet
 
 ### Disable self sign up
 
-This sample has self sign up enabled by default. To disable self sign up, open [cdk.json](./cdk/cdk.json) and switch `selfSignUpEnabled` as `false`. If you configure [external identity provider](#external-identity-provider), the value will be ignored and automatically disabled.
+Self sign up is disabled by default, so administrators create users in the Cognito user pool and the sign-in page has no sign-up tab. To let anyone who can reach the URL create an account, set `selfSignUpEnabled` to `true` in [cdk.json](./cdk/cdk.json). If you configure [external identity provider](#external-identity-provider), the value is ignored and self sign up stays disabled.
 
 ### Restrict Domains for Sign-Up Email Addresses
 
