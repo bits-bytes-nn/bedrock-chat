@@ -42,9 +42,9 @@ export class BedrockRegionResourcesStack extends Stack {
       encryption: BucketEncryption.S3_MANAGED,
       blockPublicAccess: BlockPublicAccess.BLOCK_ALL,
       enforceSSL: true,
-      removalPolicy: RemovalPolicy.DESTROY,
+      // Keep uploaded knowledge documents when the stack is deleted.
+      removalPolicy: RemovalPolicy.RETAIN,
       objectOwnership: ObjectOwnership.OBJECT_WRITER,
-      autoDeleteObjects: true,
       serverAccessLogsBucket: accessLogBucket,
       serverAccessLogsPrefix: "DocumentBucket",
     });

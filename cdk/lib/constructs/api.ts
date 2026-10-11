@@ -27,6 +27,7 @@ import { UsageAnalysis } from "./usage-analysis";
 import { excludeDockerImage } from "../constants/docker";
 import { PythonFunction } from "@aws-cdk/aws-lambda-python-alpha";
 import { Database } from "./database";
+import { bedrockChatPolicyStatement } from "../utils/bedrock-policies";
 
 export interface ApiProps {
   readonly database: Database;
@@ -79,12 +80,7 @@ export class Api extends Construct {
         resources: [tableAccessRole.roleArn],
       })
     );
-    handlerRole.addToPolicy(
-      new iam.PolicyStatement({
-        actions: ["bedrock:*"],
-        resources: ["*"],
-      })
-    );
+    handlerRole.addToPolicy(bedrockChatPolicyStatement());
     handlerRole.addToPolicy(
       new iam.PolicyStatement({
         effect: iam.Effect.ALLOW,

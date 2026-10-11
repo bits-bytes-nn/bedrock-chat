@@ -55,7 +55,9 @@ export class Auth extends Construct {
         username: false,
         email: true,
       },
-      removalPolicy: RemovalPolicy.DESTROY,
+      // Keep user accounts when the stack is deleted.
+      removalPolicy: RemovalPolicy.RETAIN,
+      deletionProtection: true,
     });
 
     const clientProps = (() => {

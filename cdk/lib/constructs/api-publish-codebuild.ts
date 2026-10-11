@@ -1,5 +1,5 @@
 import { Construct } from "constructs";
-import { RemovalPolicy } from "aws-cdk-lib";
+import { RemovalPolicy, Stack } from "aws-cdk-lib";
 import * as codebuild from "aws-cdk-lib/aws-codebuild";
 import * as s3 from "aws-cdk-lib/aws-s3";
 import * as iam from "aws-cdk-lib/aws-iam";
@@ -70,7 +70,8 @@ export class ApiPublishCodebuild extends Construct {
     project.role!.addToPrincipalPolicy(
       new iam.PolicyStatement({
         actions: ["sts:AssumeRole"],
-        resources: ["arn:aws:iam::*:role/cdk-*"],
+        // Only the CDK bootstrap roles of this account.
+        resources: [`arn:aws:iam::${Stack.of(this).account}:role/cdk-*`],
       })
     );
 

@@ -280,6 +280,7 @@ export function resolveBedrockChatParameters(
     titleModel: app.node.tryGetContext("titleModel"),
     logoPath: app.node.tryGetContext("logoPath"),
     devAccessIamRoleArn: app.node.tryGetContext("devAccessIamRoleArn"),
+    tokenValidMinutes: app.node.tryGetContext("tokenValidMinutes"),
   };
 
   return BedrockChatParametersSchema.parse(contextParams);

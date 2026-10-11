@@ -12,6 +12,7 @@ import * as sqs from "aws-cdk-lib/aws-sqs";
 import * as s3 from "aws-cdk-lib/aws-s3";
 import * as logs from "aws-cdk-lib/aws-logs";
 import { excludeDockerImage } from "./constants/docker";
+import { bedrockChatPolicyStatement } from "./utils/bedrock-policies";
 
 interface ApiPublishmentStackProps extends StackProps {
   readonly bedrockRegion: string;
@@ -31,7 +32,6 @@ export class ApiPublishmentStack extends Stack {
   constructor(scope: Construct, id: string, props: ApiPublishmentStackProps) {
     super(scope, id, props);
 
-    console.log(`usagePlan: ${JSON.stringify(props.usagePlan)}`); // DEBUG
 
     const deploymentStage = props.deploymentStage ?? "dev";
 
@@ -61,12 +61,7 @@ export class ApiPublishmentStack extends Stack {
         resources: [props.tableAccessRoleArn],
       })
     );
-    handlerRole.addToPolicy(
-      new iam.PolicyStatement({
-        actions: ["bedrock:*"],
-        resources: ["*"],
-      })
-    );
+    handlerRole.addToPolicy(bedrockChatPolicyStatement());
     const largeMessageBucket = s3.Bucket.fromBucketName(
       this,
       "LargeMessageBucket",

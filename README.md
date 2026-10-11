@@ -506,6 +506,8 @@ npx cdk deploy --all
 
 If using cli and CDK, please `npx cdk destroy`. If not, access [CloudFormation](https://console.aws.amazon.com/cloudformation/home) and then delete `BedrockChatStack` and `FrontendWafStack` manually. Please note that `FrontendWafStack` is in `us-east-1` region.
 
+The conversation and bot tables, the Cognito user pool, the document bucket and the large message bucket are retained so that user data is not lost. To delete them as well, turn off deletion protection on the tables and the user pool, empty the buckets, and delete them in the console or with the AWS CLI.
+
 ### Language Settings
 
 This asset automatically detects the language using [i18next-browser-languageDetector](https://github.com/i18next/i18next-browser-languageDetector). You can switch languages from the application menu. Alternatively, you can use Query String to set the language as shown below.
