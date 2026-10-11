@@ -710,6 +710,13 @@ const translation: typeof en = {
       ],
     },
     button: {
+      copy: 'コピー',
+      edit: '編集',
+      feedback: 'フィードバック',
+      previous: '前へ',
+      next: '次へ',
+      remove: '削除',
+      rename: '名前を変更',
       newChat: '新しいチャット',
       backToConversationHistory: 'チャット履歴に戻る',
       botConsole: 'ボットコンソール',

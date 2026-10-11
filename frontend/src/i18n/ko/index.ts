@@ -20,6 +20,13 @@ const translation = {
       title: '언어 변경',
     },
     button: {
+      copy: '복사',
+      edit: '편집',
+      feedback: '피드백',
+      previous: '이전',
+      next: '다음',
+      remove: '제거',
+      rename: '이름 변경',
       newChat: '새로운 채팅',
       SaveAndSubmit: '변경 & 전송',
       resend: '재전송',

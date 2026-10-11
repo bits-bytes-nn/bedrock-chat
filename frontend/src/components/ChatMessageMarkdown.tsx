@@ -117,10 +117,6 @@ const ChatMessageMarkdown: React.FC<Props> = ({
       },
     );
 
-    // Note: We no longer escape single $ here because remark-math is configured
-    // to only recognize $$ for display math (singleDollarTextMath: false)
-    // This prevents conflicts with code containing $ (like PHP variables, shell scripts, etc.)
-
     if (isStreaming) {
       textReplacedSourceId += chatWaitingSymbol;
     }
@@ -137,7 +133,8 @@ const ChatMessageMarkdown: React.FC<Props> = ({
   const remarkPlugins = useMemo((): RemarkPlugins => [
     remarkGfm,
     remarkBreaks,
-    remarkMath,
+    // Only $$ starts math, so prices and shell variables such as $HOME stay as text.
+    [remarkMath, { singleDollarTextMath: false }],
   ], []);
 
   type RehypePlugins = Exclude<MarkdownOptions['rehypePlugins'], null | undefined>

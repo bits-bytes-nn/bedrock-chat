@@ -107,6 +107,11 @@ const resources = {
 	ptbr,
 };
 
+// Keep the document language in sync for screen readers and CJK font selection.
+i18next.on('languageChanged', (language) => {
+  document.documentElement.lang = language;
+});
+
 // Settings i18n
 const i18n = i18next
   .use(initReactI18next)

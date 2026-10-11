@@ -3,18 +3,18 @@ import ButtonIcon from './ButtonIcon';
 import { BaseProps } from '../@types/common';
 import { PiCheck, PiClipboard } from 'react-icons/pi';
 import copy from 'copy-to-clipboard';
+import { useTranslation } from 'react-i18next';
 
 type Props = BaseProps & {
   text: string;
 };
 
 const ButtonCopy: React.FC<Props> = (props) => {
+  const { t } = useTranslation();
   const [showsCheck, setshowsCheck] = useState(false);
 
   const copyMessage = useCallback((message: string) => {
-    // Strip out [^...] citation tags before copying
-    const cleanedText = message.replace(/\[\^[^\]]*\]/g, '');
-    copy(cleanedText);
+    copy(message);
     setshowsCheck(true);
 
     setTimeout(() => {
@@ -25,6 +25,7 @@ const ButtonCopy: React.FC<Props> = (props) => {
   return (
     <ButtonIcon
       className={props.className}
+      label={t('button.copy')}
       onClick={() => {
         copyMessage(props.text);
       }}>

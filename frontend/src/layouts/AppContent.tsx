@@ -26,7 +26,7 @@ type Props = BaseProps & {
 };
 
 const AppContent: React.FC<Props> = (props) => {
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { getPageLabel } = usePageLabel();
   const { switchOpen: switchDrawer } = useDrawer();
   const navigate = useNavigate();
@@ -150,6 +150,7 @@ const AppContent: React.FC<Props> = (props) => {
         <header className="visible flex h-12 w-full items-center bg-aws-squid-ink-light p-3 text-lg text-aws-font-color-white-light dark:bg-aws-squid-ink-dark dark:text-aws-font-color-white-dark lg:hidden lg:h-0">
           <button
             className="mr-2 rounded-full p-2 hover:brightness-50 focus:outline-none focus:ring-1 "
+            aria-label={t('button.menu')}
             onClick={() => {
               switchDrawer();
             }}>
@@ -170,7 +171,7 @@ const AppContent: React.FC<Props> = (props) => {
             )}
           </div>
 
-          <ButtonIcon onClick={onClickNewChat}>
+          <ButtonIcon label={t('button.newChat')} onClick={onClickNewChat}>
             <PiPlus />
           </ButtonIcon>
         </header>
