@@ -20,15 +20,73 @@ const translation = {
       userGroups: 'User Groups',
     },
     model: {
-      'claude-v4-opus': {
-        label: 'Claude 4 (Opus)',
+      'claude-v4.8-opus': {
+        label: 'Claude 4.8 (Opus)',
         description:
-          'Powerful hybrid reasoning model for complex tasks, coding, and AI agents with 200K token context window.',
+          'Opus model for complex reasoning, coding, and long-running agentic tasks.',
       },
-      'claude-v4.1-opus': {
-        label: 'Claude 4.1 (Opus)',
+      'claude-v5-opus': {
+        label: 'Claude 5 (Opus)',
         description:
-          'Powerful Opus model with enhanced reasoning capabilities.',
+          'Fifth-generation Opus model for the most demanding reasoning and agentic work.',
+      },
+      'claude-v5.5-opus': {
+        label: 'Claude 5.5 (Opus)',
+        description:
+          'Most capable Claude model for complex reasoning, coding, and long-running agents.',
+      },
+      'claude-v5-sonnet': {
+        label: 'Claude 5 (Sonnet)',
+        description:
+          'Fifth-generation Sonnet model balancing intelligence, speed, and cost.',
+      },
+      'claude-v5.5-sonnet': {
+        label: 'Claude 5.5 (Sonnet)',
+        description:
+          'Latest Sonnet model with strong coding and agentic performance at scale.',
+      },
+      'claude-v5.5-haiku': {
+        label: 'Claude 5.5 (Haiku)',
+        description:
+          'Fastest and most cost-efficient Claude model for high-volume tasks.',
+      },
+      'gpt-5.5': {
+        label: 'GPT-5.5',
+        description: 'OpenAI reasoning model for general tasks.',
+      },
+      'gpt-5.6-luna': {
+        label: 'GPT-5.6 Luna',
+        description: 'OpenAI GPT-5.6 model optimized for speed and cost.',
+      },
+      'gpt-5.6-sol': {
+        label: 'GPT-5.6 Sol',
+        description: 'OpenAI GPT-5.6 model for complex reasoning.',
+      },
+      'gpt-5.6-terra': {
+        label: 'GPT-5.6 Terra',
+        description: 'OpenAI GPT-5.6 model balancing capability and cost.',
+      },
+      'gpt-6-astra': {
+        label: 'GPT-6 Astra',
+        description:
+          'OpenAI GPT-6 flagship model for the most demanding tasks.',
+      },
+      'gpt-6-luna': {
+        label: 'GPT-6 Luna',
+        description: 'OpenAI GPT-6 model optimized for speed and cost.',
+      },
+      'gpt-6-sol': {
+        label: 'GPT-6 Sol',
+        description: 'OpenAI GPT-6 model for complex reasoning.',
+      },
+      'gpt-6.1-sol': {
+        label: 'GPT-6.1 Sol',
+        description: 'Latest OpenAI GPT-6.1 model for complex reasoning.',
+      },
+      'amazon-nova-2-lite': {
+        label: 'Amazon Nova 2 Lite',
+        description:
+          'Low-cost multimodal Amazon Nova model for fast everyday tasks.',
       },
       'claude-v4.5-opus': {
         label: 'Claude 4.5 (Opus)',
@@ -45,11 +103,6 @@ const translation = {
         description:
           'High-capability Opus model built for coding, enterprise workflows, and long-running agentic tasks.',
       },
-      'claude-v4-sonnet': {
-        label: 'Claude 4 (Sonnet)',
-        description:
-          'Balanced hybrid reasoning model optimized for efficiency at scale with 200K token context window.',
-      },
       'claude-v4.5-sonnet': {
         label: 'Claude 4.5 (Sonnet)',
         description:
@@ -64,45 +117,6 @@ const translation = {
         label: 'Claude 4.5 (Haiku)',
         description:
           'The fastest and most intelligent Haiku model with near-frontier performance and extended thinking capabilities',
-      },
-      'claude-v3-haiku': {
-        label: 'Claude 3 (Haiku)',
-        description:
-          'Previous version optimized for speed and compactness, providing near-instant responsiveness.',
-      },
-      'claude-v3.5-sonnet': {
-        label: 'Claude 3.5 (Sonnet) v1',
-        description:
-          'An earlier version of Claude 3.5. Supports a wide range of tasks, but v2 offers improved accuracy.',
-      },
-      'claude-v3.5-sonnet-v2': {
-        label: 'Claude 3.5 (Sonnet) v2',
-        description:
-          'The latest version of Claude 3.5. An enhanced model that builds on v1 with higher accuracy and performance.',
-      },
-      'claude-v3.7-sonnet': {
-        label: 'Claude 3.7 Sonnet',
-        description:
-          'Hybrid reasoning model balancing quick responses and deep analytical capabilities.',
-      },
-      'claude-v3.5-haiku': {
-        label: 'Claude 3.5 (Haiku) v1',
-        description:
-          'The latest version, offering even faster responsiveness and improved capabilities over Haiku 3.',
-      },
-      'claude-v3-opus': {
-        label: 'Claude 3 (Opus)',
-        description: 'Powerful model for highly complex tasks.',
-      },
-      'mistral-7b-instruct': {
-        label: 'Mistral 7B',
-        description:
-          'Supports English text generation tasks with natural coding capabilities',
-      },
-      'mixtral-8x7b-instruct': {
-        label: 'Mistral-8x7B',
-        description:
-          'A popular, high-quality, sparse Mixture-of-Experts (MoE) model, that is ideal for text summarization, question and answering, text classification, text completion, and code generation.',
       },
       'mistral-large': {
         label: 'Mistral Large',
@@ -139,26 +153,6 @@ const translation = {
         label: 'Meta Llama 3.3 70B Instruct',
         description:
           'Latest Llama 3 model offering performance on par with the 405B model at a lower cost with excellent reasoning and instruction-following capabilities.',
-      },
-      'llama3-2-1b-instruct': {
-        label: 'Meta Llama 3.2 1B Instruct',
-        description:
-          'Lightweight model optimized for edge devices with efficient on-device processing for personal information management and multilingual knowledge retrieval.',
-      },
-      'llama3-2-3b-instruct': {
-        label: 'Meta Llama 3.2 3B Instruct',
-        description:
-          'Compact model delivering text generation, summarization, and sentiment analysis with low latency, ideal for mobile AI applications.',
-      },
-      'llama3-2-11b-instruct': {
-        label: 'Meta Llama 3.2 11B Instruct',
-        description:
-          'Multimodal model excelling at image understanding and visual reasoning for image captioning, visual question answering, and document processing.',
-      },
-      'llama3-2-90b-instruct': {
-        label: 'Meta Llama 3.2 90B Instruct',
-        description:
-          'Large multimodal model with advanced image understanding and visual reasoning capabilities for sophisticated visual intelligence applications.',
       },
       'gpt-oss-20b': {
         label: 'GPT-OSS 20B',
@@ -546,7 +540,8 @@ How would you categorize this email?`,
         title: 'Prompt Caching',
         promptCachingEnabled: {
           title: 'Use prompt caching if the model supports it.',
-          description: 'If enabled, it may reduce the cost and latency of repeated conversations with this bot.',
+          description:
+            'If enabled, it may reduce the cost and latency of repeated conversations with this bot.',
         },
       },
     },
@@ -1030,7 +1025,7 @@ How would you categorize this email?`,
             'This bot is published as API by administrator. Published API must be shared with all users.',
         },
       },
-      invalidMermaidFormat: "Error in diagram drawing"
+      invalidMermaidFormat: 'Error in diagram drawing',
     },
     validation: {
       title: 'Validation Error',

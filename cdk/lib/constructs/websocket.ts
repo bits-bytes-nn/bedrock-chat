@@ -25,6 +25,9 @@ export interface WebSocketProps {
   readonly enableBedrockGlobalInference: boolean;
   readonly enableBedrockCrossRegionInference: boolean;
   readonly enableLambdaSnapStart: boolean;
+  readonly globalAvailableModels?: string[];
+  readonly defaultModel?: string;
+  readonly titleModel?: string;
 }
 
 export class WebSocket extends Construct {
@@ -130,6 +133,10 @@ export class WebSocket extends Construct {
           props.enableBedrockGlobalInference.toString(),
         ENABLE_BEDROCK_CROSS_REGION_INFERENCE:
           props.enableBedrockCrossRegionInference.toString(),
+        // Model allowlist enforced on chat, and the model for search summaries.
+        GLOBAL_AVAILABLE_MODELS: JSON.stringify(props.globalAvailableModels ?? []),
+        DEFAULT_MODEL: props.defaultModel || "",
+        TITLE_MODEL: props.titleModel || "",
       },
       role: handlerRole,
       snapStart: props.enableLambdaSnapStart

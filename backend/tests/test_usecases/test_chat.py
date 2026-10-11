@@ -62,8 +62,8 @@ from tests.test_usecases.utils.user_factory import (
     create_test_user,
 )
 
-MODEL: type_model_name = "claude-v3.5-sonnet"
-MODEL_REASONING: type_model_name = "claude-v3.7-sonnet"
+MODEL: type_model_name = "claude-v4.6-sonnet"
+MODEL_REASONING: type_model_name = "claude-v4.5-sonnet"
 
 
 class TestTraceToRoot(unittest.TestCase):
@@ -332,7 +332,7 @@ class TestMultimodalChat(unittest.TestCase):
                         body="Explain the image",
                     ),
                 ],
-                model="claude-v3.5-sonnet",
+                model="claude-v4.6-sonnet",
                 parent_message_id=None,
                 message_id=None,
             ),
@@ -912,8 +912,7 @@ def on_reasoning(x: str):
 class TestAgentChat(unittest.TestCase):
     user = create_test_user("user1")
     bot_id = "bot1"
-    # model: type_model_name = "claude-v3-sonnet"
-    model: type_model_name = "claude-v3.7-sonnet"
+    model: type_model_name = "claude-v4.5-sonnet"
 
     def setUp(self) -> None:
         private_bot = create_test_private_bot(
@@ -970,7 +969,7 @@ class TestAgentChat(unittest.TestCase):
 class TestGuardrailChat(unittest.TestCase):
     user = create_test_user("user1")
     bot_id = "bot1"
-    model: type_model_name = "claude-v3.5-sonnet"
+    model: type_model_name = "claude-v4.6-sonnet"
 
     def setUp(self) -> None:
         # Note that the region must be the same as the one used in the bedrock client
