@@ -3,13 +3,13 @@
 from typing import Literal, TypedDict
 
 from app.repositories.models.conversation import MessageModel, RelatedDocumentModel
-from mypy_boto3_bedrock_runtime.literals import StopReasonType
 from pydantic import JsonValue
+from strands.types.event_loop import StopReason
 
 
 class OnStopInput(TypedDict):
     message: MessageModel
-    stop_reason: StopReasonType
+    stop_reason: StopReason
     input_token_count: int
     output_token_count: int
     cache_read_input_count: int
