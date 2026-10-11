@@ -24,49 +24,10 @@ const ALWAYS_REASONING = {
 
 // Capabilities shown in the UI. The backend keeps the request parameters for each
 // model in backend/app/model_registry.py, and a backend test keeps both lists in sync.
+// Newest models first within each provider.
 const MODELS: Omit<ModelItem, 'label' | 'description'>[] = [
   {
-    modelId: 'claude-v4.5-opus',
-    supportMediaType: IMAGE_MEDIA_TYPES,
-    supportReasoning: true,
-  },
-  {
-    modelId: 'claude-v4.6-opus',
-    supportMediaType: IMAGE_MEDIA_TYPES,
-    supportReasoning: true,
-  },
-  {
-    modelId: 'claude-v4.7-opus',
-    supportMediaType: IMAGE_MEDIA_TYPES,
-    supportReasoning: true,
-  },
-  {
-    modelId: 'claude-v4.8-opus',
-    supportMediaType: IMAGE_MEDIA_TYPES,
-    supportReasoning: true,
-  },
-  {
-    modelId: 'claude-v5-opus',
-    supportMediaType: IMAGE_MEDIA_TYPES,
-    supportReasoning: true,
-  },
-  {
     modelId: 'claude-v5.5-opus',
-    supportMediaType: IMAGE_MEDIA_TYPES,
-    supportReasoning: true,
-  },
-  {
-    modelId: 'claude-v4.5-sonnet',
-    supportMediaType: IMAGE_MEDIA_TYPES,
-    supportReasoning: true,
-  },
-  {
-    modelId: 'claude-v4.6-sonnet',
-    supportMediaType: IMAGE_MEDIA_TYPES,
-    supportReasoning: true,
-  },
-  {
-    modelId: 'claude-v5-sonnet',
     supportMediaType: IMAGE_MEDIA_TYPES,
     supportReasoning: true,
   },
@@ -76,32 +37,57 @@ const MODELS: Omit<ModelItem, 'label' | 'description'>[] = [
     supportReasoning: true,
   },
   {
-    modelId: 'claude-v4.5-haiku',
-    supportMediaType: IMAGE_MEDIA_TYPES,
-    supportReasoning: true,
-  },
-  {
     modelId: 'claude-v5.5-haiku',
     supportMediaType: IMAGE_MEDIA_TYPES,
     supportReasoning: true,
   },
   {
-    modelId: 'gpt-5.5',
+    modelId: 'claude-v5-opus',
     supportMediaType: IMAGE_MEDIA_TYPES,
-    ...ALWAYS_REASONING,
+    supportReasoning: true,
   },
   {
-    modelId: 'gpt-5.6-luna',
+    modelId: 'claude-v5-sonnet',
     supportMediaType: IMAGE_MEDIA_TYPES,
-    ...ALWAYS_REASONING,
+    supportReasoning: true,
   },
   {
-    modelId: 'gpt-5.6-sol',
+    modelId: 'claude-v4.8-opus',
     supportMediaType: IMAGE_MEDIA_TYPES,
-    ...ALWAYS_REASONING,
+    supportReasoning: true,
   },
   {
-    modelId: 'gpt-5.6-terra',
+    modelId: 'claude-v4.7-opus',
+    supportMediaType: IMAGE_MEDIA_TYPES,
+    supportReasoning: true,
+  },
+  {
+    modelId: 'claude-v4.6-opus',
+    supportMediaType: IMAGE_MEDIA_TYPES,
+    supportReasoning: true,
+  },
+  {
+    modelId: 'claude-v4.6-sonnet',
+    supportMediaType: IMAGE_MEDIA_TYPES,
+    supportReasoning: true,
+  },
+  {
+    modelId: 'claude-v4.5-opus',
+    supportMediaType: IMAGE_MEDIA_TYPES,
+    supportReasoning: true,
+  },
+  {
+    modelId: 'claude-v4.5-sonnet',
+    supportMediaType: IMAGE_MEDIA_TYPES,
+    supportReasoning: true,
+  },
+  {
+    modelId: 'claude-v4.5-haiku',
+    supportMediaType: IMAGE_MEDIA_TYPES,
+    supportReasoning: true,
+  },
+  {
+    modelId: 'gpt-6.1-sol',
     supportMediaType: IMAGE_MEDIA_TYPES,
     ...ALWAYS_REASONING,
   },
@@ -111,22 +97,42 @@ const MODELS: Omit<ModelItem, 'label' | 'description'>[] = [
     ...ALWAYS_REASONING,
   },
   {
-    modelId: 'gpt-6-luna',
-    supportMediaType: IMAGE_MEDIA_TYPES,
-    ...ALWAYS_REASONING,
-  },
-  {
     modelId: 'gpt-6-sol',
     supportMediaType: IMAGE_MEDIA_TYPES,
     ...ALWAYS_REASONING,
   },
   {
-    modelId: 'gpt-6.1-sol',
+    modelId: 'gpt-6-luna',
     supportMediaType: IMAGE_MEDIA_TYPES,
     ...ALWAYS_REASONING,
   },
-  { modelId: 'gpt-oss-20b', supportMediaType: [], ...ALWAYS_REASONING },
+  {
+    modelId: 'gpt-5.6-terra',
+    supportMediaType: IMAGE_MEDIA_TYPES,
+    ...ALWAYS_REASONING,
+  },
+  {
+    modelId: 'gpt-5.6-sol',
+    supportMediaType: IMAGE_MEDIA_TYPES,
+    ...ALWAYS_REASONING,
+  },
+  {
+    modelId: 'gpt-5.6-luna',
+    supportMediaType: IMAGE_MEDIA_TYPES,
+    ...ALWAYS_REASONING,
+  },
+  {
+    modelId: 'gpt-5.5',
+    supportMediaType: IMAGE_MEDIA_TYPES,
+    ...ALWAYS_REASONING,
+  },
   { modelId: 'gpt-oss-120b', supportMediaType: [], ...ALWAYS_REASONING },
+  { modelId: 'gpt-oss-20b', supportMediaType: [], ...ALWAYS_REASONING },
+  {
+    modelId: 'amazon-nova-2-lite',
+    supportMediaType: IMAGE_MEDIA_TYPES,
+    supportReasoning: false,
+  },
   {
     modelId: 'amazon-nova-pro',
     supportMediaType: IMAGE_MEDIA_TYPES,
@@ -142,19 +148,14 @@ const MODELS: Omit<ModelItem, 'label' | 'description'>[] = [
     supportMediaType: [],
     supportReasoning: false,
   },
-  {
-    modelId: 'amazon-nova-2-lite',
-    supportMediaType: IMAGE_MEDIA_TYPES,
-    supportReasoning: false,
-  },
+  { modelId: 'mistral-large-2', supportMediaType: [], supportReasoning: false },
+  { modelId: 'mistral-large', supportMediaType: [], supportReasoning: false },
   { modelId: 'deepseek-r1', supportMediaType: [], ...ALWAYS_REASONING },
   {
     modelId: 'llama3-3-70b-instruct',
     supportMediaType: [],
     supportReasoning: false,
   },
-  { modelId: 'mistral-large', supportMediaType: [], supportReasoning: false },
-  { modelId: 'mistral-large-2', supportMediaType: [], supportReasoning: false },
 ];
 
 const useModelState = create<{
@@ -329,6 +330,16 @@ const useModel = (botId?: string | null, activeModels?: ActiveModels) => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [botId]);
+
+  // The global config arrives after the first render, when the first model in the
+  // list was selected as a fallback. Apply the configured default unless the user
+  // has already chosen a model.
+  useEffect(() => {
+    if (!botId && !recentUseModelId && globalConfig?.defaultModel) {
+      setModelId(selectModel(globalConfig.defaultModel as Model));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [globalConfig?.defaultModel]);
 
   const model = useMemo(() => {
     if (!modelId) {

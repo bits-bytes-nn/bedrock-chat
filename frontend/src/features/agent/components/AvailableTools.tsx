@@ -187,7 +187,7 @@ export const AvailableTools = ({ availableTools, tools, setTools }: Props) => {
         <Help direction={TooltipDirection.RIGHT} message={t('agent.hint')} />
       </div>
 
-      <div className="text-sm text-aws-font-color-light/50 dark:text-aws-font-color-dark">
+      <div className="text-sm text-aws-font-color-light/70 dark:text-aws-font-color-dark">
         <Trans
           i18nKey="agent.help.overview"
           components={{
@@ -216,7 +216,7 @@ export const AvailableTools = ({ availableTools, tools, setTools }: Props) => {
               }
               onChange={handleChangeTool(tool)}
             />
-            <div className="whitespace-pre-wrap text-sm text-aws-font-color-light/50 dark:text-aws-font-color-dark">
+            <div className="whitespace-pre-wrap text-sm text-aws-font-color-light/70 dark:text-aws-font-color-dark">
               {formatDescription(tool, t)}
               {tool.name === 'bedrock_agent' && !isAdmin && (
                 <div>{t('bot.help.adminOnly')}</div>
@@ -241,7 +241,7 @@ export const AvailableTools = ({ availableTools, tools, setTools }: Props) => {
                         )}
                         onChange={handleSearchEngineChange}
                       />
-                      <div className="ml-6 text-sm text-aws-font-color-light/50 dark:text-aws-font-color-dark">
+                      <div className="ml-6 text-sm text-aws-font-color-light/70 dark:text-aws-font-color-dark">
                         {t(
                           'agent.tools.internet_search.engines.duckduckgo.hint'
                         )}
@@ -257,7 +257,7 @@ export const AvailableTools = ({ availableTools, tools, setTools }: Props) => {
                         )}
                         onChange={handleSearchEngineChange}
                       />
-                      <div className="ml-6 text-sm text-aws-font-color-light/50 dark:text-aws-font-color-dark">
+                      <div className="ml-6 text-sm text-aws-font-color-light/70 dark:text-aws-font-color-dark">
                         {t(
                           'agent.tools.internet_search.engines.firecrawl.hint'
                         )}
