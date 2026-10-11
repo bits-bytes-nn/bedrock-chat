@@ -136,7 +136,7 @@ class TestProcessChatInput(unittest.TestCase):
         self.assertEqual(response["statusCode"], 500)
         self.assertEqual(
             gatewayapi.sent,
-            [{"status": "ERROR", "reason": "Failed to run stream handler: boom"}],
+            [{"status": "ERROR", "reason": "Failed to generate the answer."}],
         )
 
 

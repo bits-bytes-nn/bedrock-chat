@@ -271,9 +271,14 @@ def process_chat_input(
         else:
             return error_response(400, "Invalid request.")
 
-    except Exception as e:
+    except (PermissionError, ValueError) as e:
+        logger.exception("Rejected chat input")
+        return error_response(400, str(e))
+
+    except Exception:
+        # Unexpected errors may contain resource names and account details.
         logger.exception("Failed to run stream handler")
-        return error_response(500, f"Failed to run stream handler: {e}")
+        return error_response(500, "Failed to generate the answer.")
 
 
 def handler(event, context):
