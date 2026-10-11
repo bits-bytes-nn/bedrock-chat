@@ -1,5 +1,4 @@
 import {
-  BedrockKnowledgeBase,
   OpenSearchParams,
   SearchParams,
   FixedSizeParams,
@@ -46,21 +45,6 @@ export const DEFAULT_OPENSEARCH_ANALYZER: {
   zhhans: 'icu',
   zhhant: 'icu',
 } as const;
-
-export const DEFAULT_BEDROCK_KNOWLEDGEBASE: BedrockKnowledgeBase = {
-  type: "dedicated",
-  knowledgeBaseId: null,
-  existKnowledgeBaseId: null,
-  embeddingsModel: 'cohere_multilingual_v3',
-  openSearch: OPENSEARCH_ANALYZER['none'],
-  chunkingConfiguration: {
-    chunkingStrategy: 'default'
-  },
-  searchParams: {
-    maxResults: 20,
-    searchType: 'hybrid',
-  },
-};
 
 export const DEFAULT_FIXED_CHUNK_PARAMS: FixedSizeParams = {
   chunkingStrategy: 'fixed_size',
