@@ -86,4 +86,4 @@ Tests marked `aws` call real AWS resources (Bedrock, DynamoDB, Cognito, OpenSear
 poetry run pytest -m aws
 ```
 
-Mark a new test with `@pytest.mark.aws` if it needs AWS or internet access.
+Tests that only need DynamoDB use in-memory tables from [moto](https://github.com/getmoto/moto): add `@pytest.mark.usefixtures("dynamodb_tables")` (see `tests/conftest.py`). Mark a new test with `@pytest.mark.aws` only if it needs other AWS services or internet access.

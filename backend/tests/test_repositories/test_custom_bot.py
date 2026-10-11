@@ -63,7 +63,7 @@ from tests.test_repositories.utils.bot_factory import (
     create_test_published_bot,
 )
 
-pytestmark = pytest.mark.aws
+pytestmark = pytest.mark.usefixtures("dynamodb_tables")
 
 
 class TestCustomBotRepository(unittest.TestCase):
@@ -275,10 +275,12 @@ class TestCustomBotRepository(unittest.TestCase):
         delete_bot_by_id("user1", "1")
 
     def test_update_knowledge_base_id(self):
+        # A bot without knowledge sources drops its knowledge base ID when loaded.
         bot = create_test_private_bot(
             "1",
             False,
             "user1",
+            set_dummy_knowledge=True,
             bedrock_knowledge_base=BedrockKnowledgeBaseModel(
                 type="dedicated",
                 embeddings_model="titan_v2",
