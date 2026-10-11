@@ -47,7 +47,7 @@ class BotUpdateError(Exception):
 
 def store_bot(custom_bot: BotModel):
     table = get_bot_table_client()
-    logger.info(f"Storing bot: {custom_bot}")
+    logger.info("Storing bot: %s", custom_bot.id)
 
     item = {
         "PK": custom_bot.owner_user_id,
@@ -698,7 +698,7 @@ def find_bot_by_id(bot_id: str) -> BotModel:
 
     bot = BotModel.from_dynamo_item(items[0])
 
-    logger.info(f"Found bot: {bot}")
+    logger.info("Found bot: %s", bot.id)
     return bot
 
 

@@ -12,7 +12,7 @@ env_prefix = os.environ.get("ENV_PREFIX", "")
 INDEX_NAME = f"{env_prefix}bot"
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 
 
 def find_bots_by_query(

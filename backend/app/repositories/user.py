@@ -7,7 +7,7 @@ from botocore.exceptions import ClientError
 from reretry import retry
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 
 USER_POOL_ID = os.environ.get("USER_POOL_ID")
 

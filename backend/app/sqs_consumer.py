@@ -1,8 +1,12 @@
 import json
+import logging
 
 from app.routes.schemas.conversation import ChatInput
-from app.usecases.chat import chat, chat_output_from_message
+from app.usecases.chat import chat
 from app.user import User
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 
 def handler(event, context):
@@ -18,10 +22,10 @@ def handler(event, context):
         user = User.from_published_api_id(chat_input.bot_id)
 
         conversation, message = chat(user=user, chat_input=chat_input)
-        chat_result = chat_output_from_message(
-            conversation=conversation,
-            message=message,
+        logger.info(
+            "Processed message: conversation_id=%s, message_id=%s",
+            conversation.id,
+            conversation.last_message_id,
         )
-        print(chat_result)
 
     return {"statusCode": 200, "body": json.dumps("Processing completed")}

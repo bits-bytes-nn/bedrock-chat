@@ -33,8 +33,10 @@ REGION = os.environ.get("REGION", "us-east-1")
 
 
 def _fetch_bot_with_permission_check(user: User, bot_id: str) -> BotModel:
+    # Published bots are shared with all users, so read access is not enough to
+    # manage the publication and its API keys.
     bot = find_bot_by_id(bot_id)
-    if not bot.is_accessible_by_user(user):
+    if not bot.is_editable_by_user(user):
         raise PermissionError(
             f"User {user.id} is not authorized to access bot {bot_id}"
         )
