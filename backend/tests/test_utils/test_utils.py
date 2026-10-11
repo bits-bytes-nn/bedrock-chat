@@ -10,7 +10,7 @@ sys.path.append(".")
 
 class TestUtils(unittest.TestCase):
     def test_get_bedrock_client_default(self):
-        from app.utils import get_bedrock_client
+        from app.utils import BEDROCK_REGION, get_bedrock_client
 
         client = get_bedrock_client()
         assert client is not None
@@ -22,7 +22,7 @@ class TestUtils(unittest.TestCase):
         logger.debug("Region: ")
         logger.debug(reg)
 
-        assert reg == "us-east-1"
+        assert reg == BEDROCK_REGION
 
     def test_get_bedrock_client_alt(self):
         from app.utils import get_bedrock_client

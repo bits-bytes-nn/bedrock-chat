@@ -1,3 +1,4 @@
+import pytest
 import base64
 import os
 import sys
@@ -23,9 +24,11 @@ from app.repositories.models.custom_bot import (
 )
 from app.repositories.models.custom_bot_guardrails import BedrockGuardrailsModel
 from app.stream import ConverseApiStreamHandler, OnStopInput
-from get_aws_logo import get_aws_logo, get_cdk_logo
-from get_pdf import get_aws_overview, get_test_markdown
+from tests.test_stream.get_aws_logo import get_aws_logo, get_cdk_logo
+from tests.test_stream.get_pdf import get_aws_overview, get_test_markdown
 from ulid import ULID
+
+pytestmark = pytest.mark.aws
 
 
 def on_stream(x: str) -> None:

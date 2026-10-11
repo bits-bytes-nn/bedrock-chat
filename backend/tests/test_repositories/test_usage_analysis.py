@@ -1,3 +1,4 @@
+import pytest
 import sys
 import unittest
 
@@ -11,6 +12,8 @@ from app.repositories.usage_analysis import (
     find_bots_sorted_by_price,
     find_users_sorted_by_price,
 )
+
+pytestmark = pytest.mark.aws
 
 
 class TestUsageAnalysis(unittest.IsolatedAsyncioTestCase):

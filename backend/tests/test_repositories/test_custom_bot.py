@@ -1,3 +1,4 @@
+import pytest
 import sys
 import unittest
 
@@ -61,6 +62,8 @@ from tests.test_repositories.utils.bot_factory import (
     create_test_public_bot,
     create_test_published_bot,
 )
+
+pytestmark = pytest.mark.aws
 
 
 class TestCustomBotRepository(unittest.TestCase):

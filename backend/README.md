@@ -72,9 +72,18 @@ poetry run uvicorn app.main:app  --reload --host 0.0.0.0 --port 8000
 
 - To refer the specification, access to [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs) for [Swagger](https://swagger.io/) and [http://127.0.0.1:8000/redoc](http://127.0.0.1:8000/redoc) for [Redoc](https://github.com/Redocly/redoc).
 
-## Unit test
+## Tests
+
+Unit tests run without AWS access and are executed in CI:
 
 ```sh
-poetry run python tests/test_bedrock.py
-poetry run python tests/test_repositories/test_conversation.py
+poetry run pytest
 ```
+
+Tests marked `aws` call real AWS resources (Bedrock, DynamoDB, Cognito, OpenSearch Serverless) and may incur costs. Run them only with credentials for a deployed development stack and the environment variables listed above:
+
+```sh
+poetry run pytest -m aws
+```
+
+Mark a new test with `@pytest.mark.aws` if it needs AWS or internet access.

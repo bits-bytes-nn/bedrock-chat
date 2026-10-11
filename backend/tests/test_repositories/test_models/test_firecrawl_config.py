@@ -1,3 +1,4 @@
+import pytest
 import json
 import sys
 import unittest
@@ -10,6 +11,9 @@ from app.repositories.models.custom_bot import FirecrawlConfigModel
 from app.routes.schemas.bot import FirecrawlConfig
 
 API_KEY = "test-api-key"
+
+
+pytestmark = pytest.mark.aws
 
 
 class TestFirecrawlConfigModel(unittest.TestCase):

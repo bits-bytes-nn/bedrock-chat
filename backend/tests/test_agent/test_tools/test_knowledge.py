@@ -1,3 +1,4 @@
+import pytest
 import sys
 
 sys.path.append(".")
@@ -12,6 +13,8 @@ from app.repositories.models.custom_bot import (
     KnowledgeModel,
     ReasoningParamsModel,
 )
+
+pytestmark = pytest.mark.aws
 
 
 class TestKnowledgeTool(unittest.TestCase):

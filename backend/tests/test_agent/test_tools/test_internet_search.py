@@ -1,3 +1,4 @@
+import pytest
 import sys
 
 sys.path.append(".")
@@ -11,6 +12,7 @@ from app.agents.tools.internet_search import (
 
 
 class TestInternetSearchTool(unittest.TestCase):
+    @pytest.mark.aws
     def test_internet_search(self):
         # query = "Amazon Stock Price Today"
         query = "東京 焼肉"
@@ -37,6 +39,7 @@ class TestInternetSearchTool(unittest.TestCase):
         self.assertEqual(response["status"], "success")
         print(response)
 
+    @pytest.mark.aws
     def test_summarization(self):
         """Test that the summarization function works correctly"""
         test_content = (
