@@ -1,5 +1,3 @@
-from datetime import date
-
 from app.dependencies import check_admin
 from app.repositories.custom_bot import find_all_published_bots, find_bot_by_id
 from app.repositories.usage_analysis import (
@@ -16,7 +14,6 @@ from app.routes.schemas.admin import (
 )
 from app.routes.schemas.bot import Knowledge
 from app.usecases.bot import modify_pinning_status
-from app.user import User
 from fastapi import APIRouter, Depends, Request
 
 router = APIRouter(tags=["admin"])

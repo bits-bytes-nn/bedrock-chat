@@ -12,7 +12,7 @@ import unittest
 from pprint import pprint
 
 import boto3
-from app.agents.tools.agent_tool import ToolRunResult
+from app.stream import ToolRunResult
 from app.prompt import build_rag_prompt
 from app.repositories.conversation import (
     delete_conversation_by_id,

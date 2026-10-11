@@ -5,7 +5,7 @@ Tool result capture handler for Strands integration.
 import logging
 from typing import Callable
 
-from app.agents.tools.agent_tool import ToolRunResult
+from app.stream import ToolRunResult
 from app.stream import OnThinking
 from app.strands_integration.converters.tool_converter import (
     strands_tool_result_to_tool_run_result,

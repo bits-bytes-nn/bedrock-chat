@@ -8,7 +8,7 @@ from threading import Thread
 from typing import Literal, TypedDict
 
 import boto3
-from app.agents.tools.agent_tool import ToolRunResult
+from app.stream import ToolRunResult
 from app.auth import verify_token
 from app.repositories.conversation import RecordNotFoundError
 from app.routes.schemas.conversation import ChatInput

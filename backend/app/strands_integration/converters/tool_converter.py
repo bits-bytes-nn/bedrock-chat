@@ -4,7 +4,7 @@ Tool result conversion utilities for Strands integration.
 
 import logging
 
-from app.agents.tools.agent_tool import ToolRunResult
+from app.stream import ToolRunResult
 from app.repositories.models.conversation import (
     DocumentToolResultModel,
     ImageToolResultModel,

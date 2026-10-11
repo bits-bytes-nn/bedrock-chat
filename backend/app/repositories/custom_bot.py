@@ -33,18 +33,6 @@ logger = logging.getLogger(__name__)
 logger.setLevel("INFO")
 
 
-class BotNotFoundException(Exception):
-    """Exception raised when a bot is not found."""
-
-    pass
-
-
-class BotUpdateError(Exception):
-    """Exception raised when there's an error updating a bot."""
-
-    pass
-
-
 def store_bot(custom_bot: BotModel):
     table = get_bot_table_client()
     logger.info("Storing bot: %s", custom_bot.id)

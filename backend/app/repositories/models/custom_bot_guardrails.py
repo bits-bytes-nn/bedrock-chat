@@ -1,4 +1,3 @@
-from decimal import Decimal
 from pydantic import BaseModel
 from app.repositories.models.common import Float
 

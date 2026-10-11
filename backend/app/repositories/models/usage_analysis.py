@@ -1,5 +1,3 @@
-from typing import Literal
-
 from app.repositories.custom_bot import type_shared_scope
 from pydantic import BaseModel
 

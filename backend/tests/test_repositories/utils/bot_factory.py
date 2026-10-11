@@ -3,7 +3,6 @@ import unittest
 from decimal import Decimal
 
 sys.path.append(".")
-from app.agents.tools.internet_search import internet_search_tool
 from app.repositories.models.custom_bot import (
     ActiveModelsModel,
     AgentModel,
@@ -68,8 +67,8 @@ def _create_test_bot_model(
         tools.append(
             InternetToolModel(
                 tool_type="internet",
-                name=internet_search_tool.name,
-                description=internet_search_tool.description,
+                name="internet_search",
+                description="Search the internet for information.",
                 search_engine="duckduckgo",
             )
         )

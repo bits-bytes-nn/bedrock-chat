@@ -155,15 +155,6 @@ def get_conversation_table_client(user_id: str):
     ).Table(CONVERSATION_TABLE_NAME)
 
 
-def get_conversation_table_public_client():
-    """Get a DynamoDB table client for conversation table.
-    Warning: No row-level access. Use for only limited use case.
-    """
-    return _get_aws_resource("dynamodb", table_name=CONVERSATION_TABLE_NAME).Table(
-        CONVERSATION_TABLE_NAME
-    )
-
-
 def get_bot_table_client():
     """Get a DynamoDB table client for bot table.
     Note: Bot table does not have row-level access control.

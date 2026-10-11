@@ -19,14 +19,14 @@ from app.routes.published_api import router as published_api_router
 from app.routes.user import router as user_router
 from app.user import User
 from app.utils import is_running_on_lambda
-from fastapi import Depends, FastAPI, Request
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.security import HTTPAuthorizationCredentials
 from pydantic import ValidationError
 from starlette.requests import Request
 from starlette.responses import Response
-from starlette.types import ASGIApp, Message
+from starlette.types import ASGIApp
 
 CORS_ALLOW_ORIGINS = os.environ.get("CORS_ALLOW_ORIGINS", "*")
 PUBLISHED_API_ID = os.environ.get("PUBLISHED_API_ID", None)

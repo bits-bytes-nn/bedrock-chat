@@ -6,7 +6,6 @@ sys.path.insert(0, ".")
 
 import time
 
-from app.agents.tools.internet_search import internet_search_tool
 from app.config import DEFAULT_GENERATION_CONFIG
 from app.config import GenerationParams as GenerationParamsConfig
 from app.repositories.models.custom_bot import (
@@ -101,8 +100,8 @@ class TestBotModel(unittest.TestCase):
                 tools=[
                     PlainToolModel(
                         tool_type="plain",
-                        name=internet_search_tool.name,
-                        description=internet_search_tool.description,
+                        name="internet_search",
+                        description="Search the internet for information.",
                     )
                 ]
             ),
