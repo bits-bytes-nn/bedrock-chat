@@ -786,12 +786,13 @@ export class BotStore extends Construct {
               ]
             }
           },
-          // Step 3: List all messages except system
+          // Step 3: List all messages except system and the bot instruction,
+          // which must not be searchable by users of a shared bot.
           {
             map_to_list: {
               source: "parsed_message_map",
               target: "messages",
-              exclude_keys: [],
+              exclude_keys: ["system", "instruction"],
               key_name: "id"
             }
           },

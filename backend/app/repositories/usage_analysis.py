@@ -142,6 +142,26 @@ async def run_athena_query(
     return results
 
 
+def _to_datehour_range(from_: str | None, to_: str | None) -> tuple[str, str]:
+    """Convert YYYYMMDDHH bounds to the datehour partition format (YYYY/MM/DD/HH).
+
+    The values are embedded in the Athena query, so anything else is rejected.
+
+    Raises:
+        ValueError: If a bound is not in YYYYMMDDHH format.
+    """
+    if from_ is None or to_ is None:
+        today = date.today()
+        return today.strftime("%Y/%m/%d/00"), today.strftime("%Y/%m/%d/23")
+
+    def convert(value: str) -> str:
+        if not re.fullmatch(r"\d{10}", value):
+            raise ValueError(f"Invalid datehour: {value}. Use YYYYMMDDHH.")
+        return f"{value[:4]}/{value[4:6]}/{value[6:8]}/{value[8:]}"
+
+    return convert(from_), convert(to_)
+
+
 async def find_bots_sorted_by_price(
     limit: int = 20,
     from_: str | None = None,
@@ -157,13 +177,7 @@ async def find_bots_sorted_by_price(
         not from_ and not to_
     ), "Both from_ and to_ must be specified or omitted."
 
-    if from_ is not None and to_ is not None:
-        from_str = re.sub(r"(\d{4})(\d{2})(\d{2})(\d{2})", r"\1/\2/\3/\4", from_)  # type: ignore
-        to_str = re.sub(r"(\d{4})(\d{2})(\d{2})(\d{2})", r"\1/\2/\3/\4", to_)  # type: ignore
-    else:
-        today = date.today()
-        from_str = today.strftime("%Y/%m/%d/00")
-        to_str = today.strftime("%Y/%m/%d/23")
+    from_str, to_str = _to_datehour_range(from_, to_)
 
     # To avoid duplication of conversation, apply most the latest conversation by using subquery
     query = f"""
@@ -269,13 +283,7 @@ async def find_users_sorted_by_price(
         not from_ and not to_
     ), "Both from_ and to_ must be specified or omitted."
 
-    if from_ is not None and to_ is not None:
-        from_str = re.sub(r"(\d{4})(\d{2})(\d{2})(\d{2})", r"\1/\2/\3/\4", from_)  # type: ignore
-        to_str = re.sub(r"(\d{4})(\d{2})(\d{2})(\d{2})", r"\1/\2/\3/\4", to_)  # type: ignore
-    else:
-        today = date.today()
-        from_str = today.strftime("%Y/%m/%d/00")
-        to_str = today.strftime("%Y/%m/%d/23")
+    from_str, to_str = _to_datehour_range(from_, to_)
 
     # To avoid duplication of conversation, apply most the latest conversation by using subquery
     query = f"""
