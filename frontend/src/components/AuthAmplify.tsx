@@ -17,6 +17,8 @@ const AuthAmplify: React.FC<Props> = ({ socialProviders, children }) => {
   return (
     <Authenticator
       socialProviders={socialProviders}
+      // The user pool rejects sign-ups unless self sign-up is enabled.
+      hideSignUp={import.meta.env.VITE_APP_SELF_SIGN_UP_ENABLED !== 'true'}
       components={{
         Header: () => (
           <div className="mb-5 mt-10 flex justify-center text-3xl text-aws-font-color-light">

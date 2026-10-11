@@ -504,7 +504,7 @@ describe("getBedrockChatParameters", () => {
       expect(result.enableBedrockCrossRegionInference).toBe(true);
       expect(result.enableRagReplicas).toBe(true);
       expect(result.enableLambdaSnapStart).toBe(true);
-      expect(result.selfSignUpEnabled).toBe(true);
+      expect(result.selfSignUpEnabled).toBe(false);
       expect(result.autoJoinUserGroups).toEqual(["CreatingBotAllowed"]);
       expect(result.allowedSignUpEmailDomains).toEqual([]);
       expect(result.identityProviders).toEqual([]);

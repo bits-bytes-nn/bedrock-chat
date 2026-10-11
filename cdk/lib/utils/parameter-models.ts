@@ -98,7 +98,8 @@ const BedrockChatParametersSchema = BaseParametersSchema.extend({
   userPoolDomainPrefix: z.string().default(""),
   allowedSignUpEmailDomains: z.array(z.string()).default([]),
   autoJoinUserGroups: z.array(z.string()).default(["CreatingBotAllowed"]),
-  selfSignUpEnabled: z.boolean().default(true),
+  // Off by default: users are created by an administrator.
+  selfSignUpEnabled: z.boolean().default(false),
 
   // Performance and availability
   enableRagReplicas: z.boolean().default(true),
