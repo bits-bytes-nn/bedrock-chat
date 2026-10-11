@@ -28,12 +28,14 @@ import { excludeDockerImage } from "../constants/docker";
 import { PythonFunction } from "@aws-cdk/aws-lambda-python-alpha";
 import { Database } from "./database";
 import { bedrockChatPolicyStatement } from "../utils/bedrock-policies";
+import { CfnStage, ThrottleSettings } from "aws-cdk-lib/aws-apigatewayv2";
 
 export interface ApiProps {
   readonly database: Database;
   readonly envName: string;
   readonly envPrefix: string;
   readonly corsAllowOrigins?: string[];
+  readonly throttle: ThrottleSettings;
   readonly auth: Auth;
   readonly bedrockRegion: string;
   readonly documentBucket: IBucket;
@@ -320,6 +322,11 @@ export class Api extends Construct {
         maxAge: Duration.days(10),
       },
     });
+    const defaultStage = api.defaultStage?.node.defaultChild as CfnStage;
+    defaultStage.defaultRouteSettings = {
+      throttlingRateLimit: props.throttle.rateLimit,
+      throttlingBurstLimit: props.throttle.burstLimit,
+    };
 
     const integration = new HttpLambdaIntegration(
       "Integration",

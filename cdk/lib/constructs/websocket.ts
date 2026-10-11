@@ -29,6 +29,7 @@ export interface WebSocketProps {
   readonly globalAvailableModels?: string[];
   readonly defaultModel?: string;
   readonly titleModel?: string;
+  readonly throttle: apigwv2.ThrottleSettings;
 }
 
 export class WebSocket extends Construct {
@@ -159,6 +160,7 @@ export class WebSocket extends Construct {
       webSocketApi,
       stageName: this.defaultStageName,
       autoDeploy: true,
+      throttle: props.throttle,
     });
     webSocketApi.grantManageConnections(handler);
 

@@ -106,6 +106,11 @@ const chat = new BedrockChatStack(
     devAccessIamRoleArn: params.devAccessIamRoleArn,
     allowedCountries: params.allowedCountries,
     logoPath: params.logoPath,
+    alarmEmail: params.alarmEmail,
+    apiThrottle: {
+      rateLimit: params.apiThrottleRateLimit,
+      burstLimit: params.apiThrottleBurstLimit,
+    },
   }
 );
 if (waf) {
