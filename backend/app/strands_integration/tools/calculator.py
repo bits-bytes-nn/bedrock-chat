@@ -11,7 +11,7 @@ from app.repositories.models.custom_bot import BotModel
 from strands import tool
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 
 
 def create_calculator_tool(bot: BotModel | None = None):

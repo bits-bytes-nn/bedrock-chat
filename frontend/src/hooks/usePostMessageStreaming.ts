@@ -8,6 +8,28 @@ import { PostStreamingStatus } from '../constants';
 const WS_ENDPOINT: string = import.meta.env.VITE_APP_WS_ENDPOINT;
 const CHUNK_SIZE = 32 * 1024; //32KB
 
+const isHighSurrogate = (charCode: number) =>
+  charCode >= 0xd800 && charCode <= 0xdbff;
+
+/** Split the payload without breaking a surrogate pair across chunks. */
+export const chunkPayload = (payload: string, chunkSize: number): string[] => {
+  const chunks: string[] = [];
+  let start = 0;
+  while (start < payload.length) {
+    let end = Math.min(start + chunkSize, payload.length);
+    if (
+      end < payload.length &&
+      end - start > 1 &&
+      isHighSurrogate(payload.charCodeAt(end - 1))
+    ) {
+      end--;
+    }
+    chunks.push(payload.substring(start, end));
+    start = end;
+  }
+  return chunks;
+};
+
 const usePostMessageStreaming = create<{
   post: (params: {
     input: PostMessageRequest;
@@ -15,10 +37,14 @@ const usePostMessageStreaming = create<{
     handleStreamingEvent: (event: StreamingEvent) => void;
   }) => Promise<void>;
   errorDetail: string | null;
+  /** Conversation whose last answer stopped at the maximum output tokens. */
+  truncatedConversationId: string | null;
 }>((set) => {
   return {
     errorDetail: null,
+    truncatedConversationId: null,
     post: async ({ input, handleStreamingEvent }) => {
+      set({ errorDetail: null, truncatedConversationId: null });
       handleStreamingEvent({ type: 'wakeup' });
 
       const token = (await fetchAuthSession()).tokens?.idToken?.toString();
@@ -27,21 +53,26 @@ const usePostMessageStreaming = create<{
         token,
       });
 
-      // chunking
-      const chunkedPayloads: string[] = [];
-      const chunkCount = Math.ceil(payloadString.length / CHUNK_SIZE);
-      for (let i = 0; i < chunkCount; i++) {
-        const start = i * CHUNK_SIZE;
-        const end = Math.min(start + CHUNK_SIZE, payloadString.length);
-        chunkedPayloads.push(payloadString.substring(start, end));
-      }
+      const chunkedPayloads = chunkPayload(payloadString, CHUNK_SIZE);
 
       let receivedCount = 0;
+      let streamEnded = false;
+      let failed = false;
       return new Promise<void>((resolve, reject) => {
         const ws = new WebSocket(WS_ENDPOINT);
 
+        const fail = (reason: string) => {
+          // Closing the socket below triggers onclose, so report only the first failure.
+          if (failed) {
+            return;
+          }
+          failed = true;
+          set({ errorDetail: reason });
+          ws.close();
+          reject(reason);
+        };
+
         ws.onopen = () => {
-          console.log('[FRONTEND_WS] WebSocket connection opened');
           ws.send(
             JSON.stringify({
               step: PostStreamingStatus.START,
@@ -52,7 +83,6 @@ const usePostMessageStreaming = create<{
 
         ws.onmessage = (message) => {
           try {
-            console.log('[FRONTEND_WS] Received message:', message.data);
             if (
               message.data === '' ||
               message.data === 'Message sent.' ||
@@ -87,10 +117,8 @@ const usePostMessageStreaming = create<{
             }
 
             const data = JSON.parse(message.data);
-            console.log('[FRONTEND_WS] Parsed data:', data);
 
             if (data.status) {
-              console.log('[FRONTEND_WS] Processing status:', data.status);
               switch (data.status) {
                 case PostStreamingStatus.AGENT_THINKING: {
                   Object.entries(data.log).forEach(([toolUseId, toolInfo]) => {
@@ -134,74 +162,50 @@ const usePostMessageStreaming = create<{
                   });
                   break;
                 case PostStreamingStatus.STREAMING_END:
-                  console.log(
-                    '[FRONTEND_WS] Received STREAMING_END, ending thinking state'
-                  );
-                  try {
-                    console.log(
-                      '[FRONTEND_WS] Calling handleStreamingEvent goodbye'
-                    );
-                    handleStreamingEvent({
-                      type: 'goodbye',
-                    });
-                    console.log(
-                      '[FRONTEND_WS] handleStreamingEvent goodbye completed'
-                    );
-
-                    console.log('[FRONTEND_WS] Closing WebSocket');
-                    ws.close();
-                    console.log('[FRONTEND_WS] WebSocket closed successfully');
-                  } catch (error) {
-                    console.error(
-                      '[FRONTEND_WS] Error in STREAMING_END handling:',
-                      error
-                    );
-                    ws.close();
+                  streamEnded = true;
+                  if (data.stop_reason === 'max_tokens') {
+                    set({ truncatedConversationId: input.conversationId });
                   }
+                  handleStreamingEvent({
+                    type: 'goodbye',
+                  });
+                  ws.close();
                   break;
                 case PostStreamingStatus.ERROR:
-                  ws.close();
                   console.error(data);
-                  set({
-                    errorDetail:
-                      data.reason || i18next.t('error.predict.invalidResponse'),
-                  });
-                  throw new Error(
+                  fail(
                     data.reason || i18next.t('error.predict.invalidResponse')
                   );
+                  break;
                 default:
-                  handleStreamingEvent({
-                    type: 'reset',
-                  });
+                  console.warn('[FRONTEND_WS] Ignored status:', data.status);
                   break;
               }
             } else {
-              ws.close();
               console.error(data);
-              throw new Error(i18next.t('error.predict.invalidResponse'));
+              fail(i18next.t('error.predict.invalidResponse'));
             }
           } catch (e) {
-            console.error('[FRONTEND_WS] Error in onmessage handler:', e);
-            console.error(
-              '[FRONTEND_WS] Message data that caused error:',
-              message.data
-            );
-            reject(i18next.t('error.predict.general'));
+            console.error('[FRONTEND_WS] Failed to handle message:', e);
+            fail(i18next.t('error.predict.general'));
           }
         };
 
         ws.onerror = (e) => {
           console.error('[FRONTEND_WS] WebSocket error:', e);
-          ws.close();
-          reject(i18next.t('error.predict.general'));
+          fail(i18next.t('error.predict.general'));
         };
         ws.onclose = (event) => {
-          console.log(
-            '[FRONTEND_WS] WebSocket closed:',
-            event.code,
-            event.reason
+          if (streamEnded) {
+            resolve();
+            return;
+          }
+          // The connection was closed before STREAMING_END, so the displayed answer is incomplete.
+          console.error(
+            '[FRONTEND_WS] Closed before the end of the stream:',
+            event.code
           );
-          resolve();
+          fail(i18next.t('error.predict.connectionClosed'));
         };
       });
     },

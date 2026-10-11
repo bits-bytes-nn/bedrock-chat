@@ -47,7 +47,6 @@ export type StreamingEvent =
       toolUseId: string;
       relatedDocument: RelatedDocument;
     }
-  | { type: 'reset' }
   | { type: 'goodbye' };
 
 export const streamingStateMachine = setup({
@@ -145,15 +144,15 @@ export const streamingStateMachine = setup({
     areAllToolsSuccessful: false,
   },
   initial: 'sleeping',
-  states: {
-    sleeping: {
-      on: {
-        wakeup: {
-          actions: 'reset',
-          target: 'streaming',
-        },
-      },
+  on: {
+    // A new request always starts a fresh stream, even if the previous one did not end cleanly.
+    wakeup: {
+      actions: 'reset',
+      target: '.streaming',
     },
+  },
+  states: {
+    sleeping: {},
     streaming: {
       on: {
         reasoning: {
@@ -170,9 +169,6 @@ export const streamingStateMachine = setup({
         },
         'related-document': {
           actions: ['addRelatedDocument'],
-        },
-        reset: {
-          actions: 'reset',
         },
         goodbye: {
           target: 'leaving',

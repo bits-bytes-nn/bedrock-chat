@@ -21,6 +21,38 @@ import useModel from './useModel';
 import useFeedbackApi from './useFeedbackApi';
 import { useMachine } from '@xstate/react';
 import { streamingStateMachine } from './xstates/streaming';
+import { Actor } from 'xstate';
+
+/**
+ * Apply streamed text at most once per animation frame. Rendering on every token
+ * re-renders the whole conversation and makes long answers slow.
+ *
+ * @returns A function that unsubscribes and applies any text that is still pending.
+ */
+const subscribeStreamingText = (
+  actor: Actor<typeof streamingStateMachine>,
+  onText: (text: string) => void
+) => {
+  let frame: number | null = null;
+  let latestText = '';
+  const subscription = actor.subscribe((state) => {
+    latestText = state.context.text;
+    if (frame === null) {
+      frame = requestAnimationFrame(() => {
+        frame = null;
+        onText(latestText);
+      });
+    }
+  });
+
+  return () => {
+    subscription.unsubscribe();
+    if (frame !== null) {
+      cancelAnimationFrame(frame);
+      onText(latestText);
+    }
+  };
+};
 
 type ChatStateType = {
   [id: string]: MessageMap;
@@ -456,8 +488,8 @@ const useChat = () => {
     // post message
     const postPromise = new Promise<void>((resolve, reject) => {
       if (USE_STREAMING) {
-        const subscription = streamingActor.subscribe(state => {
-          editMessage(conversationId, NEW_MESSAGE_ID.ASSISTANT, state.context.text);
+        const unsubscribe = subscribeStreamingText(streamingActor, (text) => {
+          editMessage(conversationId, NEW_MESSAGE_ID.ASSISTANT, text);
         });
         postStreaming({
           input,
@@ -472,7 +504,7 @@ const useChat = () => {
             reject(e);
           })
           .finally(() => {
-            subscription.unsubscribe();
+            unsubscribe();
           });
       } else {
         conversationApi
@@ -538,8 +570,8 @@ const useChat = () => {
     const currentMessage = messages[messages.length - 1];
 
     // WARNING: Non-streaming is not supported from the UI side as it is planned to be DEPRICATED.
-    const subscription = streamingActor.subscribe(state => {
-      editMessage(conversationId, currentMessage.id, currentContentBody + state.context.text);
+    const unsubscribe = subscribeStreamingText(streamingActor, (text) => {
+      editMessage(conversationId, currentMessage.id, currentContentBody + text);
     });
     postStreaming({
       input,
@@ -554,7 +586,7 @@ const useChat = () => {
         console.error(e);
       })
       .finally(() => {
-        subscription.unsubscribe();
+        unsubscribe();
         setPostingMessage(false);
       });
   };
@@ -640,8 +672,8 @@ const useChat = () => {
 
     setCurrentMessageId(NEW_MESSAGE_ID.ASSISTANT);
 
-    const subscription = streamingActor.subscribe(state => {
-      editMessage(conversationId, NEW_MESSAGE_ID.ASSISTANT, state.context.text);
+    const unsubscribe = subscribeStreamingText(streamingActor, (text) => {
+      editMessage(conversationId, NEW_MESSAGE_ID.ASSISTANT, text);
     });
     postStreaming({
       input,
@@ -658,7 +690,7 @@ const useChat = () => {
         removeMessage(conversationId, NEW_MESSAGE_ID.ASSISTANT);
       })
       .finally(() => {
-        subscription.unsubscribe();
+        unsubscribe();
         setPostingMessage(false);
       });
   };

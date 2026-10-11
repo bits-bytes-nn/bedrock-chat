@@ -8,7 +8,7 @@ from app.repositories.models.custom_bot_kb import (
 )
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 
 
 def get_knowledge_base_info(
