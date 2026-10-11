@@ -33,3 +33,11 @@ pytest = "^9.0.3"
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = ["--import-mode=importlib", "--strict-markers", "-m", "not aws"]
+markers = [
+    "aws: needs real AWS resources or internet access. Run with `pytest -m aws` against a deployed stack.",
+]

@@ -1,3 +1,4 @@
+import pytest
 import sys
 import unittest
 
@@ -13,6 +14,8 @@ from tests.test_usecases.utils.user_factory import (
     store_group_in_cognito,
     store_user_in_cognito,
 )
+
+pytestmark = pytest.mark.aws
 
 
 class TestUserRepository(unittest.TestCase):

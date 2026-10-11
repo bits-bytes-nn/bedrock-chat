@@ -1,3 +1,4 @@
+import pytest
 import sys
 import unittest
 from pprint import pprint
@@ -15,6 +16,9 @@ from app.repositories.api_publication import (
 # Edit before running (Need to create a api stack. To do so, run codebuild project).
 usage_plan_id = "jukuef"
 bot_id = "01HRA01CB4H6GQPAG78YG49CQ4"
+
+
+pytestmark = pytest.mark.aws
 
 
 class TestApiGateway(unittest.TestCase):

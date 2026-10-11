@@ -1,3 +1,4 @@
+import pytest
 import json
 import logging
 import sys
@@ -31,6 +32,9 @@ logger.setLevel(logging.INFO)
 # Enable logging for bedrock_agent module
 logging.basicConfig(level=logging.INFO)
 logging.getLogger("app.strands_integration.tools.bedrock_agent").setLevel(logging.INFO)
+
+
+pytestmark = pytest.mark.aws
 
 
 class TestBedrockAgentTool(unittest.TestCase):

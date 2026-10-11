@@ -14,15 +14,15 @@ from app.routes.schemas.conversation import type_model_name
 from pydantic import BaseModel, Field
 
 
-class TestArg(BaseModel):
+class DummyToolInput(BaseModel):
     arg1: str = Field(..., description="test string")
     arg2: float = Field(..., description="test float")
     arg3: int = Field(..., description="test int")
     arg4: list[str] = Field(..., description="test list")
 
 
-def test_function(
-    arg: TestArg,
+def dummy_tool_function(
+    arg: DummyToolInput,
     bot: BotModel | None,
     model: type_model_name | None,
 ) -> str:
@@ -35,12 +35,12 @@ class TestAgentTool(unittest.TestCase):
         self.tool = AgentTool(
             name="test",
             description="test",
-            args_schema=TestArg,
-            function=test_function,
+            args_schema=DummyToolInput,
+            function=dummy_tool_function,
         )
 
     def test_run(self):
-        arg = TestArg(
+        arg = DummyToolInput(
             arg1="test",
             arg2=1.0,
             arg3=1,

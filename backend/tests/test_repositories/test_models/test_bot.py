@@ -1,3 +1,4 @@
+import pytest
 import sys
 import unittest
 
@@ -42,6 +43,7 @@ from tests.test_usecases.utils.user_factory import (
 )
 
 
+@pytest.mark.aws
 class TestBotModel(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
