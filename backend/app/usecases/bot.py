@@ -1,5 +1,6 @@
 import logging
 import os
+import re
 from typing import Literal, TypeGuard
 
 from app.config import DEFAULT_GENERATION_CONFIG
@@ -152,11 +153,30 @@ def validate_external_resource_references(
         raise PermissionError("Only administrators can add Bedrock agents.")
 
 
+def validate_new_bot_id(bot_id: str) -> None:
+    """Bot IDs are chosen by the client, so make sure they cannot collide.
+
+    Lookups by ID take the first match, so a duplicate ID could shadow another
+    user's bot. The ID is also used in S3 keys and stack names.
+
+    Raises:
+        ValueError: If the ID is not a ULID or is already used.
+    """
+    if not re.fullmatch(r"[0-9A-HJKMNP-TV-Z]{26}", bot_id):
+        raise ValueError("Bot ID must be a ULID.")
+    try:
+        find_bot_by_id(bot_id)
+    except RecordNotFoundError:
+        return
+    raise ValueError(f"Bot ID {bot_id} is already used.")
+
+
 def create_new_bot(user: User, bot_input: BotInput) -> BotOutput:
     """Create a new bot.
     Bot is created as private.
     """
     validate_external_resource_references(user, bot_input, current_bot=None)
+    validate_new_bot_id(bot_input.id)
 
     # Create initial knowledge
     source_urls = []

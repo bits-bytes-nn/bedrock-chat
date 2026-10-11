@@ -138,7 +138,9 @@ export class ApiPublishmentStack extends Stack {
       }
     );
     sqsConsumeHandler.addEventSource(
-      new lambdaEventSources.SqsEventSource(chatQueue)
+      // One message per invocation so that a failure does not re-run, and re-bill,
+      // the other messages of the batch.
+      new lambdaEventSources.SqsEventSource(chatQueue, { batchSize: 1 })
     );
     chatQueue.grantSendMessages(apiHandler);
     chatQueue.grantConsumeMessages(sqsConsumeHandler);
