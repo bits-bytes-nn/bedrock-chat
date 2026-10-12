@@ -319,20 +319,14 @@ export class Embedding extends Construct {
       resultPath: sfn.JsonPath.DISCARD,
     });
 
-    const passSharedKnowledgeBasesBuildError = new sfn.Pass(this, "PassSharedKnowledgeBasesBuildError", {
-      parameters: {
-        QueuedBots: sfn.JsonPath.objectAt("$.QueuedBots"),
-        Lock: sfn.JsonPath.objectAt("$.Lock"),
-        Error: sfn.JsonPath.stringAt("$.Error.Error"),
-        Cause: sfn.JsonPath.stringToJson(sfn.JsonPath.stringAt("$.Error.Cause")),
-      },
-    });
     const updateSyncStatusFailedForSharedKnowledgeBasesBuild = new tasks.LambdaInvoke(this, "UpdateSyncStatusFailedForSharedKnowledgeBasesBuild", {
       lambdaFunction: this._updateSyncStatusHandler,
       payload: sfn.TaskInput.fromObject({
         QueuedBots: sfn.JsonPath.objectAt("$.QueuedBots"),
         SyncStatus: "FAILED",
-        Build: sfn.JsonPath.objectAt("$.Cause.Build"),
+        // The handler reads the build from the cause. A build that could not start
+        // has a plain-text cause, which would fail a JSON conversion here.
+        Error: sfn.JsonPath.objectAt("$.Error"),
       }),
       resultPath: sfn.JsonPath.DISCARD,
     });
@@ -341,8 +335,7 @@ export class Embedding extends Construct {
     });
 
     const buildSharedKnowledgeBasesFallback = (
-      passSharedKnowledgeBasesBuildError
-        .next(updateSyncStatusFailedForSharedKnowledgeBasesBuild)
+      updateSyncStatusFailedForSharedKnowledgeBasesBuild
         .next(releaseLockFallback)
     );
     buildSharedKnowledgeBases.addCatch(buildSharedKnowledgeBasesFallback, {
@@ -459,22 +452,13 @@ export class Embedding extends Construct {
         .next(syncCustomBotSucceeded)
     );
 
-    const passCustomBotBuildError = new sfn.Pass(this, "PassCustomBotBuildError", {
-      parameters: {
-        OwnerUserId: sfn.JsonPath.stringAt("$.OwnerUserId"),
-        BotId: sfn.JsonPath.stringAt("$.BotId"),
-        Lock: sfn.JsonPath.objectAt("$.Lock"),
-        Error: sfn.JsonPath.stringAt("$.Error.Error"),
-        Cause: sfn.JsonPath.stringToJson(sfn.JsonPath.stringAt("$.Error.Cause")),
-      },
-    });
     const updateSyncStatusFailedForCustomBotBuild = new tasks.LambdaInvoke(this, "UpdateSyncStatusFailedForCustomBotBuild", {
       lambdaFunction: this._updateSyncStatusHandler,
       payload: sfn.TaskInput.fromObject({
         OwnerUserId: sfn.JsonPath.stringAt("$.OwnerUserId"),
         BotId: sfn.JsonPath.stringAt("$.BotId"),
         SyncStatus: "FAILED",
-        Build: sfn.JsonPath.objectAt("$.Cause.Build"),
+        Error: sfn.JsonPath.objectAt("$.Error"),
       }),
       resultPath: sfn.JsonPath.DISCARD,
     });
@@ -483,8 +467,7 @@ export class Embedding extends Construct {
     });
 
     const buildCustomBotFallback = (
-      passCustomBotBuildError
-        .next(updateSyncStatusFailedForCustomBotBuild)
+      updateSyncStatusFailedForCustomBotBuild
         .next(syncCustomBotFinished)
     );
 

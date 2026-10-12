@@ -34,13 +34,23 @@ def update_sync_status(sync_status: SyncStatus):
     )
 
 
-def error_reason(error: dict) -> str:
-    """Return the message of an error caught by the state machine."""
+def error_reason(error: dict) -> tuple[str, str]:
+    """Return the reason and the execution id of an error caught by the state machine.
+
+    The cause is the JSON of a failed Lambda or CodeBuild run, or plain text when a
+    build could not start.
+    """
     cause = error.get("Cause", "")
     try:
-        return json.loads(cause).get("errorMessage", cause)
-    except (TypeError, ValueError, AttributeError):
-        return cause or error.get("Error", "")
+        details = json.loads(cause)
+    except (TypeError, ValueError):
+        return cause or error.get("Error", ""), ""
+    if not isinstance(details, dict):
+        return cause, ""
+    build = details.get("Build")
+    if build:
+        return json.dumps(build.get("Phases", [])), build.get("Arn", "")
+    return details.get("errorMessage", cause), ""
 
 
 def handler(event, context):
@@ -52,16 +62,9 @@ def handler(event, context):
     sync_status_reason: str
     last_exec_id: str
 
-    build = event.get("Build")
-    if build:
-        # CodeBuild
-        sync_status_reason = json.dumps(build["Phases"])
-        last_exec_id = build["Arn"]
-
-    elif "Error" in event:
-        # Caught by the state machine: {"Error": ..., "Cause": <Lambda error JSON>}
-        sync_status_reason = error_reason(event["Error"])
-        last_exec_id = event.get("LastExecId", "")
+    if "Error" in event:
+        # Caught by the state machine: {"Error": ..., "Cause": ...}
+        sync_status_reason, last_exec_id = error_reason(event["Error"])
 
     else:
         sync_status_reason = event.get("SyncStatusReason", "")
