@@ -1,6 +1,5 @@
 import logging
 import os
-import traceback
 from typing import Callable
 
 from app.dependencies import get_current_user
@@ -10,6 +9,7 @@ from app.repositories.common import (
     ResourceConflictError,
 )
 from app.routes.admin import router as admin_router
+from app.routes.attachment import router as attachment_router
 from app.routes.api_publication import router as api_publication_router
 from app.routes.bot import router as bot_router
 from app.routes.bot_store import router as bot_store_router
@@ -59,6 +59,7 @@ app = FastAPI(
 
 if not is_published_api:
     app.include_router(conversation_router)
+    app.include_router(attachment_router)
     app.include_router(bot_router)
     app.include_router(api_publication_router)
     app.include_router(admin_router)
@@ -80,11 +81,9 @@ app.add_middleware(
 
 def error_handler_factory(status_code: int) -> Callable[[Request, Exception], Response]:
     def error_handler(_: Request, exc: Exception) -> JSONResponse:
-        logger.error(exc)
-        logger.error("".join(traceback.format_tb(exc.__traceback__)))
-        # Unexpected errors may contain resource names and account details.
-        message = str(exc) if status_code < 500 else "Internal server error"
-        return JSONResponse({"errors": [message]}, status_code=status_code)
+        # Client errors only; unexpected errors are handled in add_log_requests.
+        logger.warning("%s: %s", type(exc).__name__, exc)
+        return JSONResponse({"errors": [str(exc)]}, status_code=status_code)
 
     return error_handler  # type: ignore
 
@@ -96,7 +95,6 @@ app.add_exception_handler(ValueError, error_handler_factory(400))
 app.add_exception_handler(PermissionError, error_handler_factory(403))
 app.add_exception_handler(ValidationError, error_handler_factory(422))
 app.add_exception_handler(ResourceConflictError, error_handler_factory(409))
-app.add_exception_handler(Exception, error_handler_factory(500))
 
 
 def _user_from_authorization(authorization: str) -> User:
@@ -133,6 +131,10 @@ async def add_log_requests(request: Request, call_next: ASGIApp):
     # Headers and bodies are not logged because they contain tokens and user content.
     logger.info("Request: %s %s", request.method, request.url.path)
 
-    response = await call_next(request)  # type: ignore
-
-    return response
+    try:
+        return await call_next(request)  # type: ignore
+    except Exception:
+        # Starlette re-raises unhandled errors after its 500 response, which closes
+        # the connection that the Lambda Web Adapter reuses for the next request.
+        logger.exception("Unhandled error for %s %s", request.method, request.url.path)
+        return JSONResponse({"errors": ["Internal server error"]}, status_code=500)

@@ -24,5 +24,20 @@ class TestAuthMiddleware(unittest.TestCase):
         self.assertEqual(response.status_code, 403)
 
 
+class TestUnhandledErrors(unittest.TestCase):
+    client = TestClient(main.app)
+
+    def test_returns_500_and_keeps_serving(self):
+        with patch(
+            "app.routes.conversation.fetch_conversation",
+            side_effect=RuntimeError("arn:aws:iam::123456789012:role/x"),
+        ):
+            response = self.client.get("/conversation/c")
+
+        self.assertEqual(response.status_code, 500)
+        self.assertNotIn("arn:aws", response.text)
+        self.assertEqual(self.client.get("/health").status_code, 200)
+
+
 if __name__ == "__main__":
     unittest.main()

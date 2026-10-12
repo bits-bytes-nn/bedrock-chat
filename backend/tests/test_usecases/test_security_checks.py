@@ -211,3 +211,13 @@ class TestAdminEditsAnotherUsersBot(unittest.TestCase):
         self.assertIn("admin/bot", source)
         self.assertIn("owner/bot", destination)
         self.assertIn("owner/bot", delete.call_args.args[1])
+
+    def test_keeps_a_replaced_file_with_the_same_name(self):
+        with patch.object(bot_usecase, "move_file_in_s3"), patch.object(
+            bot_usecase, "delete_file_from_s3"
+        ) as delete:
+            bot_usecase._update_s3_documents_by_diff(
+                "owner", "owner", "bot", ["deck.pptx.txt"], ["deck.pptx.txt"]
+            )
+
+        delete.assert_not_called()

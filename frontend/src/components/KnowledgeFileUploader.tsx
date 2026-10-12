@@ -11,6 +11,11 @@ import Progress from './Progress';
 import useBot from '../hooks/useBot';
 import { create } from 'zustand';
 import ButtonFileChoose from './ButtonFileChoose';
+import {
+  CONVERTIBLE_FILE_EXTENSIONS,
+  isConvertibleFile,
+  maxConvertibleFileSizeMb,
+} from '../constants/supportedAttachedFiles';
 
 type Props = BaseProps & {
   botId: string;
@@ -28,6 +33,8 @@ const SUPPORTED_FILES = [
   '.docx',
   '.pdf',
   '.csv',
+  // Converted into a text file after the upload.
+  ...CONVERTIBLE_FILE_EXTENSIONS,
 ];
 
 const KnowledgeFileUploaderState = create<{
@@ -74,14 +81,22 @@ const KnowledgeFileUploader: React.FC<Props> = (props) => {
         produce(props.files, (draft) => {
           renamedFiles.forEach((file) => {
             const isSupportedFile = SUPPORTED_FILES.includes(
-              '.' + file.name.split('.').slice(-1)
+              '.' + file.name.split('.').slice(-1)[0].toLowerCase()
             );
-            const isDuplicatedFile =
-              props.files.findIndex(
-                (botFile) => botFile.filename === file.name
-              ) > -1;
+            // A converted file is registered as `<filename>.txt`.
+            const registeredNames = isConvertibleFile(file.name)
+              ? [file.name, `${file.name}.txt`]
+              : [file.name];
+            const isDuplicatedFile = props.files.some((botFile) =>
+              registeredNames.includes(botFile.filename)
+            );
+            const maxSizeMb = isConvertibleFile(file.name)
+              ? maxConvertibleFileSizeMb(file.name)
+              : undefined;
+            const isTooLarge =
+              maxSizeMb !== undefined && file.size > maxSizeMb * 1024 * 1024;
 
-            if (isSupportedFile && !isDuplicatedFile) {
+            if (isSupportedFile && !isDuplicatedFile && !isTooLarge) {
               draft.push({
                 filename: file.name,
                 status: 'UPLOADING',
@@ -92,7 +107,11 @@ const KnowledgeFileUploader: React.FC<Props> = (props) => {
                 status: 'ERROR',
                 errorMessage: isDuplicatedFile
                   ? t('bot.error.duplicatedFile')
-                  : t('bot.error.notSupportedFile'),
+                  : isTooLarge
+                    ? t('error.attachment.fileSizeExceeded', {
+                        maxSize: `${maxSizeMb} MB`,
+                      })
+                    : t('bot.error.notSupportedFile'),
               });
             }
           });
@@ -102,24 +121,37 @@ const KnowledgeFileUploader: React.FC<Props> = (props) => {
 
       renamedFiles.forEach((file, idx) => {
         if (_getFiles()[originalLength + idx].status === 'UPLOADING') {
-          uploadFile(props.botId, file, (progress) => {
-            _setFiles(
-              produce(_getFiles(), (draft) => {
-                draft[originalLength + idx].progress = progress;
-              })
-            );
-
-            props.onUpdate(_getFiles());
-          })
-            .then(() => {
+          uploadFile(
+            props.botId,
+            file,
+            (progress) => {
               _setFiles(
                 produce(_getFiles(), (draft) => {
+                  draft[originalLength + idx].progress = progress;
+                })
+              );
+
+              props.onUpdate(_getFiles());
+            },
+            () => {
+              _setFiles(
+                produce(_getFiles(), (draft) => {
+                  draft[originalLength + idx].status = 'CONVERTING';
+                })
+              );
+              props.onUpdate(_getFiles());
+            }
+          )
+            .then((filename) => {
+              _setFiles(
+                produce(_getFiles(), (draft) => {
+                  draft[originalLength + idx].filename = filename;
                   draft[originalLength + idx].status = 'UPLOADED';
                 })
               );
               props.onUpdate(_getFiles());
             })
-            .catch((e: AxiosError) => {
+            .catch((e: AxiosError | Error) => {
               console.error(e);
               _setFiles(
                 produce(_getFiles(), (draft) => {
@@ -210,6 +242,11 @@ const KnowledgeFileUploader: React.FC<Props> = (props) => {
                       <Progress progress={file.progress ?? 0} />
                     </div>
                   )}
+                  {file.status === 'CONVERTING' && (
+                    <div className="text-sm text-dark-gray dark:text-light-gray">
+                      {t('bot.label.fileUploadStatus.converting')}
+                    </div>
+                  )}
                   {file.status === 'UPLOADED' && (
                     <div className="text-sm font-bold text-dark-gray dark:text-light-gray">
                       {t('bot.label.fileUploadStatus.uploaded')}
@@ -225,7 +262,11 @@ const KnowledgeFileUploader: React.FC<Props> = (props) => {
                 <div>
                   <ButtonIcon
                     className="text-red dark:text-red-400"
-                    disabled={file.status === 'UPLOADING' || props.disabled}
+                    disabled={
+                      file.status === 'UPLOADING' ||
+                      file.status === 'CONVERTING' ||
+                      props.disabled
+                    }
                     onClick={() => {
                       onDeleteFile(idx);
                     }}>

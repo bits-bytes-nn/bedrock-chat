@@ -33,8 +33,12 @@ import {
   MAX_FILE_SIZE_MB,
   SUPPORTED_FILE_EXTENSIONS,
   MAX_ATTACHED_FILES,
+  isConvertibleFile,
+  maxConvertibleFileSizeMb,
 } from '../constants/supportedAttachedFiles';
 import { isSubmitEnter } from '../utils/KeyboardUtils';
+import { bytesToBase64, textToBase64 } from '../utils/ConversionUtils';
+import useAttachmentApi from '../hooks/useAttachmentApi';
 
 type Props = BaseProps & {
   disabledSend?: boolean;
@@ -194,9 +198,13 @@ const InputChatContent = forwardRef<HTMLElement, Props>(
 
     const { open } = useSnackbar();
 
+    const { convertToText } = useAttachmentApi();
+    // Names of the attachments that are being converted to text.
+    const [convertingFiles, setConvertingFiles] = useState<string[]>([]);
+
     const disabledSend = useMemo(() => {
-      return content === '' || props.disabledSend;
-    }, [content, props.disabledSend]);
+      return content === '' || props.disabledSend || convertingFiles.length > 0;
+    }, [content, props.disabledSend, convertingFiles.length]);
 
     const inputRef = useRef<HTMLDivElement>(null);
 
@@ -313,17 +321,7 @@ const InputChatContent = forwardRef<HTMLElement, Props>(
         const reader = new FileReader();
         reader.onload = () => {
           if (reader.result instanceof ArrayBuffer) {
-            // Convert from byte to base64 encoded string
-            const byteArray = new Uint8Array(reader.result);
-            let binaryString = '';
-            const chunkSize = 8192;
-
-            for (let i = 0; i < byteArray.length; i += chunkSize) {
-              const chunk = byteArray.slice(i, i + chunkSize);
-              // To avoid `Maximum call stack size exceeded` error, split into smaller chunks
-              binaryString += String.fromCharCode(...chunk);
-            }
-            const base64String = btoa(binaryString);
+            const base64String = bytesToBase64(new Uint8Array(reader.result));
 
             // Total file size check
             if (
@@ -349,6 +347,51 @@ const InputChatContent = forwardRef<HTMLElement, Props>(
         reader.readAsArrayBuffer(file);
       },
       [pushTextFile, totalFileSizeToSend, setTotalFileSizeToSend, open, t]
+    );
+
+    // Presentations and recordings are converted to text by the backend and
+    // attached as text files.
+    const handleConvertibleFile = useCallback(
+      (file: File) => {
+        const maxSizeMb = maxConvertibleFileSizeMb(file.name);
+        if (file.size > maxSizeMb * 1024 * 1024) {
+          open(
+            t('error.attachment.fileSizeExceeded', { maxSize: `${maxSizeMb} MB` })
+          );
+          return;
+        }
+        setConvertingFiles((files) => [...files, file.name]);
+        convertToText(file)
+          .then((text) => {
+            const content = textToBase64(text);
+            const { totalFileSizeToSend } = useInputChatContentState.getState();
+            if (totalFileSizeToSend + content.length > MAX_FILE_SIZE_TO_SEND_BYTES) {
+              open(
+                t('error.totalFileSizeToSendExceeded', {
+                  maxSize: `${MAX_FILE_SIZE_TO_SEND_MB} MB`,
+                })
+              );
+              return;
+            }
+            pushTextFile({
+              name: `${file.name}.txt`,
+              type: 'text/plain',
+              size: content.length,
+              content,
+            });
+            setTotalFileSizeToSend(totalFileSizeToSend + content.length);
+          })
+          .catch((e) => {
+            console.error(e);
+            open(
+              t('error.attachment.conversionFailed', { fileName: file.name })
+            );
+          })
+          .finally(() => {
+            setConvertingFiles((files) => files.filter((f) => f !== file.name));
+          });
+      },
+      [convertToText, open, pushTextFile, setTotalFileSizeToSend, t]
     );
 
     useEffect(() => {
@@ -400,7 +443,7 @@ const InputChatContent = forwardRef<HTMLElement, Props>(
           )
         ).length;
 
-        let newAttachedFilesCount = 0;
+        let newAttachedFilesCount = convertingFiles.length;
         for (let i = 0; i < fileList.length; i++) {
           const file = fileList.item(i);
           if (file) {
@@ -429,7 +472,9 @@ const InputChatContent = forwardRef<HTMLElement, Props>(
         for (let i = 0; i < fileList.length; i++) {
           const file = fileList.item(i);
           if (file) {
-            if (
+            if (isConvertibleFile(file.name)) {
+              handleConvertibleFile(file);
+            } else if (
               SUPPORTED_FILE_EXTENSIONS.some((extension) =>
                 file.name.endsWith(extension)
               )
@@ -445,7 +490,15 @@ const InputChatContent = forwardRef<HTMLElement, Props>(
           }
         }
       },
-      [encodeAndPushImage, handleAttachedFileRead, open, t, acceptMediaType]
+      [
+        encodeAndPushImage,
+        handleAttachedFileRead,
+        handleConvertibleFile,
+        convertingFiles.length,
+        open,
+        t,
+        acceptMediaType,
+      ]
     );
 
     const onDragOver: React.DragEventHandler<HTMLDivElement> = useCallback(
@@ -553,8 +606,19 @@ const InputChatContent = forwardRef<HTMLElement, Props>(
               </ModalDialog>
             </div>
           )}
-          {attachedFiles.length > 0 && (
+          {(attachedFiles.length > 0 || convertingFiles.length > 0) && (
             <div className="relative m-2 mr-24 flex flex-wrap gap-3">
+              {convertingFiles.map((name) => (
+                <div
+                  key={name}
+                  className="flex flex-col items-center opacity-60"
+                  aria-busy="true">
+                  <UploadedAttachedFile fileName={name} />
+                  <div className="text-xs text-aws-font-color-light/70 dark:text-gray">
+                    {t('bot.label.fileUploadStatus.converting')}
+                  </div>
+                </div>
+              ))}
               {attachedFiles.map((file, idx) => (
                 <div key={idx} className="relative flex flex-col items-center">
                   <UploadedAttachedFile fileName={file.name} />

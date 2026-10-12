@@ -218,6 +218,21 @@ export class Api extends Construct {
     props.usageAnalysis?.resultOutputBucket.grantReadWrite(handlerRole);
     props.usageAnalysis?.ddbBucket.grantRead(handlerRole);
     props.largeMessageBucket.grantReadWrite(handlerRole);
+    handlerRole.addToPolicy(
+      // Transcribes recordings in the document bucket, which is in the Bedrock Region.
+      // Transcribe reads and writes the bucket with the caller's permissions.
+      new iam.PolicyStatement({
+        actions: [
+          "transcribe:StartTranscriptionJob",
+          "transcribe:GetTranscriptionJob",
+        ],
+        resources: [
+          `arn:aws:transcribe:${props.bedrockRegion}:${
+            Stack.of(this).account
+          }:transcription-job/brchat-*`,
+        ],
+      })
+    );
 
     const handler = new PythonFunction(this, "HandlerV2", {
       entry: path.join(__dirname, "../../../backend"),

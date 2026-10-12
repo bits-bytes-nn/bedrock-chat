@@ -1,3 +1,4 @@
+import { ConversionStatus } from '../utils/ConversionUtils';
 import {
   Agent,
   AgentInput,
@@ -106,9 +107,13 @@ export type BotSummary = BotMeta & {
 
 export type BotFile = {
   filename: string;
-  status: 'UPLOADING' | 'UPLOADED' | 'ERROR';
+  status: 'UPLOADING' | 'CONVERTING' | 'UPLOADED' | 'ERROR';
   errorMessage?: string;
   progress?: number;
+};
+
+export type FileConversionResponse = ConversionStatus & {
+  convertedFilename: string;
 };
 
 export type RegisterBotRequest = {
