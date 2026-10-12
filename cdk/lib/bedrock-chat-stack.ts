@@ -338,10 +338,13 @@ export class BedrockChatStack extends cdk.Stack {
       .defaultChild as Distribution;
     props.documentBucket.addCorsRule({
       allowedMethods: [HttpMethods.PUT],
+      // Browsers upload documents with presigned URLs from the app origins only.
       allowedOrigins: [
         `https://${cloudFrontWebDistribution.distributionDomainName}`, // frontend.getOrigin() is cyclic reference
+        ...(props.alternateDomainName
+          ? [`https://${props.alternateDomainName}`]
+          : []),
         "http://localhost:5173",
-        "*",
       ],
       allowedHeaders: ["*"],
       maxAge: 3000,

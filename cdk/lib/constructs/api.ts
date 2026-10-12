@@ -18,6 +18,10 @@ import {
 import { Auth } from "./auth";
 import { Stack } from "aws-cdk-lib";
 import * as iam from "aws-cdk-lib/aws-iam";
+import {
+  botStackPolicyStatement,
+  publishedApiKeyPolicyStatement,
+} from "../utils/publication-policies";
 import * as logs from "aws-cdk-lib/aws-logs";
 import * as path from "path";
 import { IBucket } from "aws-cdk-lib/aws-s3";
@@ -96,17 +100,7 @@ export class Api extends Construct {
     );
     props.embeddingStateMachine.grantStartExecution(handlerRole);
     handlerRole.addToPolicy(
-      new iam.PolicyStatement({
-        effect: iam.Effect.ALLOW,
-        actions: [
-          "cloudformation:DescribeStacks",
-          "cloudformation:DescribeStackEvents",
-          "cloudformation:DescribeStackResource",
-          "cloudformation:DescribeStackResources",
-          "cloudformation:DeleteStack",
-        ],
-        resources: [`*`],
-      })
+      botStackPolicyStatement(Stack.of(this), ["ApiPublishmentStack"])
     );
     handlerRole.addToPolicy(
       new iam.PolicyStatement({
@@ -119,18 +113,7 @@ export class Api extends Construct {
         ],
       })
     );
-    handlerRole.addToPolicy(
-      new iam.PolicyStatement({
-        effect: iam.Effect.ALLOW,
-        actions: [
-          "apigateway:GET",
-          "apigateway:POST",
-          "apigateway:PUT",
-          "apigateway:DELETE",
-        ],
-        resources: [`arn:aws:apigateway:${Stack.of(this).region}::/*`],
-      })
-    );
+    handlerRole.addToPolicy(publishedApiKeyPolicyStatement(Stack.of(this)));
     handlerRole.addToPolicy(
       new iam.PolicyStatement({
         effect: iam.Effect.ALLOW,
@@ -246,7 +229,8 @@ export class Api extends Construct {
       runtime: Runtime.PYTHON_3_13,
       architecture: Architecture.X86_64,
       memorySize: 1024,
-      timeout: Duration.minutes(15),
+      // API Gateway ends the request after 30 seconds, so a longer run is wasted.
+      timeout: Duration.seconds(30),
       environment: {
         CONVERSATION_TABLE_NAME: database.conversationTable.tableName,
         BOT_TABLE_NAME: database.botTable.tableName,
@@ -326,6 +310,22 @@ export class Api extends Construct {
     defaultStage.defaultRouteSettings = {
       throttlingRateLimit: props.throttle.rateLimit,
       throttlingBurstLimit: props.throttle.burstLimit,
+    };
+    const accessLogGroup = new logs.LogGroup(this, "AccessLogs", {
+      retention: logs.RetentionDays.THREE_MONTHS,
+    });
+    defaultStage.accessLogSettings = {
+      destinationArn: accessLogGroup.logGroupArn,
+      format: JSON.stringify({
+        requestId: "$context.requestId",
+        ip: "$context.identity.sourceIp",
+        requestTime: "$context.requestTime",
+        routeKey: "$context.routeKey",
+        status: "$context.status",
+        responseLength: "$context.responseLength",
+        integrationLatency: "$context.integrationLatency",
+        integrationError: "$context.integrationErrorMessage",
+      }),
     };
 
     const integration = new HttpLambdaIntegration(
