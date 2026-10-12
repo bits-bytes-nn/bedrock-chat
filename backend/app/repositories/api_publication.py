@@ -86,7 +86,10 @@ def find_stack_by_bot_id(bot_id: str) -> PublishedApiStackModel:
     try:
         response = client.describe_stacks(StackName=stack_name)
     except client.exceptions.ClientError as e:
-        raise RecordNotFoundError()
+        # Other errors, such as throttling, must not look like a missing stack.
+        if "does not exist" in e.response["Error"].get("Message", ""):
+            raise RecordNotFoundError() from e
+        raise
 
     stack = response["Stacks"][0]
 
