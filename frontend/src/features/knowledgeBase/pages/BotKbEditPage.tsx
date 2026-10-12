@@ -818,14 +818,22 @@ const BotKbEditPage: React.FC = () => {
   const onUpdateFiles = useCallback((botFiles: BotFile[]) => {
     setFiles(botFiles);
     // A converted file is registered as `<filename>.txt` instead of the upload.
+    // It may replace a file of that name that was deleted or kept unchanged.
     const filenames = botFiles.map((file) => file.filename);
-    setAddedFilenames((added) =>
-      added.map((name) =>
-        !filenames.includes(name) && filenames.includes(`${name}.txt`)
-          ? `${name}.txt`
-          : name
-      )
-    );
+    const isConverted = (name: string) =>
+      !filenames.includes(name) && filenames.includes(`${name}.txt`);
+    setAddedFilenames((added) => {
+      const converted = added.filter(isConverted).map((name) => `${name}.txt`);
+      if (converted.length > 0) {
+        setDeletedFilenames((deleted) =>
+          deleted.filter((name) => !converted.includes(name))
+        );
+        setUnchangedFilenames((unchanged) =>
+          unchanged.filter((name) => !converted.includes(name))
+        );
+      }
+      return added.map((name) => (isConverted(name) ? `${name}.txt` : name));
+    });
   }, []);
 
   const onDeleteFiles = useCallback(

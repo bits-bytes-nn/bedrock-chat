@@ -78,7 +78,14 @@ export const CONVERTIBLE_FILE_EXTENSIONS = [
   '.m4a',
 ];
 // Convertible files are uploaded to S3, so they are not limited by the request size.
-export const MAX_CONVERTIBLE_FILE_SIZE_MB = 500;
+// Presentations are parsed by the API, so they have a lower limit.
+const MAX_PRESENTATION_FILE_SIZE_MB = 100;
+const MAX_MEDIA_FILE_SIZE_MB = 500;
+
+export const maxConvertibleFileSizeMb = (fileName: string): number =>
+  fileName.toLowerCase().endsWith('.pptx')
+    ? MAX_PRESENTATION_FILE_SIZE_MB
+    : MAX_MEDIA_FILE_SIZE_MB;
 
 export const isConvertibleFile = (fileName: string): boolean =>
   CONVERTIBLE_FILE_EXTENSIONS.some((extension) =>

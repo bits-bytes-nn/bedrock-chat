@@ -33,8 +33,8 @@ import {
   MAX_FILE_SIZE_MB,
   SUPPORTED_FILE_EXTENSIONS,
   MAX_ATTACHED_FILES,
-  MAX_CONVERTIBLE_FILE_SIZE_MB,
   isConvertibleFile,
+  maxConvertibleFileSizeMb,
 } from '../constants/supportedAttachedFiles';
 import { isSubmitEnter } from '../utils/KeyboardUtils';
 import { bytesToBase64, textToBase64 } from '../utils/ConversionUtils';
@@ -353,11 +353,10 @@ const InputChatContent = forwardRef<HTMLElement, Props>(
     // attached as text files.
     const handleConvertibleFile = useCallback(
       (file: File) => {
-        if (file.size > MAX_CONVERTIBLE_FILE_SIZE_MB * 1024 * 1024) {
+        const maxSizeMb = maxConvertibleFileSizeMb(file.name);
+        if (file.size > maxSizeMb * 1024 * 1024) {
           open(
-            t('error.attachment.fileSizeExceeded', {
-              maxSize: `${MAX_CONVERTIBLE_FILE_SIZE_MB} MB`,
-            })
+            t('error.attachment.fileSizeExceeded', { maxSize: `${maxSizeMb} MB` })
           );
           return;
         }

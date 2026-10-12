@@ -115,6 +115,7 @@ class TestConversion(unittest.TestCase):
 
     def test_transcribes_recordings(self):
         key = "u/b/_temp/meeting.m4a"
+        self.s3.put_object(Bucket=BUCKET, Key=key, Body=b"audio")
         transcribe = MagicMock()
         transcribe.exceptions.ConflictException = type("Conflict", (Exception,), {})
         transcribe.exceptions.BadRequestException = type("BadRequest", (Exception,), {})
@@ -143,7 +144,41 @@ class TestConversion(unittest.TestCase):
 
         self.assertEqual(file_conversion.read_converted_text(key), "회의")
 
+    def test_new_uploads_with_the_same_name_start_a_new_job(self):
+        key = "u/b/_temp/meeting.mp3"
+        transcribe = MagicMock()
+        transcribe.exceptions.ConflictException = type("Conflict", (Exception,), {})
+        with patch.object(file_conversion, "transcribe_client", transcribe):
+            self.s3.put_object(Bucket=BUCKET, Key=key, Body=b"first")
+            file_conversion.start_conversion(key)
+            self.s3.put_object(Bucket=BUCKET, Key=f"{key}.txt", Body=b"old text")
+            self.s3.put_object(Bucket=BUCKET, Key=key, Body=b"second")
+            file_conversion.start_conversion(key)
+            transcribe.get_transcription_job.return_value = {
+                "TranscriptionJob": {"TranscriptionJobStatus": "IN_PROGRESS"}
+            }
+            # The text of the previous upload is not reported for the new one.
+            self.assertEqual(file_conversion.get_conversion(key).status, "IN_PROGRESS")
+
+        first, second = [
+            c.kwargs["TranscriptionJobName"]
+            for c in transcribe.start_transcription_job.call_args_list
+        ]
+        self.assertNotEqual(first, second)
+
+    def test_rejects_large_presentations(self):
+        key = "u/b/_temp/deck.pptx"
+        self.s3.put_object(Bucket=BUCKET, Key=key, Body=presentation())
+        with patch.object(file_conversion, "MAX_PRESENTATION_BYTES", 10):
+            with self.assertRaises(ValueError):
+                file_conversion.start_conversion(key)
+
+    def test_rejects_missing_uploads(self):
+        with self.assertRaises(ValueError):
+            file_conversion.start_conversion("u/b/_temp/missing.pptx")
+
     def test_reports_failed_transcriptions(self):
+        self.s3.put_object(Bucket=BUCKET, Key="u/b/_temp/meeting.mp3", Body=b"audio")
         transcribe = MagicMock()
         transcribe.exceptions.BadRequestException = type("BadRequest", (Exception,), {})
         transcribe.get_transcription_job.return_value = {

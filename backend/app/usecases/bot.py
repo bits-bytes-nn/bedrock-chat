@@ -109,6 +109,9 @@ def _update_s3_documents_by_diff(
         move_file_in_s3(DOCUMENT_BUCKET, tmp_path, document_path)
 
     for filename in deleted_filenames:
+        if filename in added_filenames:
+            # Replaced by a new upload with the same name, which was moved above.
+            continue
         document_path = compose_upload_document_s3_path(owner_id, bot_id, filename)
 
         # Ignore errors when deleting a non-existent file from the S3 bucket used in knowledge bases.

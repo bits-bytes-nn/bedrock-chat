@@ -11,7 +11,11 @@ import Progress from './Progress';
 import useBot from '../hooks/useBot';
 import { create } from 'zustand';
 import ButtonFileChoose from './ButtonFileChoose';
-import { CONVERTIBLE_FILE_EXTENSIONS } from '../constants/supportedAttachedFiles';
+import {
+  CONVERTIBLE_FILE_EXTENSIONS,
+  isConvertibleFile,
+  maxConvertibleFileSizeMb,
+} from '../constants/supportedAttachedFiles';
 
 type Props = BaseProps & {
   botId: string;
@@ -77,14 +81,22 @@ const KnowledgeFileUploader: React.FC<Props> = (props) => {
         produce(props.files, (draft) => {
           renamedFiles.forEach((file) => {
             const isSupportedFile = SUPPORTED_FILES.includes(
-              '.' + file.name.split('.').slice(-1)
+              '.' + file.name.split('.').slice(-1)[0].toLowerCase()
             );
-            const isDuplicatedFile =
-              props.files.findIndex(
-                (botFile) => botFile.filename === file.name
-              ) > -1;
+            // A converted file is registered as `<filename>.txt`.
+            const registeredNames = isConvertibleFile(file.name)
+              ? [file.name, `${file.name}.txt`]
+              : [file.name];
+            const isDuplicatedFile = props.files.some((botFile) =>
+              registeredNames.includes(botFile.filename)
+            );
+            const maxSizeMb = isConvertibleFile(file.name)
+              ? maxConvertibleFileSizeMb(file.name)
+              : undefined;
+            const isTooLarge =
+              maxSizeMb !== undefined && file.size > maxSizeMb * 1024 * 1024;
 
-            if (isSupportedFile && !isDuplicatedFile) {
+            if (isSupportedFile && !isDuplicatedFile && !isTooLarge) {
               draft.push({
                 filename: file.name,
                 status: 'UPLOADING',
@@ -95,7 +107,11 @@ const KnowledgeFileUploader: React.FC<Props> = (props) => {
                 status: 'ERROR',
                 errorMessage: isDuplicatedFile
                   ? t('bot.error.duplicatedFile')
-                  : t('bot.error.notSupportedFile'),
+                  : isTooLarge
+                    ? t('error.attachment.fileSizeExceeded', {
+                        maxSize: `${maxSizeMb} MB`,
+                      })
+                    : t('bot.error.notSupportedFile'),
               });
             }
           });

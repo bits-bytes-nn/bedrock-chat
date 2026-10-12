@@ -32,6 +32,8 @@ MEDIA_EXTENSIONS = frozenset(
     {".mp3", ".mp4", ".wav", ".flac", ".ogg", ".amr", ".webm", ".m4a"}
 )
 CONVERTIBLE_EXTENSIONS = PRESENTATION_EXTENSIONS | MEDIA_EXTENSIONS
+# Presentations are parsed in the API Lambda, so their size is limited.
+MAX_PRESENTATION_BYTES = 100 * 1024 * 1024
 # Languages that Transcribe chooses from when identifying the spoken language.
 TRANSCRIPTION_LANGUAGES = ["ko-KR", "en-US", "ja-JP", "zh-CN"]
 MAX_SPEAKERS = 10
@@ -70,9 +72,38 @@ def converted_key(source_key: str) -> str:
     return f"{source_key}.txt"
 
 
-def _job_name(source_key: str) -> str:
-    # Deterministic, so that starting a conversion twice reuses the same job.
-    return TRANSCRIPTION_JOB_PREFIX + hashlib.sha256(source_key.encode()).hexdigest()
+def _source(source_key: str) -> dict:
+    """Return the metadata of the uploaded object.
+
+    Raises:
+        ValueError: If nothing was uploaded at the key.
+    """
+    try:
+        return s3_client.head_object(Bucket=DOCUMENT_BUCKET, Key=source_key)
+    except ClientError as e:
+        if e.response["Error"]["Code"] in ("404", "NoSuchKey"):
+            raise ValueError("The file was not uploaded.") from None
+        raise
+
+
+def _delete_if_older(key: str, than) -> None:
+    try:
+        stale = s3_client.head_object(Bucket=DOCUMENT_BUCKET, Key=key)
+    except ClientError as e:
+        if e.response["Error"]["Code"] in ("404", "NoSuchKey"):
+            return
+        raise
+    # S3 times have one-second precision. Results written in the same second as
+    # the upload are older than it: presentations are converted again anyway.
+    if stale["LastModified"] <= than:
+        s3_client.delete_object(Bucket=DOCUMENT_BUCKET, Key=key)
+
+
+def _job_name(source_key: str, etag: str) -> str:
+    # Deterministic per upload, so that starting a conversion twice reuses the job,
+    # while a new upload with the same name gets a new one.
+    digest = hashlib.sha256(f"{source_key}:{etag}".encode()).hexdigest()
+    return TRANSCRIPTION_JOB_PREFIX + digest
 
 
 def _transcript_key(source_key: str) -> str:
@@ -145,7 +176,17 @@ def start_conversion(source_key: str) -> ConversionStatus:
         ValueError: If the file type cannot be converted.
     """
     suffix = PurePosixPath(source_key).suffix.lower()
+    if suffix not in CONVERTIBLE_EXTENSIONS:
+        raise ValueError(f"Files of type {suffix} cannot be converted.")
+    source = _source(source_key)
+    # A previous upload with the same name may have left its results behind. Results
+    # of this upload are kept, so that starting twice is harmless.
+    for key in (converted_key(source_key), _transcript_key(source_key)):
+        _delete_if_older(key, source["LastModified"])
+
     if suffix in PRESENTATION_EXTENSIONS:
+        if source["ContentLength"] > MAX_PRESENTATION_BYTES:
+            raise ValueError("Presentations must be 100 MB or smaller.")
         data = s3_client.get_object(Bucket=DOCUMENT_BUCKET, Key=source_key)[
             "Body"
         ].read()
@@ -160,21 +201,19 @@ def start_conversion(source_key: str) -> ConversionStatus:
             ContentType="text/plain; charset=utf-8",
         )
         return ConversionStatus(status="COMPLETED")
-    if suffix in MEDIA_EXTENSIONS:
-        try:
-            transcribe_client.start_transcription_job(
-                TranscriptionJobName=_job_name(source_key),
-                Media={"MediaFileUri": f"s3://{DOCUMENT_BUCKET}/{source_key}"},
-                OutputBucketName=DOCUMENT_BUCKET,
-                OutputKey=_transcript_key(source_key),
-                IdentifyLanguage=True,
-                LanguageOptions=TRANSCRIPTION_LANGUAGES,
-                Settings={"ShowSpeakerLabels": True, "MaxSpeakerLabels": MAX_SPEAKERS},
-            )
-        except transcribe_client.exceptions.ConflictException:
-            logger.info("Transcription job for %s already exists", source_key)
-        return ConversionStatus(status="IN_PROGRESS")
-    raise ValueError(f"Files of type {suffix} cannot be converted.")
+    try:
+        transcribe_client.start_transcription_job(
+            TranscriptionJobName=_job_name(source_key, source["ETag"]),
+            Media={"MediaFileUri": f"s3://{DOCUMENT_BUCKET}/{source_key}"},
+            OutputBucketName=DOCUMENT_BUCKET,
+            OutputKey=_transcript_key(source_key),
+            IdentifyLanguage=True,
+            LanguageOptions=TRANSCRIPTION_LANGUAGES,
+            Settings={"ShowSpeakerLabels": True, "MaxSpeakerLabels": MAX_SPEAKERS},
+        )
+    except transcribe_client.exceptions.ConflictException:
+        logger.info("Transcription job for %s already exists", source_key)
+    return ConversionStatus(status="IN_PROGRESS")
 
 
 def get_conversion(source_key: str) -> ConversionStatus:
@@ -188,7 +227,7 @@ def get_conversion(source_key: str) -> ConversionStatus:
 
     try:
         job = transcribe_client.get_transcription_job(
-            TranscriptionJobName=_job_name(source_key)
+            TranscriptionJobName=_job_name(source_key, _source(source_key)["ETag"])
         )["TranscriptionJob"]
     except transcribe_client.exceptions.BadRequestException:
         return ConversionStatus(
@@ -206,13 +245,15 @@ def get_conversion(source_key: str) -> ConversionStatus:
             "Body"
         ].read()
     )
+    text = transcript_to_text(transcript)
+    if not text.strip():
+        return ConversionStatus(status="FAILED", reason="No speech was detected.")
     s3_client.put_object(
         Bucket=DOCUMENT_BUCKET,
         Key=converted_key(source_key),
-        Body=transcript_to_text(transcript).encode(),
+        Body=text.encode(),
         ContentType="text/plain; charset=utf-8",
     )
-    s3_client.delete_object(Bucket=DOCUMENT_BUCKET, Key=_transcript_key(source_key))
     return ConversionStatus(status="COMPLETED")
 
 
