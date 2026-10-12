@@ -7,6 +7,7 @@ import { PiList, PiPlus } from 'react-icons/pi';
 import ButtonIcon from '../components/ButtonIcon';
 import SnackbarProvider from '../providers/SnackbarProvider';
 import { Outlet } from 'react-router-dom';
+import { useSWRConfig } from 'swr';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router-dom';
 import useDrawer from '../hooks/useDrawer';
@@ -40,6 +41,7 @@ const AppContent: React.FC<Props> = (props) => {
   } = useConversation();
   const { pinnedBots, starredBots, recentlyUsedUnstarredBots } = useBot();
   const newChat = useNewChat();
+  const { mutate: clearCache } = useSWRConfig();
   const isGeneratedTitle = useIsGeneratedTitle();
   const { isConversationOrNewChat, pathPattern } = usePageTitlePathPattern();
   const { isAdmin } = useLoginUser();
@@ -99,6 +101,10 @@ const AppContent: React.FC<Props> = (props) => {
           await updateTitle(conversationId, title);
         }}
         onSignOut={() => {
+          // Drop the cached data of this user, so that the next user to sign in
+          // does not see it before it is refetched.
+          clearCache(() => true, undefined, { revalidate: false });
+          newChat();
           props.signOut?.();
         }}
         onDeleteConversation={(conversation) => {

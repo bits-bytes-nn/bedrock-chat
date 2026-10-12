@@ -1,5 +1,7 @@
 import React, { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { getApiErrorMessage } from '../utils/ErrorUtils';
+import useSnackbar from '../hooks/useSnackbar';
 import { PiLink } from 'react-icons/pi';
 import { useNavigate } from 'react-router-dom';
 import useBot from '../hooks/useBot';
@@ -21,6 +23,7 @@ import MenuBot from '../components/MenuBot';
 
 const BotStarredPage: React.FC = () => {
   const { t } = useTranslation();
+  const { open: openSnackbar } = useSnackbar();
   const navigate = useNavigate();
   const { isAllowApiSettings, isAdmin } = useLoginUser();
   const [isOpenDeleteDialog, setIsOpenDeleteDialog] = useState(false);
@@ -65,11 +68,12 @@ const BotStarredPage: React.FC = () => {
   const onDeleteMyBot = useCallback(() => {
     if (targetDelete) {
       setIsOpenDeleteDialog(false);
-      deleteMyBot(targetDelete.id).catch(() => {
-        setIsOpenDeleteDialog(true);
+      deleteMyBot(targetDelete.id).catch((e) => {
+        // For example, the knowledge base is still being synchronized.
+        openSnackbar(getApiErrorMessage(e) ?? t('bot.error.failDelete'));
       });
     }
-  }, [deleteMyBot, targetDelete]);
+  }, [deleteMyBot, targetDelete, openSnackbar, t]);
 
   const onClickBot = useCallback(
     (botId: string) => {
