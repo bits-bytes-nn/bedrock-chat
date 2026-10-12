@@ -20,8 +20,12 @@ class TestAuthMiddleware(unittest.TestCase):
         self.assertEqual(response.status_code, 403)
 
     def test_malformed_header_returns_403(self):
-        response = self.client.get("/conversations", headers={"Authorization": "token"})
+        response = self.client.get(
+            "/conversations",
+            headers={"Authorization": "token", "Origin": "https://example.com"},
+        )
         self.assertEqual(response.status_code, 403)
+        self.assertIn("access-control-allow-origin", response.headers)
 
 
 class TestUnhandledErrors(unittest.TestCase):
@@ -32,10 +36,13 @@ class TestUnhandledErrors(unittest.TestCase):
             "app.routes.conversation.fetch_conversation",
             side_effect=RuntimeError("arn:aws:iam::123456789012:role/x"),
         ):
-            response = self.client.get("/conversation/c")
+            response = self.client.get(
+                "/conversation/c", headers={"Origin": "https://example.com"}
+            )
 
         self.assertEqual(response.status_code, 500)
         self.assertNotIn("arn:aws", response.text)
+        self.assertIn("access-control-allow-origin", response.headers)
         self.assertEqual(self.client.get("/health").status_code, 200)
 
 

@@ -153,3 +153,7 @@ logs=$(aws logs get-log-events --log-group-name $logGroupName --log-stream-name 
 frontendUrl=$(echo "$logs" | grep -o 'FrontendURL = [^ ]*' | cut -d' ' -f3 | tr -d '\n,')
 
 echo "Frontend URL: $frontendUrl"
+
+# The deploy project has administrator access, so do not leave it behind.
+echo "Deleting the $StackName stack..."
+aws cloudformation delete-stack --stack-name $StackName

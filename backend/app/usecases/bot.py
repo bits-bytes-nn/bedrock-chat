@@ -4,7 +4,8 @@ import re
 from typing import Literal, TypeGuard
 
 from app.config import DEFAULT_GENERATION_CONFIG
-from app.repositories.common import RecordNotFoundError
+from app.repositories.api_publication import find_build_status_by_build_id
+from app.repositories.common import RecordNotFoundError, ResourceConflictError
 from app.repositories.custom_bot import (
     alias_exists,
     delete_alias_by_id,
@@ -523,8 +524,6 @@ def fetch_bot_summary(user: User, bot_id: str) -> BotSummaryOutput:
             f"User {user.id} is not authorized to access bot {bot_id}"
         )
 
-    logger.debug(f"Bot: {bot}")
-    logger.debug(f"User: {user}")
     logger.debug(f"bot.is_accessible_by_user(user): {bot.is_accessible_by_user(user)}")
 
     if not bot.is_owned_by_user(user):
@@ -558,6 +557,17 @@ def modify_star_status(user: User, bot_id: str, starred: bool):
         return update_alias_star_status(user.id, bot_id, starred)
 
 
+def _is_publication_building(bot: BotModel) -> bool:
+    if bot.published_api_codebuild_id is None:
+        return False
+    try:
+        status = find_build_status_by_build_id(bot.published_api_codebuild_id)
+    except RecordNotFoundError:
+        # CodeBuild no longer keeps the build, so it has finished.
+        return False
+    return status not in ("SUCCEEDED", "FAILED", "STOPPED", "FAULT", "TIMED_OUT")
+
+
 def remove_bot_by_id(user: User, bot_id: str):
     """Remove bot by id."""
     bot = find_bot_by_id(bot_id)
@@ -569,6 +579,17 @@ def remove_bot_by_id(user: User, bot_id: str):
         raise PermissionError(
             f"User {user.id} is not authorized to access bot {bot_id}"
         )
+    # A stack built after the removal would be left running and billing. Admins can
+    # still delete a bot whose sync is stuck.
+    if not user.is_admin():
+        if bot.sync_status in ("QUEUED", "RUNNING"):
+            raise ResourceConflictError(
+                "The knowledge base is being synchronized. Delete the bot after it finishes."
+            )
+        if _is_publication_building(bot):
+            raise ResourceConflictError(
+                "The API is being published. Delete the bot after it finishes."
+            )
 
     if bot.is_editable_by_user(user):
         owner_user_id = bot.owner_user_id

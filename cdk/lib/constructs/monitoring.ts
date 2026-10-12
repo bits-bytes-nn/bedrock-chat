@@ -5,6 +5,7 @@ import { IFunction } from "aws-cdk-lib/aws-lambda";
 import * as sns from "aws-cdk-lib/aws-sns";
 import { EmailSubscription } from "aws-cdk-lib/aws-sns-subscriptions";
 import * as sfn from "aws-cdk-lib/aws-stepfunctions";
+import * as sqs from "aws-cdk-lib/aws-sqs";
 import { Construct } from "constructs";
 
 export interface MonitoringProps {
@@ -13,6 +14,7 @@ export interface MonitoringProps {
   readonly apiHandler: IFunction;
   readonly webSocketHandler: IFunction;
   readonly embeddingStateMachine: sfn.IStateMachine;
+  readonly botRemovalDeadLetterQueue: sqs.IQueue;
 }
 
 /** Alarms for failures that users notice: API errors, chat errors and failed knowledge syncs. */
@@ -52,6 +54,14 @@ export class Monitoring extends Construct {
         props.embeddingStateMachine.metricFailed({ period: Duration.minutes(5) }),
         1,
         "A bot knowledge sync (embedding state machine) failed.",
+      ],
+      [
+        "BotRemovalFailures",
+        props.botRemovalDeadLetterQueue.metricApproximateNumberOfMessagesVisible({
+          period: Duration.minutes(5),
+        }),
+        1,
+        "Removing a deleted bot's resources failed. Its knowledge base or API stack may still be running and billing.",
       ],
     ];
     for (const [alarmId, metric, threshold, description] of alarms) {

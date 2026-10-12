@@ -88,7 +88,9 @@ def generate_presigned_url(
 
 
 def compose_upload_temp_s3_prefix(user_id: str, bot_id: str) -> str:
-    return f"{user_id}/{bot_id}/_temp/"
+    # Under `.temp/`, which expires after a day, so uploads of bots that are never
+    # saved do not stay forever.
+    return f".temp/{user_id}/{bot_id}/"
 
 
 def compose_upload_temp_s3_path(user_id: str, bot_id: str, filename: str) -> str:

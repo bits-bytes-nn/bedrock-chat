@@ -1,9 +1,13 @@
 import json
+import logging
 from typing import TypedDict
 
 from app.repositories.common import compose_sk, get_bot_table_client
 from app.routes.schemas.bot import type_sync_status
+from botocore.exceptions import ClientError
 from reretry import retry
+
+logger = logging.getLogger(__name__)
 
 RETRIES_TO_UPDATE_SYNC_STATUS = 4
 RETRY_DELAY_TO_UPDATE_SYNC_STATUS = 2
@@ -20,6 +24,15 @@ class SyncStatus(TypedDict):
 @retry(tries=RETRIES_TO_UPDATE_SYNC_STATUS, delay=RETRY_DELAY_TO_UPDATE_SYNC_STATUS)
 def update_sync_status(sync_status: SyncStatus):
     table = get_bot_table_client()
+    try:
+        _update(table, sync_status)
+    except ClientError as e:
+        if e.response["Error"]["Code"] != "ConditionalCheckFailedException":
+            raise
+        logger.info("Bot %s was deleted during the sync.", sync_status["bot_id"])
+
+
+def _update(table, sync_status: SyncStatus):
     table.update_item(
         Key={
             "PK": sync_status["user_id"],
@@ -31,16 +44,29 @@ def update_sync_status(sync_status: SyncStatus):
             ":sync_status_reason": sync_status["reason"],
             ":last_exec_id": sync_status["last_exec_id"],
         },
+        # Without it, a bot deleted during the sync would be recreated as a row
+        # without its other attributes.
+        ConditionExpression="attribute_exists(PK) AND attribute_exists(SK)",
     )
 
 
-def error_reason(error: dict) -> str:
-    """Return the message of an error caught by the state machine."""
+def error_reason(error: dict) -> tuple[str, str]:
+    """Return the reason and the execution id of an error caught by the state machine.
+
+    The cause is the JSON of a failed Lambda or CodeBuild run, or plain text when a
+    build could not start.
+    """
     cause = error.get("Cause", "")
     try:
-        return json.loads(cause).get("errorMessage", cause)
-    except (TypeError, ValueError, AttributeError):
-        return cause or error.get("Error", "")
+        details = json.loads(cause)
+    except (TypeError, ValueError):
+        return cause or error.get("Error", ""), ""
+    if not isinstance(details, dict):
+        return cause, ""
+    build = details.get("Build")
+    if build:
+        return json.dumps(build.get("Phases", [])), build.get("Arn", "")
+    return details.get("errorMessage", cause), ""
 
 
 def handler(event, context):
@@ -52,16 +78,9 @@ def handler(event, context):
     sync_status_reason: str
     last_exec_id: str
 
-    build = event.get("Build")
-    if build:
-        # CodeBuild
-        sync_status_reason = json.dumps(build["Phases"])
-        last_exec_id = build["Arn"]
-
-    elif "Error" in event:
-        # Caught by the state machine: {"Error": ..., "Cause": <Lambda error JSON>}
-        sync_status_reason = error_reason(event["Error"])
-        last_exec_id = event.get("LastExecId", "")
+    if "Error" in event:
+        # Caught by the state machine: {"Error": ..., "Cause": ...}
+        sync_status_reason, last_exec_id = error_reason(event["Error"])
 
     else:
         sync_status_reason = event.get("SyncStatusReason", "")

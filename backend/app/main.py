@@ -70,15 +70,6 @@ else:
     app.include_router(published_api_router)
 
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=CORS_ALLOW_ORIGINS.split(","),
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-
 def error_handler_factory(status_code: int) -> Callable[[Request, Exception], Response]:
     def error_handler(_: Request, exc: Exception) -> JSONResponse:
         # Client errors only; unexpected errors are handled in add_log_requests.
@@ -138,3 +129,14 @@ async def add_log_requests(request: Request, call_next: ASGIApp):
         # the connection that the Lambda Web Adapter reuses for the next request.
         logger.exception("Unhandled error for %s %s", request.method, request.url.path)
         return JSONResponse({"errors": ["Internal server error"]}, status_code=500)
+
+
+# Added last, so that it wraps the middlewares above and their 403 and 500 responses
+# also carry CORS headers. Otherwise browsers report them as CORS errors.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=CORS_ALLOW_ORIGINS.split(","),
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)

@@ -16,7 +16,8 @@ import {
   DockerImageFunction,
   IFunction,
 } from "aws-cdk-lib/aws-lambda";
-import { DynamoEventSource } from "aws-cdk-lib/aws-lambda-event-sources";
+import { DynamoEventSource, SqsDlq } from "aws-cdk-lib/aws-lambda-event-sources";
+import * as sqs from "aws-cdk-lib/aws-sqs";
 import * as sfn from "aws-cdk-lib/aws-stepfunctions";
 import * as tasks from "aws-cdk-lib/aws-stepfunctions-tasks";
 import { Platform } from "aws-cdk-lib/aws-ecr-assets";
@@ -35,6 +36,8 @@ export interface EmbeddingProps {
 export class Embedding extends Construct {
   readonly stateMachine: sfn.StateMachine;
   readonly removalHandler: IFunction;
+  /** Bot removals that failed after the retries, which may leave stacks behind. */
+  readonly removalDeadLetterQueue: sqs.Queue;
 
   private _updateSyncStatusHandler: IFunction;
   private _bootstrapStateMachineHandler: IFunction;
@@ -48,6 +51,10 @@ export class Embedding extends Construct {
 
     this.setupStateMachineHandlers(props);
     this.stateMachine = this.setupStateMachine(props)
+    this.removalDeadLetterQueue = new sqs.Queue(this, "BotRemovalDeadLetterQueue", {
+      retentionPeriod: Duration.days(14),
+      enforceSSL: true,
+    });
     this.removalHandler = this.setupRemovalHandler(props);
   }
 
@@ -319,20 +326,14 @@ export class Embedding extends Construct {
       resultPath: sfn.JsonPath.DISCARD,
     });
 
-    const passSharedKnowledgeBasesBuildError = new sfn.Pass(this, "PassSharedKnowledgeBasesBuildError", {
-      parameters: {
-        QueuedBots: sfn.JsonPath.objectAt("$.QueuedBots"),
-        Lock: sfn.JsonPath.objectAt("$.Lock"),
-        Error: sfn.JsonPath.stringAt("$.Error.Error"),
-        Cause: sfn.JsonPath.stringToJson(sfn.JsonPath.stringAt("$.Error.Cause")),
-      },
-    });
     const updateSyncStatusFailedForSharedKnowledgeBasesBuild = new tasks.LambdaInvoke(this, "UpdateSyncStatusFailedForSharedKnowledgeBasesBuild", {
       lambdaFunction: this._updateSyncStatusHandler,
       payload: sfn.TaskInput.fromObject({
         QueuedBots: sfn.JsonPath.objectAt("$.QueuedBots"),
         SyncStatus: "FAILED",
-        Build: sfn.JsonPath.objectAt("$.Cause.Build"),
+        // The handler reads the build from the cause. A build that could not start
+        // has a plain-text cause, which would fail a JSON conversion here.
+        Error: sfn.JsonPath.objectAt("$.Error"),
       }),
       resultPath: sfn.JsonPath.DISCARD,
     });
@@ -341,8 +342,7 @@ export class Embedding extends Construct {
     });
 
     const buildSharedKnowledgeBasesFallback = (
-      passSharedKnowledgeBasesBuildError
-        .next(updateSyncStatusFailedForSharedKnowledgeBasesBuild)
+      updateSyncStatusFailedForSharedKnowledgeBasesBuild
         .next(releaseLockFallback)
     );
     buildSharedKnowledgeBases.addCatch(buildSharedKnowledgeBasesFallback, {
@@ -459,22 +459,13 @@ export class Embedding extends Construct {
         .next(syncCustomBotSucceeded)
     );
 
-    const passCustomBotBuildError = new sfn.Pass(this, "PassCustomBotBuildError", {
-      parameters: {
-        OwnerUserId: sfn.JsonPath.stringAt("$.OwnerUserId"),
-        BotId: sfn.JsonPath.stringAt("$.BotId"),
-        Lock: sfn.JsonPath.objectAt("$.Lock"),
-        Error: sfn.JsonPath.stringAt("$.Error.Error"),
-        Cause: sfn.JsonPath.stringToJson(sfn.JsonPath.stringAt("$.Error.Cause")),
-      },
-    });
     const updateSyncStatusFailedForCustomBotBuild = new tasks.LambdaInvoke(this, "UpdateSyncStatusFailedForCustomBotBuild", {
       lambdaFunction: this._updateSyncStatusHandler,
       payload: sfn.TaskInput.fromObject({
         OwnerUserId: sfn.JsonPath.stringAt("$.OwnerUserId"),
         BotId: sfn.JsonPath.stringAt("$.BotId"),
         SyncStatus: "FAILED",
-        Build: sfn.JsonPath.objectAt("$.Cause.Build"),
+        Error: sfn.JsonPath.objectAt("$.Error"),
       }),
       resultPath: sfn.JsonPath.DISCARD,
     });
@@ -483,8 +474,7 @@ export class Embedding extends Construct {
     });
 
     const buildCustomBotFallback = (
-      passCustomBotBuildError
-        .next(updateSyncStatusFailedForCustomBotBuild)
+      updateSyncStatusFailedForCustomBotBuild
         .next(syncCustomBotFinished)
     );
 
@@ -684,7 +674,9 @@ export class Embedding extends Construct {
       new DynamoEventSource(props.database.botTable, {
         startingPosition: lambda.StartingPosition.TRIM_HORIZON,
         batchSize: 1,
-        retryAttempts: 2,
+        retryAttempts: 5,
+        // Keep the record of a failed removal instead of dropping it.
+        onFailure: new SqsDlq(this.removalDeadLetterQueue),
         filters: [
           {
             pattern: '{"eventName":["REMOVE"]}',

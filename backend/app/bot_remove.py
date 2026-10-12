@@ -3,6 +3,7 @@ import os
 from typing import Any
 
 import boto3
+from botocore.exceptions import ClientError
 from app.repositories.api_publication import (
     delete_api_key,
     delete_stack_by_bot_id,
@@ -59,11 +60,26 @@ def handler(event: dict, context: Any) -> None:
     user_id = pk
     bot_id = decompose_sk(sk)
 
-    delete_from_s3(user_id, bot_id)
-    delete_custom_bot_stack_by_bot_id(bot_id)
-    delete_api_key_from_secret_manager(user_id, bot_id, "firecrawl")
+    # Every step runs even if another fails, and the failure is raised at the end so
+    # that the stream retries the record. Each step is idempotent. Stacks go first:
+    # a leaked knowledge base stack keeps an OpenSearch Serverless collection billing.
+    errors: list[Exception] = []
+    for step in (
+        lambda: delete_custom_bot_stack_by_bot_id(bot_id),
+        lambda: _delete_published_api(bot_id),
+        lambda: delete_from_s3(user_id, bot_id),
+        lambda: delete_api_key_from_secret_manager(user_id, bot_id, "firecrawl"),
+    ):
+        try:
+            step()
+        except Exception as e:
+            logger.exception("Failed to clean up bot %s", bot_id)
+            errors.append(e)
+    if errors:
+        raise errors[0]
 
-    # Check if api published stack exists
+
+def _delete_published_api(bot_id: str) -> None:
     try:
         stack = find_stack_by_bot_id(bot_id)
     except RecordNotFoundError:
@@ -71,10 +87,18 @@ def handler(event: dict, context: Any) -> None:
         return
 
     # Before delete cfn stack, delete all api keys
-    if stack.api_usage_plan_id:  # Add type check
-        usage_plan = find_usage_plan_by_id(stack.api_usage_plan_id)
-        for key_id in usage_plan.key_ids:
-            delete_api_key(key_id)
+    if stack.api_usage_plan_id:
+        try:
+            usage_plan = find_usage_plan_by_id(stack.api_usage_plan_id)
+        except RecordNotFoundError:
+            # Deleted by an earlier attempt.
+            usage_plan = None
+        for key_id in usage_plan.key_ids if usage_plan else []:
+            try:
+                delete_api_key(key_id)
+            except ClientError as e:
+                if e.response["Error"]["Code"] != "NotFoundException":
+                    raise
 
     # Delete `ApiPublishmentStack` by CloudFormation
     delete_stack_by_bot_id(bot_id)

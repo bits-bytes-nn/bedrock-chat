@@ -9,6 +9,7 @@ import {
 import {
   CachePolicy,
   Distribution,
+  ResponseHeadersPolicy,
   ViewerProtocolPolicy,
   GeoRestriction,
 } from "aws-cdk-lib/aws-cloudfront";
@@ -88,6 +89,9 @@ export class Frontend extends Construct {
         origin: S3BucketOrigin.withOriginAccessControl(assetBucket),
         viewerProtocolPolicy: ViewerProtocolPolicy.HTTPS_ONLY,
         cachePolicy: CachePolicy.CACHING_OPTIMIZED,
+        // HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy and
+        // X-XSS-Protection. The app keeps Cognito tokens in the browser.
+        responseHeadersPolicy: ResponseHeadersPolicy.SECURITY_HEADERS,
       },
       // Apply geo restriction allowlist only when countries are provided
       ...(this.allowedCountries.length

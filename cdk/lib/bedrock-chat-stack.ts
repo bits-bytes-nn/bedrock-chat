@@ -323,6 +323,7 @@ export class BedrockChatStack extends cdk.Stack {
       apiHandler: backendApi.handler,
       webSocketHandler: websocket.handler,
       embeddingStateMachine: embedding.stateMachine,
+      botRemovalDeadLetterQueue: embedding.removalDeadLetterQueue,
     });
 
     frontend.buildViteApp({

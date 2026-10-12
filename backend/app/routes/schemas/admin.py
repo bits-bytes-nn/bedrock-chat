@@ -61,7 +61,8 @@ class PublicBotOutput(BaseSchema):
 
 class PushBotInputPinned(BaseSchema):
     to_pinned: Literal[True]
-    order: int
+    # Stored as three digits in SharedStatus ("pinned@001").
+    order: int = Field(..., ge=0, le=999)
 
 
 class PushBotInputUnpinned(BaseSchema):
