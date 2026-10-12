@@ -64,9 +64,31 @@ export const NON_TEXT_FILE_EXTENSIONS = [
   '.xlsx',
 ];
 
+// Converted to text by the backend: presentations are parsed and recordings are
+// transcribed with Amazon Transcribe.
+export const CONVERTIBLE_FILE_EXTENSIONS = [
+  '.pptx',
+  '.mp3',
+  '.mp4',
+  '.wav',
+  '.flac',
+  '.ogg',
+  '.amr',
+  '.webm',
+  '.m4a',
+];
+// Convertible files are uploaded to S3, so they are not limited by the request size.
+export const MAX_CONVERTIBLE_FILE_SIZE_MB = 500;
+
+export const isConvertibleFile = (fileName: string): boolean =>
+  CONVERTIBLE_FILE_EXTENSIONS.some((extension) =>
+    fileName.toLowerCase().endsWith(extension)
+  );
+
 export const SUPPORTED_FILE_EXTENSIONS = [
   ...TEXT_FILE_EXTENSIONS,
   ...NON_TEXT_FILE_EXTENSIONS,
+  ...CONVERTIBLE_FILE_EXTENSIONS,
 ];
 
 // Converse API limitations:

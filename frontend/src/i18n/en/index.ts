@@ -269,7 +269,7 @@ const translation = {
         noStarredBots: 'No Starred Bots.',
         retrievingKnowledge: '[Retrieving Knowledge...]',
         dndFileUpload:
-          'You can upload files by drag and drop.\nSupported files: {{fileExtensions}}',
+          'You can upload files by drag and drop.\nSupported files: {{fileExtensions}}\nPresentations and recordings are converted to text files.',
         uploadError: 'Error Message',
         referenceLink: 'Reference Link',
         syncStatus: {
@@ -280,6 +280,7 @@ const translation = {
         },
         fileUploadStatus: {
           uploading: 'Uploading...',
+          converting: 'Converting...',
           uploaded: 'Uploaded',
           error: 'ERROR',
         },
@@ -1009,6 +1010,7 @@ How would you categorize this email?`,
         fileSizeExceeded:
           'Each document size must be no more than {{maxSize}}.',
         fileCountExceeded: 'Could not upload more than {{maxCount}} files.',
+        conversionFailed: 'Could not convert {{fileName}} to text.',
       },
       share: {
         markedEssential: {

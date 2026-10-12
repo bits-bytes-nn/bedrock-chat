@@ -1,6 +1,8 @@
 import { RegisterBotRequest, UpdateBotRequest } from '../@types/bot';
 import useBotApi from './useBotApi';
 import { produce } from 'immer';
+import { isConvertibleFile } from '../constants/supportedAttachedFiles';
+import { waitForConversion } from '../utils/ConversionUtils';
 
 const useBot = (shouldAutoRefreshMyBots?: boolean) => {
   const api = useBotApi();
@@ -220,14 +222,27 @@ const useBot = (shouldAutoRefreshMyBots?: boolean) => {
         mutateRecentlyUsedBots();
       });
     },
-    uploadFile: (
+    /**
+     * Upload a knowledge file and return the name to register. Presentations and
+     * recordings are converted into a text file first.
+     */
+    uploadFile: async (
       botId: string,
       file: File,
-      onProgress?: (progress: number) => void
-    ) => {
-      return api.getPresignedUrl(botId, file).then(({ data }) => {
-        return api.uploadFile(data.url, file, onProgress);
-      });
+      onProgress?: (progress: number) => void,
+      onConverting?: () => void
+    ): Promise<string> => {
+      const { data } = await api.getPresignedUrl(botId, file);
+      await api.uploadFile(data.url, file, onProgress);
+      if (!isConvertibleFile(file.name)) {
+        return file.name;
+      }
+      onConverting?.();
+      const started = await api.startFileConversion(botId, file.name);
+      const result = await waitForConversion(started.data, () =>
+        api.getFileConversion(botId, file.name).then((res) => res.data)
+      );
+      return result.convertedFilename;
     },
     deleteUploadedFile: (botId: string, filename: string) => {
       return api.deleteUploadedFile(botId, filename);

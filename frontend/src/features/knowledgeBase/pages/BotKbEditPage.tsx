@@ -817,6 +817,15 @@ const BotKbEditPage: React.FC = () => {
 
   const onUpdateFiles = useCallback((botFiles: BotFile[]) => {
     setFiles(botFiles);
+    // A converted file is registered as `<filename>.txt` instead of the upload.
+    const filenames = botFiles.map((file) => file.filename);
+    setAddedFilenames((added) =>
+      added.map((name) =>
+        !filenames.includes(name) && filenames.includes(`${name}.txt`)
+          ? `${name}.txt`
+          : name
+      )
+    );
   }, []);
 
   const onDeleteFiles = useCallback(

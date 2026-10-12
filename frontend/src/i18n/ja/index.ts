@@ -271,7 +271,7 @@ const translation: typeof en = {
         retrievingKnowledge: '[ナレッジを取得中...]',
         referenceLink: '参考ドキュメント',
         dndFileUpload:
-          'ドラッグ＆ドロップでファイルをアップロードできます。\n対応ファイル: {{fileExtensions}}',
+          'ドラッグ＆ドロップでファイルをアップロードできます。\n対応ファイル: {{fileExtensions}}\nプレゼンテーションと音声・動画ファイルはテキストファイルに変換して登録します。',
         uploadError: 'エラーメッセージ',
         syncStatus: {
           queue: '同期待ち',
@@ -281,6 +281,7 @@ const translation: typeof en = {
         },
         fileUploadStatus: {
           uploading: 'アップロード中...',
+          converting: '変換中...',
           uploaded: 'アップロード完了',
           error: 'エラー',
         },
@@ -1011,6 +1012,7 @@ const translation: typeof en = {
       attachment: {
         fileSizeExceeded: 'ファイルサイズは{{maxSize}}以下にしてください。',
         fileCountExceeded: 'ファイル数は{{maxCount}}以下にしてください。',
+        conversionFailed: '{{fileName}}をテキストに変換できませんでした。',
       },
       cannotAccessBot:
         'このボットにアクセスできません。新しいチャットへリダイレクトしました。',

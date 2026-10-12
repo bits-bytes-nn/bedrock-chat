@@ -14,6 +14,7 @@ import {
   GetPinnedBotResponse,
   UpdateBotSharedScopeRequest,
   UpdateBotSharedScopeResponse,
+  FileConversionResponse,
 } from '../@types/bot';
 import useHttp from './useHttp';
 
@@ -106,6 +107,18 @@ const useBotApi = () => {
           onProgress?.(Math.floor((e.progress ?? 0) * 100));
         },
       });
+    },
+    startFileConversion: (botId: string, filename: string) => {
+      return http.post<FileConversionResponse>(
+        `bot/${botId}/files/conversion?filename=${encodeURIComponent(filename)}`,
+        {}
+      );
+    },
+    getFileConversion: (botId: string, filename: string) => {
+      return http.getOnce<FileConversionResponse>(
+        `bot/${botId}/files/conversion`,
+        { filename }
+      );
     },
     deleteUploadedFile: (botId: string, filename: string) => {
       return http.delete(`bot/${botId}/uploaded-file`, {

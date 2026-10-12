@@ -14,7 +14,10 @@ from app.routes.schemas.bot import (
     BotSwitchVisibilityInput,
     Tool,
 )
+from app.routes.schemas.file_conversion import FileConversionOutput
 from app.usecases.bot import (
+    fetch_knowledge_file_conversion,
+    start_knowledge_file_conversion,
     create_new_bot,
     fetch_all_bots,
     fetch_all_pinned_bots,
@@ -153,6 +156,41 @@ def get_bot_presigned_url(
     current_user: User = request.state.current_user
     url = issue_presigned_url(current_user, bot_id, filename, contentType)
     return BotPresignedUrlOutput(url=url)
+
+
+def _conversion_output(status, filename: str) -> FileConversionOutput:
+    return FileConversionOutput(
+        status=status.status,
+        reason=status.reason,
+        converted_filename=f"{filename}.txt",
+    )
+
+
+@router.post("/bot/{bot_id}/files/conversion", response_model=FileConversionOutput)
+def post_knowledge_file_conversion(
+    request: Request,
+    bot_id: str,
+    filename: str,
+    create_bot_check=Depends(check_creating_bot_allowed),
+):
+    """Start converting an uploaded presentation or recording into a text file
+    that knowledge bases can ingest."""
+    current_user: User = request.state.current_user
+    status = start_knowledge_file_conversion(current_user, bot_id, filename)
+    return _conversion_output(status, filename)
+
+
+@router.get("/bot/{bot_id}/files/conversion", response_model=FileConversionOutput)
+def get_knowledge_file_conversion(
+    request: Request,
+    bot_id: str,
+    filename: str,
+    create_bot_check=Depends(check_creating_bot_allowed),
+):
+    """Return the status of a knowledge file conversion."""
+    current_user: User = request.state.current_user
+    status = fetch_knowledge_file_conversion(current_user, bot_id, filename)
+    return _conversion_output(status, filename)
 
 
 @router.delete("/bot/{bot_id}/uploaded-file")

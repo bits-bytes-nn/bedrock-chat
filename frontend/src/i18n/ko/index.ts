@@ -270,7 +270,7 @@ const translation: typeof en = {
         noStarredBots: '즐겨찾기한 봇이 없습니다.',
         retrievingKnowledge: '[지식 검색 중...]',
         dndFileUpload:
-          '파일을 끌어다 놓아 업로드할 수 있습니다.\n지원 파일: {{fileExtensions}}',
+          '파일을 끌어다 놓아 업로드할 수 있습니다.\n지원 파일: {{fileExtensions}}\n프레젠테이션과 음성·영상 파일은 텍스트 파일로 변환해 등록합니다.',
         uploadError: '오류 메시지',
         referenceLink: '참고 링크',
         syncStatus: {
@@ -281,6 +281,7 @@ const translation: typeof en = {
         },
         fileUploadStatus: {
           uploading: '업로드 중...',
+          converting: '변환 중...',
           uploaded: '업로드 완료',
           error: '오류',
         },
@@ -1006,6 +1007,7 @@ const translation: typeof en = {
         fileSizeExceeded: '각 문서 크기는 {{maxSize}} 이하여야 합니다.',
         fileCountExceeded:
           '파일은 최대 {{maxCount}}개까지 업로드할 수 있습니다.',
+        conversionFailed: '{{fileName}}을(를) 텍스트로 변환하지 못했습니다.',
       },
       share: {
         markedEssential: {

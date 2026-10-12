@@ -71,6 +71,11 @@ from app.routes.schemas.bot_guardrails import BedrockGuardrailsOutput
 from app.routes.schemas.bot_kb import BedrockKnowledgeBaseOutput
 from app.strands_integration.utils import get_strands_registered_tools
 from app.user import User
+from app.usecases.file_conversion import (
+    ConversionStatus,
+    get_conversion,
+    start_conversion,
+)
 from app.utils import (
     compose_upload_document_s3_path,
     compose_upload_temp_s3_path,
@@ -700,10 +705,8 @@ def modify_bot_stats(user: User, bot: BotModel, increment: int):
     return update_bot_stats(owner_id, bot.id, increment)
 
 
-def issue_presigned_url(
-    user: User, bot_id: str, filename: str, content_type: str
-) -> str:
-    """Issue an upload URL in the user's temporary prefix for the bot.
+def _knowledge_upload_key(user: User, bot_id: str, filename: str) -> str:
+    """Key in the user's temporary prefix for a knowledge file of the bot.
 
     Raises:
         ValueError: If the bot ID or the filename is invalid.
@@ -722,14 +725,44 @@ def issue_presigned_url(
             raise PermissionError(
                 f"User {user.id} is not authorized to edit bot {bot_id}"
             )
-    response = generate_presigned_url(
+    return compose_upload_temp_s3_path(user.id, bot_id, filename)
+
+
+def issue_presigned_url(
+    user: User, bot_id: str, filename: str, content_type: str
+) -> str:
+    """Issue an upload URL in the user's temporary prefix for the bot.
+
+    Raises:
+        ValueError: If the bot ID or the filename is invalid.
+        PermissionError: If the bot exists and the user cannot edit it.
+    """
+    return generate_presigned_url(
         DOCUMENT_BUCKET,
-        compose_upload_temp_s3_path(user.id, bot_id, filename),
+        _knowledge_upload_key(user, bot_id, filename),
         content_type=content_type,
         expiration=3600,
         client_method="put_object",
     )
-    return response
+
+
+def start_knowledge_file_conversion(
+    user: User, bot_id: str, filename: str
+) -> ConversionStatus:
+    """Convert an uploaded knowledge file into `<filename>.txt` next to it.
+
+    Raises:
+        ValueError: If the bot ID or the filename is invalid, or the file type cannot
+            be converted.
+        PermissionError: If the bot exists and the user cannot edit it.
+    """
+    return start_conversion(_knowledge_upload_key(user, bot_id, filename))
+
+
+def fetch_knowledge_file_conversion(
+    user: User, bot_id: str, filename: str
+) -> ConversionStatus:
+    return get_conversion(_knowledge_upload_key(user, bot_id, filename))
 
 
 def remove_bot_from_recently_used(user: User, bot_id: str):
