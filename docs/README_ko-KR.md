@@ -1,5 +1,5 @@
 > [!NOTE]
-> This translation describes the upstream aws-samples project and is not updated with this fork. See the [English README](../README.md) for current models, defaults (self sign-up is disabled by default) and deployment options.
+> 이 번역은 upstream aws-samples 프로젝트 기준이며, 배포 절차와 보안 기본값만 이 포크에 맞게 고쳤습니다. 모델 목록과 그 밖의 최신 내용은 [영어 README](../README.md)를 기준으로 합니다.
 
 <h1 align="center">Bedrock Chat (BrChat)</h1>
 
@@ -98,13 +98,16 @@ chmod +x bin.sh
 ./bin.sh
 ```
 
+> [!IMPORTANT]
+> `bin.sh`는 `--repo-url`의 저장소를 배포하며 기본값은 upstream aws-samples/bedrock-chat입니다. 이 포크를 배포하려면 `./bin.sh --repo-url https://github.com/bits-bytes-nn/bedrock-chat.git`처럼 URL을 지정하세요.
+
 - 새로운 사용자인지 v3 사용자인지 묻는 메시지가 표시됩니다. v0 이전 버전의 기존 사용자가 아닌 경우 `y`를 입력하세요.
 
 ### 선택적 파라미터
 
 배포 시 보안 강화와 사용자 지정을 위해 다음 파라미터들을 지정할 수 있습니다:
 
-- **--disable-self-register**: 자체 등록 비활성화 (기본값: 활성화). 이 플래그가 설정되면 모든 사용자를 cognito에서 생성해야 하며 사용자가 직접 계정을 등록할 수 없습니다.
+- **--enable-self-register**: URL에 접근할 수 있는 누구나 가입할 수 있게 합니다 (기본값: 비활성화, 관리자가 Cognito에서 사용자를 생성). 켜는 경우 `--allowed-signup-email-domains`와 IP 제한을 함께 설정하세요.
 - **--enable-lambda-snapstart**: [Lambda SnapStart](https://docs.aws.amazon.com/lambda/latest/dg/snapstart.html) 활성화 (기본값: 비활성화). 이 플래그가 설정되면 Lambda 함수의 콜드 스타트 시간이 개선되어 더 나은 사용자 경험을 위한 빠른 응답 시간을 제공합니다.
 - **--ipv4-ranges**: 허용된 IPv4 범위의 쉼표로 구분된 목록. (기본값: 모든 ipv4 주소 허용)
 - **--ipv6-ranges**: 허용된 IPv6 범위의 쉼표로 구분된 목록. (기본값: 모든 ipv6 주소 허용)
@@ -157,7 +160,7 @@ override JSON은 cdk.json과 동일한 구조를 따라야 합니다. 다음을 
 #### 파라미터를 포함한 명령어 예시:
 
 ```sh
-./bin.sh --disable-self-register --ipv4-ranges "192.0.2.0/25,192.0.2.128/25" --ipv6-ranges "2001:db8:1:2::/64,2001:db8:1:3::/64" --allowed-signup-email-domains "example.com,anotherexample.com" --bedrock-region "us-west-2" --version "v1.2.6"
+./bin.sh --ipv4-ranges "192.0.2.0/25,192.0.2.128/25" --ipv6-ranges "2001:db8:1:2::/64,2001:db8:1:3::/64" --bedrock-region "us-west-2"
 ```
 
 - 약 35분 후에 브라우저에서 접속할 수 있는 다음과 같은 출력이 표시됩니다
@@ -168,13 +171,13 @@ Frontend URL: https://xxxxxxxxx.cloudfront.net
 
 ![](./imgs/signin.png)
 
-위와 같은 가입 화면이 표시되며, 이메일을 등록하고 로그인할 수 있습니다.
+위와 같은 로그인 화면이 표시됩니다. 자체 가입이 꺼져 있으므로 관리자가 Cognito 사용자 풀에서 사용자를 만든 뒤 로그인합니다.
 
 > [!Important]
-> 선택적 파라미터를 설정하지 않으면, 이 배포 방법은 URL을 아는 모든 사람이 가입할 수 있습니다. 프로덕션 환경에서는 보안 위험을 줄이기 위해 IP 주소 제한을 추가하고 자체 가입을 비활성화하는 것이 강력히 권장됩니다 (allowed-signup-email-domains를 정의하여 회사 도메인의 이메일 주소만 가입할 수 있도록 제한할 수 있습니다). IP 주소 제한을 위해 ipv4-ranges와 ipv6-ranges를 모두 사용하고, ./bin 실행 시 disable-self-register를 사용하여 자체 가입을 비활성화하세요.
+> 자체 가입은 기본적으로 꺼져 있습니다. `--enable-self-register`로 켜면 URL을 아는 누구나 가입할 수 있으므로 IP 주소 제한(`--ipv4-ranges`, `--ipv6-ranges`)과 이메일 도메인 제한(`--allowed-signup-email-domains`)을 함께 설정하세요.
 
 > [!TIP]
-> `Frontend URL`이 나타나지 않거나 Bedrock Chat이 제대로 작동하지 않는 경우, 최신 버전의 문제일 수 있습니다. 이 경우 파라미터에 `--version "v3.0.0"`를 추가하고 배포를 다시 시도하세요.
+> `Frontend URL`이 나타나지 않으면 CodeBuild 로그에서 실패한 단계를 확인한 뒤 배포를 다시 시도하세요.
 
 ## 아키텍처
 
@@ -244,6 +247,9 @@ npx cdk bootstrap
 ```
 npx cdk deploy --require-approval never --all
 ```
+
+> [!NOTE]
+> 배포 환경별 값은 `-c`로 넘기세요(예: `npx cdk deploy --all -c bedrockRegion=ap-northeast-2`). 명령행 컨텍스트는 `cdk.json`보다 우선하지만, `cdk.context.json`의 값은 `cdk.json`에 같은 키가 있으면 적용되지 않습니다.
 
 - 다음과 같은 출력이 표시됩니다. 웹 앱의 URL은 `BedrockChatStack.FrontendURL`에 출력되므로 브라우저에서 접속하시기 바랍니다.
 
@@ -491,7 +497,7 @@ cli와 CDK를 사용하는 경우 `npx cdk destroy`를 실행하세요. 그렇�
 
 ### 자체 회원가입 비활성화
 
-이 샘플은 기본적으로 자체 회원가입이 활성화되어 있습니다. 자체 회원가입을 비활성화하려면 [cdk.json](./cdk/cdk.json)을 열고 `selfSignUpEnabled`를 `false`로 변경하세요. [외부 ID 공급자](#external-identity-provider)를 구성하는 경우, 이 값은 무시되고 자동으로 비활성화됩니다.
+자체 회원가입은 기본적으로 비활성화되어 있습니다(`selfSignUpEnabled: false`). 켜려면 [cdk.json](../cdk/cdk.json)에서 `selfSignUpEnabled`를 `true`로 바꾸세요. [외부 ID 공급자](#external-identity-provider)를 구성하는 경우, 이 값은 무시되고 자동으로 비활성화됩니다.
 
 ### 회원가입 이메일 주소의 도메인 제한
 

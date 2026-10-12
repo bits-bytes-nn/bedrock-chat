@@ -1,8 +1,8 @@
 """Single source of truth for the models offered by the application.
 
 Each entry describes how to call the model through the Bedrock Converse API. Parameter
-support was verified with Converse calls; prices come from the AWS Price List API and
-are per 1,000 tokens for global cross-Region inference.
+support was verified with Converse calls. Prices come from the AWS Price List API or
+the Bedrock model cards and are per 1,000 tokens for global cross-Region inference.
 """
 
 from dataclasses import dataclass, field
@@ -35,7 +35,7 @@ class ModelPrice:
 class ModelSpec:
     bedrock_id: str
     provider: Provider
-    price: ModelPrice | None
+    price: ModelPrice
     defaults: GenerationParams = field(
         default_factory=lambda: DEFAULT_GENERATION_CONFIG
     )
@@ -86,7 +86,7 @@ def _claude(
     )
 
 
-def _gpt(bedrock_id: str, price: ModelPrice | None) -> ModelSpec:
+def _gpt(bedrock_id: str, price: ModelPrice) -> ModelSpec:
     """OpenAI GPT-5.5 and later. Converse rejects temperature, topP, stopSequences
     and cache points for these models."""
     return ModelSpec(
@@ -102,7 +102,7 @@ def _gpt(bedrock_id: str, price: ModelPrice | None) -> ModelSpec:
     )
 
 
-def _nova(bedrock_id: str, price: ModelPrice | None) -> ModelSpec:
+def _nova(bedrock_id: str, price: ModelPrice) -> ModelSpec:
     return ModelSpec(
         bedrock_id=bedrock_id,
         provider="amazon",
@@ -194,14 +194,21 @@ MODELS: dict[str, ModelSpec] = {
         "adaptive",
         modern=True,
     ),
-    "gpt-5.5": _gpt("openai.gpt-5.5", None),
-    "gpt-5.6-luna": _gpt("openai.gpt-5.6-luna", None),
-    "gpt-5.6-sol": _gpt("openai.gpt-5.6-sol", None),
-    "gpt-5.6-terra": _gpt("openai.gpt-5.6-terra", None),
+    # GPT-5.5 has no global cross-Region price; this is the In-Region price.
+    "gpt-5.5": _gpt("openai.gpt-5.5", ModelPrice(0.0055, 0.033, 0.00055)),
+    "gpt-5.6-luna": _gpt(
+        "openai.gpt-5.6-luna", ModelPrice(0.0002, 0.0012, 0.00002, 0.00025)
+    ),
+    "gpt-5.6-sol": _gpt("openai.gpt-5.6-sol", ModelPrice(0.004, 0.02, 0.0004, 0.005)),
+    "gpt-5.6-terra": _gpt(
+        "openai.gpt-5.6-terra", ModelPrice(0.002, 0.012, 0.0002, 0.0025)
+    ),
     "gpt-6-astra": _gpt("openai.gpt-6-astra", ModelPrice(0.01, 0.05, 0.001, 0.0125)),
-    "gpt-6-luna": _gpt("openai.gpt-6-luna", None),
-    "gpt-6-sol": _gpt("openai.gpt-6-sol", None),
-    "gpt-6.1-sol": _gpt("openai.gpt-6.1-sol", None),
+    "gpt-6-luna": _gpt(
+        "openai.gpt-6-luna", ModelPrice(0.0001, 0.0005, 0.00001, 0.000125)
+    ),
+    "gpt-6-sol": _gpt("openai.gpt-6-sol", ModelPrice(0.002, 0.01, 0.0002, 0.0025)),
+    "gpt-6.1-sol": _gpt("openai.gpt-6.1-sol", ModelPrice(0.002, 0.01, 0.0001, 0.0025)),
     "gpt-oss-20b": _gpt_oss("openai.gpt-oss-20b-1:0", ModelPrice(0.00015, 0.0003)),
     "gpt-oss-120b": _gpt_oss("openai.gpt-oss-120b-1:0", ModelPrice(0.0003, 0.0006)),
     "amazon-nova-pro": _nova(
@@ -214,7 +221,9 @@ MODELS: dict[str, ModelSpec] = {
         "amazon.nova-micro-v1:0",
         ModelPrice(0.000035, 0.00014, 0.00000875, 0.000035),
     ),
-    "amazon-nova-2-lite": _nova("amazon.nova-2-lite-v1:0", None),
+    "amazon-nova-2-lite": _nova(
+        "amazon.nova-2-lite-v1:0", ModelPrice(0.0003, 0.0025, 0.000075, 0.0)
+    ),
     "mistral-large": _mistral(
         "mistral.mistral-large-2402-v1:0", ModelPrice(0.004, 0.012)
     ),

@@ -136,8 +136,10 @@ class TestCalculatePrice(unittest.TestCase):
 
         self.assertAlmostEqual(price, 0.002 + 0.01 + 0.0001 + 0.0025)
 
-    def test_returns_zero_without_price(self):
-        self.assertEqual(calculate_price("gpt-6-sol", 1000, 1000, 0, 0), 0.0)
+    def test_uses_input_price_when_cache_prices_are_missing(self):
+        price = calculate_price("gpt-oss-120b", 1000, 1000, 1000, 1000)
+
+        self.assertAlmostEqual(price, 0.0003 + 0.0006 + 0.0003 + 0.0003)
 
 
 if __name__ == "__main__":
