@@ -934,9 +934,13 @@ const translation: typeof en = {
           label: '사용 안 함',
           hint: '고급 파싱을 적용하지 않습니다.',
         },
+        claude_haiku_4_5: {
+          label: 'Claude Haiku 4.5',
+          hint: 'Claude Haiku 4.5로 PDF와 이미지의 그림, 차트, 표까지 파싱합니다.',
+        },
         claude_3_haiku_v1: {
-          label: 'Claude 3 Haiku v1',
-          hint: 'Claude 3 Haiku v1을 사용해 문서를 고급 파싱합니다.',
+          label: 'Claude 3 Haiku v1 (이전 모델)',
+          hint: 'Claude 3 Haiku v1을 사용해 문서를 고급 파싱합니다. 일부 리전에서는 사용할 수 없습니다.',
         },
       },
       webCrawlerConfig: {

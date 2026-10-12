@@ -34,7 +34,12 @@ def create_knowledge_search_tool(bot: BotModel | None) -> StrandsAgentTool:
     @tool
     def knowledge_base_tool(query: str) -> dict:
         """
-        Search knowledge base for relevant information.
+        Search the documents in this bot's knowledge base.
+
+        Use this tool before answering any question that the bot's documents may
+        cover, such as names, figures, policies or procedures from the uploaded
+        files and web pages. Answer from general knowledge only when the search
+        returns nothing relevant.
 
         Args:
             query: Search query for vector search, full text search, and hybrid search

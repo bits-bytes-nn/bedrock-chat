@@ -346,6 +346,13 @@ const BotKbEditPage: React.FC = () => {
       description: t('knowledgeBaseSettings.parsingModel.none.hint'),
     },
     {
+      label: t('knowledgeBaseSettings.parsingModel.claude_haiku_4_5.label'),
+      value: 'anthropic.claude-haiku-4-5',
+      description: t(
+        'knowledgeBaseSettings.parsingModel.claude_haiku_4_5.hint'
+      ),
+    },
+    {
       label: t('knowledgeBaseSettings.parsingModel.claude_3_haiku_v1.label'),
       value: 'anthropic.claude-3-haiku-v1',
       description: t(

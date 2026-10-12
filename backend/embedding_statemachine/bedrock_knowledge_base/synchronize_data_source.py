@@ -261,10 +261,17 @@ def handle_check(event):
                 dataSourceId=data_source_id,
                 ingestionJobId=ingestion_job_id,
             )
-            status = get_job_response["ingestionJob"]["status"]
+            job = get_job_response["ingestionJob"]
+            status = job["status"]
             match status:
                 case "COMPLETE":
-                    pass
+                    # A job completes even when every document failed to ingest.
+                    failed = job.get("statistics", {}).get("numberOfDocumentsFailed", 0)
+                    if failed:
+                        reasons = "; ".join(job.get("failureReasons", [])[:3])
+                        raise Exception(
+                            f"Ingestion Job '{ingestion_job_id}': {failed} document(s) failed. {reasons}"
+                        )
 
                 case "STARTING" | "IN_PROGRESS":
                     raise RetryException()

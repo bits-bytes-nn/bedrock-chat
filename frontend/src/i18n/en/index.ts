@@ -935,9 +935,13 @@ How would you categorize this email?`,
           label: 'Disabled',
           hint: 'No advanced parsing will be applied.',
         },
+        claude_haiku_4_5: {
+          label: 'Claude Haiku 4.5',
+          hint: 'Use Claude Haiku 4.5 to parse figures, charts and tables in PDF files and images.',
+        },
         claude_3_haiku_v1: {
-          label: 'Claude 3 Haiku v1',
-          hint: 'Use Claude 3 Haiku v1 for advanced document parsing.',
+          label: 'Claude 3 Haiku v1 (legacy)',
+          hint: 'Use Claude 3 Haiku v1 for advanced document parsing. It is not available in every Region.',
         },
       },
       webCrawlerConfig: {
