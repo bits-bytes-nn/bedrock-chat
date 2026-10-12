@@ -65,8 +65,9 @@ export const getEmbeddingModel = (
 };
 
 /**
- * A global cross-Region inference profile. Invoking it needs access to the profile
- * and to the model in every Region that the profile routes to.
+ * A global cross-Region inference profile. The knowledge base reads the profile
+ * when the data source is created, and invoking it needs access to the model in
+ * every Region that the profile routes to.
  */
 const globalInferenceProfile = (modelId: string): IInvokable => {
   const invokableArn = `arn:${Aws.PARTITION}:bedrock:${Aws.REGION}:${Aws.ACCOUNT_ID}:inference-profile/global.${modelId}`;
@@ -75,7 +76,7 @@ const globalInferenceProfile = (modelId: string): IInvokable => {
     grantInvoke: (grantee: IGrantable) =>
       Grant.addToPrincipal({
         grantee,
-        actions: ["bedrock:InvokeModel"],
+        actions: ["bedrock:InvokeModel", "bedrock:GetInferenceProfile"],
         resourceArns: [
           invokableArn,
           `arn:${Aws.PARTITION}:bedrock:*::foundation-model/${modelId}`,
