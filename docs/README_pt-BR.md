@@ -1,3 +1,6 @@
+> [!NOTE]
+> This translation describes the upstream aws-samples project and is not updated with this fork. See the [English README](../README.md) for current models, defaults (self sign-up is disabled by default) and deployment options.
+
 <h1 align="center">Bedrock Chat (BrChat)</h1>
 
 <p align="center">

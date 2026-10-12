@@ -123,6 +123,9 @@ chmod +x bin.sh
 ./bin.sh
 ```
 
+> [!IMPORTANT]
+> `bin.sh` runs the deployment from the repository in `--repo-url`, which defaults to upstream aws-samples/bedrock-chat. To deploy this fork, pass its URL, for example `./bin.sh --repo-url https://github.com/bits-bytes-nn/bedrock-chat.git`.
+
 - You will be asked if a new user or using v3. If you are not a continuing user from v0, please enter `y`.
 
 ### Optional Parameters
