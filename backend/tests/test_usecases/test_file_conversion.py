@@ -114,7 +114,7 @@ class TestConversion(unittest.TestCase):
             file_conversion.start_conversion("u/b/_temp/deck.pptx")
 
     def test_transcribes_recordings(self):
-        key = "u/b/_temp/meeting.m4a"
+        key = "u/b/_temp/회의.m4a"
         self.s3.put_object(Bucket=BUCKET, Key=key, Body=b"audio")
         transcribe = MagicMock()
         transcribe.exceptions.ConflictException = type("Conflict", (Exception,), {})
@@ -126,6 +126,8 @@ class TestConversion(unittest.TestCase):
             job = transcribe.start_transcription_job.call_args.kwargs
             self.assertEqual(job["Media"]["MediaFileUri"], f"s3://{BUCKET}/{key}")
             self.assertTrue(job["TranscriptionJobName"].startswith("brchat-"))
+            # Transcribe rejects non-ASCII output keys.
+            self.assertTrue(job["OutputKey"].isascii())
 
             transcribe.get_transcription_job.return_value = {
                 "TranscriptionJob": {"TranscriptionJobStatus": "IN_PROGRESS"}

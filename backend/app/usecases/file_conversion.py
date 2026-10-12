@@ -106,8 +106,10 @@ def _job_name(source_key: str, etag: str) -> str:
     return TRANSCRIPTION_JOB_PREFIX + digest
 
 
-def _transcript_key(source_key: str) -> str:
-    return f"{source_key}.transcript.json"
+def _transcript_key(source_key: str, job_name: str) -> str:
+    # Transcribe accepts only ASCII output keys, so the job name is used instead of
+    # the filename, which may be Korean.
+    return str(PurePosixPath(source_key).parent / f"{job_name}.json")
 
 
 def _exists(key: str) -> bool:
@@ -179,10 +181,9 @@ def start_conversion(source_key: str) -> ConversionStatus:
     if suffix not in CONVERTIBLE_EXTENSIONS:
         raise ValueError(f"Files of type {suffix} cannot be converted.")
     source = _source(source_key)
-    # A previous upload with the same name may have left its results behind. Results
-    # of this upload are kept, so that starting twice is harmless.
-    for key in (converted_key(source_key), _transcript_key(source_key)):
-        _delete_if_older(key, source["LastModified"])
+    # A previous upload with the same name may have left its text behind. The text of
+    # this upload is kept, so that starting twice is harmless.
+    _delete_if_older(converted_key(source_key), source["LastModified"])
 
     if suffix in PRESENTATION_EXTENSIONS:
         if source["ContentLength"] > MAX_PRESENTATION_BYTES:
@@ -201,12 +202,13 @@ def start_conversion(source_key: str) -> ConversionStatus:
             ContentType="text/plain; charset=utf-8",
         )
         return ConversionStatus(status="COMPLETED")
+    job_name = _job_name(source_key, source["ETag"])
     try:
         transcribe_client.start_transcription_job(
-            TranscriptionJobName=_job_name(source_key, source["ETag"]),
+            TranscriptionJobName=job_name,
             Media={"MediaFileUri": f"s3://{DOCUMENT_BUCKET}/{source_key}"},
             OutputBucketName=DOCUMENT_BUCKET,
-            OutputKey=_transcript_key(source_key),
+            OutputKey=_transcript_key(source_key, job_name),
             IdentifyLanguage=True,
             LanguageOptions=TRANSCRIPTION_LANGUAGES,
             Settings={"ShowSpeakerLabels": True, "MaxSpeakerLabels": MAX_SPEAKERS},
@@ -225,10 +227,11 @@ def get_conversion(source_key: str) -> ConversionStatus:
             status="FAILED", reason="The conversion was not started."
         )
 
+    job_name = _job_name(source_key, _source(source_key)["ETag"])
     try:
-        job = transcribe_client.get_transcription_job(
-            TranscriptionJobName=_job_name(source_key, _source(source_key)["ETag"])
-        )["TranscriptionJob"]
+        job = transcribe_client.get_transcription_job(TranscriptionJobName=job_name)[
+            "TranscriptionJob"
+        ]
     except transcribe_client.exceptions.BadRequestException:
         return ConversionStatus(
             status="FAILED", reason="The conversion was not started."
@@ -241,9 +244,9 @@ def get_conversion(source_key: str) -> ConversionStatus:
         return ConversionStatus(status="IN_PROGRESS")
 
     transcript = json.loads(
-        s3_client.get_object(Bucket=DOCUMENT_BUCKET, Key=_transcript_key(source_key))[
-            "Body"
-        ].read()
+        s3_client.get_object(
+            Bucket=DOCUMENT_BUCKET, Key=_transcript_key(source_key, job_name)
+        )["Body"].read()
     )
     text = transcript_to_text(transcript)
     if not text.strip():
