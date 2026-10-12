@@ -72,3 +72,5 @@ jobs:
       - uses: actions/checkout@v6
       - name: Build backend/Dockerfile
         run: docker build -t backend .
+      - name: Build backend/lambda.Dockerfile
+        run: docker build -f lambda.Dockerfile -t backend-lambda .
