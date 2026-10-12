@@ -1,9 +1,13 @@
 import json
+import logging
 from typing import TypedDict
 
 from app.repositories.common import compose_sk, get_bot_table_client
 from app.routes.schemas.bot import type_sync_status
+from botocore.exceptions import ClientError
 from reretry import retry
+
+logger = logging.getLogger(__name__)
 
 RETRIES_TO_UPDATE_SYNC_STATUS = 4
 RETRY_DELAY_TO_UPDATE_SYNC_STATUS = 2
@@ -20,6 +24,15 @@ class SyncStatus(TypedDict):
 @retry(tries=RETRIES_TO_UPDATE_SYNC_STATUS, delay=RETRY_DELAY_TO_UPDATE_SYNC_STATUS)
 def update_sync_status(sync_status: SyncStatus):
     table = get_bot_table_client()
+    try:
+        _update(table, sync_status)
+    except ClientError as e:
+        if e.response["Error"]["Code"] != "ConditionalCheckFailedException":
+            raise
+        logger.info("Bot %s was deleted during the sync.", sync_status["bot_id"])
+
+
+def _update(table, sync_status: SyncStatus):
     table.update_item(
         Key={
             "PK": sync_status["user_id"],
@@ -31,6 +44,9 @@ def update_sync_status(sync_status: SyncStatus):
             ":sync_status_reason": sync_status["reason"],
             ":last_exec_id": sync_status["last_exec_id"],
         },
+        # Without it, a bot deleted during the sync would be recreated as a row
+        # without its other attributes.
+        ConditionExpression="attribute_exists(PK) AND attribute_exists(SK)",
     )
 
 

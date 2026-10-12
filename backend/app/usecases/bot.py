@@ -4,7 +4,8 @@ import re
 from typing import Literal, TypeGuard
 
 from app.config import DEFAULT_GENERATION_CONFIG
-from app.repositories.common import RecordNotFoundError
+from app.repositories.api_publication import find_build_status_by_build_id
+from app.repositories.common import RecordNotFoundError, ResourceConflictError
 from app.repositories.custom_bot import (
     alias_exists,
     delete_alias_by_id,
@@ -523,8 +524,6 @@ def fetch_bot_summary(user: User, bot_id: str) -> BotSummaryOutput:
             f"User {user.id} is not authorized to access bot {bot_id}"
         )
 
-    logger.debug(f"Bot: {bot}")
-    logger.debug(f"User: {user}")
     logger.debug(f"bot.is_accessible_by_user(user): {bot.is_accessible_by_user(user)}")
 
     if not bot.is_owned_by_user(user):
@@ -568,6 +567,17 @@ def remove_bot_by_id(user: User, bot_id: str):
     if not bot.is_editable_by_user(user):
         raise PermissionError(
             f"User {user.id} is not authorized to access bot {bot_id}"
+        )
+    # A stack built after the removal would be left running and billing.
+    if bot.sync_status in ("QUEUED", "RUNNING", "KNOWLEDGE_BASE_STACK_CREATED"):
+        raise ResourceConflictError(
+            "The knowledge base is being synchronized. Delete the bot after it finishes."
+        )
+    if bot.published_api_codebuild_id is not None and find_build_status_by_build_id(
+        bot.published_api_codebuild_id
+    ) not in ("SUCCEEDED", "FAILED", "STOPPED", "FAULT", "TIMED_OUT"):
+        raise ResourceConflictError(
+            "The API is being published. Delete the bot after it finishes."
         )
 
     if bot.is_editable_by_user(user):

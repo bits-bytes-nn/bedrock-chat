@@ -278,7 +278,18 @@ describe("Bedrock Chat Stack Test", () => {
     }
 
     // Alarms and API throttling.
-    template.resourceCountIs("AWS::CloudWatch::Alarm", 4);
+    template.resourceCountIs("AWS::CloudWatch::Alarm", 5);
+    // Failed bot removals are kept for investigation instead of being dropped.
+    template.hasResourceProperties("AWS::Lambda::EventSourceMapping", {
+      DestinationConfig: Match.objectLike({ OnFailure: Match.anyValue() }),
+    });
+    template.hasResourceProperties("AWS::CloudFront::Distribution", {
+      DistributionConfig: Match.objectLike({
+        DefaultCacheBehavior: Match.objectLike({
+          ResponseHeadersPolicyId: Match.anyValue(),
+        }),
+      }),
+    });
     template.hasResourceProperties("AWS::ApiGatewayV2::Stage", {
       StageName: "dev",
       DefaultRouteSettings: Match.objectLike({ ThrottlingRateLimit: 500 }),

@@ -2,6 +2,10 @@ import json
 import unittest
 from unittest.mock import patch
 
+import boto3
+import pytest
+from app.repositories import common
+
 from embedding_statemachine.bedrock_knowledge_base import update_bot_status
 
 
@@ -46,6 +50,24 @@ class TestFailedSyncReason(unittest.TestCase):
         self.assertEqual(
             (json.loads(reason), last_exec_id), (build["Phases"], "arn:build")
         )
+
+
+@pytest.mark.usefixtures("dynamodb_tables")
+class TestUpdateSyncStatus(unittest.TestCase):
+    def test_does_not_recreate_a_deleted_bot(self):
+        update_bot_status.update_sync_status(
+            {
+                "user_id": "user",
+                "bot_id": "deleted",
+                "status": "FAILED",
+                "reason": "",
+                "last_exec_id": "",
+            }
+        )
+        table = boto3.resource("dynamodb", region_name=common.REGION).Table(
+            common.BOT_TABLE_NAME
+        )
+        self.assertEqual(table.scan()["Items"], [])
 
 
 if __name__ == "__main__":

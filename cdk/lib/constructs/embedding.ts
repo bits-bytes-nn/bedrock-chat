@@ -16,7 +16,8 @@ import {
   DockerImageFunction,
   IFunction,
 } from "aws-cdk-lib/aws-lambda";
-import { DynamoEventSource } from "aws-cdk-lib/aws-lambda-event-sources";
+import { DynamoEventSource, SqsDlq } from "aws-cdk-lib/aws-lambda-event-sources";
+import * as sqs from "aws-cdk-lib/aws-sqs";
 import * as sfn from "aws-cdk-lib/aws-stepfunctions";
 import * as tasks from "aws-cdk-lib/aws-stepfunctions-tasks";
 import { Platform } from "aws-cdk-lib/aws-ecr-assets";
@@ -35,6 +36,8 @@ export interface EmbeddingProps {
 export class Embedding extends Construct {
   readonly stateMachine: sfn.StateMachine;
   readonly removalHandler: IFunction;
+  /** Bot removals that failed after the retries, which may leave stacks behind. */
+  readonly removalDeadLetterQueue: sqs.Queue;
 
   private _updateSyncStatusHandler: IFunction;
   private _bootstrapStateMachineHandler: IFunction;
@@ -48,6 +51,10 @@ export class Embedding extends Construct {
 
     this.setupStateMachineHandlers(props);
     this.stateMachine = this.setupStateMachine(props)
+    this.removalDeadLetterQueue = new sqs.Queue(this, "BotRemovalDeadLetterQueue", {
+      retentionPeriod: Duration.days(14),
+      enforceSSL: true,
+    });
     this.removalHandler = this.setupRemovalHandler(props);
   }
 
@@ -667,7 +674,9 @@ export class Embedding extends Construct {
       new DynamoEventSource(props.database.botTable, {
         startingPosition: lambda.StartingPosition.TRIM_HORIZON,
         batchSize: 1,
-        retryAttempts: 2,
+        retryAttempts: 5,
+        // Keep the record of a failed removal instead of dropping it.
+        onFailure: new SqsDlq(this.removalDeadLetterQueue),
         filters: [
           {
             pattern: '{"eventName":["REMOVE"]}',

@@ -11,16 +11,12 @@ logger = logging.getLogger(__name__)
 
 def _get_bedrock_agent_config(bot: BotModel | None):
     """Extract Bedrock Agent configuration from bot."""
-    logger.debug(f"_get_bedrock_agent_config called with bot: {bot}")
-    logger.debug(f"Bot agent: {bot.agent if bot else None}")
-    logger.debug(f"Bot agent tools: {bot.agent.tools if bot and bot.agent else None}")
 
     if not bot or not bot.agent or not bot.agent.tools:
         logger.debug("Early return: bot, agent, or tools is None/empty")
         return None
 
     for tool_config in bot.agent.tools:
-        logger.debug(f"Checking tool: {tool_config}")
         logger.debug(f"Tool type: {tool_config.tool_type}")
         logger.debug(
             f"Tool bedrockAgentConfig: {getattr(tool_config, 'bedrockAgentConfig', 'NOT_FOUND')}"
