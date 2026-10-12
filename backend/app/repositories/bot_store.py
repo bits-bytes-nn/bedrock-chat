@@ -28,7 +28,7 @@ def find_bots_by_query(
 
     1. Main Search (must clause):
     - Uses multi_match for flexible text searching
-    - Searches across multiple fields (Description, Title, Instruction)
+    - Searches the description and title. Instructions are private to the owner.
     - Implements fuzzy matching for typo tolerance
     - Requires 30% of search terms to match
 
@@ -120,7 +120,7 @@ def find_bots_by_query(
                     {
                         "multi_match": {
                             "query": query,
-                            "fields": ["Description", "Title", "Instruction"],
+                            "fields": ["Description", "Title"],
                             "type": "best_fields",
                             "operator": "or",
                             "minimum_should_match": "30%",
