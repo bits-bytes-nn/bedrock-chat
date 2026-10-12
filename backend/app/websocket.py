@@ -363,18 +363,18 @@ def handler(event, context):
             last_evaluated_key = None
 
             while True:
-                if last_evaluated_key:
-                    response = table.query(
-                        KeyConditionExpression=Key("ConnectionId").eq(connection_id)
-                        # Zero is reserved for user id, so start from 1
-                        & Key("MessagePartId").gte(1),
-                        ExclusiveStartKey=last_evaluated_key,
-                    )
-                else:
-                    response = table.query(
-                        KeyConditionExpression=Key("ConnectionId").eq(connection_id)
-                        & Key("MessagePartId").gte(1),
-                    )
+                response = table.query(
+                    KeyConditionExpression=Key("ConnectionId").eq(connection_id)
+                    # Zero is reserved for user id, so start from 1
+                    & Key("MessagePartId").gte(1),
+                    # END follows the last part immediately, so read the latest writes.
+                    ConsistentRead=True,
+                    **(
+                        {"ExclusiveStartKey": last_evaluated_key}
+                        if last_evaluated_key
+                        else {}
+                    ),
+                )
 
                 message_parts.extend(response["Items"])
 
