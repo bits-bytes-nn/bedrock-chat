@@ -49,7 +49,7 @@ const Toggle: React.FC<Props> = (props) => {
         )}
       </label>
       {props.hint && (
-        <div className="ml-11 w-full pl-2 text-xs text-gray dark:text-aws-font-color-dark">
+        <div className="ml-11 w-full pl-2 text-xs text-aws-font-color-light/70 dark:text-aws-font-color-dark">
           {props.hint}
         </div>
       )}

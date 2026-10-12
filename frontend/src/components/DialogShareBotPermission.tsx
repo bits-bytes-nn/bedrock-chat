@@ -208,7 +208,7 @@ const DialogShareBotPermission: React.FC<Props> = (props) => {
             </div>
           ))}
           {isShowingNoResults && (
-            <div className="p-3 text-center text-gray">
+            <div className="p-3 text-center text-aws-font-color-light/70 dark:text-gray">
               {t('bot.shareDialog.label.noSearchResults')}
             </div>
           )}
@@ -221,7 +221,7 @@ const DialogShareBotPermission: React.FC<Props> = (props) => {
       )}
 
       <div className="mt-2 flex max-h-[30vh] flex-col gap-1 overflow-y-auto">
-        <div className="mt-3 font-bold text-gray">
+        <div className="mt-3 font-bold text-aws-font-color-light/70 dark:text-gray">
           {t('bot.shareDialog.label.group')}
         </div>
         <div className="flex flex-col gap-3">
@@ -264,7 +264,7 @@ const DialogShareBotPermission: React.FC<Props> = (props) => {
             />
           ))}
         </div>
-        <div className="mt-3 font-bold text-gray">
+        <div className="mt-3 font-bold text-aws-font-color-light/70 dark:text-gray">
           {t('bot.shareDialog.label.user')}
         </div>
         <div className="flex flex-col gap-3">

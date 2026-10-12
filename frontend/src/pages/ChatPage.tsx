@@ -569,7 +569,7 @@ const ChatPage: React.FC = () => {
                       botId={botId}
                     />
                   )}
-                  <div className="px-20 text-center">
+                  <div className="px-4 text-center md:px-20">
                     <div className="text-lg font-bold">
                       {isLoadingBot && botId && (
                         <Skeleton className="h-5 w-32" />
@@ -637,7 +637,7 @@ const ChatPage: React.FC = () => {
                 )}
               {hasError && (
                 <div className="mb-12 mt-2 flex flex-col items-center">
-                  <div className="flex items-center font-bold text-red">
+                  <div className="flex items-center font-bold text-red dark:text-red-400">
                     <PiWarningCircleFill className="mr-1 text-2xl" />
                     {errorDetail ?? t('error.answerResponse')}
                   </div>
@@ -667,7 +667,7 @@ const ChatPage: React.FC = () => {
           messages.length === 0 ? 'absolute top-2/3 -translate-y-1/2' : ''
         )}>
         {bot && bot.syncStatus !== SyncStatus.SUCCEEDED && (
-          <div className="mb-8 w-1/2">
+          <div className="mb-8 w-11/12 md:w-1/2">
             <Alert
               severity="warning"
               title={t('bot.alert.sync.incomplete.title')}>

@@ -19,6 +19,7 @@ import DialogConfirmDeleteChat from '../components/DialogConfirmDeleteChat';
 import Button from '../components/Button';
 import ListPageLayout from '../layouts/ListPageLayout';
 import ConversationSearchResults from '../components/ConversationSearchResults';
+import { isSubmitEnter } from '../utils/KeyboardUtils';
 
 const ConversationHistoryPage: React.FC = () => {
   const { t } = useTranslation();
@@ -135,7 +136,7 @@ const ConversationHistoryPage: React.FC = () => {
   useLayoutEffect(() => {
     if (editingConversationId && inputRef.current) {
       const listener = (e: KeyboardEvent) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
+        if (isSubmitEnter(e)) {
           e.preventDefault();
           onUpdateTitle(editingConversationId, tempTitle);
         } else if (e.key === 'Escape') {
@@ -187,7 +188,7 @@ const ConversationHistoryPage: React.FC = () => {
             />
             {inputValue && (
               <button
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray hover:text-dark-gray"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-dark-gray dark:text-gray hover:text-dark-gray"
                 onClick={handleClearSearch}>
                 <PiX size={20} />
               </button>
@@ -253,7 +254,7 @@ const ConversationHistoryPage: React.FC = () => {
                     </ButtonIcon>
                   </div>
                 )}
-                <div className="text-xs text-gray">
+                <div className="text-xs text-aws-font-color-light/70 dark:text-gray">
                   {formatDate(conversation.createTime)}
                 </div>
               </div>

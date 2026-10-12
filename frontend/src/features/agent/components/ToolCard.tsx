@@ -218,7 +218,7 @@ const ToolCard: React.FC<ToolCardProps> = ({
           {status === 'success' && (
             <PiCheckCircle className="mr-2 text-aws-aqua" />
           )}
-          {status === 'error' && <PiXCircle className="mr-2  text-red" />}
+          {status === 'error' && <PiXCircle className="mr-2  text-red dark:text-red-400" />}
           <h3 className="">{getAgentName(name, t)}</h3>
         </div>
         <div>
@@ -289,7 +289,7 @@ const ToolCard: React.FC<ToolCardProps> = ({
                 {displayDocuments.length == 1 && (
                   <div className="flex items-center space-x-2">
                     <a
-                      className="flex items-center cursor-pointer text-aws-sea-blue-light dark:text-aws-sea-blue-dark hover:text-aws-sea-blue-hover-light dark:hover:text-aws-sea-blue-hover-dark"
+                      className="flex items-center cursor-pointer text-aws-sea-blue-light dark:text-aws-link-dark hover:text-aws-sea-blue-hover-light dark:hover:text-aws-sea-blue-hover-dark"
                       onClick={() => setViewingRelatedDocument(displayDocuments[0])}
                     >
                       <PiLinkBold />
@@ -302,7 +302,7 @@ const ToolCard: React.FC<ToolCardProps> = ({
                 {displayDocuments.length > 1 && displayDocuments.map((document, index) => (
                   <div key={document.sourceId} className="flex items-center space-x-2">
                     <a
-                      className="flex items-center cursor-pointer text-aws-sea-blue-light dark:text-aws-sea-blue-dark hover:text-aws-sea-blue-hover-light dark:hover:text-aws-sea-blue-hover-dark"
+                      className="flex items-center cursor-pointer text-aws-sea-blue-light dark:text-aws-link-dark hover:text-aws-sea-blue-hover-light dark:hover:text-aws-sea-blue-hover-dark"
                       onClick={() => setViewingRelatedDocument(document)}
                     >
                       <div>{`[${index + 1}]`}</div>

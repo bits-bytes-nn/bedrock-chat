@@ -1721,7 +1721,7 @@ const BotKbEditPage: React.FC = () => {
                                       errorMessage={errorMessages[`s3Urls-${idx}`]}
                                     />
                                     <ButtonIcon
-                                      className="text-red"
+                                      className="text-red dark:text-red-400"
                                       disabled={
                                         (s3Urls.length === 1 && !s3Url[0]) ||
                                         isLoading ||
@@ -1772,7 +1772,7 @@ const BotKbEditPage: React.FC = () => {
                                       errorMessage={errorMessages[`urls-${idx}`]}
                                     />
                                     <ButtonIcon
-                                      className="text-red"
+                                      className="text-red dark:text-red-400"
                                       disabled={
                                         (urls.length === 1 && !url[0]) ||
                                         isLoading ||
@@ -1846,7 +1846,7 @@ const BotKbEditPage: React.FC = () => {
                                             }}
                                           />
                                           <ButtonIcon
-                                            className="text-red"
+                                            className="text-red dark:text-red-400"
                                             disabled={
                                               (webCrawlingFilters.includePatterns
                                                 .length === 1 &&
@@ -1900,7 +1900,7 @@ const BotKbEditPage: React.FC = () => {
                                             }}
                                           />
                                           <ButtonIcon
-                                            className="text-red"
+                                            className="text-red dark:text-red-400"
                                             disabled={
                                               (webCrawlingFilters.excludePatterns
                                                 .length === 1 &&

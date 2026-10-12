@@ -65,7 +65,7 @@ const RelatedDocumentLink: React.FC<{
         className={twMerge(
           'mx-0.5 ',
           props.relatedDocument != null
-            ? 'cursor-pointer text-aws-sea-blue-light dark:text-aws-sea-blue-dark hover:text-aws-sea-blue-hover-light dark:hover:text-aws-sea-blue-hover-dark'
+            ? 'cursor-pointer text-aws-sea-blue-light dark:text-aws-link-dark hover:text-aws-sea-blue-hover-light dark:hover:text-aws-sea-blue-hover-dark'
             : 'cursor-not-allowed text-gray'
         )}
         onClick={() => {
@@ -164,7 +164,7 @@ const ChatMessageMarkdown: React.FC<Props> = ({
                 type: "element",
                 tagName: "div",
                 properties: {
-                  className: "p-2 bg-[#1e1e1e] font-[Menlo, Monaco, Consolas, \"Andale Mono\", \"Ubuntu Mono\", \"Courier New\", monospace] text-[13px] text-[#d4d4d4] leading-[1.3] whitespace-pre-wrap break-all",
+                  className: "p-2 bg-[#1e1e1e] font-mono text-[13px] text-[#d4d4d4] leading-[1.3] whitespace-pre-wrap break-all",
                 },
                 children: [
                   {
@@ -177,7 +177,7 @@ const ChatMessageMarkdown: React.FC<Props> = ({
                 type: "element",
                 tagName: 'div',
                 properties: {
-                  className: "text-sm font-bold text-red",
+                  className: "text-sm font-bold text-red dark:text-red-400",
                 },
                 children: [
                   {
@@ -190,7 +190,7 @@ const ChatMessageMarkdown: React.FC<Props> = ({
                 type: "element",
                 tagName: "div",
                 properties: {
-                  className: "p-2 border text-sm rounded text-red/80",
+                  className: "p-2 border text-sm rounded text-red/80 dark:text-red-400/80",
                 },
                 children: [
                   {
@@ -289,10 +289,16 @@ const ChatMessageMarkdown: React.FC<Props> = ({
     code: Code,
     sup: Sup,
     section: Section,
+    // Wide tables scroll instead of widening the message.
+    table: ({ node: _node, ...props }) => (
+      <div className="overflow-x-auto">
+        <table {...props} />
+      </div>
+    ),
   }), [Code, Sup, Section]);
 
   return (
-    <div className={twMerge(className, 'prose dark:prose-invert w-full break-words')}>
+    <div className={twMerge(className, 'prose dark:prose-invert w-full break-words prose-code:before:content-none prose-code:after:content-none')}>
       {isStreaming ? (
         <Markdown
           children={text}

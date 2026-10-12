@@ -216,7 +216,7 @@ const KnowledgeFileUploader: React.FC<Props> = (props) => {
                     </div>
                   )}
                   {file.status === 'ERROR' && (
-                    <div className="flex items-center gap-1 text-sm font-bold text-red">
+                    <div className="flex items-center gap-1 text-sm font-bold text-red dark:text-red-400">
                       <PiWarningCircleFill />
                       {t('bot.label.fileUploadStatus.error')}
                     </div>
@@ -224,7 +224,7 @@ const KnowledgeFileUploader: React.FC<Props> = (props) => {
                 </div>
                 <div>
                   <ButtonIcon
-                    className="text-red"
+                    className="text-red dark:text-red-400"
                     disabled={file.status === 'UPLOADING' || props.disabled}
                     onClick={() => {
                       onDeleteFile(idx);
@@ -236,7 +236,7 @@ const KnowledgeFileUploader: React.FC<Props> = (props) => {
             </div>
             {file.errorMessage && (
               <div className="rounded border border-dark-gray bg-light-gray px-2 py-1 text-sm ">
-                <div className="font-bold text-red">
+                <div className="font-bold text-red dark:text-red-400">
                   {t('bot.label.uploadError')}
                 </div>
                 <div className="italic">{file.errorMessage}</div>

@@ -114,7 +114,7 @@ const MenuBot: React.FC<Props> = (props) => {
       )}
       {props.onClickDelete && (
         <PopoverItem
-          className="font-bold text-red"
+          className="font-bold text-red dark:text-red-400"
           onClick={props.onClickDelete}>
           <PiTrashBold />
           {t('bot.button.delete')}

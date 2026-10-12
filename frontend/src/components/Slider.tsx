@@ -40,7 +40,7 @@ export const Slider: FC<Props> = (props) => {
       <label
         className={twMerge(
           'text-sm text-dark-gray dark:text-light-gray',
-          props.errorMessage && 'border-red dark:border-red text-red dark:text-red'
+          props.errorMessage && 'border-red dark:border-red text-red dark:text-red-400'
         )}>
         {props.label}
       </label>
@@ -73,10 +73,10 @@ export const Slider: FC<Props> = (props) => {
         />
       </div>
       {props.hint && !props.errorMessage && (
-        <span className={'mt-0.5 text-xs text-gray dark:text-aws-font-color-gray'}>{props.hint}</span>
+        <span className={'mt-0.5 text-xs text-aws-font-color-light/70 dark:text-aws-font-color-gray'}>{props.hint}</span>
       )}
       {props.errorMessage && (
-        <div className="mt-0.5 text-xs text-red">{props.errorMessage}</div>
+        <div className="mt-0.5 text-xs text-red dark:text-red-400">{props.errorMessage}</div>
       )}
     </div>
   );

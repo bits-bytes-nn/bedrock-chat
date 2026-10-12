@@ -41,19 +41,19 @@ const Select: React.FC<Props> = (props) => {
         <div className={twMerge('relative')}>
           <Listbox.Button
             className={twMerge(
-              'relative h-9 w-full cursor-default rounded border border-aws-font-color-light/50 dark:border-aws-font-color-dark/50 py-1 pl-3 pr-10 text-left dark:text-aws-font-color-dark focus:outline-none',
+              'relative h-9 w-full cursor-default rounded border border-aws-font-color-light/50 dark:border-aws-font-color-dark/50 py-1 pl-3 pr-10 text-left dark:text-aws-font-color-dark focus:outline-none focus-visible:ring-2 focus-visible:ring-aws-sea-blue-light dark:focus-visible:ring-aws-font-color-dark',
               !props.disabled && 'bg-white dark:bg-aws-ui-color-dark'
             )}>
             <span className="block truncate">{selectedLabel}</span>
 
             <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
-              <PiCaretUpDown className="size-5 text-gray" />
+              <PiCaretUpDown className="size-5 text-dark-gray dark:text-gray" />
             </span>
           </Listbox.Button>
           {props.clearable && props.value !== '' && (
             <span className="absolute inset-y-0 right-6 flex items-center pr-2">
               <ButtonIcon onClick={onClear}>
-                <PiX className="size-5 text-gray" />
+                <PiX className="size-5 text-dark-gray dark:text-gray" />
               </ButtonIcon>
             </span>
           )}
@@ -69,7 +69,7 @@ const Select: React.FC<Props> = (props) => {
                   className={({ active }) =>
                     `relative cursor-default select-none py-2 pl-10 pr-4 ${
                       active
-                        ? 'bg-aws-smile/10 text-aws-smile dark:bg-aws-font-color-dark/10 dark:text-aws-font-color-dark'
+                        ? 'bg-aws-sea-blue-light/10 text-aws-sea-blue-light dark:bg-aws-font-color-dark/10 dark:text-aws-font-color-dark'
                         : 'text-aws-font-color-light dark:text-aws-font-color-dark'
                     }`
                   }

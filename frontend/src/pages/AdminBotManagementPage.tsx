@@ -145,7 +145,7 @@ const AdminBotManagementPage: React.FC = () => {
                   <div className="flex items-center text-sm text-dark-gray dark:text-light-gray">
                     {t('admin.botManagement.label.sharedUrl')}:
                     <div
-                      className="flex cursor-pointer items-center text-aws-sea-blue-light underline hover:text-aws-sea-blue-hover-light dark:text-aws-sea-blue-dark dark:hover:text-aws-sea-blue-hover-dark"
+                      className="flex cursor-pointer items-center text-aws-sea-blue-light underline hover:text-aws-sea-blue-hover-light dark:text-aws-link-dark dark:hover:text-aws-sea-blue-hover-dark"
                       onClick={() => {
                         window.open(getBotUrl(bot?.id ?? ''), '_blank');
                       }}>
@@ -221,7 +221,7 @@ const AdminBotManagementPage: React.FC = () => {
                               value={url}
                             />
                             <ButtonIcon
-                              className="text-aws-sea-blue-light dark:text-aws-sea-blue-dark"
+                              className="text-aws-sea-blue-light dark:text-aws-link-dark"
                               onClick={() => {
                                 window.open(url, '_blank');
                               }}>
@@ -459,7 +459,7 @@ const AdminBotManagementPage: React.FC = () => {
                               value={url}
                             />
                             <ButtonIcon
-                              className="text-aws-sea-blue-light dark:text-aws-sea-blue-dark"
+                              className="text-aws-sea-blue-light dark:text-aws-link-dark"
                               onClick={() => {
                                 window.open(url, '_blank');
                               }}>

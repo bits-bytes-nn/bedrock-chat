@@ -47,7 +47,10 @@ export default {
           light: '#f1f3f3',
           dark: '#212121',
         },
-        red: '#dc2626',
+        // red-400 is for text in dark mode, where the default red is 3.3:1.
+        red: { DEFAULT: '#dc2626', 400: '#f87171' },
+        // Links in dark mode; aws-sea-blue-dark is only 3.5:1 there.
+        'aws-link-dark': '#8ab4f8',
         'light-red': '#fee2e2',
         yellow: '#f59e0b',
         'light-yellow': '#fef9c3',

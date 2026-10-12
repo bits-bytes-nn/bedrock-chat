@@ -101,7 +101,7 @@ export const ConversationItem: React.FC<ConversationItemProps> = ({
               {highlightSearchTerms(conversation.title, searchQuery)}
             </span>
           </div>
-          <div className="text-xs text-gray">
+          <div className="text-xs text-aws-font-color-light/70 dark:text-gray">
             {formatDate(conversation.lastUpdatedTime)}
           </div>
         </div>
@@ -176,7 +176,7 @@ const ConversationSearchResults: React.FC<ConversationSearchResultsProps> = ({
               query: searchQuery,
             })}
           </div>
-          <div className="mt-1 text-sm text-gray">
+          <div className="mt-1 text-sm text-aws-font-color-light/70 dark:text-gray">
             {t('conversationHistory.searchConversation.tryDifferentKeywords')}
           </div>
         </div>

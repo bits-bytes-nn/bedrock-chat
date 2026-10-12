@@ -48,19 +48,19 @@ const InputText = React.forwardRef<HTMLInputElement, Props>((props, ref) => {
           className={twMerge(
             'order-first text-sm peer-focus:font-semibold peer-focus:italic',
             props.errorMessage
-              ? 'font-bold text-red'
+              ? 'font-bold text-red dark:text-red-400'
               : 'text-dark-gray peer-focus:text-aws-font-color-light dark:text-light-gray dark:peer-focus:text-aws-font-color-dark'
           )}>
           {props.label}
         </div>
       )}
       {props.hint && !props.errorMessage && (
-        <div className="mt-0.5 text-xs text-gray dark:text-aws-font-color-dark">
+        <div className="mt-0.5 text-xs text-aws-font-color-light/70 dark:text-aws-font-color-dark">
           {props.hint}
         </div>
       )}
       {props.errorMessage && (
-        <div className="mt-0.5 text-xs text-red">{props.errorMessage}</div>
+        <div className="mt-0.5 text-xs text-red dark:text-red-400">{props.errorMessage}</div>
       )}
     </div>
   );
