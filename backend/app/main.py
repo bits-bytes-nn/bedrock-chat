@@ -19,7 +19,7 @@ from app.routes.published_api import router as published_api_router
 from app.routes.user import router as user_router
 from app.user import User
 from app.utils import is_running_on_lambda
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.security import HTTPAuthorizationCredentials
@@ -99,33 +99,33 @@ app.add_exception_handler(ResourceConflictError, error_handler_factory(409))
 app.add_exception_handler(Exception, error_handler_factory(500))
 
 
+def _user_from_authorization(authorization: str) -> User:
+    scheme, _, credentials = authorization.partition(" ")
+    if scheme.lower() != "bearer" or not credentials:
+        raise HTTPException(status_code=403, detail="Could not validate credentials")
+    return get_current_user(
+        HTTPAuthorizationCredentials(scheme="Bearer", credentials=credentials)
+    )
+
+
 @app.middleware("http")
-def add_current_user_to_request(request: Request, call_next: ASGIApp):
-    if is_running_on_lambda():
-        if not is_published_api:
-            authorization = request.headers.get("Authorization")
-            if authorization:
-                token_str = authorization.split(" ")[1]
-                token = HTTPAuthorizationCredentials(
-                    scheme="Bearer", credentials=token_str
-                )
-                request.state.current_user = get_current_user(token)
-        else:
+async def add_current_user_to_request(request: Request, call_next: ASGIApp):
+    authorization = request.headers.get("Authorization")
+    try:
+        if is_published_api and is_running_on_lambda():
             assert PUBLISHED_API_ID is not None, "PUBLISHED_API_ID is not set."
             request.state.current_user = User.from_published_api_id(PUBLISHED_API_ID)
-    else:
-        authorization = request.headers.get("Authorization")
-        if authorization:
-            token_str = authorization.split(" ")[1]
-            token = HTTPAuthorizationCredentials(scheme="Bearer", credentials=token_str)
-            request.state.current_user = get_current_user(token)
-        else:
+        elif authorization:
+            request.state.current_user = _user_from_authorization(authorization)
+        elif not is_running_on_lambda():
             request.state.current_user = User(
                 id="test_user", name="test_user", email="user@example.com", groups=[]
             )
+    except HTTPException as e:
+        # Exception handlers do not run for errors raised in middleware.
+        return JSONResponse({"errors": [e.detail]}, status_code=e.status_code)
 
-    response = call_next(request)  # type: ignore
-    return response
+    return await call_next(request)  # type: ignore
 
 
 @app.middleware("http")

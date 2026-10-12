@@ -208,9 +208,6 @@ def calculate_price(
 ) -> float:
     """Estimate the price in USD from the token usage."""
     price = get_model_spec(model).price
-    if price is None:
-        logger.warning("No price is defined for model %s. Reporting 0.", model)
-        return 0.0
 
     cache_read_price = (
         price.cache_read_input if price.cache_read_input is not None else price.input
