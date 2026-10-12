@@ -2,11 +2,13 @@ import json
 import logging
 import os
 from decimal import Decimal as decimal
+from typing import Any
 
 import boto3
 from app.repositories.common import (
     TRANSACTION_BATCH_WRITE_SIZE,
     RecordNotFoundError,
+    ResourceConflictError,
     compose_conv_id,
     compose_related_document_source_id,
     decompose_conv_id,
@@ -20,6 +22,7 @@ from app.repositories.models.conversation import (
     MessageModel,
     RelatedDocumentModel,
     ToolResultModel,
+    merge_conversations,
 )
 from boto3.dynamodb.conditions import Key
 from botocore.exceptions import ClientError
@@ -34,11 +37,35 @@ BEDROCK_REGION = os.environ.get("BEDROCK_REGION", "us-east-1")
 s3_client = boto3.client("s3", BEDROCK_REGION)
 
 
-def store_conversation(
-    user_id: str, conversation: ConversationModel, threshold=THRESHOLD_LARGE_MESSAGE
-):
-    logger.info("Storing conversation: %s", conversation.id)
+# Concurrent writes to one conversation are rare, so a few merges are enough.
+MAX_STORE_ATTEMPTS = 3
+
+
+def _large_message_path(user_id: str, conversation_id: str, version: int) -> str:
+    return f"{user_id}/{conversation_id}/message_map-{version}.json"
+
+
+def _delete_large_messages(user_id: str, conversation_id: str):
+    """Delete every stored version of a large message map."""
+    paginator = s3_client.get_paginator("list_objects_v2")
+    for page in paginator.paginate(
+        Bucket=LARGE_MESSAGE_BUCKET, Prefix=f"{user_id}/{conversation_id}/"
+    ):
+        keys = [{"Key": obj["Key"]} for obj in page.get("Contents", [])]
+        if keys:
+            s3_client.delete_objects(
+                Bucket=LARGE_MESSAGE_BUCKET, Delete={"Objects": keys}
+            )
+
+
+def _put_conversation(user_id: str, conversation: ConversationModel, threshold: int):
+    """Write the conversation if nobody else wrote it since it was read.
+
+    Raises:
+        ResourceConflictError: If the stored version changed.
+    """
     table = get_conversation_table_client(user_id)
+    version = conversation.version + 1
 
     item_params = {
         "PK": user_id,
@@ -50,6 +77,7 @@ def store_conversation(
         "TotalPrice": decimal(str(conversation.total_price)),
         "LastMessageId": conversation.last_message_id,
         "ShouldContinue": conversation.should_continue,
+        "Version": version,
     }
 
     if conversation.bot_id:
@@ -60,14 +88,16 @@ def store_conversation(
     }
     message_map_size = len(json.dumps(message_map).encode("utf-8"))
     logger.info(f"Message map size: {message_map_size}")
+    large_message_path = None
     if message_map_size > threshold:
         logger.info(
             f"Message map size {message_map_size} exceeds threshold {threshold}"
         )
         item_params["IsLargeMessage"] = True
-        large_message_path = f"{user_id}/{conversation.id}/message_map.json"
+        # Each version has its own object, so a write that loses the race does not
+        # overwrite the stored messages.
+        large_message_path = _large_message_path(user_id, conversation.id, version)
         item_params["LargeMessagePath"] = large_message_path
-        # Store all message in S3
         s3_client.put_object(
             Bucket=LARGE_MESSAGE_BUCKET,
             Key=large_message_path,
@@ -81,10 +111,64 @@ def store_conversation(
         item_params["IsLargeMessage"] = False
         item_params["MessageMap"] = json.dumps(message_map)
 
-    response = table.put_item(
-        Item=item_params,
+    # Items written before versioning have no Version attribute.
+    condition: dict[str, Any] = (
+        {"ConditionExpression": "attribute_not_exists(Version)"}
+        if conversation.version == 0
+        else {
+            "ConditionExpression": "Version = :version",
+            "ExpressionAttributeValues": {":version": conversation.version},
+        }
     )
-    return response
+    try:
+        table.put_item(Item=item_params, **condition)
+    except ClientError as e:
+        if large_message_path:
+            s3_client.delete_object(Bucket=LARGE_MESSAGE_BUCKET, Key=large_message_path)
+        if e.response["Error"]["Code"] == "ConditionalCheckFailedException":
+            raise ResourceConflictError(
+                f"Conversation {conversation.id} was updated concurrently."
+            ) from e
+        raise
+
+    if large_message_path and version > 2:
+        # Readers may still hold the previous version, so keep it.
+        s3_client.delete_object(
+            Bucket=LARGE_MESSAGE_BUCKET,
+            Key=_large_message_path(user_id, conversation.id, version - 2),
+        )
+    conversation.version = version
+    conversation.mark_stored()
+
+
+def store_conversation(
+    user_id: str, conversation: ConversationModel, threshold=THRESHOLD_LARGE_MESSAGE
+):
+    """Store the conversation, merging it with concurrent writes.
+
+    On a conflict, the changes made to this copy since it was read are applied to
+    the latest stored conversation. The merged result is written back into
+    `conversation`.
+
+    Raises:
+        ResourceConflictError: If the conversation keeps changing concurrently.
+    """
+    logger.info("Storing conversation: %s", conversation.id)
+    for attempt in range(MAX_STORE_ATTEMPTS):
+        try:
+            _put_conversation(user_id, conversation, threshold)
+            return
+        except ResourceConflictError:
+            if attempt == MAX_STORE_ATTEMPTS - 1:
+                raise
+            logger.warning(
+                "Conversation %s changed concurrently. Merging.", conversation.id
+            )
+            latest = find_conversation_by_id(user_id, conversation.id)
+            merged = merge_conversations(conversation._stored, conversation, latest)
+            for field in ConversationModel.model_fields:
+                setattr(conversation, field, getattr(merged, field))
+            conversation._stored = latest._stored
 
 
 def find_conversation_by_user_id(user_id: str) -> list[ConversationMeta]:
@@ -149,15 +233,14 @@ def find_conversation_by_user_id(user_id: str) -> list[ConversationMeta]:
 def find_conversation_by_id(user_id: str, conversation_id: str) -> ConversationModel:
     logger.info(f"Finding conversation: {conversation_id}")
     table = get_conversation_table_client(user_id)
-    response = table.query(
-        IndexName="SKIndex",
-        KeyConditionExpression=Key("SK").eq(compose_conv_id(user_id, conversation_id)),
-    )
-    if len(response["Items"]) == 0:
+    # A consistent read returns the latest version for optimistic locking.
+    item = table.get_item(
+        Key={"PK": user_id, "SK": compose_conv_id(user_id, conversation_id)},
+        ConsistentRead=True,
+    ).get("Item")
+    if item is None:
         raise RecordNotFoundError(f"No conversation found with id: {conversation_id}")
 
-    # NOTE: conversation is unique
-    item = response["Items"][0]
     if item.get("IsLargeMessage", False):
         large_message_path = item["LargeMessagePath"]
         response = s3_client.get_object(
@@ -176,7 +259,9 @@ def find_conversation_by_id(user_id: str, conversation_id: str) -> ConversationM
         last_message_id=item["LastMessageId"],
         bot_id=item["BotId"] if "BotId" in item else None,
         should_continue=item.get("ShouldContinue", False),
+        version=int(item.get("Version", 0)),
     )
+    conv.mark_stored()
     logger.info("Found conversation: %s", conv.id)
     return conv
 
@@ -194,10 +279,7 @@ def delete_conversation_by_id(user_id: str, conversation_id: str):
 
         item = response.get("Item")
         if item and item.get("IsLargeMessage", False):
-            # Delete the large message map from S3
-            s3_client.delete_object(
-                Bucket=LARGE_MESSAGE_BUCKET, Key=item["LargeMessagePath"]
-            )
+            _delete_large_messages(user_id, conversation_id)
 
         # Delete the conversation from DynamoDB
         response = table.delete_item(
@@ -239,9 +321,7 @@ def delete_conversation_by_user_id(user_id: str):
     def delete_large_messages(items):
         for item in items:
             if item.get("IsLargeMessage", False):
-                s3_client.delete_object(
-                    Bucket=LARGE_MESSAGE_BUCKET, Key=item["LargeMessagePath"]
-                )
+                _delete_large_messages(user_id, decompose_conv_id(item["SK"]))
 
     try:
         response = table.query(
@@ -283,8 +363,9 @@ def change_conversation_title(user_id: str, conversation_id: str, new_title: str
                 "PK": user_id,
                 "SK": compose_conv_id(user_id, conversation_id),
             },
-            UpdateExpression="set Title=:t",
-            ExpressionAttributeValues={":t": new_title},
+            # Bump the version so that a concurrent write keeps the new title.
+            UpdateExpression="SET Title = :t ADD Version :one",
+            ExpressionAttributeValues={":t": new_title, ":one": 1},
             ReturnValues="UPDATED_NEW",
             ConditionExpression="attribute_exists(PK) AND attribute_exists(SK)",
         )
