@@ -7,7 +7,10 @@ import {
   getAnalyzer,
   getParsingModel,
 } from "../lib/utils/bedrock-knowledge-base-args";
-import { BedrockFoundationModel } from "@cdklabs/generative-ai-cdk-constructs/lib/cdk-lib/bedrock";
+import {
+  BedrockFoundationModel,
+  IInvokable,
+} from "@cdklabs/generative-ai-cdk-constructs/lib/cdk-lib/bedrock";
 import { ChunkingStrategy } from "@cdklabs/generative-ai-cdk-constructs/lib/cdk-lib/bedrock/data-sources/chunking";
 import { Analyzer } from "@cdklabs/generative-ai-cdk-constructs/lib/cdk-lib/opensearch-vectorindex";
 import { resolveBedrockSharedKnowledgeBasesParameters } from "../lib/utils/parameter-models";
@@ -32,7 +35,7 @@ interface BaseConfig {
 interface KnowledgeConfig {
   knowledgeBaseHash: string;
   embeddingsModel: BedrockFoundationModel;
-  parsingModel: BedrockFoundationModel | undefined;
+  parsingModel: IInvokable | undefined;
   instruction?: string;
   analyzer?: Analyzer | undefined;
 }
@@ -112,7 +115,7 @@ const knowledgeBases = sharedKnowledgeBasesJson.map((sharedKnowledgeBase: any) =
       {
         ...knowledgeConfig,
         embeddingsModel: knowledgeConfig.embeddingsModel.toString(),
-        parsingModel: knowledgeConfig.parsingModel?.toString(),
+        parsingModel: knowledgeConfig.parsingModel?.invokableArn,
         analyzer: knowledgeConfig.analyzer ? "configured" : "undefined",
       },
       null,

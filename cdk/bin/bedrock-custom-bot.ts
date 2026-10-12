@@ -10,7 +10,10 @@ import {
   getCrowlingScope,
   getCrawlingFilters,
 } from "../lib/utils/bedrock-knowledge-base-args";
-import { BedrockFoundationModel } from "@cdklabs/generative-ai-cdk-constructs/lib/cdk-lib/bedrock";
+import {
+  BedrockFoundationModel,
+  IInvokable,
+} from "@cdklabs/generative-ai-cdk-constructs/lib/cdk-lib/bedrock";
 import { ChunkingStrategy } from "@cdklabs/generative-ai-cdk-constructs/lib/cdk-lib/bedrock/data-sources/chunking";
 import {
   CrawlingFilters,
@@ -43,7 +46,7 @@ interface BaseConfig {
 interface KnowledgeConfig {
   knowledgeBaseType: "dedicated" | "shared" | undefined;
   embeddingsModel: BedrockFoundationModel;
-  parsingModel: BedrockFoundationModel | undefined;
+  parsingModel: IInvokable | undefined;
   existKnowledgeBaseId?: string;
   existingS3Urls: string[];
   filenames: string[];
@@ -186,7 +189,7 @@ console.log(
     {
       ...knowledgeConfig,
       embeddingsModel: knowledgeConfig.embeddingsModel.toString(),
-      parsingModel: knowledgeConfig.parsingModel?.toString(),
+      parsingModel: knowledgeConfig.parsingModel?.invokableArn,
       analyzer: knowledgeConfig.analyzer ? "configured" : "undefined",
     },
     null,

@@ -8,7 +8,11 @@ import {
 } from "@cdklabs/generative-ai-cdk-constructs/lib/cdk-lib/opensearch-vectorindex";
 import { VectorCollectionStandbyReplicas } from "@cdklabs/generative-ai-cdk-constructs/lib/cdk-lib/opensearchserverless";
 import * as s3 from "aws-cdk-lib/aws-s3";
-import { BedrockFoundationModel, CustomTransformation } from "@cdklabs/generative-ai-cdk-constructs/lib/cdk-lib/bedrock";
+import {
+  BedrockFoundationModel,
+  CustomTransformation,
+  IInvokable,
+} from "@cdklabs/generative-ai-cdk-constructs/lib/cdk-lib/bedrock";
 import { ChunkingStrategy } from "@cdklabs/generative-ai-cdk-constructs/lib/cdk-lib/bedrock/data-sources/chunking";
 import { S3DataSource } from "@cdklabs/generative-ai-cdk-constructs/lib/cdk-lib/bedrock/data-sources/s3-data-source";
 import { ParsingStrategy } from "@cdklabs/generative-ai-cdk-constructs/lib/cdk-lib/bedrock/data-sources/parsing";
@@ -67,7 +71,7 @@ interface BedrockKnowledgeBaseProps {
   // Knowledge base configuration
   readonly knowledgeBaseHash: string;
   readonly embeddingsModel: BedrockFoundationModel;
-  readonly parsingModel?: BedrockFoundationModel;
+  readonly parsingModel?: IInvokable;
   readonly instruction?: string;
   readonly analyzer?: Analyzer;
 
@@ -136,6 +140,8 @@ class SharedKnowledgeBase extends Construct {
       instruction: props.instruction,
     });
     tempBucket.grantReadWrite(this.kb.role);
+    // Parsing runs as the knowledge base role.
+    props.parsingModel?.grantInvoke(this.kb.role);
 
     props.documentBucket.grantRead(this.kb.role);
     this.dataSource = new S3DataSource(this, `DocumentBucketDataSource`, {

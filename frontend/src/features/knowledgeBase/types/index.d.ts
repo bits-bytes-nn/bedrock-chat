@@ -20,6 +20,7 @@ export type ParsingModel =
   | 'anthropic.claude-3-5-sonnet-v1'
   | 'anthropic.claude-3-sonnet-v1'
   | 'anthropic.claude-3-haiku-v1'
+  | 'anthropic.claude-haiku-4-5'
   | 'disabled';
 
 export type ChunkingStrategy = 'default' | 'fixed_size' | 'hierarchical' | 'semantic' | 'none';

@@ -16,6 +16,7 @@ type_kb_search_type = Literal["hybrid", "semantic"]
 type_kb_parsing_model = Literal[
     "anthropic.claude-3-5-sonnet-v1",
     "anthropic.claude-3-haiku-v1",
+    "anthropic.claude-haiku-4-5",
     "anthropic.claude-3-sonnet-v1",
     "disabled",
 ]
