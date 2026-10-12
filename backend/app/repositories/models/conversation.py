@@ -559,9 +559,9 @@ class ConversationModel(BaseModel):
     _stored: ConversationModel | None = PrivateAttr(default=None)
 
     def mark_stored(self) -> None:
-        snapshot = self.model_copy(deep=True)
-        snapshot._stored = None
-        self._stored = snapshot
+        # Drop the old snapshot first so that it is not copied into the new one.
+        self._stored = None
+        self._stored = self.model_copy(deep=True)
 
 
 def _merge_children(base: list[str], mine: list[str], theirs: list[str]) -> list[str]:

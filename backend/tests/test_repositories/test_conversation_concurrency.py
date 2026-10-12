@@ -1,6 +1,9 @@
 import unittest
+from unittest.mock import patch
 
+import boto3
 import pytest
+from app.repositories import conversation as conversation_repository
 from app.repositories.conversation import (
     change_conversation_title,
     find_conversation_by_id,
@@ -111,6 +114,27 @@ class TestStoreConversationConcurrently(unittest.TestCase):
         stored = find_conversation_by_id("user", "c")
         self.assertEqual(stored.title, "Generated title")
         self.assertIn("answer", stored.message_map)
+
+    def test_merges_large_conversations_without_losing_the_stored_object(self):
+        bucket = "test-large-message-bucket"
+        s3 = boto3.client("s3", region_name="us-east-1")
+        s3.create_bucket(Bucket=bucket)
+        with patch.object(conversation_repository, "LARGE_MESSAGE_BUCKET", bucket):
+            store_conversation("user", conversation(), threshold=1)
+            first = find_conversation_by_id("user", "c")
+            second = find_conversation_by_id("user", "c")
+
+            add_reply(first, "first", 0.5)
+            store_conversation("user", first, threshold=1)
+            add_reply(second, "second", 0.25)
+            store_conversation("user", second, threshold=1)
+
+            stored = find_conversation_by_id("user", "c")
+            objects = s3.list_objects_v2(Bucket=bucket)["Contents"]
+
+        self.assertEqual(stored.message_map["a"].children, ["first", "second"])
+        # Only the object of the latest write is kept.
+        self.assertEqual(len(objects), 1)
 
     def test_upgrades_items_without_a_version(self):
         legacy = conversation()

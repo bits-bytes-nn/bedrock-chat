@@ -27,6 +27,7 @@ from app.repositories.models.conversation import (
 from boto3.dynamodb.conditions import Key
 from botocore.exceptions import ClientError
 from pydantic import TypeAdapter
+from ulid import ULID
 
 logger = logging.getLogger(__name__)
 
@@ -41,8 +42,9 @@ s3_client = boto3.client("s3", BEDROCK_REGION)
 MAX_STORE_ATTEMPTS = 3
 
 
-def _large_message_path(user_id: str, conversation_id: str, version: int) -> str:
-    return f"{user_id}/{conversation_id}/message_map-{version}.json"
+def _large_message_path(user_id: str, conversation_id: str) -> str:
+    # Unique per write, so that concurrent writers never share an object.
+    return f"{user_id}/{conversation_id}/message_map-{ULID()}.json"
 
 
 def _delete_large_messages(user_id: str, conversation_id: str):
@@ -94,9 +96,9 @@ def _put_conversation(user_id: str, conversation: ConversationModel, threshold: 
             f"Message map size {message_map_size} exceeds threshold {threshold}"
         )
         item_params["IsLargeMessage"] = True
-        # Each version has its own object, so a write that loses the race does not
+        # Each write has its own object, so a write that loses the race does not
         # overwrite the stored messages.
-        large_message_path = _large_message_path(user_id, conversation.id, version)
+        large_message_path = _large_message_path(user_id, conversation.id)
         item_params["LargeMessagePath"] = large_message_path
         s3_client.put_object(
             Bucket=LARGE_MESSAGE_BUCKET,
@@ -121,7 +123,9 @@ def _put_conversation(user_id: str, conversation: ConversationModel, threshold: 
         }
     )
     try:
-        table.put_item(Item=item_params, **condition)
+        previous = table.put_item(
+            Item=item_params, ReturnValues="ALL_OLD", **condition
+        ).get("Attributes", {})
     except ClientError as e:
         if large_message_path:
             s3_client.delete_object(Bucket=LARGE_MESSAGE_BUCKET, Key=large_message_path)
@@ -131,12 +135,10 @@ def _put_conversation(user_id: str, conversation: ConversationModel, threshold: 
             ) from e
         raise
 
-    if large_message_path and version > 2:
-        # Readers may still hold the previous version, so keep it.
-        s3_client.delete_object(
-            Bucket=LARGE_MESSAGE_BUCKET,
-            Key=_large_message_path(user_id, conversation.id, version - 2),
-        )
+    previous_path = previous.get("LargeMessagePath")
+    if previous_path and previous_path != large_message_path:
+        # Readers that loaded the previous item retry once (see find_conversation_by_id).
+        s3_client.delete_object(Bucket=LARGE_MESSAGE_BUCKET, Key=previous_path)
     conversation.version = version
     conversation.mark_stored()
 
@@ -233,22 +235,30 @@ def find_conversation_by_user_id(user_id: str) -> list[ConversationMeta]:
 def find_conversation_by_id(user_id: str, conversation_id: str) -> ConversationModel:
     logger.info(f"Finding conversation: {conversation_id}")
     table = get_conversation_table_client(user_id)
-    # A consistent read returns the latest version for optimistic locking.
-    item = table.get_item(
-        Key={"PK": user_id, "SK": compose_conv_id(user_id, conversation_id)},
-        ConsistentRead=True,
-    ).get("Item")
-    if item is None:
-        raise RecordNotFoundError(f"No conversation found with id: {conversation_id}")
-
-    if item.get("IsLargeMessage", False):
-        large_message_path = item["LargeMessagePath"]
-        response = s3_client.get_object(
-            Bucket=LARGE_MESSAGE_BUCKET, Key=large_message_path
-        )
+    for attempt in range(2):
+        # A consistent read returns the latest version for optimistic locking.
+        item = table.get_item(
+            Key={"PK": user_id, "SK": compose_conv_id(user_id, conversation_id)},
+            ConsistentRead=True,
+        ).get("Item")
+        if item is None:
+            raise RecordNotFoundError(
+                f"No conversation found with id: {conversation_id}"
+            )
+        if not item.get("IsLargeMessage", False):
+            message_map = json.loads(item["MessageMap"])
+            break
+        try:
+            response = s3_client.get_object(
+                Bucket=LARGE_MESSAGE_BUCKET, Key=item["LargeMessagePath"]
+            )
+        except s3_client.exceptions.NoSuchKey:
+            # A concurrent write replaced the object after the item was read.
+            if attempt == 1:
+                raise
+            continue
         message_map = json.loads(response["Body"].read().decode("utf-8"))
-    else:
-        message_map = json.loads(item["MessageMap"])
+        break
 
     conv = ConversationModel(
         id=decompose_conv_id(item["SK"]),
