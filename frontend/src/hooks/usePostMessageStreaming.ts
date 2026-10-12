@@ -6,7 +6,9 @@ import { StreamingEvent } from './xstates/streaming';
 import { PostStreamingStatus } from '../constants';
 
 const WS_ENDPOINT: string = import.meta.env.VITE_APP_WS_ENDPOINT;
-const CHUNK_SIZE = 32 * 1024; //32KB
+// API Gateway closes the connection for frames over 32 KB. 8K UTF-16 code units
+// stay below that in UTF-8 even for Korean or Japanese text and JSON escaping.
+const CHUNK_SIZE = 8 * 1024;
 
 const isHighSurrogate = (charCode: number) =>
   charCode >= 0xd800 && charCode <= 0xdbff;
