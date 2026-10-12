@@ -307,14 +307,20 @@ const ChatMessageMarkdown: React.FC<Props> = ({
     // Remote images would load as soon as they are rendered, so a prompt-injected
     // answer could send conversation data to any server in the image URL. They are
     // shown as links that the user can open.
-    img: ({ node: _node, src, alt, ...props }) =>
-      isInlineImageSource(src) ? (
-        <img src={src} alt={alt} {...props} />
-      ) : (
+    img: ({ node: _node, src, alt, ...props }) => {
+      if (isInlineImageSource(src)) {
+        return <img src={src} alt={alt} {...props} />;
+      }
+      // react-markdown removes unsafe URLs, which leaves an empty source.
+      if (!src) {
+        return <>{alt}</>;
+      }
+      return (
         <a href={src} target="_blank" rel="noopener noreferrer nofollow">
           {alt || src}
         </a>
-      ),
+      );
+    },
     // Wide tables scroll instead of widening the message.
     table: ({ node: _node, ...props }) => (
       <div className="overflow-x-auto">
