@@ -107,6 +107,11 @@ first answer [^1][^5]. second answer [^2][^3][^4]. third answer [^4].
     return inserted_prompt
 
 
+# Without it, models answer questions about the bot's documents from general
+# knowledge instead of calling the knowledge base tool.
+KNOWLEDGE_BASE_PROMPT = """You have a knowledge base of documents provided for this conversation. Search it with the knowledge_base_tool before you answer, unless the message is only a greeting or small talk. Answer from general knowledge only when the search finds nothing relevant, and say that the documents did not cover it."""
+
+
 def get_prompt_to_cite_tool_results(model: type_model_name) -> str:
     # Prompt for 'Retrieved Context Citation' of agent chat.
     inserted_prompt = """To answer the user's question, you are given a set of tools. Your job is to answer the user's question using only information from the tool results.

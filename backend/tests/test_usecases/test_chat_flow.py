@@ -1,11 +1,12 @@
 import unittest
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from app.repositories.conversation import find_conversation_by_id
 from app.repositories.models.conversation import MessageModel, TextContentModel
 from app.routes.schemas.conversation import ChatInput
 from app.stream import OnStopInput
+from app.prompt import KNOWLEDGE_BASE_PROMPT
 from app.usecases import chat as chat_usecase
 from app.user import User
 
@@ -93,6 +94,31 @@ class TestChatFlow(unittest.TestCase):
 
         stored = find_conversation_by_id(USER.id, "c2")
         self.assertEqual(len(stored.message_map["system"].children), 2)
+
+    def test_tells_the_model_to_search_the_knowledge_base(self):
+        bot = MagicMock(
+            id="bot",
+            instruction="",
+            display_retrieved_chunks=False,
+            generation_params=None,
+            bedrock_guardrails=None,
+        )
+        bot.is_agent_enabled.return_value = True
+        bot.has_knowledge.return_value = True
+        request = chat_input("c3", None, "What is the project code name?")
+        request.bot_id = "bot"
+        with patch.object(
+            chat_usecase, "fetch_bot", return_value=(True, bot)
+        ), patch.object(chat_usecase, "validate_model_is_available"), patch.object(
+            chat_usecase, "modify_bot_last_used_time"
+        ), patch.object(
+            chat_usecase, "modify_bot_stats"
+        ), patch.object(
+            chat_usecase, "converse_with_strands", return_value=answer("BLUEFIN-42")
+        ) as converse:
+            chat_usecase.chat(USER, request)
+
+        self.assertIn(KNOWLEDGE_BASE_PROMPT, converse.call_args.kwargs["instructions"])
 
 
 if __name__ == "__main__":

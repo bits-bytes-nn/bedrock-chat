@@ -12,7 +12,11 @@ from app.bedrock import (
 )
 from app.model_registry import get_model_spec
 from mypy_boto3_bedrock_runtime.type_defs import MessageTypeDef
-from app.prompt import build_rag_prompt, get_prompt_to_cite_tool_results
+from app.prompt import (
+    KNOWLEDGE_BASE_PROMPT,
+    build_rag_prompt,
+    get_prompt_to_cite_tool_results,
+)
 from app.repositories.conversation import (
     RecordNotFoundError,
     find_conversation_by_id,
@@ -263,6 +267,8 @@ def chat(
     search_results: list[SearchResult] = []
     if bot is not None:
         if bot.is_agent_enabled() and is_tooluse_supported(chat_input.message.model):
+            if bot.has_knowledge():
+                instructions.append(KNOWLEDGE_BASE_PROMPT)
             if display_citation:
                 instructions.append(
                     get_prompt_to_cite_tool_results(
