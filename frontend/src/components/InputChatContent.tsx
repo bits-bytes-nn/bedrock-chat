@@ -43,7 +43,8 @@ import {
   textToBase64,
 } from '../utils/ConversionUtils';
 import useAttachmentApi from '../hooks/useAttachmentApi';
-import { useChatConversationId } from '../hooks/useChat';
+import { useNewChatCount } from '../hooks/useChat';
+import { useLocation } from 'react-router-dom';
 
 type Props = BaseProps & {
   disabledSend?: boolean;
@@ -213,8 +214,10 @@ const InputChatContent = forwardRef<HTMLElement, Props>(
       });
     }, []);
 
-    // A conversion belongs to the conversation it was started in.
-    const conversationId = useChatConversationId();
+    // A conversion belongs to the conversation it was started in. Leaving it means
+    // navigating or starting a new chat; a new chat getting its id is not leaving.
+    const { pathname } = useLocation();
+    const newChatCount = useNewChatCount();
     useEffect(() => {
       return () => {
         setConvertingFiles((files) => {
@@ -222,7 +225,7 @@ const InputChatContent = forwardRef<HTMLElement, Props>(
           return [];
         });
       };
-    }, [conversationId]);
+    }, [pathname, newChatCount]);
 
     const disabledSend = useMemo(() => {
       return content === '' || props.disabledSend || convertingFiles.length > 0;

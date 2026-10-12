@@ -1,5 +1,17 @@
 import InputChatContent from './InputChatContent';
 import { useState } from 'react';
+import type { StoryDefault } from '@ladle/react';
+import { MemoryRouter } from 'react-router-dom';
+
+export default {
+  decorators: [
+    (Component) => (
+      <MemoryRouter>
+        <Component />
+      </MemoryRouter>
+    ),
+  ],
+} satisfies StoryDefault;
 
 const defaultProps = {
   reasoningEnabled: false,
