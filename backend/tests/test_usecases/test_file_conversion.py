@@ -187,6 +187,13 @@ class TestConversion(unittest.TestCase):
             with self.assertRaises(ValueError):
                 file_conversion.start_conversion(key)
 
+    def test_rejects_large_recordings(self):
+        key = "u/b/_temp/meeting.mp3"
+        self.s3.put_object(Bucket=BUCKET, Key=key, Body=b"audio")
+        with patch.object(file_conversion, "MAX_MEDIA_BYTES", 2):
+            with self.assertRaises(ValueError):
+                file_conversion.start_conversion(key)
+
     def test_rejects_missing_uploads(self):
         with self.assertRaises(ValueError):
             file_conversion.start_conversion("u/b/_temp/missing.pptx")

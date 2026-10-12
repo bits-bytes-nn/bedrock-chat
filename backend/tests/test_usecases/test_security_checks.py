@@ -120,6 +120,29 @@ class TestVerifyToken(unittest.TestCase):
             self.decode({"token_use": "access"})
 
 
+class TestPartialSharing(unittest.TestCase):
+    bot = SimpleNamespace(
+        owner_user_id="owner",
+        shared_scope="partial",
+        allowed_cognito_users=[],
+        allowed_cognito_groups=["team"],
+    )
+
+    def accessible(self, user: User) -> bool:
+        from app.repositories.models.custom_bot import BotModel
+
+        return BotModel.is_accessible_by_user(self.bot, user)  # type: ignore[arg-type]
+
+    def test_uses_the_groups_in_the_token(self):
+        member = User(id="m", name="m", email="m@example.com", groups=["team"])
+        self.assertTrue(self.accessible(member))
+
+    def test_ignores_the_email_claim(self):
+        # A user who set another member's email is not a member.
+        other = User(id="o", name="o", email="m@example.com", groups=[])
+        self.assertFalse(self.accessible(other))
+
+
 if __name__ == "__main__":
     unittest.main()
 

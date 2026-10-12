@@ -168,24 +168,6 @@ def start_codebuild_project(environment_variables: dict) -> str:
     return response["build"]["id"]
 
 
-def get_user_cognito_groups(user: User, user_pool_id: str = USER_POOL_ID) -> list[str]:
-    """Retrieve the groups that a Cognito user belongs to."""
-    client = boto3.client("cognito-idp")
-
-    try:
-        response = client.admin_list_groups_for_user(
-            UserPoolId=user_pool_id, Username=user.email
-        )
-        groups = [group["GroupName"] for group in response.get("Groups", [])]
-        logger.debug("Groups for user %s: %s", user.name, groups)
-
-        return groups
-
-    except ClientError:
-        logger.exception("Failed to retrieve groups for user %s", user.name)
-        return []
-
-
 def store_api_key_to_secret_manager(
     user_id: str, bot_id: str, prefix: str, api_key: str
 ) -> str:

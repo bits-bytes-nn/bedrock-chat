@@ -20,6 +20,7 @@ import remarkMath from 'remark-math';
 import 'katex/dist/katex.min.css';
 import { onlyText } from 'react-children-utilities';
 import RelatedDocumentViewer from './RelatedDocumentViewer';
+import { isInlineImageSource } from '../utils/MarkdownUtils';
 
 type Props = BaseProps & {
   children: string;
@@ -303,6 +304,17 @@ const ChatMessageMarkdown: React.FC<Props> = ({
     code: Code,
     sup: Sup,
     section: Section,
+    // Remote images would load as soon as they are rendered, so a prompt-injected
+    // answer could send conversation data to any server in the image URL. They are
+    // shown as links that the user can open.
+    img: ({ node: _node, src, alt, ...props }) =>
+      isInlineImageSource(src) ? (
+        <img src={src} alt={alt} {...props} />
+      ) : (
+        <a href={src} target="_blank" rel="noopener noreferrer nofollow">
+          {alt || src}
+        </a>
+      ),
     // Wide tables scroll instead of widening the message.
     table: ({ node: _node, ...props }) => (
       <div className="overflow-x-auto">

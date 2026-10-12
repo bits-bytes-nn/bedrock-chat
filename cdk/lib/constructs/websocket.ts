@@ -76,13 +76,6 @@ export class WebSocket extends Construct {
       })
     );
     handlerRole.addToPolicy(bedrockChatPolicyStatement());
-    handlerRole.addToPolicy(
-      new iam.PolicyStatement({
-        effect: iam.Effect.ALLOW,
-        actions: ["cognito-idp:AdminListGroupsForUser"],
-        resources: [props.auth.userPool.userPoolArn],
-      })
-    );
 
     // get api key from secrets manager
     handlerRole.addToPolicy(

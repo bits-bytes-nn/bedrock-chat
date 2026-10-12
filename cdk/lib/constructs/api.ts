@@ -160,7 +160,6 @@ export class Api extends Construct {
         effect: iam.Effect.ALLOW,
         actions: [
           "cognito-idp:AdminGetUser",
-          "cognito-idp:AdminListGroupsForUser",
           "cognito-idp:ListUsers",
           "cognito-idp:ListGroups",
         ],
