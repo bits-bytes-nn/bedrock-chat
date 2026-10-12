@@ -9,15 +9,8 @@ security = HTTPBearer()
 
 def get_current_user(token: HTTPAuthorizationCredentials = Depends(security)):
     try:
-        decoded = verify_token(token.credentials)
-        # Return user information
-        return User(
-            id=decoded["sub"],
-            name=decoded["cognito:username"],
-            email=decoded["email"],
-            groups=decoded.get("cognito:groups", []),
-        )
-    except (IndexError, JWTError):
+        return User.from_decoded_token(verify_token(token.credentials))
+    except (KeyError, JWTError):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Could not validate credentials",

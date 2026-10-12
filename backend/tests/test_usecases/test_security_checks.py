@@ -1,4 +1,5 @@
 import sys
+import time
 import unittest
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
@@ -90,14 +91,33 @@ class TestSigningKeys(unittest.TestCase):
 
         self.assertEqual(get.call_count, 1)
 
-    def test_refreshes_once_for_unknown_key(self):
+    def test_refreshes_for_unknown_key_at_most_once_a_minute(self):
+        auth._jwks_cache.update(keys=[{"kid": "k1"}], fetched_at=time.monotonic() - 120)
         with patch.object(
             auth.requests, "get", return_value=self.jwks_response(["k1"])
         ) as get:
-            with self.assertRaises(JWTError):
-                auth._find_signing_key("unknown")
+            for _ in range(2):
+                with self.assertRaises(JWTError):
+                    auth._find_signing_key("unknown")
 
-        self.assertEqual(get.call_count, 2)
+        self.assertEqual(get.call_count, 1)
+
+
+class TestVerifyToken(unittest.TestCase):
+    def decode(self, claims: dict) -> dict:
+        with patch.object(auth, "_find_signing_key"), patch.object(
+            auth.jwt, "get_unverified_header", return_value={}
+        ), patch.object(auth.jwt, "decode", return_value=claims) as decode:
+            result = auth.verify_token("token")
+        self.assertEqual(decode.call_args.kwargs["issuer"], auth.ISSUER)
+        return result
+
+    def test_accepts_id_tokens(self):
+        self.assertEqual(self.decode({"token_use": "id"}), {"token_use": "id"})
+
+    def test_rejects_access_tokens(self):
+        with self.assertRaises(JWTError):
+            self.decode({"token_use": "access"})
 
 
 if __name__ == "__main__":
