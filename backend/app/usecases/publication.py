@@ -189,8 +189,8 @@ def remove_bot_publication(user: User, bot_id: str):
         delete_bot_publication(bot.owner_user_id, bot_id)
         return
 
-    if stack.stack_status == "CREATE_COMPLETED":
-        usage_plan = find_usage_plan_by_id(stack.api_usage_plan_id)  # type: ignore
+    if stack.api_usage_plan_id:
+        usage_plan = find_usage_plan_by_id(stack.api_usage_plan_id)
         for key_id in usage_plan.key_ids:
             delete_api_key(key_id)
 

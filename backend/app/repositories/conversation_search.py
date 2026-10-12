@@ -56,13 +56,14 @@ def find_conversations_by_query(
                             }
                         }
                     },
-                    # Exact match search
+                    # Exact title match. match_phrase does not parse query syntax,
+                    # so quotes and operators in the search text are literal.
                     {
-                        "query_string": {
-                            "query": f'\\"{query}\\"',
-                            "fields": ["Title^3.0"],
-                            "type": "best_fields",
-                            "default_operator": "AND",
+                        "match_phrase": {
+                            "Title": {
+                                "query": query,
+                                "boost": 3.0,
+                            }
                         }
                     },
                 ],

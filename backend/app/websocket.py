@@ -435,8 +435,10 @@ def _error(status_code: int, reason: str) -> dict:
 
 def _session_user_id(connection_id: str) -> str | None:
     """Return the user who sent START on this connection, if any."""
+    # Parts can arrive right after START, so read the latest write.
     item = table.get_item(
-        Key={"ConnectionId": connection_id, "MessagePartId": decimal(0)}
+        Key={"ConnectionId": connection_id, "MessagePartId": decimal(0)},
+        ConsistentRead=True,
     ).get("Item")
     return item.get("UserId") if item else None
 
