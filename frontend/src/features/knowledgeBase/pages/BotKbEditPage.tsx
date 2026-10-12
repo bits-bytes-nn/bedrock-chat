@@ -341,13 +341,6 @@ const BotKbEditPage: React.FC = () => {
       description: t('knowledgeBaseSettings.parsingModel.none.hint'),
     },
     {
-      label: t('knowledgeBaseSettings.parsingModel.claude_3_5_sonnet_v1.label'),
-      value: 'anthropic.claude-3-5-sonnet-v1',
-      description: t(
-        'knowledgeBaseSettings.parsingModel.claude_3_5_sonnet_v1.hint'
-      ),
-    },
-    {
       label: t('knowledgeBaseSettings.parsingModel.claude_3_haiku_v1.label'),
       value: 'anthropic.claude-3-haiku-v1',
       description: t(
@@ -648,7 +641,13 @@ const BotKbEditPage: React.FC = () => {
               ? bot.bedrockGuardrails.relevanceThreshold
               : 0
           );
-          setParsingModel(bot.bedrockKnowledgeBase.parsingModel);
+          setParsingModel(
+            // Claude 3.5 Sonnet is no longer offered by Amazon Bedrock.
+            bot.bedrockKnowledgeBase.parsingModel ===
+              'anthropic.claude-3-5-sonnet-v1'
+              ? 'disabled'
+              : bot.bedrockKnowledgeBase.parsingModel
+          );
           setWebCrawlingScope(
             bot.bedrockKnowledgeBase.webCrawlingScope ?? 'DEFAULT'
           );

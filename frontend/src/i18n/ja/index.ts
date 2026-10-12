@@ -940,10 +940,6 @@ const translation: typeof en = {
           label: 'なし',
           hint: 'ドキュメントの高度な解析機能は適用されません。',
         },
-        claude_3_5_sonnet_v1: {
-          label: 'Claude 3.5 Sonnet v1',
-          hint: 'Claude 3.5 Sonnet v1を使用してドキュメントの高度な解析を行います。',
-        },
         claude_3_haiku_v1: {
           label: 'Claude 3 Haiku v1',
           hint: 'Claude 3 Haiku v1を使用してドキュメントの高度な解析を行います。',

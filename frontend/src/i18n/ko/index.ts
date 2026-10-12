@@ -933,10 +933,6 @@ const translation: typeof en = {
           label: '사용 안 함',
           hint: '고급 파싱을 적용하지 않습니다.',
         },
-        claude_3_5_sonnet_v1: {
-          label: 'Claude 3.5 Sonnet v1',
-          hint: 'Claude 3.5 Sonnet v1을 사용해 문서를 고급 파싱합니다.',
-        },
         claude_3_haiku_v1: {
           label: 'Claude 3 Haiku v1',
           hint: 'Claude 3 Haiku v1을 사용해 문서를 고급 파싱합니다.',

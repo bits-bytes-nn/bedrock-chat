@@ -934,10 +934,6 @@ How would you categorize this email?`,
           label: 'Disabled',
           hint: 'No advanced parsing will be applied.',
         },
-        claude_3_5_sonnet_v1: {
-          label: 'Claude 3.5 Sonnet v1',
-          hint: 'Use Claude 3.5 Sonnet v1 for advanced document parsing.',
-        },
         claude_3_haiku_v1: {
           label: 'Claude 3 Haiku v1',
           hint: 'Use Claude 3 Haiku v1 for advanced document parsing.',

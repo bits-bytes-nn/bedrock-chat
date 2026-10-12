@@ -68,8 +68,11 @@ export const getParsingModel = (
     return undefined;
   }
   switch (parsingModel) {
+    // Bedrock no longer offers these models, so stored bots fall back to the
+    // default parser instead of failing to deploy.
     case "anthropic.claude-3-5-sonnet-v1":
-      return BedrockFoundationModel.ANTHROPIC_CLAUDE_3_5_SONNET_V1_0;
+    case "anthropic.claude-3-sonnet-v1":
+      return undefined;
     case "anthropic.claude-3-haiku-v1":
       return BedrockFoundationModel.ANTHROPIC_CLAUDE_HAIKU_V1_0;
     case "disabled":
