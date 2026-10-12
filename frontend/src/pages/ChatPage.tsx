@@ -169,6 +169,7 @@ const ChatPage: React.FC = () => {
     streamingState,
     conversationError,
     postingMessage,
+    isStreamingHere,
     newChat,
     postChat,
     messages,
@@ -440,6 +441,7 @@ const ChatPage: React.FC = () => {
       if (isNewConversationCommand) {
         event.preventDefault();
 
+        newChat();
         if (botId) {
           navigate(`/bot/${botId}`);
         } else {
@@ -632,13 +634,13 @@ const ChatPage: React.FC = () => {
                       }`}>
                       <ChatMessageWithRelatedDocuments
                         chatContent={message}
-                        isStreaming={postingMessage && isLast}
+                        isStreaming={isStreamingHere && isLast}
                         streamingReasoning={isLast ? streamingState.context.reasoning : ''}
                         streamingTools={isLast ? streamingState.context.tools : NO_TOOLS}
                         streamingRelatedDocuments={
                           isLast ? streamingState.context.relatedDocuments : NO_RELATED_DOCUMENTS
                         }
-                        streamingStateValue={isLast ? (streamingState.value as string) : StreamingState.SLEEPING}
+                        streamingStateValue={isStreamingHere && isLast ? (streamingState.value as string) : StreamingState.SLEEPING}
                         botHasAgent={bot?.hasAgent ?? false}
                         botHasKnowledge={bot?.hasKnowledge ?? false}
                         relatedDocuments={relatedDocuments ?? NO_RELATED_DOCUMENTS}

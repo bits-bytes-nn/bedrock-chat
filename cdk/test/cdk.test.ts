@@ -247,6 +247,19 @@ describe("Bedrock Chat Stack Test", () => {
     );
     expect(actions).not.toContain("bedrock:*");
 
+    // Document uploads are allowed from CloudFront, not from every origin.
+    const regionTemplate = Template.fromStack(bedrockRegionResourcesStack);
+    const bucketCors = Object.values(
+      regionTemplate.findResources("AWS::S3::Bucket")
+    ).flatMap((bucket: any) =>
+      (bucket.Properties.CorsConfiguration?.CorsRules ?? []).flatMap(
+        (rule: any) => rule.AllowedOrigins
+      )
+    );
+    expect(bucketCors).toContain("https://*.cloudfront.net");
+    expect(bucketCors).not.toContain("*");
+    expect(bucketCors.join()).not.toContain("undefined");
+
     // Stack deletion and API Gateway access are limited to the per-bot resources.
     const statements = Object.values(policies).flatMap(
       (policy: any) => policy.Properties.PolicyDocument.Statement

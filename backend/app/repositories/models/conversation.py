@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import logging
 import re
 from pathlib import Path
@@ -159,6 +160,11 @@ class AttachmentContentModel(BaseModel):
 
         # e.g. "document.txt" -> "document"
         name = _convert_to_valid_file_name(path.stem)
+        if name != path.stem:
+            # Converse rejects empty and duplicate names, so names that lost
+            # characters (e.g. Korean names) get a suffix from the original name.
+            digest = hashlib.sha256(path.stem.encode()).hexdigest()[:8]
+            name = f"{name} {digest}".strip()
 
         return (
             format if _is_converse_supported_document_format(format) else None,

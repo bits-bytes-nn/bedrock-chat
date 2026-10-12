@@ -29,10 +29,23 @@ MAX_MERGED_COMPLETION_CHARS = 8 * 1024
 # Time reserved for Lambda to return after the sender has drained.
 SENDER_DRAIN_MARGIN_SECONDS = 5
 
-# Request payloads arrive in parts of up to 32K characters (frontend CHUNK_SIZE).
-# The limit leaves room for the largest attachments the frontend allows.
-MAX_MESSAGE_PART_CHARS = 32 * 1024
-MAX_MESSAGE_PARTS = 400
+# Request payloads arrive in parts of up to 8K characters (frontend CHUNK_SIZE), so
+# that each frame stays within API Gateway's 32 KB frame quota in UTF-8. The part
+# count leaves room for the largest attachments the frontend allows.
+MAX_MESSAGE_PART_CHARS = 8 * 1024
+MAX_MESSAGE_PARTS = 1600
+USER_FACING_MODEL_ERRORS = frozenset(
+    {
+        "ValidationException",
+        "ThrottlingException",
+        "ServiceQuotaExceededException",
+        "ModelTimeoutException",
+        "ModelNotReadyException",
+        "ModelErrorException",
+        "ServiceUnavailableException",
+        "ResourceNotFoundException",
+    }
+)
 
 dynamodb_client = boto3.resource("dynamodb")
 table = dynamodb_client.Table(WEBSOCKET_SESSION_TABLE_NAME)
@@ -283,8 +296,13 @@ def process_chat_input(
     except ClientError as e:
         logger.exception("Bedrock request failed")
         if e.operation_name in ("Converse", "ConverseStream"):
-            # Model errors such as missing model access are actionable for the user.
-            return error_response(502, e.response["Error"]["Message"])
+            code = e.response["Error"]["Code"]
+            # These messages describe the request or the model, not the account.
+            if code in USER_FACING_MODEL_ERRORS:
+                return error_response(502, e.response["Error"]["Message"])
+            if code == "AccessDeniedException":
+                # IAM denials name the role, so keep them out of the response.
+                return error_response(502, "The model is not available.")
         return error_response(500, "Failed to generate the answer.")
 
     except Exception:
@@ -363,18 +381,18 @@ def handler(event, context):
             last_evaluated_key = None
 
             while True:
-                if last_evaluated_key:
-                    response = table.query(
-                        KeyConditionExpression=Key("ConnectionId").eq(connection_id)
-                        # Zero is reserved for user id, so start from 1
-                        & Key("MessagePartId").gte(1),
-                        ExclusiveStartKey=last_evaluated_key,
-                    )
-                else:
-                    response = table.query(
-                        KeyConditionExpression=Key("ConnectionId").eq(connection_id)
-                        & Key("MessagePartId").gte(1),
-                    )
+                response = table.query(
+                    KeyConditionExpression=Key("ConnectionId").eq(connection_id)
+                    # Zero is reserved for user id, so start from 1
+                    & Key("MessagePartId").gte(1),
+                    # END follows the last part immediately, so read the latest writes.
+                    ConsistentRead=True,
+                    **(
+                        {"ExclusiveStartKey": last_evaluated_key}
+                        if last_evaluated_key
+                        else {}
+                    ),
+                )
 
                 message_parts.extend(response["Items"])
 
@@ -435,8 +453,10 @@ def _error(status_code: int, reason: str) -> dict:
 
 def _session_user_id(connection_id: str) -> str | None:
     """Return the user who sent START on this connection, if any."""
+    # Parts can arrive right after START, so read the latest write.
     item = table.get_item(
-        Key={"ConnectionId": connection_id, "MessagePartId": decimal(0)}
+        Key={"ConnectionId": connection_id, "MessagePartId": decimal(0)},
+        ConsistentRead=True,
     ).get("Item")
     return item.get("UserId") if item else None
 

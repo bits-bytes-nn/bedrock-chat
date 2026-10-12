@@ -6,7 +6,11 @@ import { StreamingEvent } from './xstates/streaming';
 import { PostStreamingStatus } from '../constants';
 
 const WS_ENDPOINT: string = import.meta.env.VITE_APP_WS_ENDPOINT;
-const CHUNK_SIZE = 32 * 1024; //32KB
+// API Gateway closes the connection for frames over 32 KB. 8K UTF-16 code units
+// stay below that in UTF-8 even for Korean or Japanese text and JSON escaping.
+const CHUNK_SIZE = 8 * 1024;
+// Each part runs a Lambda invocation, so limit the parts in flight.
+const MAX_PARTS_IN_FLIGHT = 50;
 
 const isHighSurrogate = (charCode: number) =>
   charCode >= 0xd800 && charCode <= 0xdbff;
@@ -62,6 +66,7 @@ const usePostMessageStreaming = create<{
       const chunkedPayloads = chunkPayload(payloadString, CHUNK_SIZE);
 
       let receivedCount = 0;
+      let sentCount = 0;
       let streamEnded = false;
       let failed = false;
       return new Promise<void>((resolve, reject) => {
@@ -76,6 +81,22 @@ const usePostMessageStreaming = create<{
           set({ errorDetail: reason, errorConversationId: input.conversationId });
           ws.close();
           reject(reason);
+        };
+
+        const sendParts = () => {
+          while (
+            sentCount < chunkedPayloads.length &&
+            sentCount - receivedCount < MAX_PARTS_IN_FLIGHT
+          ) {
+            ws.send(
+              JSON.stringify({
+                step: PostStreamingStatus.BODY,
+                index: sentCount,
+                part: chunkedPayloads[sentCount],
+              })
+            );
+            sentCount++;
+          }
         };
 
         ws.onopen = () => {
@@ -99,18 +120,11 @@ const usePostMessageStreaming = create<{
             ) {
               return;
             } else if (message.data === 'Session started.') {
-              chunkedPayloads.forEach((chunk, index) => {
-                ws.send(
-                  JSON.stringify({
-                    step: PostStreamingStatus.BODY,
-                    index,
-                    part: chunk,
-                  })
-                );
-              });
+              sendParts();
               return;
             } else if (message.data === 'Message part received.') {
               receivedCount++;
+              sendParts();
               if (receivedCount === chunkedPayloads.length) {
                 ws.send(
                   JSON.stringify({

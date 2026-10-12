@@ -10,7 +10,7 @@ import { PostMessageRequest } from '../../@types/conversation';
 
 class FakeWebSocket {
   static last: FakeWebSocket;
-  sent: { step: string }[] = [];
+  sent: { step: string; index?: number; part?: string }[] = [];
   onopen?: () => void;
   onmessage?: (message: { data: string }) => void;
   onerror?: (e: unknown) => void;
@@ -99,6 +99,32 @@ describe('usePostMessageStreaming', () => {
     await expect(promise).rejects.toBe(
       i18next.t('error.predict.connectionClosed')
     );
+  });
+
+  test('limits the message parts in flight and sends them in order', async () => {
+    const largeInput = {
+      conversationId: 'conversation',
+      message: 'x'.repeat(8 * 1024 * 60),
+    } as unknown as PostMessageRequest;
+    usePostMessageStreaming
+      .getState()
+      .post({ input: largeInput, handleStreamingEvent: () => {} });
+    await flush();
+    await flush();
+    const ws = FakeWebSocket.last;
+    const bodies = () => ws.sent.filter((m) => m.step === 'BODY');
+
+    ws.receive('Session started.');
+    expect(bodies()).toHaveLength(50);
+
+    while (!ws.sent.some((m) => m.step === 'END')) {
+      ws.receive('Message part received.');
+    }
+    expect(bodies().map((m) => m.index)).toEqual(
+      bodies().map((_, index) => index)
+    );
+    expect(bodies().map((m) => m.part).join('')).toContain('x'.repeat(1000));
+    expect(bodies().every((m) => (m.part ?? '').length <= 8 * 1024)).toBe(true);
   });
 
   test('ignores the API Gateway timeout message', async () => {

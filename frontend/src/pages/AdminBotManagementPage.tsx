@@ -88,7 +88,7 @@ const AdminBotManagementPage: React.FC = () => {
         open(t('bot.error.failDeleteApi'));
       })
       .finally(() => {
-        setIsDeletingApi(true);
+        setIsDeletingApi(false);
       });
   }, [deleteBotPublication, mutateBotPublication, open, t]);
 

@@ -531,6 +531,7 @@ How would you categorize this email?`,
         notSupportedFile: 'This file is not supported.',
         duplicatedFile: 'A file with the same name has been uploaded.',
         failDeleteApi: 'Failed to delete the API.',
+        failSave: 'Failed to save the bot.',
       },
       activeModels: {
         title: 'Model Activation',
@@ -932,10 +933,6 @@ How would you categorize this email?`,
         none: {
           label: 'Disabled',
           hint: 'No advanced parsing will be applied.',
-        },
-        claude_3_5_sonnet_v1: {
-          label: 'Claude 3.5 Sonnet v1',
-          hint: 'Use Claude 3.5 Sonnet v1 for advanced document parsing.',
         },
         claude_3_haiku_v1: {
           label: 'Claude 3 Haiku v1',

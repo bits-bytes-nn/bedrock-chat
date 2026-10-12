@@ -1,7 +1,7 @@
 from typing import Literal
 
 from app.routes.schemas.base import BaseSchema
-from pydantic import Field, root_validator
+from pydantic import Field, model_validator
 
 
 class PublishedApiQuota(BaseSchema):
@@ -9,23 +9,23 @@ class PublishedApiQuota(BaseSchema):
     offset: int | None
     period: Literal["DAY", "WEEK", "MONTH"] | None
 
-    @root_validator(pre=True)
-    def validate_quota(cls, values):
-        limit, period = values.get("limit"), values.get("period")
-        if (limit is None) != (period is None):
+    # Validate after parsing so that camelCase and snake_case input are both checked.
+    @model_validator(mode="after")
+    def validate_quota(self):
+        if (self.limit is None) != (self.period is None):
             raise ValueError("limit and period must both be None or both have values")
-        if limit is not None and limit <= 0:
+        if self.limit is not None and self.limit <= 0:
             raise ValueError("limit must be a positive integer")
-        return values
+        return self
 
 
 class PublishedApiThrottle(BaseSchema):
     rate_limit: float | None
     burst_limit: int | None
 
-    @root_validator(pre=True)
-    def validate_throttle(cls, values):
-        rate_limit, burst_limit = values.get("rate_limit"), values.get("burst_limit")
+    @model_validator(mode="after")
+    def validate_throttle(self):
+        rate_limit, burst_limit = self.rate_limit, self.burst_limit
         if (rate_limit is None) != (burst_limit is None):
             raise ValueError(
                 "rate_limit and burst_limit must both be None or both have values"
@@ -34,7 +34,7 @@ class PublishedApiThrottle(BaseSchema):
             raise ValueError("rate_limit must be a positive number")
         if burst_limit is not None and burst_limit <= 0:
             raise ValueError("burst_limit must be a positive integer")
-        return values
+        return self
 
 
 class BotPublishInput(BaseSchema):
@@ -43,15 +43,14 @@ class BotPublishInput(BaseSchema):
     throttle: PublishedApiThrottle
     allowed_origins: list[str]
 
-    @root_validator(pre=True)
-    def validate_allowed_origins(cls, values):
-        allowed_origins = values.get("allowed_origins", [])
-        for origin in allowed_origins:
+    @model_validator(mode="after")
+    def validate_allowed_origins(self):
+        for origin in self.allowed_origins:
             if not (origin.startswith(("http://", "https://")) or origin == "*"):
                 raise ValueError(
                     f"Invalid origin: {origin}. Origin must start with 'http://' or 'https://' or be '*'"
                 )
-        return values
+        return self
 
 
 class BotPublishOutput(BaseSchema):

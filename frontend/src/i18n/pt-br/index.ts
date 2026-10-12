@@ -821,10 +821,6 @@ Como você categorizaria este e-mail?`,
           label: 'Desativado',
           hint: 'Nenhuma análise avançada será aplicada.',
         },
-        claude_3_5_sonnet_v1: {
-          label: 'Claude 3.5 Sonnet v1',
-          hint: 'Use Claude 3.5 Sonnet v1 para análise avançada de documentos.',
-        },
         claude_3_haiku_v1: {
           label: 'Claude 3 Haiku v1',
           hint: 'Use Claude 3 Haiku v1 para análise avançada de documentos.',

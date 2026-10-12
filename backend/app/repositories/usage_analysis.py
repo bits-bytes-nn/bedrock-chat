@@ -128,8 +128,10 @@ async def run_athena_query(
         logger.debug(f"status: {status}")
         if status == "SUCCEEDED":
             break
-        elif status == "FAILED":
-            reason = query_execution["QueryExecution"]["Status"]["StateChangeReason"]
+        elif status in ("FAILED", "CANCELLED"):
+            reason = query_execution["QueryExecution"]["Status"].get(
+                "StateChangeReason", status
+            )
             logger.error(f"query failed.")
             raise Exception(reason)
         else:

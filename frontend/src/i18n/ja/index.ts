@@ -537,6 +537,7 @@ const translation: typeof en = {
         duplicatedFile:
           '同一ファイル名のファイルが既にアップロードされています。',
         failDeleteApi: 'APIの削除に失敗しました。',
+        failSave: 'ボットを保存できませんでした。',
       },
       activeModels: {
         title: '利用可能なモデル設定',
@@ -938,10 +939,6 @@ const translation: typeof en = {
         none: {
           label: 'なし',
           hint: 'ドキュメントの高度な解析機能は適用されません。',
-        },
-        claude_3_5_sonnet_v1: {
-          label: 'Claude 3.5 Sonnet v1',
-          hint: 'Claude 3.5 Sonnet v1を使用してドキュメントの高度な解析を行います。',
         },
         claude_3_haiku_v1: {
           label: 'Claude 3 Haiku v1',

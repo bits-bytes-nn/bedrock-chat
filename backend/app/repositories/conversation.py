@@ -303,26 +303,10 @@ def update_feedback(
     user_id: str, conversation_id: str, message_id: str, feedback: FeedbackModel
 ):
     logger.info(f"Updating feedback for conversation: {conversation_id}")
-    table = get_conversation_table_client(user_id)
     conv = find_conversation_by_id(user_id, conversation_id)
-    message_map = conv.message_map
-    message_map[message_id].feedback = feedback
-
-    response = table.update_item(
-        Key={
-            "PK": user_id,
-            "SK": compose_conv_id(user_id, conversation_id),
-        },
-        UpdateExpression="set MessageMap = :m",
-        ExpressionAttributeValues={
-            ":m": json.dumps(
-                {k: v.model_dump(by_alias=True) for k, v in message_map.items()}
-            )
-        },
-        ConditionExpression="attribute_exists(PK) AND attribute_exists(SK)",
-        ReturnValues="UPDATED_NEW",
-    )
-    return response
+    conv.message_map[message_id].feedback = feedback
+    # Store the whole conversation so that large message maps stay in S3.
+    store_conversation(user_id, conv)
 
 
 def store_related_documents(

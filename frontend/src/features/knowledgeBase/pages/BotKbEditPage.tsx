@@ -70,13 +70,21 @@ import {
 } from '../types';
 import { toCamelCase } from '../../../utils/StringUtils';
 import useGlobalConfig from '../../../hooks/useGlobalConfig';
+import useSnackbar from '../../../hooks/useSnackbar';
+import { getApiErrorMessage } from '../../../utils/ErrorUtils';
 
 const edgeGenerationParams = EDGE_GENERATION_PARAMS;
 
 const defaultGenerationConfig = DEFAULT_GENERATION_CONFIG;
 
+const RETIRED_PARSING_MODELS: (ParsingModel | undefined)[] = [
+  'anthropic.claude-3-5-sonnet-v1',
+  'anthropic.claude-3-sonnet-v1',
+];
+
 const BotKbEditPage: React.FC = () => {
   const { i18n, t } = useTranslation();
+  const { open: openSnackbar } = useSnackbar();
   // S3 data sources and existing knowledge bases are read with the application's
   // role, so only admins can add them.
   const { isAdmin } = useLoginUser();
@@ -336,13 +344,6 @@ const BotKbEditPage: React.FC = () => {
       label: t('knowledgeBaseSettings.parsingModel.none.label'),
       value: 'disabled',
       description: t('knowledgeBaseSettings.parsingModel.none.hint'),
-    },
-    {
-      label: t('knowledgeBaseSettings.parsingModel.claude_3_5_sonnet_v1.label'),
-      value: 'anthropic.claude-3-5-sonnet-v1',
-      description: t(
-        'knowledgeBaseSettings.parsingModel.claude_3_5_sonnet_v1.hint'
-      ),
     },
     {
       label: t('knowledgeBaseSettings.parsingModel.claude_3_haiku_v1.label'),
@@ -645,7 +646,12 @@ const BotKbEditPage: React.FC = () => {
               ? bot.bedrockGuardrails.relevanceThreshold
               : 0
           );
-          setParsingModel(bot.bedrockKnowledgeBase.parsingModel);
+          setParsingModel(
+            // Retired parsing models are no longer offered by Amazon Bedrock.
+            RETIRED_PARSING_MODELS.includes(bot.bedrockKnowledgeBase.parsingModel)
+              ? 'disabled'
+              : bot.bedrockKnowledgeBase.parsingModel
+          );
           setWebCrawlingScope(
             bot.bedrockKnowledgeBase.webCrawlingScope ?? 'DEFAULT'
           );
@@ -1347,10 +1353,13 @@ const BotKbEditPage: React.FC = () => {
       .then(() => {
         navigate('/bot/my');
       })
-      .catch(() => {
+      .catch((e) => {
+        openSnackbar(getApiErrorMessage(e) ?? t('bot.error.failSave'));
         setIsLoading(false);
       });
   }, [
+    openSnackbar,
+    t,
     isValid,
     registerBot,
     tools,
@@ -1473,11 +1482,14 @@ const BotKbEditPage: React.FC = () => {
         .then(() => {
           navigate('/bot/my');
         })
-        .catch(() => {
+        .catch((e) => {
+          openSnackbar(getApiErrorMessage(e) ?? t('bot.error.failSave'));
           setIsLoading(false);
         });
     }
   }, [
+    openSnackbar,
+    t,
     isValid,
     isNewBot,
     updateBot,

@@ -65,6 +65,15 @@ export class ApiPublishmentStack extends Stack {
       })
     );
     handlerRole.addToPolicy(bedrockChatPolicyStatement());
+    handlerRole.addToPolicy(
+      // Bots with the internet search tool keep their Firecrawl API key here.
+      new iam.PolicyStatement({
+        actions: ["secretsmanager:GetSecretValue"],
+        resources: [
+          `arn:aws:secretsmanager:${this.region}:${this.account}:secret:firecrawl/*/*`,
+        ],
+      })
+    );
     const largeMessageBucket = s3.Bucket.fromBucketName(
       this,
       "LargeMessageBucket",
@@ -135,6 +144,8 @@ export class ApiPublishmentStack extends Stack {
           ENABLE_BEDROCK_CROSS_REGION_INFERENCE:
             props.enableBedrockCrossRegionInference.toString(),
           BEDROCK_REGION: props.bedrockRegion,
+          // Conversations over the DynamoDB item limit are stored in this bucket.
+          LARGE_MESSAGE_BUCKET: props.largeMessageBucketName,
           TABLE_ACCESS_ROLE_ARN: props.tableAccessRoleArn,
           ...props.modelEnvironment,
         },

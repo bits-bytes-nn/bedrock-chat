@@ -144,7 +144,7 @@ class TestProcessChatInput(unittest.TestCase):
             [{"status": "ERROR", "reason": "Failed to generate the answer."}],
         )
 
-    def test_passes_through_bedrock_model_errors(self):
+    def bedrock_error_reason(self, code: str, message: str) -> str:
         sender = NotificationSender(
             endpoint_url="https://example.com/dev", connection_id="connection"
         )
@@ -154,8 +154,7 @@ class TestProcessChatInput(unittest.TestCase):
             message=SimpleNamespace(model="claude-v4.7-opus"),
         )
         error = ClientError(
-            {"Error": {"Code": "AccessDeniedException", "Message": "No access"}},
-            "ConverseStream",
+            {"Error": {"Code": code, "Message": message}}, "ConverseStream"
         )
 
         with patch.object(websocket, "chat", side_effect=error):
@@ -167,8 +166,20 @@ class TestProcessChatInput(unittest.TestCase):
 
         gatewayapi = FakeGatewayApi()
         run_sender(sender, gatewayapi)
+        return gatewayapi.sent[0]["reason"]
 
-        self.assertEqual(gatewayapi.sent, [{"status": "ERROR", "reason": "No access"}])
+    def test_passes_through_bedrock_model_errors(self):
+        self.assertEqual(
+            self.bedrock_error_reason("ValidationException", "Input is too long"),
+            "Input is too long",
+        )
+
+    def test_hides_access_denied_details(self):
+        reason = self.bedrock_error_reason(
+            "AccessDeniedException",
+            "User: arn:aws:sts::123456789012:assumed-role/x is not authorized",
+        )
+        self.assertNotIn("arn:aws", reason)
 
 
 @pytest.fixture

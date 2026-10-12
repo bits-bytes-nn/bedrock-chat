@@ -6,7 +6,6 @@ import {
   HttpMethods,
   ObjectOwnership,
 } from "aws-cdk-lib/aws-s3";
-import { Distribution } from "aws-cdk-lib/aws-cloudfront";
 import { Construct } from "constructs";
 import { Auth } from "./constructs/auth";
 import { Api } from "./constructs/api";
@@ -334,13 +333,13 @@ export class BedrockChatStack extends cdk.Stack {
       idp,
     });
 
-    const cloudFrontWebDistribution = frontend.cloudFrontWebDistribution.node
-      .defaultChild as Distribution;
     props.documentBucket.addCorsRule({
       allowedMethods: [HttpMethods.PUT],
       // Browsers upload documents with presigned URLs from the app origins only.
+      // The bucket is in another stack that the distribution depends on, so its
+      // domain name cannot be referenced here.
       allowedOrigins: [
-        `https://${cloudFrontWebDistribution.distributionDomainName}`, // frontend.getOrigin() is cyclic reference
+        "https://*.cloudfront.net",
         ...(props.alternateDomainName
           ? [`https://${props.alternateDomainName}`]
           : []),

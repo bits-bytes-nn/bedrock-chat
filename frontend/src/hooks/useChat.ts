@@ -88,7 +88,13 @@ const useChatState = create<{
   conversationId: string;
   setConversationId: (s: string) => void;
   postingMessage: boolean;
+  // The conversation that the message is posted to. Other conversations can
+  // still load while it streams.
+  postingConversationId: string | null;
   setPostingMessage: (b: boolean) => void;
+  // Incremented by every new chat, so that a finished new conversation does not
+  // reopen after the user has started another one.
+  newChatCount: number;
   chats: ChatStateType;
   setMessages: (id: string, messageMap: MessageMap) => void;
   copyMessages: (fromId: string, toId: string) => void;
@@ -126,11 +132,14 @@ const useChatState = create<{
       });
     },
     postingMessage: false,
+    postingConversationId: null,
     setPostingMessage: (b) => {
-      set(() => ({
+      set((state) => ({
         postingMessage: b,
+        postingConversationId: b ? state.conversationId : null,
       }));
     },
+    newChatCount: 0,
     chats: {},
     setMessages: (id: string, messageMap: MessageMap) => {
       set((state) => ({
@@ -250,7 +259,10 @@ const useChatState = create<{
       return (
         !!get().conversationId &&
         currentConversation.id === get().conversationId &&
-        !get().postingMessage &&
+        !(
+          get().postingMessage &&
+          get().postingConversationId === currentConversation.id
+        ) &&
         get().currentMessageId !== currentConversation.lastMessageId
       );
     },
@@ -282,6 +294,7 @@ export const useNewChat = () => {
   const setConversationId = useChatState((state) => state.setConversationId);
   const setMessages = useChatState((state) => state.setMessages);
   return useCallback(() => {
+    useChatState.setState((state) => ({ newChatCount: state.newChatCount + 1 }));
     setConversationId('');
     setMessages('', {});
   }, [setConversationId, setMessages]);
@@ -316,6 +329,7 @@ const useChat = () => {
     conversationId,
     setConversationId,
     postingMessage,
+    postingConversationId,
     setPostingMessage,
     setMessages,
     pushMessage,
@@ -502,15 +516,22 @@ const useChat = () => {
       botId: bot?.botId,
       enableReasoning: params.enableReasoning,
     };
+    const newChatCount = useChatState.getState().newChatCount;
     const createNewConversation = () => {
       // Copy State to prevent screen flicker
       copyMessages('', newConversationId);
 
       conversationApi
         .updateTitleWithGeneratedTitle(newConversationId)
+        // The conversation exists without a generated title.
+        .catch((e) => console.error(e))
         .then(() => {
-          // Open the new conversation only if the user is still on the new chat.
-          if (useChatState.getState().conversationId === '') {
+          // Open the new conversation only if the user is still on this new chat.
+          const state = useChatState.getState();
+          if (
+            state.conversationId === '' &&
+            state.newChatCount === newChatCount
+          ) {
             setConversationId(newConversationId);
           }
         })
@@ -749,6 +770,8 @@ const useChat = () => {
     loadingConversation,
     conversationError,
     postingMessage: postingMessage || loadingConversation,
+    // Whether the message being posted belongs to the shown conversation.
+    isStreamingHere: postingMessage && postingConversationId === conversationId,
     isGeneratedTitle,
     setIsGeneratedTitle,
     newChat,
