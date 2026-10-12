@@ -99,11 +99,11 @@ def _delete_if_older(key: str, than) -> None:
         s3_client.delete_object(Bucket=DOCUMENT_BUCKET, Key=key)
 
 
-def _job_name(source_key: str, etag: str) -> str:
+def _job_name(source_key: str, source: dict) -> str:
     # Deterministic per upload, so that starting a conversion twice reuses the job,
-    # while a new upload with the same name gets a new one.
-    digest = hashlib.sha256(f"{source_key}:{etag}".encode()).hexdigest()
-    return TRANSCRIPTION_JOB_PREFIX + digest
+    # while uploading again, even the same bytes, starts a new one.
+    upload = f"{source_key}:{source['ETag']}:{source['LastModified'].isoformat()}"
+    return TRANSCRIPTION_JOB_PREFIX + hashlib.sha256(upload.encode()).hexdigest()
 
 
 def _transcript_key(source_key: str, job_name: str) -> str:
@@ -202,7 +202,7 @@ def start_conversion(source_key: str) -> ConversionStatus:
             ContentType="text/plain; charset=utf-8",
         )
         return ConversionStatus(status="COMPLETED")
-    job_name = _job_name(source_key, source["ETag"])
+    job_name = _job_name(source_key, source)
     try:
         transcribe_client.start_transcription_job(
             TranscriptionJobName=job_name,
@@ -227,7 +227,7 @@ def get_conversion(source_key: str) -> ConversionStatus:
             status="FAILED", reason="The conversion was not started."
         )
 
-    job_name = _job_name(source_key, _source(source_key)["ETag"])
+    job_name = _job_name(source_key, _source(source_key))
     try:
         job = transcribe_client.get_transcription_job(TranscriptionJobName=job_name)[
             "TranscriptionJob"
@@ -243,11 +243,17 @@ def get_conversion(source_key: str) -> ConversionStatus:
     if status != "COMPLETED":
         return ConversionStatus(status="IN_PROGRESS")
 
-    transcript = json.loads(
-        s3_client.get_object(
-            Bucket=DOCUMENT_BUCKET, Key=_transcript_key(source_key, job_name)
-        )["Body"].read()
-    )
+    try:
+        transcript = json.loads(
+            s3_client.get_object(
+                Bucket=DOCUMENT_BUCKET, Key=_transcript_key(source_key, job_name)
+            )["Body"].read()
+        )
+    except s3_client.exceptions.NoSuchKey:
+        # Saving a bot purges its temporary files, including the transcript.
+        return ConversionStatus(
+            status="FAILED", reason="The transcript expired. Upload the file again."
+        )
     text = transcript_to_text(transcript)
     if not text.strip():
         return ConversionStatus(status="FAILED", reason="No speech was detected.")
