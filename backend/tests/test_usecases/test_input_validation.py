@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 sys.path.insert(0, ".")
 
 from app.repositories.common import RecordNotFoundError
-from app.repositories.usage_analysis import _to_datehour_range
+from app.repositories.usage_analysis import _to_datehour_range, _validate_query
 from app.usecases import bot as bot_usecase
 from app.usecases.bot import validate_new_bot_id
 
@@ -39,6 +39,17 @@ class TestToDatehourRange(unittest.TestCase):
     def test_rejects_injection(self):
         with self.assertRaises(ValueError):
             _to_datehour_range("2026101100' OR '1'='1", "2026101123")
+
+
+class TestValidateQuery(unittest.TestCase):
+    def test_rejects_out_of_range_limit(self):
+        for limit in (0, 1001):
+            with self.assertRaises(ValueError):
+                _validate_query(limit, None, None)
+
+    def test_rejects_half_open_period(self):
+        with self.assertRaises(ValueError):
+            _validate_query(10, "2026101100", None)
 
 
 if __name__ == "__main__":

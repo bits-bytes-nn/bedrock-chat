@@ -24,7 +24,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.security import HTTPAuthorizationCredentials
 from pydantic import ValidationError
-from starlette.requests import Request
 from starlette.responses import Response
 from starlette.types import ASGIApp
 
@@ -94,8 +93,6 @@ app.add_exception_handler(RecordNotFoundError, error_handler_factory(404))
 app.add_exception_handler(FileNotFoundError, error_handler_factory(404))
 app.add_exception_handler(RecordAccessNotAllowedError, error_handler_factory(403))
 app.add_exception_handler(ValueError, error_handler_factory(400))
-app.add_exception_handler(TypeError, error_handler_factory(400))
-app.add_exception_handler(AssertionError, error_handler_factory(400))
 app.add_exception_handler(PermissionError, error_handler_factory(403))
 app.add_exception_handler(ValidationError, error_handler_factory(422))
 app.add_exception_handler(ResourceConflictError, error_handler_factory(409))
