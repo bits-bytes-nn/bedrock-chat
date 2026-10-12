@@ -57,7 +57,7 @@ const BotSearchResults: React.FC<BotSearchResultsProps> = ({
         <div className="text-2xl font-bold">
           {t('discover.search.noResults', { query: searchQuery })}
         </div>
-        <div className="mt-1 text-sm text-gray">
+        <div className="mt-1 text-sm text-aws-font-color-light/70 dark:text-gray">
           {t('discover.search.tryDifferent')}
         </div>
         <div className="mt-4">

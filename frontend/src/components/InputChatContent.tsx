@@ -34,6 +34,7 @@ import {
   SUPPORTED_FILE_EXTENSIONS,
   MAX_ATTACHED_FILES,
 } from '../constants/supportedAttachedFiles';
+import { isSubmitEnter } from '../utils/KeyboardUtils';
 
 type Props = BaseProps & {
   disabledSend?: boolean;
@@ -352,8 +353,9 @@ const InputChatContent = forwardRef<HTMLElement, Props>(
 
     useEffect(() => {
       const currentElem = inputRef?.current;
-      const keypressListener = (e: DocumentEventMap['keypress']) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
+      const keydownListener = (e: DocumentEventMap['keydown']) => {
+        // Only the textarea sends; Enter on the buttons in this container clicks them.
+        if (e.target instanceof HTMLTextAreaElement && isSubmitEnter(e)) {
           e.preventDefault();
 
           if (!disabledSend) {
@@ -361,7 +363,7 @@ const InputChatContent = forwardRef<HTMLElement, Props>(
           }
         }
       };
-      currentElem?.addEventListener('keypress', keypressListener);
+      currentElem?.addEventListener('keydown', keydownListener);
 
       const pasteListener = (e: DocumentEventMap['paste']) => {
         const clipboardItems = e.clipboardData?.items;
@@ -382,7 +384,7 @@ const InputChatContent = forwardRef<HTMLElement, Props>(
       currentElem?.addEventListener('paste', pasteListener);
 
       return () => {
-        currentElem?.removeEventListener('keypress', keypressListener);
+        currentElem?.removeEventListener('keydown', keydownListener);
         currentElem?.removeEventListener('paste', pasteListener);
       };
     });
@@ -474,7 +476,7 @@ const InputChatContent = forwardRef<HTMLElement, Props>(
           onDrop={onDrop}
           className={twMerge(
             props.className,
-            'relative mb-7 flex w-11/12 flex-col gap-1 rounded-xl border border-black/10 bg-white shadow-[0_0_30px_7px] shadow-light-gray dark:bg-aws-ui-color-dark dark:shadow-black/35 md:w-10/12 lg:w-4/6 xl:w-3/6'
+            'relative mb-7 flex w-11/12 flex-col gap-1 rounded-xl border border-black/10 bg-white shadow-[0_0_30px_7px] shadow-light-gray focus-within:ring-2 focus-within:ring-aws-sea-blue-light/50 dark:bg-aws-ui-color-dark dark:shadow-black/35 dark:focus-within:ring-aws-font-color-dark/40 md:w-10/12 lg:w-4/6 xl:w-3/6'
           )}>
           <div className="flex w-full">
             <Textarea
@@ -527,7 +529,7 @@ const InputChatContent = forwardRef<HTMLElement, Props>(
                     }}
                   />
                   <ButtonIcon
-                    className="absolute left-0 top-0 -m-2 border border-aws-sea-blue-light bg-white p-1 text-xs text-aws-sea-blue-light dark:border-aws-sea-blue-dark dark:text-aws-sea-blue-dark"
+                    className="absolute left-0 top-0 -m-2 border border-aws-sea-blue-light bg-white p-1 text-xs text-aws-sea-blue-light dark:border-aws-sea-blue-dark dark:text-aws-link-dark"
                     label={t('button.remove')}
                     onClick={() => {
                       removeBase64EncodedImage(idx);
@@ -557,7 +559,7 @@ const InputChatContent = forwardRef<HTMLElement, Props>(
                 <div key={idx} className="relative flex flex-col items-center">
                   <UploadedAttachedFile fileName={file.name} />
                   <ButtonIcon
-                    className="absolute left-2 top-1 -m-2 border border-aws-sea-blue-light bg-white p-1 text-xs text-aws-sea-blue-light dark:border-aws-sea-blue-dark dark:text-aws-sea-blue-dark"
+                    className="absolute left-2 top-1 -m-2 border border-aws-sea-blue-light bg-white p-1 text-xs text-aws-sea-blue-light dark:border-aws-sea-blue-dark dark:text-aws-link-dark"
                     label={t('button.remove')}
                     onClick={() => {
                       removeTextFile(idx);

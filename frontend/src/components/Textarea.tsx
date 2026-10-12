@@ -68,7 +68,7 @@ const Textarea = forwardRef<HTMLElement, Props>((props, focusInputRef) => {
         </div>
       )}
       {props.hint && (
-        <div className="mt-0.5 text-xs text-gray dark:text-aws-font-color-dark">{props.hint}</div>
+        <div className="mt-0.5 text-xs text-aws-font-color-light/70 dark:text-aws-font-color-dark">{props.hint}</div>
       )}
     </div>
   );

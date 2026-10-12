@@ -196,7 +196,7 @@ export const AvailableTools = ({ availableTools, tools, setTools }: Props) => {
                 href="https://docs.aws.amazon.com/bedrock/latest/userguide/conversation-inference-supported-models-features.html"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-aws-sea-blue-light underline dark:text-aws-sea-blue-dark"
+                className="text-aws-sea-blue-light underline dark:text-aws-link-dark"
               />
             ),
           }}

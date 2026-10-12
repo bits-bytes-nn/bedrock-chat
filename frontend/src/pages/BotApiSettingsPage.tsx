@@ -503,7 +503,7 @@ const BotApiSettingsPage: React.FC = () => {
                             />
                           </div>
                           {!errorMessages['requestLimit'] && (
-                            <div className="mt-0.5 text-xs text-gray">
+                            <div className="mt-0.5 text-xs text-aws-font-color-light/70 dark:text-gray">
                               {t('bot.apiSettings.help.requestLimit')}
                             </div>
                           )}
@@ -536,7 +536,7 @@ const BotApiSettingsPage: React.FC = () => {
                                 errorMessage={errorMessages[`origins${idx}`]}
                               />
                               <ButtonIcon
-                                className="text-red"
+                                className="text-red dark:text-red-400"
                                 disabled={disabledCreate}
                                 onClick={() => {
                                   onClickRemoveOrigin(idx);

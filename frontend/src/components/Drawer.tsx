@@ -42,6 +42,7 @@ import Skeleton from './Skeleton';
 import { isPinnedBot } from '../utils/BotUtils';
 import IconPinnedBot from './IconPinnedBot';
 import useGlobalConfig from '../hooks/useGlobalConfig';
+import { isSubmitEnter } from '../utils/KeyboardUtils';
 
 type Props = BaseProps & {
   isAdmin: boolean;
@@ -111,8 +112,8 @@ const Item: React.FC<ItemProps> = (props) => {
 
   useLayoutEffect(() => {
     if (editing) {
-      const listener = (e: DocumentEventMap['keypress']) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
+      const listener = (e: DocumentEventMap['keydown']) => {
+        if (isSubmitEnter(e)) {
           e.preventDefault();
 
           // dispatch 処理の中で Title の更新を行う（同期を取るため）
@@ -124,13 +125,13 @@ const Item: React.FC<ItemProps> = (props) => {
           });
         }
       };
-      inputRef.current?.addEventListener('keypress', listener);
+      inputRef.current?.addEventListener('keydown', listener);
 
       inputRef.current?.focus();
 
       return () => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
-        inputRef.current?.removeEventListener('keypress', listener);
+        inputRef.current?.removeEventListener('keydown', listener);
       };
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

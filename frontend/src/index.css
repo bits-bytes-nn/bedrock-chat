@@ -22,6 +22,12 @@
 .animate-liner-progress {
   animation: liner-progress 1s linear infinite;
 }
+/* Wide display math scrolls instead of overflowing the message. */
+.prose .katex-display {
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
 /* Forcing line breaks in code blocks */
 .prose pre {
   white-space: pre-wrap !important;

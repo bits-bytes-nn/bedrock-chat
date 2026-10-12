@@ -21,6 +21,12 @@ const Alert: React.FC<Props> = (props) => {
     }
   }, [props.severity]);
 
+  // White text is too faint on yellow (2.2:1), and light gray too faint on red and aqua.
+  const textColor =
+    props.severity === 'warning'
+      ? 'text-aws-font-color-light'
+      : 'text-aws-font-color-white-light';
+
   return (
     <div
       className={twMerge(
@@ -33,14 +39,15 @@ const Alert: React.FC<Props> = (props) => {
       {props.title && (
         <div
           className={twMerge(
-            'flex gap-2 px-2 pt-2 font-bold text-aws-font-color-white-light dark:text-aws-font-color-white-dark'
+            'flex gap-2 px-2 pt-2 font-bold',
+            textColor
           )}>
           {icon}
           <div>{props.title}</div>
         </div>
       )}
 
-      <div className="p-2 text-aws-font-color-white-light dark:text-aws-font-color-white-dark">
+      <div className={twMerge('p-2', textColor)}>
         {props.children}
       </div>
     </div>

@@ -68,7 +68,7 @@ const ListItemBot: React.FC<Props> = (props) => {
               : t('bot.label.notAvailable')}
           </div>
         ) : (
-          <div className="mt-1 truncate pr-12 text-xs italic text-gray dark:text-aws-font-color-gray">
+          <div className="mt-1 truncate pr-12 text-xs italic text-aws-font-color-light/70 dark:text-aws-font-color-gray">
             {t('bot.label.noDescription')}
           </div>
         )}

@@ -75,7 +75,7 @@ const ApiKeyItem: React.FC<Props> = (props) => {
                   {t('bot.apiSettings.label.apiKeyDetail.active')}
                 </div>
               ) : (
-                <div className="flex w-24 items-center gap-1 text-red">
+                <div className="flex w-24 items-center gap-1 text-red dark:text-red-400">
                   <PiXCircleBold />
                   {t('bot.apiSettings.label.apiKeyDetail.inactive')}
                 </div>
@@ -98,7 +98,7 @@ const ApiKeyItem: React.FC<Props> = (props) => {
                 <ButtonCopy text={botApiKey?.value ?? ''} className="-my-2" />
                 <Button
                   text
-                  className="-m-2 font-bold text-aws-sea-blue-light dark:text-aws-sea-blue-dark"
+                  className="-m-2 font-bold text-aws-sea-blue-light dark:text-aws-link-dark"
                   onClick={() => {
                     setIsHideKey(!isHideKey);
                   }}>

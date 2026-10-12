@@ -163,7 +163,7 @@ const BotDiscoverPage: React.FC = () => {
             />
             {inputValue && (
               <button
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray hover:text-dark-gray"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-dark-gray dark:text-gray hover:text-dark-gray"
                 onClick={handleClearSearch}>
                 <PiX size={20} />
               </button>
@@ -192,7 +192,7 @@ const BotDiscoverPage: React.FC = () => {
                   <PiCertificate className="mr-2" />
                   {t('discover.essential.label')}
                 </div>
-                <div className="mt-1 text-sm text-gray">
+                <div className="mt-1 text-sm text-aws-font-color-light/70 dark:text-gray">
                   {t('discover.essential.description')}
                 </div>
 
@@ -234,7 +234,7 @@ const BotDiscoverPage: React.FC = () => {
                   <PiRanking className="mr-2" />
                   {t('discover.trending.label')}
                 </div>
-                <div className="mt-1 text-sm text-gray">
+                <div className="mt-1 text-sm text-aws-font-color-light/70 dark:text-gray">
                   {t('discover.trending.description')}
                 </div>
 
@@ -273,7 +273,7 @@ const BotDiscoverPage: React.FC = () => {
                   <PiBinoculars className="mr-2" />
                   {t('discover.discover.label')}
                 </div>
-                <div className="mt-1 text-sm text-gray">
+                <div className="mt-1 text-sm text-aws-font-color-light/70 dark:text-gray">
                   {t('discover.discover.description')}
                 </div>
 

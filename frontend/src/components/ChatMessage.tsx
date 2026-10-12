@@ -190,7 +190,7 @@ const ChatMessage: React.FC<Props> = (props) => {
           </div>
         )}
 
-        <div className="ml-5 grow ">
+        <div className="ml-5 min-w-0 grow">
           {chatContent?.role === 'assistant' &&
             tools != null &&
             tools.length > 0 && (
