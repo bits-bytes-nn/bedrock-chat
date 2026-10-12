@@ -1,6 +1,9 @@
 import { unmarshall } from "@aws-sdk/util-dynamodb";
+import { Aws } from "aws-cdk-lib";
+import { Grant, IGrantable } from "aws-cdk-lib/aws-iam";
 import {
   BedrockFoundationModel,
+  IInvokable,
 } from "@cdklabs/generative-ai-cdk-constructs/lib/cdk-lib/bedrock";
 import {
   HierarchicalChunkingProps,
@@ -61,13 +64,36 @@ export const getEmbeddingModel = (
   }
 };
 
+/**
+ * A global cross-Region inference profile. Invoking it needs access to the profile
+ * and to the model in every Region that the profile routes to.
+ */
+const globalInferenceProfile = (modelId: string): IInvokable => {
+  const invokableArn = `arn:${Aws.PARTITION}:bedrock:${Aws.REGION}:${Aws.ACCOUNT_ID}:inference-profile/global.${modelId}`;
+  return {
+    invokableArn,
+    grantInvoke: (grantee: IGrantable) =>
+      Grant.addToPrincipal({
+        grantee,
+        actions: ["bedrock:InvokeModel"],
+        resourceArns: [
+          invokableArn,
+          `arn:${Aws.PARTITION}:bedrock:*::foundation-model/${modelId}`,
+          `arn:${Aws.PARTITION}:bedrock:::foundation-model/${modelId}`,
+        ],
+      }),
+  };
+};
+
 export const getParsingModel = (
   parsingModel?: string
-): BedrockFoundationModel | undefined => {
+): IInvokable | undefined => {
   if (parsingModel == null) {
     return undefined;
   }
   switch (parsingModel) {
+    case "anthropic.claude-haiku-4-5":
+      return globalInferenceProfile("anthropic.claude-haiku-4-5-20251001-v1:0");
     // Bedrock no longer offers these models, so stored bots fall back to the
     // default parser instead of failing to deploy.
     case "anthropic.claude-3-5-sonnet-v1":

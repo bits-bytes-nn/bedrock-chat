@@ -8,7 +8,11 @@ import {
 import { VectorCollectionStandbyReplicas } from "@cdklabs/generative-ai-cdk-constructs/lib/cdk-lib/opensearchserverless";
 import * as s3 from "aws-cdk-lib/aws-s3";
 import * as iam from "aws-cdk-lib/aws-iam";
-import { BedrockFoundationModel, VectorStoreType } from "@cdklabs/generative-ai-cdk-constructs/lib/cdk-lib/bedrock";
+import {
+  BedrockFoundationModel,
+  IInvokable,
+  VectorStoreType,
+} from "@cdklabs/generative-ai-cdk-constructs/lib/cdk-lib/bedrock";
 import { ChunkingStrategy } from "@cdklabs/generative-ai-cdk-constructs/lib/cdk-lib/bedrock/data-sources/chunking";
 import { S3DataSource } from "@cdklabs/generative-ai-cdk-constructs/lib/cdk-lib/bedrock/data-sources/s3-data-source";
 import {
@@ -55,7 +59,7 @@ interface BedrockCustomBotStackProps extends StackProps {
   // Knowledge base configuration
   readonly knowledgeBaseType: "dedicated" | "shared" | undefined;
   readonly embeddingsModel: BedrockFoundationModel;
-  readonly parsingModel?: BedrockFoundationModel;
+  readonly parsingModel?: IInvokable;
   readonly existKnowledgeBaseId: string | undefined;
   readonly existingS3Urls: string[];
   readonly filenames: string[];
@@ -124,6 +128,8 @@ export class BedrockCustomBotStack extends Stack {
           vectorIndex: vectorIndex,
           instruction: props.instruction,
         });
+        // Parsing runs as the knowledge base role.
+        props.parsingModel?.grantInvoke(kb.role);
         new CfnOutput(this, "KnowledgeBaseId", {
           value: kb.knowledgeBaseId,
         });

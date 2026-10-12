@@ -940,9 +940,13 @@ const translation: typeof en = {
           label: 'なし',
           hint: 'ドキュメントの高度な解析機能は適用されません。',
         },
+        claude_haiku_4_5: {
+          label: 'Claude Haiku 4.5',
+          hint: 'Claude Haiku 4.5でPDFや画像の図、グラフ、表も解析します。',
+        },
         claude_3_haiku_v1: {
-          label: 'Claude 3 Haiku v1',
-          hint: 'Claude 3 Haiku v1を使用してドキュメントの高度な解析を行います。',
+          label: 'Claude 3 Haiku v1 (旧モデル)',
+          hint: 'Claude 3 Haiku v1を使用してドキュメントの高度な解析を行います。一部のリージョンでは利用できません。',
         },
       },
       webCrawlerConfig: {
