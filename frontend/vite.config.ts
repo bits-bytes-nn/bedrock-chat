@@ -43,7 +43,19 @@ export default defineConfig({
           {
             urlPattern: ({ url }) => url.pathname.startsWith('/assets/'),
             handler: 'CacheFirst',
-            options: { cacheName: 'assets' },
+            options: {
+              cacheName: 'assets',
+              plugins: [
+                {
+                  // CloudFront answers missing files with index.html, which
+                  // must not be cached as a stale chunk after a deployment.
+                  cacheWillUpdate: async ({ response }) =>
+                    response.headers.get('content-type')?.includes('text/html')
+                      ? null
+                      : response,
+                },
+              ],
+            },
           },
         ],
       },
