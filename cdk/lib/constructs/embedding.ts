@@ -64,6 +64,17 @@ export class Embedding extends Construct {
     );
     handlerRole.addToPolicy(bedrockIngestionPolicyStatement());
     handlerRole.addToPolicy(
+      // Loading a bot with the internet search tool reads its Firecrawl API key.
+      new iam.PolicyStatement({
+        actions: ["secretsmanager:GetSecretValue"],
+        resources: [
+          `arn:aws:secretsmanager:${Stack.of(this).region}:${
+            Stack.of(this).account
+          }:secret:firecrawl/*/*`,
+        ],
+      })
+    );
+    handlerRole.addToPolicy(
       new iam.PolicyStatement({
         actions: [
           "cloudformation:DescribeStacks",

@@ -144,6 +144,8 @@ export class ApiPublishmentStack extends Stack {
           ENABLE_BEDROCK_CROSS_REGION_INFERENCE:
             props.enableBedrockCrossRegionInference.toString(),
           BEDROCK_REGION: props.bedrockRegion,
+          // Conversations over the DynamoDB item limit are stored in this bucket.
+          LARGE_MESSAGE_BUCKET: props.largeMessageBucketName,
           TABLE_ACCESS_ROLE_ARN: props.tableAccessRoleArn,
           ...props.modelEnvironment,
         },
