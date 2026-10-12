@@ -265,12 +265,15 @@ def handle_check(event):
             status = job["status"]
             match status:
                 case "COMPLETE":
-                    # A job completes even when every document failed to ingest.
-                    failed = job.get("statistics", {}).get("numberOfDocumentsFailed", 0)
+                    # A job completes even when documents failed to ingest. Report
+                    # any failure: a failed upload would otherwise look searchable.
+                    statistics = job.get("statistics", {})
+                    failed = statistics.get("numberOfDocumentsFailed", 0)
                     if failed:
+                        scanned = statistics.get("numberOfDocumentsScanned", 0)
                         reasons = "; ".join(job.get("failureReasons", [])[:3])
                         raise Exception(
-                            f"Ingestion Job '{ingestion_job_id}': {failed} document(s) failed. {reasons}"
+                            f"Ingestion Job '{ingestion_job_id}': {failed} of {scanned} document(s) failed. {reasons}"
                         )
 
                 case "STARTING" | "IN_PROGRESS":

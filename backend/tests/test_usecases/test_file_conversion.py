@@ -168,6 +168,18 @@ class TestConversion(unittest.TestCase):
         ]
         self.assertNotEqual(first, second)
 
+    def test_reports_expired_transcripts(self):
+        key = "u/b/_temp/meeting.mp3"
+        self.s3.put_object(Bucket=BUCKET, Key=key, Body=b"audio")
+        transcribe = MagicMock()
+        transcribe.exceptions.BadRequestException = type("BadRequest", (Exception,), {})
+        transcribe.get_transcription_job.return_value = {
+            "TranscriptionJob": {"TranscriptionJobStatus": "COMPLETED"}
+        }
+        with patch.object(file_conversion, "transcribe_client", transcribe):
+            status = file_conversion.get_conversion(key)
+        self.assertEqual(status.status, "FAILED")
+
     def test_rejects_large_presentations(self):
         key = "u/b/_temp/deck.pptx"
         self.s3.put_object(Bucket=BUCKET, Key=key, Body=presentation())

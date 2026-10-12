@@ -373,6 +373,7 @@ export class Embedding extends Construct {
       payload: sfn.TaskInput.fromObject({
         QueuedBots: sfn.JsonPath.objectAt("$.QueuedBots"),
         SyncStatus: "FAILED",
+        Error: sfn.JsonPath.objectAt("$.Error"),
       }),
       resultPath: sfn.JsonPath.DISCARD,
     })
@@ -516,6 +517,7 @@ export class Embedding extends Construct {
         OwnerUserId: sfn.JsonPath.stringAt("$.OwnerUserId"),
         BotId: sfn.JsonPath.stringAt("$.BotId"),
         SyncStatus: "FAILED",
+        Error: sfn.JsonPath.objectAt("$.Error"),
       }),
       resultPath: sfn.JsonPath.DISCARD,
     });
@@ -731,6 +733,17 @@ export class Embedding extends Construct {
     return startIngestionJob
       .next(
         checkIngestionJob.addRetry({
+          // Transient Lambda errors must not fail a sync whose ingestion is fine.
+          // The default service-exception retry does not cover throttling.
+          errors: [
+            'Lambda.TooManyRequestsException',
+            'Lambda.Unknown',
+          ],
+          interval: Duration.seconds(5),
+          maxAttempts: 6,
+          backoffRate: 2,
+          jitterStrategy: sfn.JitterType.FULL,
+        }).addRetry({
           interval: Duration.seconds(15),
           maxAttempts: timeout.toSeconds() / 15,
           backoffRate: 1,
@@ -738,6 +751,9 @@ export class Embedding extends Construct {
             'RetryException',
           ],
         }).addCatch(ingestionComplete, {
+          // Only an ingestion that outlasts the retries is left to finish in the
+          // background. Other errors, such as failed documents, fail the sync.
+          errors: ['RetryException'],
           resultPath: sfn.JsonPath.stringAt('$.Error'),
         })
       ).next(ingestionComplete)
