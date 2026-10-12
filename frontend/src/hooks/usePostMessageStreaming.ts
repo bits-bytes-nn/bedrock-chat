@@ -33,18 +33,24 @@ export const chunkPayload = (payload: string, chunkSize: number): string[] => {
 const usePostMessageStreaming = create<{
   post: (params: {
     input: PostMessageRequest;
-    hasKnowledge?: boolean;
     handleStreamingEvent: (event: StreamingEvent) => void;
   }) => Promise<void>;
   errorDetail: string | null;
+  /** Conversation that the error belongs to. */
+  errorConversationId: string | null;
   /** Conversation whose last answer stopped at the maximum output tokens. */
   truncatedConversationId: string | null;
 }>((set) => {
   return {
     errorDetail: null,
+    errorConversationId: null,
     truncatedConversationId: null,
     post: async ({ input, handleStreamingEvent }) => {
-      set({ errorDetail: null, truncatedConversationId: null });
+      set({
+        errorDetail: null,
+        errorConversationId: null,
+        truncatedConversationId: null,
+      });
       handleStreamingEvent({ type: 'wakeup' });
 
       const token = (await fetchAuthSession()).tokens?.idToken?.toString();
@@ -67,7 +73,7 @@ const usePostMessageStreaming = create<{
             return;
           }
           failed = true;
-          set({ errorDetail: reason });
+          set({ errorDetail: reason, errorConversationId: input.conversationId });
           ws.close();
           reject(reason);
         };

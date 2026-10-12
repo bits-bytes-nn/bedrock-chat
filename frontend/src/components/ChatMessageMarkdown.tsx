@@ -1,7 +1,8 @@
-import React, { ReactNode, useCallback, useMemo } from 'react';
+import React, { ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
 import { BaseProps } from '../@types/common';
 import Markdown, { MarkdownHooks, Options as MarkdownOptions } from 'react-markdown';
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+// Languages are loaded on first use instead of bundling all of them.
+import { PrismAsyncLight as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import remarkGfm from 'remark-gfm';
 import remarkBreaks from 'remark-breaks';
@@ -14,7 +15,7 @@ import { create } from 'zustand';
 import { produce } from 'immer';
 import rehypeExternalLinks, { Options as RehypeExternalLinksOptions } from 'rehype-external-links';
 import rehypeKatex from 'rehype-katex';
-import rehypeMermaid, { RehypeMermaidOptions } from 'rehype-mermaid';
+import type { RehypeMermaidOptions } from 'rehype-mermaid';
 import remarkMath from 'remark-math';
 import 'katex/dist/katex.min.css';
 import { onlyText } from 'react-children-utilities';
@@ -148,7 +149,20 @@ const ChatMessageMarkdown: React.FC<Props> = ({
     ],
   ], []);
 
-  const rehypeAsyncPlugins = useMemo((): RehypePlugins => [
+  // Mermaid is large, so load it only for messages that contain a diagram.
+  const hasMermaid = children.includes('```mermaid');
+  const [rehypeMermaid, setRehypeMermaid] = useState<
+    typeof import('rehype-mermaid').default | null
+  >(null);
+  useEffect(() => {
+    if (hasMermaid && rehypeMermaid === null) {
+      import('rehype-mermaid').then((module) =>
+        setRehypeMermaid(() => module.default)
+      );
+    }
+  }, [hasMermaid, rehypeMermaid]);
+
+  const rehypeAsyncPlugins = useMemo((): RehypePlugins => rehypeMermaid === null ? rehypePlugins : [
     ...rehypePlugins,
     [
       rehypeMermaid, {
@@ -204,7 +218,7 @@ const ChatMessageMarkdown: React.FC<Props> = ({
         ),
       } as const satisfies RehypeMermaidOptions,
     ],
-  ], [rehypePlugins, t]);
+  ], [rehypePlugins, rehypeMermaid, t]);
 
   type Components = Exclude<MarkdownOptions['components'], null | undefined>
   type CodeComponent = Exclude<Components['code'], keyof JSX.IntrinsicElements | undefined>;
@@ -344,4 +358,4 @@ const CopyToClipboard = ({
   );
 };
 
-export default ChatMessageMarkdown;
+export default React.memo(ChatMessageMarkdown);
