@@ -39,7 +39,7 @@ done
 
 
 # Default parameters
-ALLOW_SELF_REGISTER="true"
+ALLOW_SELF_REGISTER="false"
 ENABLE_LAMBDA_SNAPSTART="false"
 IPV4_RANGES=""
 IPV6_RANGES=""
@@ -53,6 +53,8 @@ VERSION="v3"
 # Parse command-line arguments for customization
 while [[ "$#" -gt 0 ]]; do
     case $1 in
+        --enable-self-register) ALLOW_SELF_REGISTER="true" ;;
+        # Kept for compatibility: self sign-up is disabled by default.
         --disable-self-register) ALLOW_SELF_REGISTER="false" ;;
         --enable-lambda-snapstart) ENABLE_LAMBDA_SNAPSTART="true" ;;
         --disable-ipv6) DISABLE_IPV6="true" ;;
