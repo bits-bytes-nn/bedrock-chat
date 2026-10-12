@@ -98,6 +98,11 @@ def create_bot_publication(user: User, bot_id: str, bot_publish_input: BotPublis
             str(bot_publish_input.allowed_origins).replace(" ", "").replace("'", '"')
         )
 
+    # The published API enforces the same model settings as the main API.
+    for name in ("GLOBAL_AVAILABLE_MODELS", "DEFAULT_MODEL", "TITLE_MODEL"):
+        if os.environ.get(name):
+            environment_variables[name] = os.environ[name]
+
     # Create `ApiPublishmentStack` by CodeBuild
     try:
         build_id = start_codebuild_project(environment_variables=environment_variables)
