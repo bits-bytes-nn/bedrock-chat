@@ -38,7 +38,6 @@ dynamodb_client = boto3.resource("dynamodb")
 table = dynamodb_client.Table(WEBSOCKET_SESSION_TABLE_NAME)
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
 
 
 class _NotifyCommand(TypedDict):

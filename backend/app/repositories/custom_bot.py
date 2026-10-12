@@ -30,7 +30,6 @@ from boto3.dynamodb.conditions import Attr, Key
 from botocore.exceptions import ClientError
 
 logger = logging.getLogger(__name__)
-logger.setLevel("INFO")
 
 
 def store_bot(custom_bot: BotModel):

@@ -29,7 +29,6 @@ if TYPE_CHECKING:
 
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
 
 BEDROCK_REGION = os.environ.get("BEDROCK_REGION", "us-east-1")
 ENABLE_BEDROCK_GLOBAL_INFERENCE = (

@@ -32,7 +32,6 @@ from app.user import User
 from fastapi import APIRouter, Depends, Request
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
 
 router = APIRouter(tags=["bot"])
 

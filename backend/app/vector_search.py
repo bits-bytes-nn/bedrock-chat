@@ -18,7 +18,6 @@ from mypy_boto3_bedrock_agent_runtime.type_defs import (
 )
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
 agent_client = get_bedrock_agent_runtime_client()
 
 

@@ -12,7 +12,6 @@ env_prefix = os.environ.get("ENV_PREFIX", "")
 INDEX_NAME = f"{env_prefix}bot"
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
 
 
 def find_bots_by_query(
@@ -47,7 +46,7 @@ def find_bots_by_query(
         - Admins can see their own private bots (`PK.keyword = admin-user`)
     """
     client = client or get_opensearch_client()
-    logger.info(f"Searching bots with query: {query}")
+    logger.info("Searching bots")
 
     # Include only BOT items
     filter_must = [{"prefix": {"SK.keyword": "BOT"}}]
@@ -149,7 +148,7 @@ def find_bots_by_query(
             BotMeta.from_opensearch_response(hit, user.id)
             for hit in response["hits"]["hits"]
         ]
-        logger.info(f"Found {len(bots)} bots matching query: {query}")
+        logger.info("Found %d bots", len(bots))
         return bots
 
     except Exception as e:

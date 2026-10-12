@@ -7,7 +7,6 @@ from strands import tool
 from strands.types.tools import AgentTool as StrandsAgentTool
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
 
 
 def _get_bedrock_agent_config(bot: BotModel | None):
@@ -180,11 +179,8 @@ def _format_trace_for_client_standalone(trace_logs: list) -> list[dict]:
                 parsed_content = content
                 content_list = []
 
-            logger.info(f"parsed_content: {parsed_content}")
-
             # Process content list
             for model_invocation_content in content_list:
-                logger.info(f"model_invocation_content: {model_invocation_content}")
                 if isinstance(model_invocation_content, dict):
                     traces.append(
                         {
@@ -216,7 +212,7 @@ def create_bedrock_agent_tool(bot: BotModel | None) -> StrandsAgentTool:
         Returns:
             list: Agent response for citation support
         """
-        logger.debug(f"[BEDROCK_AGENT_V3] Starting invocation: query={query}")
+        logger.debug("[BEDROCK_AGENT_V3] Starting invocation")
 
         try:
             # # Bot is captured on closure

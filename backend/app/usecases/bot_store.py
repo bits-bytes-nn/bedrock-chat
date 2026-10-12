@@ -9,7 +9,6 @@ from app.routes.schemas.bot import BotMetaOutput
 from app.user import User
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
 
 
 def search_bots(

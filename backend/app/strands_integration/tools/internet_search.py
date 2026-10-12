@@ -7,7 +7,6 @@ from strands import tool
 from strands.types.tools import AgentTool as StrandsAgentTool
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
 
 
 def _search_with_duckduckgo_standalone(

@@ -57,7 +57,6 @@ from app.vector_search import (
 from ulid import ULID
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
 
 
 def prepare_conversation(

@@ -10,7 +10,6 @@ env_prefix = os.environ.get("ENV_PREFIX", "")
 INDEX_NAME = f"{env_prefix}conversation"
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
 
 
 def find_conversations_by_query(
@@ -24,7 +23,7 @@ def find_conversations_by_query(
     """
     client = client or get_opensearch_client(collection_type="conversation")
 
-    logger.info(f"Searching conversations with query: {query} in index: {INDEX_NAME}")
+    logger.info("Searching conversations in index %s", INDEX_NAME)
 
     # Only search conversations belonging to the user
     # Combining both filtering conditions for more restrictive search
@@ -129,7 +128,7 @@ def find_conversations_by_query(
             except Exception as e:
                 logger.error(f"Error processing hit: {e}, hit: {hit}")
                 continue
-        logger.info(f"Found {len(conversations)} conversations matching query: {query}")
+        logger.info("Found %d conversations", len(conversations))
         return conversations
     except Exception as e:
         logger.error(f"Error searching conversations: {e}")

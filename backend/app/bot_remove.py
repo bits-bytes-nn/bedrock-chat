@@ -1,3 +1,4 @@
+import logging
 import os
 from typing import Any
 
@@ -16,38 +17,24 @@ BEDROCK_REGION = os.environ.get("BEDROCK_REGION", "us-east-1")
 
 s3_client = boto3.client("s3", BEDROCK_REGION)
 
+logger = logging.getLogger(__name__)
+
 
 def delete_custom_bot_stack_by_bot_id(bot_id: str):
     client = boto3.client("cloudformation", BEDROCK_REGION)
-    stack_name = f"BrChatKbStack{bot_id}"
-    try:
-        response = client.delete_stack(StackName=stack_name)
-    except client.exceptions.ClientError:
-        raise RecordNotFoundError()
-    return response
+    # DeleteStack succeeds when the stack does not exist.
+    return client.delete_stack(StackName=f"BrChatKbStack{bot_id}")
 
 
 def delete_from_s3(user_id: str, bot_id: str):
     """Delete all files in S3 bucket for the specified `user_id` and `bot_id`."""
     prefix = f"{user_id}/{bot_id}/"
-    try:
-        # List all objects with the specific prefix
-        objects_to_delete = s3_client.list_objects_v2(
-            Bucket=DOCUMENT_BUCKET, Prefix=prefix
-        )
-        if "Contents" in objects_to_delete:
-            # Prepare the list of objects to delete
-            delete_keys = [{"Key": obj["Key"]} for obj in objects_to_delete["Contents"]]
-            # Delete the objects
-            s3_client.delete_objects(
-                Bucket=DOCUMENT_BUCKET, Delete={"Objects": delete_keys}
-            )
-            print(f"Successfully deleted files from S3 for bot_id: {bot_id}")
-        else:
-            print("No files found to delete in S3.")
-    except Exception as e:
-        print(f"Error deleting files for bot_id: {bot_id}")
-        print(e)
+    paginator = s3_client.get_paginator("list_objects_v2")
+    for page in paginator.paginate(Bucket=DOCUMENT_BUCKET, Prefix=prefix):
+        keys = [{"Key": obj["Key"]} for obj in page.get("Contents", [])]
+        if keys:
+            s3_client.delete_objects(Bucket=DOCUMENT_BUCKET, Delete={"Objects": keys})
+    logger.info("Deleted the S3 files of bot %s", bot_id)
 
 
 def handler(event: dict, context: Any) -> None:
@@ -59,8 +46,6 @@ def handler(event: dict, context: Any) -> None:
     - cloudformation stack (if exists)
     """
 
-    print(f"Received event: {event}")
-
     # NOTE: batch size is 1
     record = event["Records"][0]
 
@@ -68,7 +53,7 @@ def handler(event: dict, context: Any) -> None:
     sk = record["dynamodb"]["Keys"].get("SK", {}).get("S")
     if not sk or "BOT#" not in sk:
         # Ignore non-bot items
-        print(f"Skipping event for SK: {sk}")
+        logger.info("Skipping event for SK: %s", sk)
         return
 
     user_id = pk
@@ -82,7 +67,7 @@ def handler(event: dict, context: Any) -> None:
     try:
         stack = find_stack_by_bot_id(bot_id)
     except RecordNotFoundError:
-        print(f"Bot {bot_id} api published stack not found. Skipping deletion.")
+        logger.info("Bot %s has no published API stack.", bot_id)
         return
 
     # Before delete cfn stack, delete all api keys

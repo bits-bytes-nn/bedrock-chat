@@ -6,7 +6,6 @@ from app.usecases.chat import chat
 from app.user import User
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
 
 
 def handler(event, context):

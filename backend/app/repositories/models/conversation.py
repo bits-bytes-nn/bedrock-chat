@@ -29,9 +29,6 @@ from app.routes.schemas.conversation import (
 )
 from app.utils import generate_presigned_url
 from mypy_boto3_bedrock_runtime.literals import DocumentFormatType, ImageFormatType
-from mypy_boto3_bedrock_runtime.type_defs import (
-    ToolUseBlockOutputTypeDef,
-)
 from pydantic import (
     BaseModel,
     Discriminator,
@@ -42,7 +39,6 @@ from pydantic import (
 )
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
 
 
 class TextContentModel(BaseModel):
@@ -187,14 +183,6 @@ class ToolUseContentModelBody(BaseModel):
     tool_use_id: str
     name: str
     input: dict[str, JsonValue]
-
-    @classmethod
-    def from_tool_use_content(cls, tool_use_content: ToolUseBlockOutputTypeDef) -> Self:
-        return cls(
-            tool_use_id=tool_use_content["toolUseId"],
-            name=tool_use_content["name"],
-            input=tool_use_content["input"],
-        )
 
     @classmethod
     def from_tool_use_content_body(cls, body: ToolUseContentBody) -> Self:

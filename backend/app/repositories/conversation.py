@@ -26,7 +26,6 @@ from botocore.exceptions import ClientError
 from pydantic import TypeAdapter
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
 
 THRESHOLD_LARGE_MESSAGE = 300 * 1024  # 300KB
 LARGE_MESSAGE_BUCKET = os.environ.get("LARGE_MESSAGE_BUCKET")
@@ -275,7 +274,7 @@ def delete_conversation_by_user_id(user_id: str):
 
 
 def change_conversation_title(user_id: str, conversation_id: str, new_title: str):
-    logger.info(f"Updating conversation title: {conversation_id} to {new_title}")
+    logger.info("Updating the title of conversation %s", conversation_id)
     table = get_conversation_table_client(user_id)
 
     try:
@@ -296,8 +295,6 @@ def change_conversation_title(user_id: str, conversation_id: str, new_title: str
             )
         else:
             raise e
-
-    logger.info(f"Updated conversation title response: {response}")
 
     return response
 
@@ -325,7 +322,6 @@ def update_feedback(
         ConditionExpression="attribute_exists(PK) AND attribute_exists(SK)",
         ReturnValues="UPDATED_NEW",
     )
-    logger.info(f"Updated feedback response: {response}")
     return response
 
 

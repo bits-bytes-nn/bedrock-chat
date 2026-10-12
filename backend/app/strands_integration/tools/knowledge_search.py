@@ -6,7 +6,6 @@ from strands import tool
 from strands.types.tools import AgentTool as StrandsAgentTool
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
 
 
 def _search_knowledge_standalone(bot: BotModel, query: str) -> list:
@@ -14,11 +13,11 @@ def _search_knowledge_standalone(bot: BotModel, query: str) -> list:
     try:
         from app.vector_search import search_related_docs
 
-        logger.info(f"Running knowledge search with query: {query}")
+        logger.info("Running knowledge search")
 
         search_results = search_related_docs(bot, query=query)
 
-        logger.info(f"Knowledge search completed. Found {len(search_results)} results")
+        logger.info("Knowledge search found %d results", len(search_results))
         return search_results
 
     except Exception as e:
@@ -43,7 +42,7 @@ def create_knowledge_search_tool(bot: BotModel | None) -> StrandsAgentTool:
         Returns:
             list: Search results for citation support
         """
-        logger.debug(f"[KNOWLEDGE_SEARCH_V3] Starting search: query={query}")
+        logger.debug("[KNOWLEDGE_SEARCH_V3] Starting search")
 
         try:
             # # Bot is captured on closure
