@@ -5,7 +5,6 @@ import os
 from app.model_registry import MODELS
 from app.routes.schemas.conversation import type_model_name
 
-logging.basicConfig(level=logging.INFO, format="%(levelname)s:%(name)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 GLOBAL_AVAILABLE_MODELS = os.environ.get("GLOBAL_AVAILABLE_MODELS")
