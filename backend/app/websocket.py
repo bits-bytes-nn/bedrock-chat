@@ -29,10 +29,9 @@ MAX_MERGED_COMPLETION_CHARS = 8 * 1024
 # Time reserved for Lambda to return after the sender has drained.
 SENDER_DRAIN_MARGIN_SECONDS = 5
 
-# Request payloads arrive in parts of up to 32K characters (frontend CHUNK_SIZE).
-# The limit leaves room for the largest attachments the frontend allows.
-# The client sends parts of up to 8K characters so that each frame stays within
-# API Gateway's 32 KB frame quota in UTF-8.
+# Request payloads arrive in parts of up to 8K characters (frontend CHUNK_SIZE), so
+# that each frame stays within API Gateway's 32 KB frame quota in UTF-8. The part
+# count leaves room for the largest attachments the frontend allows.
 MAX_MESSAGE_PART_CHARS = 8 * 1024
 MAX_MESSAGE_PARTS = 1600
 USER_FACING_MODEL_ERRORS = frozenset(
@@ -44,6 +43,7 @@ USER_FACING_MODEL_ERRORS = frozenset(
         "ModelNotReadyException",
         "ModelErrorException",
         "ServiceUnavailableException",
+        "ResourceNotFoundException",
     }
 )
 
