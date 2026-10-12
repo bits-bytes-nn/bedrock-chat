@@ -214,7 +214,7 @@ const ConversationHistoryPage: React.FC = () => {
           conversations?.map((conversation) => (
             <div
               key={conversation.id}
-              className="group flex cursor-pointer items-center justify-between border-b border-gray p-2 hover:bg-light-gray"
+              className="group flex cursor-pointer items-center justify-between border-b border-gray p-2 hover:bg-light-gray dark:border-dark-gray dark:hover:bg-aws-font-color-dark/10"
               onClick={() => onClickConversation(conversation.id)}>
               <div className="flex flex-col">
                 {editingConversationId === conversation.id ? (
@@ -249,7 +249,7 @@ const ConversationHistoryPage: React.FC = () => {
                       {conversation.title}
                     </div>
                     <ButtonIcon
-                      className="-my-2 mr-6 opacity-0 group-hover:opacity-100"
+                      className="-my-2 mr-6 opacity-0 focus-visible:opacity-100 group-hover:opacity-100 [@media(hover:none)]:opacity-100"
                       onClick={(e) => onClickEdit(e, conversation)}>
                       <PiPencilLine />
                     </ButtonIcon>
@@ -260,7 +260,7 @@ const ConversationHistoryPage: React.FC = () => {
                 </div>
               </div>
               {editingConversationId !== conversation.id && (
-                <div className="flex items-center opacity-0 group-hover:opacity-100">
+                <div className="flex items-center opacity-0 focus-within:opacity-100 group-hover:opacity-100 [@media(hover:none)]:opacity-100">
                   <ButtonIcon onClick={(e) => onClickDelete(e, conversation)}>
                     <PiTrash />
                   </ButtonIcon>

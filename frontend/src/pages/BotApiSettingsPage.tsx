@@ -21,6 +21,7 @@ import DialogConfirmAddApiKey from '../components/DialogConfirmAddApiKey';
 import Help from '../components/Help';
 import DialogConfirmDeleteApi from '../components/DialogConfirmDeleteApi';
 import useSnackbar from '../hooks/useSnackbar';
+import { getApiErrorMessage } from '../utils/ErrorUtils';
 import DialogShareBot from '../components/DialogShareBot';
 import useShareBot from '../hooks/useShareBot';
 import IconPinnedBot from '../components/IconPinnedBot';
@@ -127,8 +128,11 @@ const BotApiSettingsPage: React.FC = () => {
     setOrigins(botPublication.allowedOrigins);
   }, [botPublication]);
 
+  const { open } = useSnackbar();
+  const [hasFailedDeploy, setHasFailedDeploy] = useState(false);
   const clearApiSettings = useCallback(() => {
     setHasCreated(false);
+    setHasFailedDeploy(false);
     setEnabledThrottle(true);
     setEnabledQuota(true);
     setRateLimit(null);
@@ -138,7 +142,6 @@ const BotApiSettingsPage: React.FC = () => {
     setOrigins(['']);
   }, []);
 
-  const [hasFailedDeploy, setHasFailedDeploy] = useState(false);
   useEffect(() => {
     setHasFailedDeploy(false);
     if (!botPublication) {
@@ -206,11 +209,15 @@ const BotApiSettingsPage: React.FC = () => {
         .then(() => {
           mutateBotPublication();
         })
+        .catch((e) => {
+          open(getApiErrorMessage(e) ?? t('bot.error.failPublish'));
+        })
         .finally(() => {
           setIsLoading(false);
         });
     }
   }, [
+    open,
     burstLimit,
     clearErrorMessages,
     enabledQuota,
@@ -258,16 +265,24 @@ const BotApiSettingsPage: React.FC = () => {
     [createApiKey, mutateBotPublication]
   );
 
-  const { open } = useSnackbar();
   const [isOpenDeleteApiDialog, setIsOpenDeleteApiDialog] = useState(false);
   const deleteApi = useCallback(() => {
     clearApiSettings();
     setIsOpenDeleteApiDialog(false);
-    deleteBotPublication().catch(() => {
-      fillApiSettings();
-      open(t('bot.error.failDeleteApi'));
-    });
-  }, [clearApiSettings, deleteBotPublication, fillApiSettings, open, t]);
+    deleteBotPublication()
+      .then(() => mutateBotPublication())
+      .catch(() => {
+        fillApiSettings();
+        open(t('bot.error.failDeleteApi'));
+      });
+  }, [
+    clearApiSettings,
+    deleteBotPublication,
+    fillApiSettings,
+    mutateBotPublication,
+    open,
+    t,
+  ]);
 
   const { updateSharedScope, updateSharedUsersAndGroups } = useShareBot({
     botId,

@@ -1,3 +1,4 @@
+import { SWRConfiguration } from 'swr';
 import useHttp from './useHttp';
 import {
   CreateBotPublicationApiKeyRequest,
@@ -16,11 +17,16 @@ const useBotPublicationApi = () => {
   const http = useHttp();
 
   return {
-    getBotPublication: (botId?: string, req?: GetBotPublicationRequest) => {
+    getBotPublication: (
+      botId?: string,
+      req?: GetBotPublicationRequest,
+      config?: SWRConfiguration<GetBotPublicationResponse>
+    ) => {
       return http.get<GetBotPublicationResponse>(
         botId ? [`/bot/${botId}/publication`, req] : null,
         {
           errorRetryCount: 0,
+          ...config,
         }
       );
     },

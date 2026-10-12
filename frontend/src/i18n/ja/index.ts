@@ -538,6 +538,8 @@ const translation: typeof en = {
         duplicatedFile:
           '同一ファイル名のファイルが既にアップロードされています。',
         failDeleteApi: 'APIの削除に失敗しました。',
+        failDelete: 'ボットを削除できませんでした。',
+        failPublish: 'APIを公開できませんでした。',
         failSave: 'ボットを保存できませんでした。',
       },
       activeModels: {

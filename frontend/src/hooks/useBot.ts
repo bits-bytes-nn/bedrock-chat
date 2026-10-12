@@ -185,7 +185,9 @@ const useBot = (shouldAutoRefreshMyBots?: boolean) => {
       const idx = myBots?.findIndex((bot) => bot.id === botId) ?? -1;
       mutateMyBots(
         produce(myBots, (draft) => {
-          draft?.splice(idx, 1);
+          if (idx > -1) {
+            draft?.splice(idx, 1);
+          }
         }),
         {
           revalidate: false,
