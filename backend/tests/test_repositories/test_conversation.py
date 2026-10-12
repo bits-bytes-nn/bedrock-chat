@@ -1,11 +1,14 @@
 import base64
-import json
 import os
 import sys
 import unittest
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
+
+import boto3
+import pytest
 
 sys.path.insert(0, ".")
+from app.repositories import conversation as conversation_repository
 from app.repositories.conversation import (
     ConversationModel,
     MessageModel,
@@ -29,33 +32,23 @@ from app.repositories.models.conversation import (
 )
 
 
+@pytest.mark.usefixtures("dynamodb_tables")
 class TestConversationRepository(unittest.TestCase):
+    """Runs against in-memory DynamoDB and S3 (moto)."""
+
     def setUp(self):
-        self.patcher1 = patch("boto3.resource")
-        self.patcher2 = patch("app.repositories.conversation.s3_client")
-        self.mock_boto3_resource = self.patcher1.start()
-        self.mock_s3_client = self.patcher2.start()
-
-        self.mock_table = MagicMock()
-        self.mock_boto3_resource.return_value.Table.return_value = self.mock_table
-
-        # Set up environment variables
-        os.environ["CONVERSATION_TABLE_NAME"] = "test-table"
-        os.environ["CONVERSATION_BUCKET_NAME"] = "test-bucket"
-        os.environ["LARGE_MESSAGE_BUCKET"] = "test-large-message-bucket"
-        os.environ["BEDROCK_REGION"] = "us-east-1"
-
-        self.title_updated = False
-        self.feedback_updated = False
-        self.conversation_deleted = False
+        boto3.client("s3", region_name="us-east-1").create_bucket(
+            Bucket="test-large-message-bucket"
+        )
+        self.bucket_patcher = patch.object(
+            conversation_repository,
+            "LARGE_MESSAGE_BUCKET",
+            "test-large-message-bucket",
+        )
+        self.bucket_patcher.start()
 
     def tearDown(self):
-        self.patcher1.stop()
-        self.patcher2.stop()
-        os.environ.pop("CONVERSATION_TABLE_NAME", None)
-        os.environ.pop("CONVERSATION_BUCKET_NAME", None)
-        os.environ.pop("LARGE_MESSAGE_BUCKET", None)
-        os.environ.pop("BEDROCK_REGION", None)
+        self.bucket_patcher.stop()
 
     def test_store_and_find_conversation(self):
         conversation = ConversationModel(
@@ -118,69 +111,9 @@ class TestConversationRepository(unittest.TestCase):
             should_continue=False,
         )
 
-        # Mock the responses
-        self.mock_table.put_item.return_value = {
-            "ResponseMetadata": {"HTTPStatusCode": 200}
-        }
-
-        def mock_query_side_effect(**kwargs):
-            if self.conversation_deleted:
-                return {"Items": []}
-
-            if "IndexName" in kwargs and kwargs["IndexName"] == "SKIndex":
-                message_map = conversation.model_dump()["message_map"]
-                if self.feedback_updated:
-                    message_map["a"]["feedback"] = {
-                        "thumbs_up": True,
-                        "category": "Good",
-                        "comment": "The response is pretty good.",
-                    }
-                return {
-                    "Items": [
-                        {
-                            "PK": "user",
-                            "SK": "user#CONV#1",
-                            "Title": (
-                                "Updated title"
-                                if self.title_updated
-                                else "Test Conversation"
-                            ),
-                            "CreateTime": 1627984879.9,
-                            "TotalPrice": 100,
-                            "LastMessageId": "x",
-                            "MessageMap": json.dumps(message_map),
-                            "IsLargeMessage": False,
-                            "ShouldContinue": False,
-                        }
-                    ]
-                }
-            return {
-                "Items": (
-                    []
-                    if self.conversation_deleted
-                    else [
-                        {
-                            "PK": "user",
-                            "SK": "user#CONV#1",
-                            "Title": "Test Conversation",
-                            "CreateTime": 1627984879.9,
-                            "TotalPrice": 100,
-                            "LastMessageId": "x",
-                            "MessageMap": json.dumps(
-                                conversation.model_dump()["message_map"]
-                            ),
-                            "IsLargeMessage": False,
-                            "ShouldContinue": False,
-                        }
-                    ]
-                )
-            }
-
-        self.mock_table.query.side_effect = mock_query_side_effect
-
         # Test storing conversation
-        response = store_conversation("user", conversation)
-        self.assertIsNotNone(response)
+        store_conversation("user", conversation)
+        self.assertEqual(conversation.version, 1)
 
         # Test finding conversation by user_id
         conversations = find_conversation_by_user_id(user_id="user")
@@ -231,11 +164,6 @@ class TestConversationRepository(unittest.TestCase):
         )
 
         # Test update title
-        self.title_updated = True
-        self.mock_table.update_item.return_value = {
-            "Attributes": {"Title": "Updated title"},
-            "ResponseMetadata": {"HTTPStatusCode": 200},
-        }
         response = change_conversation_title(
             user_id="user",
             conversation_id="1",
@@ -248,7 +176,6 @@ class TestConversationRepository(unittest.TestCase):
 
         # Test give a feedback
         self.assertIsNone(found_conversation.message_map["a"].feedback)
-        self.feedback_updated = True
         response = update_feedback(
             user_id="user",
             conversation_id="1",
@@ -267,12 +194,14 @@ class TestConversationRepository(unittest.TestCase):
         self.assertEqual(feedback.comment, "The response is pretty good.")  # type: ignore
 
         # Test deleting conversation by id
-        self.conversation_deleted = True
         delete_conversation_by_id(user_id="user", conversation_id="1")
         with self.assertRaises(RecordNotFoundError):
             find_conversation_by_id("user", "1")
 
-        response = store_conversation(user_id="user", conversation=conversation)
+        # A copy read before the deletion cannot bring the conversation back.
+        with self.assertRaises(RecordNotFoundError):
+            store_conversation(user_id="user", conversation=conversation)
+        store_conversation("user", conversation.model_copy(update={"version": 0}))
 
         # Test deleting conversation by user_id
         delete_conversation_by_user_id(user_id="user")
@@ -312,82 +241,9 @@ class TestConversationRepository(unittest.TestCase):
             should_continue=False,
         )
 
-        # Mock responses
-        self.mock_table.put_item.return_value = {
-            "ResponseMetadata": {"HTTPStatusCode": 200}
-        }
-        self.mock_s3_client.put_object.return_value = {
-            "ResponseMetadata": {"HTTPStatusCode": 200}
-        }
-
-        def mock_query_side_effect(**kwargs):
-            if self.conversation_deleted:
-                return {"Items": []}
-
-            if "IndexName" in kwargs and kwargs["IndexName"] == "SKIndex":
-                return {
-                    "Items": [
-                        {
-                            "PK": "user",
-                            "SK": "user#CONV#2",
-                            "Title": "Large Conversation",
-                            "CreateTime": 1627984879.9,
-                            "TotalPrice": 200,
-                            "LastMessageId": "msg_9",
-                            "IsLargeMessage": True,
-                            "LargeMessagePath": "user/2/message_map.json",
-                            "MessageMap": json.dumps(
-                                {
-                                    "system": {
-                                        "role": "system",
-                                        "content": [
-                                            {
-                                                "content_type": "text",
-                                                "body": "Hello",
-                                                "media_type": None,
-                                            }
-                                        ],
-                                        "model": "claude-v3-haiku",
-                                        "children": [],
-                                        "parent": None,
-                                        "create_time": 1627984879.9,
-                                        "feedback": None,
-                                        "used_chunks": None,
-                                        "thinking_log": None,
-                                    }
-                                }
-                            ),
-                            "ShouldContinue": False,
-                        }
-                    ]
-                }
-            return {"Items": []}
-
-        self.mock_table.query.side_effect = mock_query_side_effect
-
-        message_map_json = json.dumps(
-            {
-                k: {
-                    "role": v.role,
-                    "content": [c.model_dump() for c in v.content],
-                    "model": v.model,
-                    "children": v.children,
-                    "parent": v.parent,
-                    "create_time": v.create_time,
-                    "feedback": v.feedback,
-                    "used_chunks": v.used_chunks,
-                    "thinking_log": v.thinking_log,
-                }
-                for k, v in large_message_map.items()
-            }
-        )
-        self.mock_s3_client.get_object.return_value = {
-            "Body": MagicMock(read=lambda: message_map_json.encode())
-        }
-
         # Test storing large conversation
-        response = store_conversation("user", large_conversation, threshold=1)
-        self.assertIsNotNone(response)
+        store_conversation("user", large_conversation, threshold=1)
+        self.assertEqual(large_conversation.version, 1)
 
         # Test finding large conversation by id
         found_conversation = find_conversation_by_id(
@@ -415,13 +271,18 @@ class TestConversationRepository(unittest.TestCase):
             self.assertEqual(message.create_time, 1627984879.9)
 
         # Test deleting large conversation
-        self.conversation_deleted = True
         delete_conversation_by_id(user_id="user", conversation_id="2")
         with self.assertRaises(RecordNotFoundError):
             find_conversation_by_id("user", "2")
 
-        store_conversation(user_id="user", conversation=large_conversation)
+        store_conversation(
+            "user", large_conversation.model_copy(update={"version": 0}), threshold=1
+        )
         delete_conversation_by_user_id(user_id="user")
+        objects = boto3.client("s3", region_name="us-east-1").list_objects_v2(
+            Bucket="test-large-message-bucket"
+        )
+        self.assertNotIn("Contents", objects)
         conversations = find_conversation_by_user_id(user_id="user")
         self.assertEqual(len(conversations), 0)
 

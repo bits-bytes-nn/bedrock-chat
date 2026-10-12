@@ -35,6 +35,7 @@ from pydantic import (
     Discriminator,
     Field,
     JsonValue,
+    PrivateAttr,
     field_validator,
     model_validator,
 )
@@ -551,6 +552,72 @@ class ConversationModel(BaseModel):
     last_message_id: str
     bot_id: str | None
     should_continue: bool
+    # Incremented by every write, for optimistic locking.
+    version: int = 0
+    # The conversation as last read from or written to the store. Used to merge
+    # this copy with a concurrent write.
+    _stored: ConversationModel | None = PrivateAttr(default=None)
+
+    def mark_stored(self) -> None:
+        # Drop the old snapshot first so that it is not copied into the new one.
+        self._stored = None
+        self._stored = self.model_copy(deep=True)
+
+
+def _merge_children(base: list[str], mine: list[str], theirs: list[str]) -> list[str]:
+    removed = set(base) - set(mine)
+    added = [child for child in mine if child not in base and child not in theirs]
+    return [child for child in theirs if child not in removed] + added
+
+
+def merge_conversations(
+    base: ConversationModel | None,
+    mine: ConversationModel,
+    theirs: ConversationModel,
+) -> ConversationModel:
+    """Apply the changes from `base` to `mine` on top of `theirs`.
+
+    Messages are tree nodes with unique ids, so changes by different writers merge
+    by node and by field. Where both changed the same field, `mine` wins.
+    """
+    base_messages = base.message_map if base else {}
+    merged = theirs.model_copy(deep=True)
+    message_map = merged.message_map
+
+    for message_id in set(base_messages) - set(mine.message_map):
+        message_map.pop(message_id, None)
+
+    for message_id, message in mine.message_map.items():
+        base_message = base_messages.get(message_id)
+        if base_message is not None and message == base_message:
+            continue
+        target = message_map.get(message_id)
+        if target is None or base_message is None:
+            # Added by this writer, or removed by the other one.
+            target = message.model_copy(deep=True)
+            if message_id in theirs.message_map:
+                target.children = _merge_children(
+                    [], message.children, theirs.message_map[message_id].children
+                )
+            message_map[message_id] = target
+            continue
+        for field in MessageModel.model_fields:
+            if field == "children":
+                target.children = _merge_children(
+                    base_message.children, message.children, target.children
+                )
+            elif getattr(message, field) != getattr(base_message, field):
+                setattr(target, field, getattr(message, field))
+
+    if base is None:
+        merged.total_price = theirs.total_price + mine.total_price
+    else:
+        merged.total_price = theirs.total_price + mine.total_price - base.total_price
+    for field in ("title", "last_message_id", "should_continue"):
+        if base is None or getattr(mine, field) != getattr(base, field):
+            setattr(merged, field, getattr(mine, field))
+    merged.version = theirs.version
+    return merged
 
 
 class ConversationMeta(BaseModel):
