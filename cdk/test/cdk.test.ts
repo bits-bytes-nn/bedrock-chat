@@ -247,6 +247,23 @@ describe("Bedrock Chat Stack Test", () => {
     );
     expect(actions).not.toContain("bedrock:*");
 
+    // Stack deletion and API Gateway access are limited to the per-bot resources.
+    const statements = Object.values(policies).flatMap(
+      (policy: any) => policy.Properties.PolicyDocument.Statement
+    );
+    for (const statement of statements) {
+      const statementActions = [statement.Action].flat();
+      if (
+        statementActions.some(
+          (action: string) =>
+            action === "cloudformation:DeleteStack" ||
+            action.startsWith("apigateway:")
+        )
+      ) {
+        expect([statement.Resource].flat()).not.toContain("*");
+      }
+    }
+
     // Alarms and API throttling.
     template.resourceCountIs("AWS::CloudWatch::Alarm", 4);
     template.hasResourceProperties("AWS::ApiGatewayV2::Stage", {
@@ -256,6 +273,7 @@ describe("Bedrock Chat Stack Test", () => {
     template.hasResourceProperties("AWS::ApiGatewayV2::Stage", {
       StageName: "$default",
       DefaultRouteSettings: Match.objectLike({ ThrottlingBurstLimit: 1000 }),
+      AccessLogSettings: Match.objectLike({ DestinationArn: Match.anyValue() }),
     });
     expect(actions).toContain("bedrock:InvokeModelWithResponseStream");
   });

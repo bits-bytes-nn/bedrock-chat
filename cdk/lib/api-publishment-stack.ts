@@ -83,7 +83,8 @@ export class ApiPublishmentStack extends Stack {
         }
       ),
       memorySize: 1024,
-      timeout: cdk.Duration.minutes(15),
+      // API Gateway ends the request after 29 seconds, so a longer run is wasted.
+      timeout: cdk.Duration.seconds(30),
       environment: {
         PUBLISHED_API_ID: id.replace("ApiPublishmentStack", ""),
         QUEUE_URL: chatQueue.queueUrl,

@@ -2,6 +2,10 @@ import { Construct } from "constructs";
 import * as path from "path";
 import { Duration, RemovalPolicy, Stack } from "aws-cdk-lib";
 import * as iam from "aws-cdk-lib/aws-iam";
+import {
+  botStackPolicyStatement,
+  publishedApiKeyPolicyStatement,
+} from "../utils/publication-policies";
 import * as logs from "aws-cdk-lib/aws-logs";
 import { IBucket } from "aws-cdk-lib/aws-s3";
 import * as lambda from "aws-cdk-lib/aws-lambda";
@@ -593,6 +597,12 @@ export class Embedding extends Construct {
 
     return new sfn.StateMachine(this, "StateMachine", {
       definitionBody: sfn.DefinitionBody.fromChainable(definition),
+      logs: {
+        destination: new logs.LogGroup(this, "StateMachineLogs", {
+          retention: logs.RetentionDays.THREE_MONTHS,
+        }),
+        level: sfn.LogLevel.ERROR,
+      },
     });
   }
 
@@ -608,30 +618,9 @@ export class Embedding extends Construct {
       })
     );
     removeHandlerRole.addToPolicy(
-      new iam.PolicyStatement({
-        effect: iam.Effect.ALLOW,
-        actions: [
-          "cloudformation:DescribeStacks",
-          "cloudformation:DescribeStackEvents",
-          "cloudformation:DescribeStackResource",
-          "cloudformation:DescribeStackResources",
-          "cloudformation:DeleteStack",
-        ],
-        resources: [`*`],
-      })
+      botStackPolicyStatement(Stack.of(this), ["ApiPublishmentStack", "BrChatKbStack"])
     );
-    removeHandlerRole.addToPolicy(
-      new iam.PolicyStatement({
-        effect: iam.Effect.ALLOW,
-        actions: [
-          "apigateway:GET",
-          "apigateway:POST",
-          "apigateway:PUT",
-          "apigateway:DELETE",
-        ],
-        resources: [`arn:aws:apigateway:${Stack.of(this).region}::/*`],
-      })
-    );
+    removeHandlerRole.addToPolicy(publishedApiKeyPolicyStatement(Stack.of(this)));
     removeHandlerRole.addToPolicy(
       new iam.PolicyStatement({
         actions: [

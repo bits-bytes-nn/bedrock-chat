@@ -4,7 +4,7 @@ Description: A template to deploy the Bedrock-Claude Chat application with custo
 Parameters:
   AllowSelfRegister:
     Type: String
-    Default: "true"
+    Default: "false"
   EnableLambdaSnapStart:
     Type: String
     Default: "false"
