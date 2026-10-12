@@ -101,3 +101,77 @@ class TestSigningKeys(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestChatInputValidation(unittest.TestCase):
+    def message(self, **overrides) -> dict:
+        return {
+            "role": "user",
+            "content": [{"content_type": "text", "body": "hi"}],
+            "model": "claude-v5.5-haiku",
+            "parent_message_id": None,
+            **overrides,
+        }
+
+    def test_rejects_non_user_roles(self):
+        from app.routes.schemas.conversation import MessageInput
+        from pydantic import ValidationError
+
+        with self.assertRaises(ValidationError):
+            MessageInput.model_validate(self.message(role="assistant"))
+
+    def test_rejects_tool_content(self):
+        from app.routes.schemas.conversation import MessageInput
+        from pydantic import ValidationError
+
+        tool_use = {
+            "content_type": "toolUse",
+            "body": {"tool_use_id": "1", "name": "tool", "input": {}},
+        }
+        with self.assertRaises(ValidationError):
+            MessageInput.model_validate(self.message(content=[tool_use]))
+
+
+class TestPrepareConversation(unittest.TestCase):
+    def chat_input(self, bot_id=None, message_id=None):
+        from app.routes.schemas.conversation import ChatInput
+
+        return ChatInput.model_validate(
+            {
+                "conversation_id": "c",
+                "message": {
+                    "role": "user",
+                    "content": [{"content_type": "text", "body": "hi"}],
+                    "model": "claude-v5.5-haiku",
+                    "parent_message_id": None,
+                    "message_id": message_id,
+                },
+                "bot_id": bot_id,
+            }
+        )
+
+    def conversation(self, bot_id=None):
+        return SimpleNamespace(
+            bot_id=bot_id,
+            last_message_id="system",
+            message_map={"system": message(None)},
+        )
+
+    def test_rejects_a_different_bot_for_an_existing_conversation(self):
+        with patch.object(
+            chat_usecase, "find_conversation_by_id", return_value=self.conversation()
+        ):
+            with self.assertRaises(ValueError):
+                chat_usecase.prepare_conversation(USER, self.chat_input(bot_id="bot"))
+
+    def test_rejects_reserved_message_ids(self):
+        for message_id in ("system", "instruction"):
+            with patch.object(
+                chat_usecase,
+                "find_conversation_by_id",
+                return_value=self.conversation(),
+            ):
+                with self.assertRaises(ValueError):
+                    chat_usecase.prepare_conversation(
+                        USER, self.chat_input(message_id=message_id)
+                    )

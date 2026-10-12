@@ -76,6 +76,10 @@ def prepare_conversation(
             parent_id = "instruction"
         elif chat_input.message.parent_message_id is None:
             parent_id = conversation.last_message_id
+        # The bot is fixed when a conversation starts. Switching it would skip the
+        # bot's model allowlist and instruction.
+        if chat_input.bot_id != conversation.bot_id:
+            raise ValueError("The bot does not match the conversation.")
         if chat_input.bot_id:
             logger.info("Bot id is provided. Fetching bot.")
             owned, bot = fetch_bot(user, chat_input.bot_id)
@@ -128,16 +132,11 @@ def prepare_conversation(
             )
             initial_message_map["system"].children.append("instruction")
 
-            if not owned:
-                try:
-                    # Check alias is already created
-                    alias_exists(user.id, chat_input.bot_id)
-                except RecordNotFoundError:
-                    logger.info(
-                        "Bot is not owned by the user. Creating alias to shared bot."
-                    )
-                    # Create alias item
-                    store_alias(user.id, BotAliasModel.from_bot_for_initial_alias(bot))
+            if not owned and not alias_exists(user.id, chat_input.bot_id):
+                logger.info(
+                    "Bot is not owned by the user. Creating alias to shared bot."
+                )
+                store_alias(user.id, BotAliasModel.from_bot_for_initial_alias(bot))
 
         # Create new conversation
         conversation = ConversationModel(
@@ -160,7 +159,11 @@ def prepare_conversation(
         if chat_input.message.message_id:
             message_id = chat_input.message.message_id
             # Reusing an existing id would overwrite a message or create a cycle.
-            if message_id in conversation.message_map:
+            # "system" and "instruction" are the roots of every conversation.
+            if message_id in conversation.message_map or message_id in (
+                "system",
+                "instruction",
+            ):
                 raise ValueError(f"Message id {message_id} already exists.")
         else:
             message_id = str(ULID())

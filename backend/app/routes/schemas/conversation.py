@@ -3,7 +3,7 @@ from typing import Annotated, Literal
 from app.repositories.models.common import Base64EncodedBytes
 from app.routes.schemas.base import BaseSchema
 from mypy_boto3_bedrock_runtime.literals import DocumentFormatType, ImageFormatType
-from pydantic import Discriminator, Field, JsonValue, root_validator
+from pydantic import Discriminator, Field, JsonValue, field_validator, root_validator
 
 # Every model name ever offered. Retired models stay here so that stored
 # conversations and bots remain readable; see app/model_registry.py.
@@ -199,13 +199,23 @@ class SimpleMessage(BaseSchema):
 
 
 class MessageInput(BaseSchema):
-    role: str
+    # Only user turns are accepted. Assistant, tool and reasoning content come from
+    # the model and must not be forged by clients.
+    role: Literal["user"]
     content: list[Content]
     model: type_model_name
     parent_message_id: str | None
     message_id: str | None = Field(
         None, description="Unique message id. If not provided, it will be generated."
     )
+
+    @field_validator("content")
+    @classmethod
+    def validate_user_content(cls, content: list[Content]) -> list[Content]:
+        for item in content:
+            if item.content_type not in ("text", "image", "attachment"):
+                raise ValueError(f"{item.content_type} content is not allowed.")
+        return content
 
 
 class MessageOutput(BaseSchema):
