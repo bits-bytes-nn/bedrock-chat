@@ -733,6 +733,17 @@ export class Embedding extends Construct {
     return startIngestionJob
       .next(
         checkIngestionJob.addRetry({
+          // Transient Lambda errors must not fail a sync whose ingestion is fine.
+          // The default service-exception retry does not cover throttling.
+          errors: [
+            'Lambda.TooManyRequestsException',
+            'Lambda.Unknown',
+          ],
+          interval: Duration.seconds(5),
+          maxAttempts: 6,
+          backoffRate: 2,
+          jitterStrategy: sfn.JitterType.FULL,
+        }).addRetry({
           interval: Duration.seconds(15),
           maxAttempts: timeout.toSeconds() / 15,
           backoffRate: 1,
