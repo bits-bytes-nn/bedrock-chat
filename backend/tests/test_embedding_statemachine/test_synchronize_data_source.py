@@ -34,12 +34,12 @@ class TestHandleCheck(unittest.TestCase):
     def test_completes_when_every_document_is_ingested(self):
         self.assertIsNone(self.check(job("COMPLETE")))
 
-    def test_fails_when_every_document_fails(self):
-        with self.assertRaisesRegex(Exception, "1 document\\(s\\) failed. Parsing"):
-            self.check(job("COMPLETE", failed=1))
-
-    def test_keeps_partially_ingested_data_sources(self):
-        self.assertIsNone(self.check(job("COMPLETE", failed=1, scanned=10)))
+    def test_fails_when_any_document_fails(self):
+        # A new upload that fails among indexed documents must not look searchable.
+        with self.assertRaisesRegex(
+            Exception, "1 of 11 document\\(s\\) failed. Parsing"
+        ):
+            self.check(job("COMPLETE", failed=1, scanned=11))
 
     def test_retries_while_running(self):
         with self.assertRaises(synchronize_data_source.RetryException):

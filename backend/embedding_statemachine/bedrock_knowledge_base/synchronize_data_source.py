@@ -1,4 +1,3 @@
-import logging
 import os
 from itertools import islice
 from typing import TypedDict
@@ -7,8 +6,6 @@ from app.utils import (
     compose_upload_document_s3_path,
     get_bedrock_agent_client,
 )
-
-logger = logging.getLogger(__name__)
 
 DOCUMENT_BUCKET = os.environ.get("DOCUMENT_BUCKET")
 bedrock_agent = get_bedrock_agent_client()
@@ -268,24 +265,15 @@ def handle_check(event):
             status = job["status"]
             match status:
                 case "COMPLETE":
-                    # A job completes even when every document failed to ingest.
-                    # Partial failures, such as one unreachable web page, keep the
-                    # documents that were ingested usable.
+                    # A job completes even when documents failed to ingest. Report
+                    # any failure: a failed upload would otherwise look searchable.
                     statistics = job.get("statistics", {})
                     failed = statistics.get("numberOfDocumentsFailed", 0)
                     if failed:
-                        logger.warning(
-                            "Ingestion job %s: %d document(s) failed: %s",
-                            ingestion_job_id,
-                            failed,
-                            job.get("failureReasons", [])[:3],
-                        )
-                    if failed and failed >= statistics.get(
-                        "numberOfDocumentsScanned", 0
-                    ):
+                        scanned = statistics.get("numberOfDocumentsScanned", 0)
                         reasons = "; ".join(job.get("failureReasons", [])[:3])
                         raise Exception(
-                            f"Ingestion Job '{ingestion_job_id}': {failed} document(s) failed. {reasons}"
+                            f"Ingestion Job '{ingestion_job_id}': {failed} of {scanned} document(s) failed. {reasons}"
                         )
 
                 case "STARTING" | "IN_PROGRESS":
