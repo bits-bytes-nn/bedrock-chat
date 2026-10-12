@@ -158,6 +158,11 @@ def validate_external_resource_references(
         raise PermissionError("Only administrators can add Bedrock agents.")
 
 
+def _validate_bot_id_format(bot_id: str) -> None:
+    if not re.fullmatch(r"[0-9A-HJKMNP-TV-Z]{26}", bot_id):
+        raise ValueError("Bot ID must be a ULID.")
+
+
 def validate_new_bot_id(bot_id: str) -> None:
     """Bot IDs are chosen by the client, so make sure they cannot collide.
 
@@ -167,8 +172,7 @@ def validate_new_bot_id(bot_id: str) -> None:
     Raises:
         ValueError: If the ID is not a ULID or is already used.
     """
-    if not re.fullmatch(r"[0-9A-HJKMNP-TV-Z]{26}", bot_id):
-        raise ValueError("Bot ID must be a ULID.")
+    _validate_bot_id_format(bot_id)
     try:
         find_bot_by_id(bot_id)
     except RecordNotFoundError:
@@ -700,6 +704,25 @@ def modify_bot_stats(user: User, bot: BotModel, increment: int):
 def issue_presigned_url(
     user: User, bot_id: str, filename: str, content_type: str
 ) -> str:
+    """Issue an upload URL in the user's temporary prefix for the bot.
+
+    Raises:
+        ValueError: If the bot ID or the filename is invalid.
+        PermissionError: If the bot exists and the user cannot edit it.
+    """
+    _validate_bot_id_format(bot_id)
+    if not filename or "/" in filename:
+        raise ValueError("Invalid filename.")
+    try:
+        bot = find_bot_by_id(bot_id)
+    except RecordNotFoundError:
+        # Files are uploaded before a new bot is created.
+        pass
+    else:
+        if not bot.is_editable_by_user(user):
+            raise PermissionError(
+                f"User {user.id} is not authorized to edit bot {bot_id}"
+            )
     response = generate_presigned_url(
         DOCUMENT_BUCKET,
         compose_upload_temp_s3_path(user.id, bot_id, filename),
