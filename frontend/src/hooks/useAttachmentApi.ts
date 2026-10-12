@@ -11,7 +11,10 @@ const useAttachmentApi = () => {
 
   return {
     /** Upload the file, convert it and return the text. */
-    convertToText: async (file: File): Promise<string> => {
+    convertToText: async (
+      file: File,
+      signal?: AbortSignal
+    ): Promise<string> => {
       const {
         data: { uploadId, url },
       } = await http.getOnce<AttachmentUploadResponse>(
@@ -19,18 +22,24 @@ const useAttachmentApi = () => {
         { filename: file.name, contentType: file.type }
       );
       // The presigned URL contains the credentials.
-      await axios.put(url, file, { headers: { 'Content-Type': file.type } });
+      await axios.put(url, file, {
+        headers: { 'Content-Type': file.type },
+        signal,
+      });
       const conversionUrl = `attachments/${uploadId}/conversion`;
       const started = await http.post<AttachmentConversionResponse>(
         `${conversionUrl}?filename=${encodeURIComponent(file.name)}`,
         {}
       );
-      const result = await waitForConversion(started.data, () =>
-        http
-          .getOnce<AttachmentConversionResponse>(conversionUrl, {
-            filename: file.name,
-          })
-          .then((res) => res.data)
+      const result = await waitForConversion(
+        started.data,
+        () =>
+          http
+            .getOnce<AttachmentConversionResponse>(conversionUrl, {
+              filename: file.name,
+            })
+            .then((res) => res.data),
+        { signal }
       );
       return result.text ?? '';
     },

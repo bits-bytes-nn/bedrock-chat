@@ -10,6 +10,7 @@ import { AxiosError } from 'axios';
 import Progress from './Progress';
 import useBot from '../hooks/useBot';
 import { create } from 'zustand';
+import { ulid } from 'ulid';
 import ButtonFileChoose from './ButtonFileChoose';
 import {
   CONVERTIBLE_FILE_EXTENSIONS,
@@ -65,8 +66,6 @@ const KnowledgeFileUploader: React.FC<Props> = (props) => {
     (targetFiles: FileList) => {
       if (props.disabled) {return;}
 
-      const originalLength = props.files.length;
-
       // Normalize file names that contain certain Japanese characters to avoid errors in the ECS Task.
       const renamedFiles: File[] = [];
       for (let i = 0; i < targetFiles.length; i++) {
@@ -77,9 +76,12 @@ const KnowledgeFileUploader: React.FC<Props> = (props) => {
         );
       }
 
+      // Rows are identified by id: they can be removed or added while a long
+      // conversion runs, which shifts their positions.
+      const uids = renamedFiles.map(() => ulid());
       _setFiles(
         produce(props.files, (draft) => {
-          renamedFiles.forEach((file) => {
+          renamedFiles.forEach((file, idx) => {
             const isSupportedFile = SUPPORTED_FILES.includes(
               '.' + file.name.split('.').slice(-1)[0].toLowerCase()
             );
@@ -98,11 +100,13 @@ const KnowledgeFileUploader: React.FC<Props> = (props) => {
 
             if (isSupportedFile && !isDuplicatedFile && !isTooLarge) {
               draft.push({
+                uid: uids[idx],
                 filename: file.name,
                 status: 'UPLOADING',
               });
             } else {
               draft.push({
+                uid: uids[idx],
                 filename: file.name,
                 status: 'ERROR',
                 errorMessage: isDuplicatedFile
@@ -119,47 +123,39 @@ const KnowledgeFileUploader: React.FC<Props> = (props) => {
       );
       props.onAdd(_getFiles());
 
+      const updateFile = (uid: string, recipe: (file: BotFile) => void) => {
+        _setFiles(
+          produce(_getFiles(), (draft) => {
+            const file = draft.find((f) => f.uid === uid);
+            if (file) {
+              recipe(file);
+            }
+          })
+        );
+        props.onUpdate(_getFiles());
+      };
+
       renamedFiles.forEach((file, idx) => {
-        if (_getFiles()[originalLength + idx].status === 'UPLOADING') {
+        const uid = uids[idx];
+        if (_getFiles().find((f) => f.uid === uid)?.status === 'UPLOADING') {
           uploadFile(
             props.botId,
             file,
-            (progress) => {
-              _setFiles(
-                produce(_getFiles(), (draft) => {
-                  draft[originalLength + idx].progress = progress;
-                })
-              );
-
-              props.onUpdate(_getFiles());
-            },
-            () => {
-              _setFiles(
-                produce(_getFiles(), (draft) => {
-                  draft[originalLength + idx].status = 'CONVERTING';
-                })
-              );
-              props.onUpdate(_getFiles());
-            }
+            (progress) => updateFile(uid, (f) => (f.progress = progress)),
+            () => updateFile(uid, (f) => (f.status = 'CONVERTING'))
           )
-            .then((filename) => {
-              _setFiles(
-                produce(_getFiles(), (draft) => {
-                  draft[originalLength + idx].filename = filename;
-                  draft[originalLength + idx].status = 'UPLOADED';
-                })
-              );
-              props.onUpdate(_getFiles());
-            })
+            .then((filename) =>
+              updateFile(uid, (f) => {
+                f.filename = filename;
+                f.status = 'UPLOADED';
+              })
+            )
             .catch((e: AxiosError | Error) => {
               console.error(e);
-              _setFiles(
-                produce(_getFiles(), (draft) => {
-                  draft[originalLength + idx].status = 'ERROR';
-                  draft[originalLength + idx].errorMessage = e.message;
-                })
-              );
-              props.onUpdate(_getFiles());
+              updateFile(uid, (f) => {
+                f.status = 'ERROR';
+                f.errorMessage = e.message;
+              });
             });
         }
       });
@@ -188,14 +184,14 @@ const KnowledgeFileUploader: React.FC<Props> = (props) => {
     (idx: number) => {
       if (props.disabled) {return;}
       
-      props.onDelete(
-        produce(props.files, (draft) => {
-          draft.splice(idx, 1);
-        }),
-        props.files[idx].filename
-      );
+      const files = produce(props.files, (draft) => {
+        draft.splice(idx, 1);
+      });
+      // Keep the copy that pending uploads update in sync.
+      _setFiles(files);
+      props.onDelete(files, props.files[idx].filename);
     },
-    [props]
+    [_setFiles, props]
   );
 
   return (
