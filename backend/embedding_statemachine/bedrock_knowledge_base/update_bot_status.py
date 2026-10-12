@@ -34,6 +34,15 @@ def update_sync_status(sync_status: SyncStatus):
     )
 
 
+def error_reason(error: dict) -> str:
+    """Return the message of an error caught by the state machine."""
+    cause = error.get("Cause", "")
+    try:
+        return json.loads(cause).get("errorMessage", cause)
+    except (TypeError, ValueError, AttributeError):
+        return cause or error.get("Error", "")
+
+
 def handler(event, context):
     # Initialize variables
     queued_bots = event.get("QueuedBots")
@@ -48,6 +57,11 @@ def handler(event, context):
         # CodeBuild
         sync_status_reason = json.dumps(build["Phases"])
         last_exec_id = build["Arn"]
+
+    elif "Error" in event:
+        # Caught by the state machine: {"Error": ..., "Cause": <Lambda error JSON>}
+        sync_status_reason = error_reason(event["Error"])
+        last_exec_id = event.get("LastExecId", "")
 
     else:
         sync_status_reason = event.get("SyncStatusReason", "")

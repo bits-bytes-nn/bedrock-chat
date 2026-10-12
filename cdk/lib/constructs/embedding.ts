@@ -373,6 +373,7 @@ export class Embedding extends Construct {
       payload: sfn.TaskInput.fromObject({
         QueuedBots: sfn.JsonPath.objectAt("$.QueuedBots"),
         SyncStatus: "FAILED",
+        Error: sfn.JsonPath.objectAt("$.Error"),
       }),
       resultPath: sfn.JsonPath.DISCARD,
     })
@@ -516,6 +517,7 @@ export class Embedding extends Construct {
         OwnerUserId: sfn.JsonPath.stringAt("$.OwnerUserId"),
         BotId: sfn.JsonPath.stringAt("$.BotId"),
         SyncStatus: "FAILED",
+        Error: sfn.JsonPath.objectAt("$.Error"),
       }),
       resultPath: sfn.JsonPath.DISCARD,
     });
@@ -738,6 +740,9 @@ export class Embedding extends Construct {
             'RetryException',
           ],
         }).addCatch(ingestionComplete, {
+          // Only an ingestion that outlasts the retries is left to finish in the
+          // background. Other errors, such as failed documents, fail the sync.
+          errors: ['RetryException'],
           resultPath: sfn.JsonPath.stringAt('$.Error'),
         })
       ).next(ingestionComplete)
