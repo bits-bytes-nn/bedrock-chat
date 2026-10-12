@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import useChat from '../../../hooks/useChat';
+import { useNewChat } from '../../../hooks/useChat';
 import IconPinnedBot from '../../../components/IconPinnedBot';
 import ModalDialog from '../../../components/ModalDialog';
 import { BotMeta } from '../../../@types/bot';
@@ -18,7 +18,7 @@ type Props = {
 const CardBotForDiscover: React.FC<Props> = (props) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { newChat } = useChat();
+  const newChat = useNewChat();
 
   const [isOpen, setIsOpen] = useState(false);
 

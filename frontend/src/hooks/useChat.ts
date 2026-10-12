@@ -19,7 +19,7 @@ import { ulid } from 'ulid';
 import { convertMessageMapToArray } from '../utils/MessageUtils';
 import useModel from './useModel';
 import useFeedbackApi from './useFeedbackApi';
-import { useMachine } from '@xstate/react';
+import { useActorRef, useSelector } from '@xstate/react';
 import { streamingStateMachine } from './xstates/streaming';
 import { Actor } from 'xstate';
 
@@ -69,12 +69,6 @@ export type AttachmentType = {
   fileType: string;
   extractedContent: string;
 };
-
-export type ThinkingAction =
-  | {
-      type: 'doing';
-    }
-  | { type: 'init' };
 
 const NEW_MESSAGE_ID = {
   USER: 'new-message',
@@ -189,6 +183,10 @@ const useChatState = create<{
     editMessage: (id: string, messageId: string, content: string) => {
       set(() => ({
         chats: produce(get().chats, (draft) => {
+          // The conversation may have been cleared, e.g. by New chat while streaming.
+          if (!draft[id]?.[messageId]) {
+            return;
+          }
           const textContent = draft[id][messageId].content.find(
             (c) => c.contentType === 'text'
           );
@@ -201,6 +199,9 @@ const useChatState = create<{
     removeMessage: (id: string, messageId: string) => {
       set((state) => ({
         chats: produce(state.chats, (draft) => {
+          if (!draft[id]?.[messageId]) {
+            return;
+          }
           const childrenIds = [...draft[id][messageId].children];
 
           // childrenに設定されているノードも全て削除
@@ -267,8 +268,48 @@ const useChatState = create<{
   };
 });
 
+/**
+ * Lightweight accessors for components that only need the current conversation.
+ * useChat() also creates a streaming actor and data subscriptions.
+ */
+export const useChatConversationId = () =>
+  useChatState((state) => state.conversationId);
+export const useSetChatConversationId = () =>
+  useChatState((state) => state.setConversationId);
+export const useIsGeneratedTitle = () =>
+  useChatState((state) => state.isGeneratedTitle);
+export const useNewChat = () => {
+  const setConversationId = useChatState((state) => state.setConversationId);
+  const setMessages = useChatState((state) => state.setMessages);
+  return useCallback(() => {
+    setConversationId('');
+    setMessages('', {});
+  }, [setConversationId, setMessages]);
+};
+
 const useChat = () => {
-  const [streamingState, streamingSend, streamingActor] = useMachine(streamingStateMachine);
+  const streamingActor = useActorRef(streamingStateMachine);
+  const streamingSend = streamingActor.send;
+  // Select only what the page renders. Streamed text is applied through
+  // subscribeStreamingText, so text events do not re-render the page.
+  const streamingValue = useSelector(streamingActor, (s) => s.value);
+  const streamingReasoning = useSelector(streamingActor, (s) => s.context.reasoning);
+  const streamingTools = useSelector(streamingActor, (s) => s.context.tools);
+  const streamingRelatedDocuments = useSelector(
+    streamingActor,
+    (s) => s.context.relatedDocuments
+  );
+  const streamingState = useMemo(
+    () => ({
+      value: streamingValue,
+      context: {
+        reasoning: streamingReasoning,
+        tools: streamingTools,
+        relatedDocuments: streamingRelatedDocuments,
+      },
+    }),
+    [streamingValue, streamingReasoning, streamingTools, streamingRelatedDocuments]
+  );
 
   const {
     chats,
@@ -319,10 +360,7 @@ const useChat = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [conversationId, chats, currentMessageId]);
 
-  const newChat = useCallback(() => {
-    setConversationId('');
-    setMessages('', {});
-  }, [setConversationId, setMessages]);
+  const newChat = useNewChat();
 
   // when updated messages
   useEffect(() => {
@@ -471,7 +509,10 @@ const useChat = () => {
       conversationApi
         .updateTitleWithGeneratedTitle(newConversationId)
         .then(() => {
-          setConversationId(newConversationId);
+          // Open the new conversation only if the user is still on the new chat.
+          if (useChatState.getState().conversationId === '') {
+            setConversationId(newConversationId);
+          }
         })
         .finally(() => {
           syncConversations().then(() => {

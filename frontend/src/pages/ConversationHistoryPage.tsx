@@ -14,7 +14,7 @@ import useConversationSearch from '../hooks/useConversationSearch';
 import { ConversationMeta } from '../@types/conversation';
 import ButtonIcon from '../components/ButtonIcon';
 import InputText from '../components/InputText';
-import useChat from '../hooks/useChat';
+import { useNewChat, useSetChatConversationId } from '../hooks/useChat';
 import DialogConfirmDeleteChat from '../components/DialogConfirmDeleteChat';
 import Button from '../components/Button';
 import ListPageLayout from '../layouts/ListPageLayout';
@@ -34,7 +34,8 @@ const ConversationHistoryPage: React.FC = () => {
   const [inputValue, setInputValue] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const { setConversationId, newChat } = useChat();
+  const setConversationId = useSetChatConversationId();
+  const newChat = useNewChat();
   const {
     conversations,
     deleteConversation,

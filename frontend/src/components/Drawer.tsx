@@ -30,7 +30,7 @@ import LazyOutputText from './LazyOutputText';
 import { ConversationMeta } from '../@types/conversation';
 import { BotListItem } from '../@types/bot';
 import { isMobile } from 'react-device-detect';
-import useChat from '../hooks/useChat';
+import { useChatConversationId, useNewChat } from '../hooks/useChat';
 import { useTranslation } from 'react-i18next';
 import Menu from './Menu';
 import DrawerItem from './DrawerItem';
@@ -74,7 +74,7 @@ const Item: React.FC<ItemProps> = (props) => {
   const { t } = useTranslation();
   const { pathname } = useLocation();
   const { conversationId: pathParam } = useParams();
-  const { conversationId } = useChat();
+  const conversationId = useChatConversationId();
   const [tempLabel, setTempLabel] = useState('');
   const [editing, setEditing] = useState(false);
 
@@ -129,13 +129,12 @@ const Item: React.FC<ItemProps> = (props) => {
 
       inputRef.current?.focus();
 
+      const input = inputRef.current;
       return () => {
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-        inputRef.current?.removeEventListener('keydown', listener);
+        input?.removeEventListener('keydown', listener);
       };
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editing]);
+  }, [editing, props]);
 
   return (
     <DrawerItem
@@ -224,7 +223,8 @@ const Drawer: React.FC<Props> = (props) => {
     useState<typeof conversations>();
   const [generateTitleIndex, setGenerateTitleIndex] = useState(-1);
 
-  const { newChat, conversationId } = useChat();
+  const newChat = useNewChat();
+  const conversationId = useChatConversationId();
   const { botId } = useParams();
   const { getGlobalConfig } = useGlobalConfig();
   const { data: globalConfig } = getGlobalConfig();

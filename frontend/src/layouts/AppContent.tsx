@@ -12,7 +12,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import useDrawer from '../hooks/useDrawer';
 import useConversation from '../hooks/useConversation';
 import useBot from '../hooks/useBot';
-import useChat from '../hooks/useChat';
+import { useNewChat, useIsGeneratedTitle } from '../hooks/useChat';
 import { usePageLabel, usePageTitlePathPattern } from '../routes';
 import useLoginUser from '../hooks/useLoginUser';
 import DialogConfirmDeleteChat from '../components/DialogConfirmDeleteChat';
@@ -39,7 +39,8 @@ const AppContent: React.FC<Props> = (props) => {
     clearConversations: clear,
   } = useConversation();
   const { pinnedBots, starredBots, recentlyUsedUnstarredBots } = useBot();
-  const { newChat, isGeneratedTitle } = useChat();
+  const newChat = useNewChat();
+  const isGeneratedTitle = useIsGeneratedTitle();
   const { isConversationOrNewChat, pathPattern } = usePageTitlePathPattern();
   const { isAdmin } = useLoginUser();
   const [theme] = useLocalStorage('theme', 'light');
@@ -66,8 +67,7 @@ const AppContent: React.FC<Props> = (props) => {
         setDeleteTarget(undefined);
       });
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    []
+    [deleteConversation, newChat, navigate]
   );
 
   const [isOpenClearConversations, setIsOpenClearConversations] =
@@ -80,8 +80,7 @@ const AppContent: React.FC<Props> = (props) => {
         setIsOpenClearConversations(false);
       });
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    []
+    [clear, navigate]
   );
 
   const [isOpenSelectLanguage, setIsOpenSelectLanguage] = useState(false);

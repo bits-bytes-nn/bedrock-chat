@@ -35,7 +35,17 @@ export default defineConfig({
       },
       injectRegister: 'auto',
       workbox: {
+        // Precache only the app shell. Lazily loaded chunks such as Mermaid
+        // diagrams and syntax highlighting languages are cached when used.
+        globPatterns: ['index.html', 'assets/index-*.{js,css}'],
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
+        runtimeCaching: [
+          {
+            urlPattern: ({ url }) => url.pathname.startsWith('/assets/'),
+            handler: 'CacheFirst',
+            options: { cacheName: 'assets' },
+          },
+        ],
       },
       manifest: {
         name: 'Bedrock Chat',

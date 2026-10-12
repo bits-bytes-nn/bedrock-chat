@@ -141,7 +141,6 @@ export const streamingStateMachine = setup({
     text: '',
     tools: [],
     relatedDocuments: [],
-    areAllToolsSuccessful: false,
   },
   initial: 'sleeping',
   on: {

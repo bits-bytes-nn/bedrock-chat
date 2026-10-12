@@ -7,7 +7,7 @@ import { BotListItem, BotMeta } from '../@types/bot';
 import DialogConfirmDeleteBot from '../components/DialogConfirmDeleteBot';
 import DialogShareBot from '../components/DialogShareBot';
 import ButtonIcon from '../components/ButtonIcon';
-import useChat from '../hooks/useChat';
+import { useNewChat } from '../hooks/useChat';
 import useLoginUser from '../hooks/useLoginUser';
 import ListItemBot from '../components/ListItemBot';
 import useShareBot from '../hooks/useShareBot';
@@ -31,7 +31,7 @@ const BotStarredPage: React.FC = () => {
   >();
   const { pinBot, unpinBot } = useBotPinning();
 
-  const { newChat } = useChat();
+  const newChat = useNewChat();
   const { starredBots, deleteMyBot, updateStarred, mutateStarredBots } =
     useBot(true);
 

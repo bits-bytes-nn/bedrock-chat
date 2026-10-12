@@ -1,3 +1,4 @@
+import i18next from 'i18next';
 import { produce } from 'immer';
 import useConversationApi from './useConversationApi';
 
@@ -17,7 +18,8 @@ const useConversation = () => {
     },
     getTitle: (conversationId: string) => {
       return (
-        conversations?.find((c) => c.id === conversationId)?.title ?? 'New Chat'
+        conversations?.find((c) => c.id === conversationId)?.title ??
+        i18next.t('button.newChat')
       );
     },
     getBotId: (conversationId: string) => {

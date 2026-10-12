@@ -153,11 +153,14 @@ const defaultActiveModels: ActiveModels = (() => {
   ) as ActiveModels;
 })();
 
+const NO_TOOLS: AgentToolsProps[] = [];
+const NO_RELATED_DOCUMENTS: RelatedDocument[] = [];
+
 const ChatPage: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { open: openSnackbar } = useSnackbar();
-  const { errorDetail, truncatedConversationId } =
+  const { errorDetail, errorConversationId, truncatedConversationId } =
     usePostMessageStreaming();
   const { isAdmin } = useLoginUser();
   const { pinBot, unpinBot } = useBotPinning();
@@ -185,6 +188,11 @@ const ChatPage: React.FC = () => {
     setReasoningEnabled,
     supportReasoning,
   } = useChat();
+  // A failed new chat keeps the page conversation ID empty.
+  const visibleErrorDetail =
+    errorConversationId === conversationId || conversationId === ''
+      ? errorDetail
+      : null;
 
   // Error Handling
   useEffect(() => {
@@ -304,8 +312,14 @@ const ChatPage: React.FC = () => {
     [setCurrentMessageId]
   );
 
+  // regenerate and retryPostChat change on every render. Read them through a ref
+  // so that the callback, and the memoized messages that receive it, stay stable.
+  const editHandlers = useRef({ hasError, inputBotParams, regenerate, retryPostChat, reasoningEnabled });
+  editHandlers.current = { hasError, inputBotParams, regenerate, retryPostChat, reasoningEnabled };
   const onSubmitEditedContent = useCallback(
     (messageId: string, content: string) => {
+      const { hasError, inputBotParams, regenerate, retryPostChat, reasoningEnabled } =
+        editHandlers.current;
       if (hasError) {
         retryPostChat({
           content,
@@ -321,7 +335,16 @@ const ChatPage: React.FC = () => {
         });
       }
     },
-    [hasError, inputBotParams, regenerate, retryPostChat, reasoningEnabled]
+    []
+  );
+
+  const onSubmitFeedback = useCallback(
+    (messageId: string, feedback: PutFeedbackRequest) => {
+      if (conversationId) {
+        giveFeedback(messageId, feedback);
+      }
+    },
+    [conversationId, giveFeedback]
   );
 
   const onRegenerate = useCallback(
@@ -595,7 +618,11 @@ const ChatPage: React.FC = () => {
                 </div>
               ) : (
                 <>
-                  {messages?.map((message, idx, array) => (
+                  {messages?.map((message, idx, array) => {
+                    // Only the last message streams. Others get constant props so
+                    // that memoization skips them while tokens arrive.
+                    const isLast = idx + 1 === array.length;
+                    return (
                     <div
                       key={message.id}
                       className={`${
@@ -605,25 +632,24 @@ const ChatPage: React.FC = () => {
                       }`}>
                       <ChatMessageWithRelatedDocuments
                         chatContent={message}
-                        isStreaming={postingMessage && idx + 1 === array.length}
-                        streamingReasoning={streamingState.context.reasoning}
-                        streamingTools={streamingState.context.tools}
-                        streamingRelatedDocuments={streamingState.context.relatedDocuments}
-                        streamingStateValue={streamingState.value as string}
+                        isStreaming={postingMessage && isLast}
+                        streamingReasoning={isLast ? streamingState.context.reasoning : ''}
+                        streamingTools={isLast ? streamingState.context.tools : NO_TOOLS}
+                        streamingRelatedDocuments={
+                          isLast ? streamingState.context.relatedDocuments : NO_RELATED_DOCUMENTS
+                        }
+                        streamingStateValue={isLast ? (streamingState.value as string) : StreamingState.SLEEPING}
                         botHasAgent={bot?.hasAgent ?? false}
                         botHasKnowledge={bot?.hasKnowledge ?? false}
-                        relatedDocuments={relatedDocuments ?? []}
+                        relatedDocuments={relatedDocuments ?? NO_RELATED_DOCUMENTS}
                         onChangeMessageId={onChangeCurrentMessageId}
                         onSubmit={onSubmitEditedContent}
-                        onSubmitFeedback={(messageId, feedback) => {
-                          if (conversationId) {
-                            giveFeedback(messageId, feedback);
-                          }
-                        }}
+                        onSubmitFeedback={onSubmitFeedback}
                       />
                       <div className="w-full border-b border-aws-squid-ink-light/10 dark:border-aws-squid-ink-dark/10"></div>
                     </div>
-                  ))}
+                    );
+                  })}
                 </>
               )}
               {!postingMessage &&
@@ -639,7 +665,7 @@ const ChatPage: React.FC = () => {
                 <div className="mb-12 mt-2 flex flex-col items-center">
                   <div className="flex items-center font-bold text-red dark:text-red-400">
                     <PiWarningCircleFill className="mr-1 text-2xl" />
-                    {errorDetail ?? t('error.answerResponse')}
+                    {visibleErrorDetail ?? t('error.answerResponse')}
                   </div>
 
                   <Button
