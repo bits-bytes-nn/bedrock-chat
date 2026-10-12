@@ -329,6 +329,7 @@ const useChat = () => {
     conversationId,
     setConversationId,
     postingMessage,
+    postingConversationId,
     setPostingMessage,
     setMessages,
     pushMessage,
@@ -769,6 +770,8 @@ const useChat = () => {
     loadingConversation,
     conversationError,
     postingMessage: postingMessage || loadingConversation,
+    // Whether the message being posted belongs to the shown conversation.
+    isStreamingHere: postingMessage && postingConversationId === conversationId,
     isGeneratedTitle,
     setIsGeneratedTitle,
     newChat,
