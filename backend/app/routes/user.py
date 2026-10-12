@@ -1,5 +1,3 @@
-from venv import logger
-
 from app.usecases.user import (
     get_user_by_id,
     search_group_by_name_prefix,

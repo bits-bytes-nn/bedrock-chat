@@ -9,7 +9,6 @@ from typing import (
     Literal,
     NotRequired,
     TypedDict,
-    TypeGuard,
 )
 
 import boto3
@@ -21,18 +20,11 @@ from app.repositories.models.custom_bot import GenerationParamsModel
 from app.repositories.models.custom_bot_guardrails import BedrockGuardrailsModel
 from app.routes.schemas.conversation import type_model_name
 from app.utils import get_bedrock_runtime_client
-from app.vector_search import SearchResult
 
 if TYPE_CHECKING:
-    from app.repositories.models.conversation import ContentModel, SimpleMessageModel
-    from mypy_boto3_bedrock_runtime.literals import ConversationRoleType
     from mypy_boto3_bedrock_runtime.type_defs import (
-        ContentBlockTypeDef,
         ConverseResponseTypeDef,
         ConverseStreamRequestTypeDef,
-        GuardrailConverseContentBlockTypeDef,
-        MessageTypeDef,
-        SystemContentBlockTypeDef,
     )
 
 
@@ -48,10 +40,6 @@ ENABLE_BEDROCK_CROSS_REGION_INFERENCE = (
 )
 
 # Base model IDs mapping
-
-
-def _is_conversation_role(role: str) -> TypeGuard[ConversationRoleType]:
-    return role in ["user", "assistant"]
 
 
 def is_nova_model(model: type_model_name) -> bool:
@@ -71,10 +59,6 @@ def is_prompt_caching_supported(
     model: type_model_name, target: Literal["system", "message", "tool"]
 ) -> bool:
     return target in get_model_spec(model).prompt_caching
-
-
-def is_multiple_system_prompt_content_supported(model: type_model_name) -> bool:
-    return get_model_spec(model).supports_multiple_system_prompts
 
 
 def is_unsigned_reasoning_content_supported(model: type_model_name) -> bool:
@@ -99,90 +83,6 @@ class ConverseConfiguration(TypedDict):
     inferenceConfig: InferenceConfiguration
     guardrailConfig: NotRequired[GuardrailConfiguration]
     additionalModelRequestFields: NotRequired[dict[str, Any]]
-
-
-def _to_guardrails_grounding_source(
-    search_results: list[SearchResult],
-) -> GuardrailConverseContentBlockTypeDef | None:
-    """Convert search results to Guardrails Grounding source format."""
-    return (
-        {
-            "text": {
-                "text": "\n\n".join(x["content"] for x in search_results),
-                "qualifiers": ["grounding_source"],
-            }
-        }
-        if len(search_results) > 0
-        else None
-    )
-
-
-def simple_message_models_to_bedrock_messages(
-    simple_messages: list[SimpleMessageModel],
-    model: type_model_name,
-    guardrail: BedrockGuardrailsModel | None = None,
-    search_results: list[SearchResult] | None = None,
-    prompt_caching_enabled: bool = True,
-) -> list[MessageTypeDef]:
-    grounding_source = None
-    if search_results and guardrail and guardrail.is_guardrail_enabled:
-        grounding_source = _to_guardrails_grounding_source(search_results)
-
-    def process_content(c: ContentModel, role: str) -> list[ContentBlockTypeDef]:
-        # Drop unsigned reasoning blocks for DeepSeek R1 and GPT-OSS models
-        if (
-            not is_unsigned_reasoning_content_supported(model)
-            and c.content_type == "reasoning"
-            and not getattr(c, "signature", None)
-        ):
-            return []
-
-        if c.content_type == "text":
-            if (
-                role == "user"
-                and guardrail
-                and guardrail.grounding_threshold > 0
-                and grounding_source
-            ):
-                return [
-                    {"guardContent": grounding_source},
-                    {
-                        "guardContent": {
-                            "text": {"text": c.body, "qualifiers": ["query"]}
-                        }
-                    },
-                ]
-
-        return c.to_contents_for_converse()
-
-    messages: list[MessageTypeDef] = [
-        {
-            "role": message.role,
-            "content": [
-                block
-                for c in message.content
-                for block in process_content(c, message.role)
-            ],
-        }
-        for message in simple_messages
-        if _is_conversation_role(message.role)
-    ]
-
-    if prompt_caching_enabled and is_prompt_caching_supported(model, target="message"):
-        for order, message in enumerate(
-            filter(lambda m: m["role"] == "user", reversed(messages))
-        ):
-            if order >= 2:
-                break
-
-            message["content"] = [
-                *(message["content"]),
-                {
-                    "cachePoint": {"type": "default"},
-                },
-            ]
-
-    return messages
 
 
 def generation_params_to_converse_configuration(
@@ -283,100 +183,6 @@ def generation_params_to_converse_configuration(
             converse_configuration["guardrailConfig"]["streamProcessingMode"] = "async"
 
     return converse_configuration
-
-
-def compose_args_for_converse_api(
-    messages: list[SimpleMessageModel],
-    model: type_model_name,
-    instructions: list[str] = [],
-    generation_params: GenerationParamsModel | None = None,
-    guardrail: BedrockGuardrailsModel | None = None,
-    search_results: list[SearchResult] | None = None,
-    stream: bool = True,
-    enable_reasoning: bool = False,
-    prompt_caching_enabled: bool = False,
-) -> ConverseStreamRequestTypeDef:
-    arg_messages = simple_message_models_to_bedrock_messages(
-        simple_messages=messages,
-        model=model,
-        guardrail=guardrail,
-        search_results=search_results,
-        prompt_caching_enabled=prompt_caching_enabled,
-    )
-    # Prepare model-specific parameters
-    converse_config = generation_params_to_converse_configuration(
-        model=model,
-        generation_params=generation_params,
-        guardrail=guardrail,
-        stream=stream,
-        enable_reasoning=enable_reasoning,
-    )
-
-    system_prompts: list[SystemContentBlockTypeDef]
-
-    if is_multiple_system_prompt_content_supported(model):
-        system_prompts = [
-            {
-                "text": instruction,
-            }
-            for instruction in instructions
-            if len(instruction) > 0
-        ]
-
-    else:
-        system_prompts = (
-            [
-                {
-                    "text": "\n\n".join(instructions),
-                }
-            ]
-            if instructions and any(instructions)
-            else []
-        )
-
-    if (
-        prompt_caching_enabled
-        and is_prompt_caching_supported(model, "system")
-        and len(system_prompts) > 0
-    ):
-        system_prompts.append(
-            {
-                "cachePoint": {
-                    "type": "default",
-                },
-            }
-        )
-
-    # Construct the base arguments
-    args: ConverseStreamRequestTypeDef = {
-        "inferenceConfig": {},
-        "modelId": get_model_id(model),
-        "messages": arg_messages,
-        "system": system_prompts,
-    }
-
-    inference_config = converse_config["inferenceConfig"]
-    if "temperature" in inference_config:
-        args["inferenceConfig"]["temperature"] = inference_config["temperature"]
-
-    if "topP" in inference_config:
-        args["inferenceConfig"]["topP"] = inference_config["topP"]
-
-    if "maxTokens" in inference_config:
-        args["inferenceConfig"]["maxTokens"] = inference_config["maxTokens"]
-
-    if "stopSequences" in inference_config:
-        args["inferenceConfig"]["stopSequences"] = inference_config["stopSequences"]
-
-    if "additionalModelRequestFields" in converse_config:
-        args["additionalModelRequestFields"] = converse_config[
-            "additionalModelRequestFields"
-        ]
-
-    if "guardrailConfig" in converse_config:
-        args["guardrailConfig"] = converse_config["guardrailConfig"]
-
-    return args
 
 
 def get_text_from_converse_response(response: ConverseResponseTypeDef) -> str:

@@ -1,16 +1,17 @@
 import logging
-from typing import Callable
+from typing import Callable, Literal
 
 from app.stream import ToolRunResult
 from app.strands_integration.chat_strands import converse_with_strands
 from app.bedrock import (
     call_converse_api,
     get_text_from_converse_response,
-    compose_args_for_converse_api,
+    get_model_id,
     is_prefill_supported,
     is_tooluse_supported,
 )
 from app.model_registry import get_model_spec
+from mypy_boto3_bedrock_runtime.type_defs import MessageTypeDef
 from app.prompt import build_rag_prompt, get_prompt_to_cite_tool_results
 from app.repositories.conversation import (
     RecordNotFoundError,
@@ -23,7 +24,6 @@ from app.repositories.custom_bot import alias_exists, store_alias
 from app.repositories.models.conversation import (
     ConversationModel,
     MessageModel,
-    ReasoningContentModel,
     RelatedDocumentModel,
     SimpleMessageModel,
     TextContentModel,
@@ -527,34 +527,42 @@ def propose_conversation_title(
         message_map=conversation.message_map,
     )
 
-    # Append message to generate title
-    new_message = SimpleMessageModel(
-        role="user",
-        content=[
-            TextContentModel(
-                content_type="text",
-                body=PROMPT,
-            )
-        ],
-    )
-    messages.append(new_message)
+    # Titles only need the text of the conversation, without tool use or reasoning.
+    title_messages: list[MessageTypeDef] = []
+    for message in messages:
+        text = "\n".join(
+            content.body
+            for content in message.content
+            if isinstance(content, TextContentModel)
+        )
+        if message.role not in ("user", "assistant") or not text:
+            continue
+        role: Literal["user", "assistant"] = (
+            "user" if message.role == "user" else "assistant"
+        )
+        if title_messages and title_messages[-1]["role"] == role:
+            # Converse requires alternating roles.
+            title_messages[-1]["content"] = [
+                {"text": title_messages[-1]["content"][0]["text"] + "\n" + text}
+            ]
+        else:
+            title_messages.append({"role": role, "content": [{"text": text}]})
 
-    # Invoke Bedrock
-    args = compose_args_for_converse_api(
-        messages=[
-            message
-            for message in messages
-            if not any(
-                isinstance(content, ToolUseContentModel)
-                or isinstance(content, ToolResultContentModel)
-                or isinstance(content, ReasoningContentModel)
-                for content in message.content
-            )
-        ],
-        model=model,
-        stream=False,
+    if title_messages and title_messages[-1]["role"] == "user":
+        title_messages[-1]["content"] = [
+            {"text": title_messages[-1]["content"][0]["text"] + "\n\n" + PROMPT}
+        ]
+    else:
+        title_messages.append({"role": "user", "content": [{"text": PROMPT}]})
+
+    response = call_converse_api(
+        {
+            "modelId": get_model_id(model),
+            "messages": title_messages,
+            # Leaves room for models that always reason before answering.
+            "inferenceConfig": {"maxTokens": 2048},
+        }
     )
-    response = call_converse_api(args)
     return get_text_from_converse_response(response)
 
 

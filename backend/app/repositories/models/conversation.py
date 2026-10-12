@@ -30,11 +30,7 @@ from app.routes.schemas.conversation import (
 from app.utils import generate_presigned_url
 from mypy_boto3_bedrock_runtime.literals import DocumentFormatType, ImageFormatType
 from mypy_boto3_bedrock_runtime.type_defs import (
-    ContentBlockTypeDef,
-    ToolResultBlockTypeDef,
-    ToolResultContentBlockOutputTypeDef,
     ToolUseBlockOutputTypeDef,
-    ToolUseBlockTypeDef,
 )
 from pydantic import (
     BaseModel,
@@ -69,13 +65,6 @@ class TextContentModel(BaseModel):
             body=self.body,
         )
 
-    def to_contents_for_converse(self) -> list[ContentBlockTypeDef]:
-        return [
-            {
-                "text": self.body,
-            }
-        ]
-
 
 def _is_converse_supported_image_format(format: str) -> TypeGuard[ImageFormatType]:
     return format in {"gif", "jpeg", "png", "webp"}
@@ -109,23 +98,6 @@ class ImageContentModel(BaseModel):
         # e.g. "image/png" -> "png"
         format = self.media_type.split("/")[1] if self.media_type else "unknown"
         return format if _is_converse_supported_image_format(format) else None
-
-    def to_contents_for_converse(self) -> list[ContentBlockTypeDef]:
-        # e.g. "image/png" -> "png"
-        format = self.format
-
-        return (
-            [
-                {
-                    "image": {
-                        "format": format,
-                        "source": {"bytes": self.body},
-                    },
-                },
-            ]
-            if format is not None
-            else []
-        )
 
 
 def _is_converse_supported_document_format(ext: str) -> TypeGuard[DocumentFormatType]:
@@ -197,26 +169,6 @@ class AttachmentContentModel(BaseModel):
             name,
         )
 
-    def to_contents_for_converse(self) -> list[ContentBlockTypeDef]:
-        format, name = self.format_and_name
-
-        return [
-            {
-                "document": (
-                    {
-                        "format": format,
-                        "name": name,
-                        "source": {"bytes": self.body},
-                    }
-                    if format is not None
-                    else {
-                        "name": name,
-                        "source": {"bytes": self.body},
-                    }
-                ),
-            }
-        ]
-
 
 class FeedbackModel(BaseModel):
     thumbs_up: bool
@@ -259,13 +211,6 @@ class ToolUseContentModelBody(BaseModel):
             input=self.input,
         )
 
-    def to_tool_use_for_converse(self) -> ToolUseBlockTypeDef:
-        return {
-            "toolUseId": self.tool_use_id,
-            "name": self.name,
-            "input": self.input,
-        }
-
 
 class ToolUseContentModel(BaseModel):
     content_type: Literal["toolUse"] = Field(
@@ -286,13 +231,6 @@ class ToolUseContentModel(BaseModel):
             body=self.body.to_tool_use_content_body(),
         )
 
-    def to_contents_for_converse(self) -> list[ContentBlockTypeDef]:
-        return [
-            {
-                "toolUse": self.body.to_tool_use_for_converse(),
-            },
-        ]
-
 
 class TextToolResultModel(BaseModel):
     text: str
@@ -307,11 +245,6 @@ class TextToolResultModel(BaseModel):
         return TextToolResult(
             text=self.text,
         )
-
-    def to_content_for_converse(self) -> ToolResultContentBlockOutputTypeDef:
-        return {
-            "text": self.text,
-        }
 
 
 class JsonToolResultModel(BaseModel):
@@ -330,11 +263,6 @@ class JsonToolResultModel(BaseModel):
             json=self.json_,
         )
 
-    def to_content_for_converse(self) -> ToolResultContentBlockOutputTypeDef:
-        return {
-            "json": self.json_,
-        }
-
 
 class ImageToolResultModel(BaseModel):
     format: ImageFormatType
@@ -352,16 +280,6 @@ class ImageToolResultModel(BaseModel):
             format=self.format,
             image=self.image,
         )
-
-    def to_content_for_converse(self) -> ToolResultContentBlockOutputTypeDef:
-        return {
-            "image": {
-                "format": self.format,
-                "source": {
-                    "bytes": self.image,
-                },
-            },
-        }
 
 
 class DocumentToolResultModel(BaseModel):
@@ -383,26 +301,6 @@ class DocumentToolResultModel(BaseModel):
             name=self.name,
             document=self.document,
         )
-
-    def to_content_for_converse(self) -> ToolResultContentBlockOutputTypeDef:
-        return {
-            "document": (
-                {
-                    "format": self.format,
-                    "name": self.name,
-                    "source": {
-                        "bytes": self.document,
-                    },
-                }
-                if self.format
-                else {
-                    "name": self.name,
-                    "source": {
-                        "bytes": self.document,
-                    },
-                }
-            ),
-        }
 
 
 ToolResultModel = (
@@ -458,13 +356,6 @@ class ToolResultContentModelBody(BaseModel):
             status=body.status,
         )
 
-    def to_tool_result_for_converse(self) -> ToolResultBlockTypeDef:
-        return {
-            "toolUseId": self.tool_use_id,
-            "status": self.status,
-            "content": [content.to_content_for_converse() for content in self.content],
-        }
-
     def to_tool_result_content_body(self) -> ToolResultContentBody:
         return ToolResultContentBody(
             tool_use_id=self.tool_use_id,
@@ -492,13 +383,6 @@ class ToolResultContentModel(BaseModel):
             body=self.body.to_tool_result_content_body(),
         )
 
-    def to_contents_for_converse(self) -> list[ContentBlockTypeDef]:
-        return [
-            {
-                "toolResult": self.body.to_tool_result_for_converse(),
-            },
-        ]
-
 
 class ReasoningContentModel(BaseModel):
     content_type: Literal["reasoning"]
@@ -512,41 +396,6 @@ class ReasoningContentModel(BaseModel):
             text=self.text,
             signature=self.signature,
             redacted_content=self.redacted_content,
-        )
-
-    def to_contents_for_converse(self) -> list[ContentBlockTypeDef]:
-        # Ref: https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/bedrock-runtime/client/converse.html
-        # Ref: https://docs.anthropic.com/en/docs/build-with-claude/extended-thinking
-
-        return (
-            [
-                {
-                    "reasoningContent": (
-                        {
-                            "reasoningText": (
-                                {
-                                    "text": self.text,
-                                    "signature": self.signature,
-                                }
-                                if self.signature
-                                else {
-                                    "text": self.text,
-                                }
-                            ),
-                        }
-                        if self.text
-                        else (
-                            {
-                                "redactedContent": self.redacted_content,
-                            }
-                            if self.redacted_content
-                            else {}
-                        )
-                    ),
-                },
-            ]
-            if self.text or self.redacted_content
-            else []
         )
 
 
