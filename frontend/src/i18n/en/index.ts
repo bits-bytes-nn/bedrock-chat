@@ -531,6 +531,7 @@ How would you categorize this email?`,
         notSupportedFile: 'This file is not supported.',
         duplicatedFile: 'A file with the same name has been uploaded.',
         failDeleteApi: 'Failed to delete the API.',
+        failSave: 'Failed to save the bot.',
       },
       activeModels: {
         title: 'Model Activation',

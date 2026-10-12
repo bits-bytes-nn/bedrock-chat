@@ -531,6 +531,7 @@ const translation: typeof en = {
         notSupportedFile: '지원되지 않는 파일입니다.',
         duplicatedFile: '같은 이름의 파일이 이미 업로드되어 있습니다.',
         failDeleteApi: 'API를 삭제하지 못했습니다.',
+        failSave: '봇을 저장하지 못했습니다.',
       },
       activeModels: {
         title: '모델 활성화',

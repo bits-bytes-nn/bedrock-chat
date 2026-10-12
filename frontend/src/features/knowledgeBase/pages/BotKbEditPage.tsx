@@ -70,6 +70,8 @@ import {
 } from '../types';
 import { toCamelCase } from '../../../utils/StringUtils';
 import useGlobalConfig from '../../../hooks/useGlobalConfig';
+import useSnackbar from '../../../hooks/useSnackbar';
+import { getApiErrorMessage } from '../../../utils/ErrorUtils';
 
 const edgeGenerationParams = EDGE_GENERATION_PARAMS;
 
@@ -77,6 +79,7 @@ const defaultGenerationConfig = DEFAULT_GENERATION_CONFIG;
 
 const BotKbEditPage: React.FC = () => {
   const { i18n, t } = useTranslation();
+  const { open: openSnackbar } = useSnackbar();
   // S3 data sources and existing knowledge bases are read with the application's
   // role, so only admins can add them.
   const { isAdmin } = useLoginUser();
@@ -1347,10 +1350,13 @@ const BotKbEditPage: React.FC = () => {
       .then(() => {
         navigate('/bot/my');
       })
-      .catch(() => {
+      .catch((e) => {
+        openSnackbar(getApiErrorMessage(e) ?? t('bot.error.failSave'));
         setIsLoading(false);
       });
   }, [
+    openSnackbar,
+    t,
     isValid,
     registerBot,
     tools,
@@ -1473,11 +1479,14 @@ const BotKbEditPage: React.FC = () => {
         .then(() => {
           navigate('/bot/my');
         })
-        .catch(() => {
+        .catch((e) => {
+          openSnackbar(getApiErrorMessage(e) ?? t('bot.error.failSave'));
           setIsLoading(false);
         });
     }
   }, [
+    openSnackbar,
+    t,
     isValid,
     isNewBot,
     updateBot,

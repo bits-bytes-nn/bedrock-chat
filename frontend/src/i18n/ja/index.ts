@@ -537,6 +537,7 @@ const translation: typeof en = {
         duplicatedFile:
           '同一ファイル名のファイルが既にアップロードされています。',
         failDeleteApi: 'APIの削除に失敗しました。',
+        failSave: 'ボットを保存できませんでした。',
       },
       activeModels: {
         title: '利用可能なモデル設定',
