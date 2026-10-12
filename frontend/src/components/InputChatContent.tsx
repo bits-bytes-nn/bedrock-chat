@@ -37,8 +37,13 @@ import {
   maxConvertibleFileSizeMb,
 } from '../constants/supportedAttachedFiles';
 import { isSubmitEnter } from '../utils/KeyboardUtils';
-import { bytesToBase64, textToBase64 } from '../utils/ConversionUtils';
+import {
+  ConversionCanceledError,
+  bytesToBase64,
+  textToBase64,
+} from '../utils/ConversionUtils';
 import useAttachmentApi from '../hooks/useAttachmentApi';
+import { useChatConversationId } from '../hooks/useChat';
 
 type Props = BaseProps & {
   disabledSend?: boolean;
@@ -98,8 +103,8 @@ const useInputChatContentState = create<{
   setPreviewImageUrl: (url: string | null) => void;
   isOpenPreviewImage: boolean;
   setIsOpenPreviewImage: (isOpen: boolean) => void;
-  totalFileSizeToSend: number;
-  setTotalFileSizeToSend: (size: number) => void;
+  // Derived from the attachments, so that removing or sending them frees the space.
+  getTotalFileSizeToSend: () => number;
 }>((set, get) => ({
   base64EncodedImages: [],
   pushBase64EncodedImage: (encodedImage) => {
@@ -149,11 +154,9 @@ const useInputChatContentState = create<{
       attachedFiles: [],
     });
   },
-  totalFileSizeToSend: 0,
-  setTotalFileSizeToSend: (size) =>
-    set({
-      totalFileSizeToSend: size,
-    }),
+  getTotalFileSizeToSend: () =>
+    get().base64EncodedImages.reduce((total, image) => total + image.length, 0) +
+    get().attachedFiles.reduce((total, file) => total + file.content.length, 0),
 }));
 
 const InputChatContent = forwardRef<HTMLElement, Props>(
@@ -186,8 +189,7 @@ const InputChatContent = forwardRef<HTMLElement, Props>(
       pushTextFile,
       removeTextFile,
       clearAttachedFiles,
-      totalFileSizeToSend,
-      setTotalFileSizeToSend,
+      getTotalFileSizeToSend,
     } = useInputChatContentState();
 
     useEffect(() => {
@@ -199,8 +201,28 @@ const InputChatContent = forwardRef<HTMLElement, Props>(
     const { open } = useSnackbar();
 
     const { convertToText } = useAttachmentApi();
-    // Names of the attachments that are being converted to text.
-    const [convertingFiles, setConvertingFiles] = useState<string[]>([]);
+    // Attachments that are being converted to text.
+    const [convertingFiles, setConvertingFiles] = useState<
+      { id: number; name: string; controller: AbortController }[]
+    >([]);
+    const nextConversionId = useRef(0);
+    const cancelConversion = useCallback((id: number) => {
+      setConvertingFiles((files) => {
+        files.find((f) => f.id === id)?.controller.abort();
+        return files.filter((f) => f.id !== id);
+      });
+    }, []);
+
+    // A conversion belongs to the conversation it was started in.
+    const conversationId = useChatConversationId();
+    useEffect(() => {
+      return () => {
+        setConvertingFiles((files) => {
+          files.forEach((f) => f.controller.abort());
+          return [];
+        });
+      };
+    }, [conversationId]);
 
     const disabledSend = useMemo(() => {
       return content === '' || props.disabledSend || convertingFiles.length > 0;
@@ -280,7 +302,7 @@ const InputChatContent = forwardRef<HTMLElement, Props>(
 
             // Total file size check
             if (
-              totalFileSizeToSend + resizedImageData.length >
+              getTotalFileSizeToSend() + resizedImageData.length >
               MAX_FILE_SIZE_TO_SEND_BYTES
             ) {
               open(
@@ -292,16 +314,12 @@ const InputChatContent = forwardRef<HTMLElement, Props>(
             }
 
             pushBase64EncodedImage(resizedImageData);
-            setTotalFileSizeToSend(
-              totalFileSizeToSend + resizedImageData.length
-            );
           };
         };
       },
       [
         pushBase64EncodedImage,
-        totalFileSizeToSend,
-        setTotalFileSizeToSend,
+        getTotalFileSizeToSend,
         open,
         t,
       ]
@@ -325,7 +343,7 @@ const InputChatContent = forwardRef<HTMLElement, Props>(
 
             // Total file size check
             if (
-              totalFileSizeToSend + base64String.length >
+              getTotalFileSizeToSend() + base64String.length >
               MAX_FILE_SIZE_TO_SEND_BYTES
             ) {
               open(
@@ -341,12 +359,11 @@ const InputChatContent = forwardRef<HTMLElement, Props>(
               size: file.size,
               content: base64String,
             });
-            setTotalFileSizeToSend(totalFileSizeToSend + base64String.length);
           }
         };
         reader.readAsArrayBuffer(file);
       },
-      [pushTextFile, totalFileSizeToSend, setTotalFileSizeToSend, open, t]
+      [pushTextFile, getTotalFileSizeToSend, open, t]
     );
 
     // Presentations and recordings are converted to text by the backend and
@@ -360,12 +377,22 @@ const InputChatContent = forwardRef<HTMLElement, Props>(
           );
           return;
         }
-        setConvertingFiles((files) => [...files, file.name]);
-        convertToText(file)
+        const id = nextConversionId.current++;
+        const controller = new AbortController();
+        setConvertingFiles((files) => [
+          ...files,
+          { id, name: file.name, controller },
+        ]);
+        convertToText(file, controller.signal)
           .then((text) => {
+            if (controller.signal.aborted) {
+              return;
+            }
             const content = textToBase64(text);
-            const { totalFileSizeToSend } = useInputChatContentState.getState();
-            if (totalFileSizeToSend + content.length > MAX_FILE_SIZE_TO_SEND_BYTES) {
+            if (
+              getTotalFileSizeToSend() + content.length >
+              MAX_FILE_SIZE_TO_SEND_BYTES
+            ) {
               open(
                 t('error.totalFileSizeToSendExceeded', {
                   maxSize: `${MAX_FILE_SIZE_TO_SEND_MB} MB`,
@@ -379,19 +406,21 @@ const InputChatContent = forwardRef<HTMLElement, Props>(
               size: content.length,
               content,
             });
-            setTotalFileSizeToSend(totalFileSizeToSend + content.length);
           })
           .catch((e) => {
+            if (controller.signal.aborted || e instanceof ConversionCanceledError) {
+              return;
+            }
             console.error(e);
             open(
               t('error.attachment.conversionFailed', { fileName: file.name })
             );
           })
           .finally(() => {
-            setConvertingFiles((files) => files.filter((f) => f !== file.name));
+            setConvertingFiles((files) => files.filter((f) => f.id !== id));
           });
       },
-      [convertToText, open, pushTextFile, setTotalFileSizeToSend, t]
+      [convertToText, getTotalFileSizeToSend, open, pushTextFile, t]
     );
 
     useEffect(() => {
@@ -439,7 +468,7 @@ const InputChatContent = forwardRef<HTMLElement, Props>(
           useInputChatContentState.getState().attachedFiles;
         const currentAttachedFilesCount = currentAttachedFiles.filter((file) =>
           SUPPORTED_FILE_EXTENSIONS.some((extension) =>
-            file.name.endsWith(extension)
+            file.name.toLowerCase().endsWith(extension.toLowerCase())
           )
         ).length;
 
@@ -449,7 +478,7 @@ const InputChatContent = forwardRef<HTMLElement, Props>(
           if (file) {
             if (
               SUPPORTED_FILE_EXTENSIONS.some((extension) =>
-                file.name.endsWith(extension)
+                file.name.toLowerCase().endsWith(extension.toLowerCase())
               )
             ) {
               newAttachedFilesCount++;
@@ -476,7 +505,7 @@ const InputChatContent = forwardRef<HTMLElement, Props>(
               handleConvertibleFile(file);
             } else if (
               SUPPORTED_FILE_EXTENSIONS.some((extension) =>
-                file.name.endsWith(extension)
+                file.name.toLowerCase().endsWith(extension.toLowerCase())
               )
             ) {
               handleAttachedFileRead(file);
@@ -608,15 +637,22 @@ const InputChatContent = forwardRef<HTMLElement, Props>(
           )}
           {(attachedFiles.length > 0 || convertingFiles.length > 0) && (
             <div className="relative m-2 mr-24 flex flex-wrap gap-3">
-              {convertingFiles.map((name) => (
+              {convertingFiles.map((file) => (
                 <div
-                  key={name}
-                  className="flex flex-col items-center opacity-60"
+                  key={file.id}
+                  className="relative flex flex-col items-center"
+                  role="status"
                   aria-busy="true">
-                  <UploadedAttachedFile fileName={name} />
+                  <UploadedAttachedFile fileName={file.name} />
                   <div className="text-xs text-aws-font-color-light/70 dark:text-gray">
                     {t('bot.label.fileUploadStatus.converting')}
                   </div>
+                  <ButtonIcon
+                    className="absolute left-2 top-1 -m-2 border border-aws-sea-blue-light bg-white p-1 text-xs text-aws-sea-blue-light dark:border-aws-sea-blue-dark dark:text-aws-link-dark"
+                    label={t('button.remove')}
+                    onClick={() => cancelConversion(file.id)}>
+                    <PiX />
+                  </ButtonIcon>
                 </div>
               ))}
               {attachedFiles.map((file, idx) => (

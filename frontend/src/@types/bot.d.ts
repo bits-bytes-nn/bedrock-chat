@@ -106,6 +106,8 @@ export type BotSummary = BotMeta & {
 };
 
 export type BotFile = {
+  // Client-side id of a row in the knowledge file uploader.
+  uid?: string;
   filename: string;
   status: 'UPLOADING' | 'CONVERTING' | 'UPLOADED' | 'ERROR';
   errorMessage?: string;
