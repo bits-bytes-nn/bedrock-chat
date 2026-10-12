@@ -26,7 +26,7 @@ const useBotApiSettings = (botId: string) => {
     isLoadingBotPublication,
     mutateBotPublication,
     isUnpublishedBot: (
-      (error?.response?.data['errors'][0] as string) ?? ''
+      (error?.response?.data?.errors?.[0] as string | undefined) ?? ''
     ).includes('is not published'),
     publishBot: (params: {
       quota?: BotPublicationQuota;

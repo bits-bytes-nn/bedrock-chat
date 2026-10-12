@@ -77,6 +77,11 @@ const edgeGenerationParams = EDGE_GENERATION_PARAMS;
 
 const defaultGenerationConfig = DEFAULT_GENERATION_CONFIG;
 
+const RETIRED_PARSING_MODELS: (ParsingModel | undefined)[] = [
+  'anthropic.claude-3-5-sonnet-v1',
+  'anthropic.claude-3-sonnet-v1',
+];
+
 const BotKbEditPage: React.FC = () => {
   const { i18n, t } = useTranslation();
   const { open: openSnackbar } = useSnackbar();
@@ -642,9 +647,8 @@ const BotKbEditPage: React.FC = () => {
               : 0
           );
           setParsingModel(
-            // Claude 3.5 Sonnet is no longer offered by Amazon Bedrock.
-            bot.bedrockKnowledgeBase.parsingModel ===
-              'anthropic.claude-3-5-sonnet-v1'
+            // Retired parsing models are no longer offered by Amazon Bedrock.
+            RETIRED_PARSING_MODELS.includes(bot.bedrockKnowledgeBase.parsingModel)
               ? 'disabled'
               : bot.bedrockKnowledgeBase.parsingModel
           );

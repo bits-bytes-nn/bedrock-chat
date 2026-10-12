@@ -52,6 +52,21 @@ class TestBotPublishInput(unittest.TestCase):
                 allowed_origins=["example.com"],
             )
 
+    def test_validates_camel_case_requests(self):
+        request = {
+            "stage": "dev",
+            "quota": {"limit": None, "offset": None, "period": None},
+            "throttle": {"rateLimit": 100.0, "burstLimit": 100},
+            "allowedOrigins": ["example.com"],
+        }
+        with self.assertRaises(ValueError):
+            BotPublishInput.model_validate(request)
+
+        request["allowedOrigins"] = ["https://example.com"]
+        request["throttle"] = {"rateLimit": 100.0, "burstLimit": None}
+        with self.assertRaises(ValueError):
+            BotPublishInput.model_validate(request)
+
 
 if __name__ == "__main__":
     unittest.main()
