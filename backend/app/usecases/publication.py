@@ -45,12 +45,7 @@ def _fetch_bot_with_permission_check(user: User, bot_id: str) -> BotModel:
 
 def create_bot_publication(user: User, bot_id: str, bot_publish_input: BotPublishInput):
     """Publish an API for the bot."""
-    # Check existence and permission of the bot
-    bot = find_bot_by_id(bot_id)
-    if not bot.is_editable_by_user(user):
-        raise PermissionError(
-            f"User {user.id} is not authorized to access bot {bot_id}"
-        )
+    bot = _fetch_bot_with_permission_check(user, bot_id)
 
     if bot.shared_scope != "all":
         raise ValueError(f"Bot {bot_id} is not shared for all users. Cannot publish.")
@@ -104,14 +99,11 @@ def create_bot_publication(user: User, bot_id: str, bot_publish_input: BotPublis
             environment_variables[name] = os.environ[name]
 
     # Create `ApiPublishmentStack` by CodeBuild
-    try:
-        build_id = start_codebuild_project(environment_variables=environment_variables)
-    except Exception as e:
-        raise e
+    build_id = start_codebuild_project(environment_variables=environment_variables)
 
-    # Update bot attribute
+    # An admin may publish another user's bot, so the record is keyed by the owner.
     update_bot_publication(
-        user.id, bot_id, published_api_id=published_api_id, build_id=build_id
+        bot.owner_user_id, bot_id, published_api_id=published_api_id, build_id=build_id
     )
     return
 

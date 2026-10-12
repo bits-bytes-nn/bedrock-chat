@@ -89,18 +89,23 @@ DOCUMENT_BUCKET = os.environ.get("DOCUMENT_BUCKET", "bedrock-documents")
 
 
 def _update_s3_documents_by_diff(
-    user_id: str,
+    uploader_id: str,
+    owner_id: str,
     bot_id: str,
     added_filenames: list[str],
     deleted_filenames: list[str],
 ):
+    """Move uploaded files to the owner's document path and delete removed ones.
+
+    The uploader differs from the owner when an admin edits another user's bot.
+    """
     for filename in added_filenames:
-        tmp_path = compose_upload_temp_s3_path(user_id, bot_id, filename)
-        document_path = compose_upload_document_s3_path(user_id, bot_id, filename)
+        tmp_path = compose_upload_temp_s3_path(uploader_id, bot_id, filename)
+        document_path = compose_upload_document_s3_path(owner_id, bot_id, filename)
         move_file_in_s3(DOCUMENT_BUCKET, tmp_path, document_path)
 
     for filename in deleted_filenames:
-        document_path = compose_upload_document_s3_path(user_id, bot_id, filename)
+        document_path = compose_upload_document_s3_path(owner_id, bot_id, filename)
 
         # Ignore errors when deleting a non-existent file from the S3 bucket used in knowledge bases.
         # This allows users to update bot if the uploaded file is missing after the bot is created.
@@ -190,7 +195,7 @@ def create_new_bot(user: User, bot_input: BotInput) -> BotOutput:
 
         # Commit changes to S3
         _update_s3_documents_by_diff(
-            user.id, bot_input.id, bot_input.knowledge.filenames, []
+            user.id, user.id, bot_input.id, bot_input.knowledge.filenames, []
         )
         # Delete files from upload temp directory
         delete_files_with_prefix_from_s3(
@@ -256,13 +261,14 @@ def modify_owned_bot(
         # Commit changes to S3
         _update_s3_documents_by_diff(
             user.id,
+            bot.owner_user_id,
             bot_id,
             added_filenames,
             deleted_filenames,
         )
         # Delete files from upload temp directory
         delete_files_with_prefix_from_s3(
-            DOCUMENT_BUCKET, compose_upload_temp_s3_prefix(bot.owner_user_id, bot_id)
+            DOCUMENT_BUCKET, compose_upload_temp_s3_prefix(user.id, bot_id)
         )
 
         filenames = added_filenames + unchanged_filenames
@@ -355,7 +361,7 @@ def modify_owned_bot(
     if sync_status == "QUEUED":
         # If necessary, start the Embedding state machine.
         start_embedding_state_machine(
-            user_id=user.id,
+            user_id=bot.owner_user_id,
             bot_id=bot.id,
             added_filenames=added_filenames,
             unchanged_filenames=unchanged_filenames,

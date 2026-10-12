@@ -7,6 +7,7 @@ sys.path.insert(0, ".")
 
 from app import auth
 from app.repositories.models.conversation import MessageModel, TextContentModel
+from app.usecases import bot as bot_usecase
 from app.usecases import chat as chat_usecase
 from app.usecases import publication
 from app.usecases.chat import trace_to_root, validate_model_is_available
@@ -175,3 +176,18 @@ class TestPrepareConversation(unittest.TestCase):
                     chat_usecase.prepare_conversation(
                         USER, self.chat_input(message_id=message_id)
                     )
+
+
+class TestAdminEditsAnotherUsersBot(unittest.TestCase):
+    def test_moves_uploads_into_the_owner_path(self):
+        with patch.object(bot_usecase, "move_file_in_s3") as move, patch.object(
+            bot_usecase, "delete_file_from_s3"
+        ) as delete:
+            bot_usecase._update_s3_documents_by_diff(
+                "admin", "owner", "bot", ["new.pdf"], ["old.pdf"]
+            )
+
+        _, source, destination = move.call_args.args
+        self.assertIn("admin/bot", source)
+        self.assertIn("owner/bot", destination)
+        self.assertIn("owner/bot", delete.call_args.args[1])
