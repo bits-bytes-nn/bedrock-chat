@@ -85,6 +85,18 @@ By using the [Agent functionality](./docs/AGENT.md), your chatbot can automatica
 
 </details>
 
+### Presentations and recordings
+
+Chat attachments and bot knowledge files can also be PowerPoint presentations (`.pptx`) and recordings (`.mp3`, `.mp4`, `.wav`, `.flac`, `.ogg`, `.amr`, `.webm`, `.m4a`), which Bedrock cannot read directly. They are converted to text after the upload:
+
+- Presentations are parsed for slide text, tables and speaker notes (up to 100 MB).
+- Recordings are transcribed with Amazon Transcribe (up to 500 MB). The spoken language is identified among Korean, English, Japanese and Chinese, and speakers are labeled.
+
+A knowledge file is registered as `<filename>.txt`. A chat attachment is sent as text. Transcription runs in the Bedrock Region and is billed per minute of audio; see [Amazon Transcribe pricing](https://aws.amazon.com/transcribe/pricing/).
+
+> [!NOTE]
+> After a knowledge base sync succeeds, OpenSearch Serverless can take up to a minute before the new documents are returned by searches.
+
 ## 🎓Workshop
 
 A comprehensive workshop is available [here](https://catalog.us-east-1.prod.workshops.aws/workshops/4bf8d30b-f7c9-440a-a853-9394a41909d2/en-US).
