@@ -5,6 +5,7 @@ from unittest.mock import MagicMock, patch
 sys.path.insert(0, ".")
 
 from app.repositories.common import RecordNotFoundError
+from app.repositories.models.conversation import AttachmentContentModel
 from app.repositories.usage_analysis import _to_datehour_range, _validate_query
 from app.usecases import bot as bot_usecase
 from app.usecases.bot import issue_presigned_url, validate_new_bot_id
@@ -53,6 +54,21 @@ class TestIssuePresignedUrl(unittest.TestCase):
         for bot_id, filename in (("../bot", "doc.pdf"), (BOT_ID, "a/b.pdf")):
             with self.assertRaises(ValueError):
                 self.issue(bot_id, filename)
+
+
+class TestAttachmentName(unittest.TestCase):
+    def name(self, file_name: str) -> str:
+        return AttachmentContentModel(
+            content_type="attachment", body=b"x", file_name=file_name
+        ).format_and_name[1]
+
+    def test_keeps_valid_names(self):
+        self.assertEqual(self.name("report (1).pdf"), "report (1)")
+
+    def test_names_without_valid_characters_are_not_empty_or_equal(self):
+        korean, japanese = self.name("보고서.pdf"), self.name("報告書.pdf")
+        self.assertRegex(korean, r"^[0-9a-f]{8}$")
+        self.assertNotEqual(korean, japanese)
 
 
 class TestToDatehourRange(unittest.TestCase):
