@@ -15,7 +15,7 @@ from app.routes.schemas.conversation import ChatInput
 from app.stream import OnStopInput, OnThinking
 from app.usecases.chat import chat
 from app.user import User
-from boto3.dynamodb.conditions import Attr, Key
+from boto3.dynamodb.conditions import Key
 from botocore.config import Config
 from botocore.exceptions import ClientError
 
@@ -29,11 +29,15 @@ MAX_MERGED_COMPLETION_CHARS = 8 * 1024
 # Time reserved for Lambda to return after the sender has drained.
 SENDER_DRAIN_MARGIN_SECONDS = 5
 
+# Request payloads arrive in parts of up to 32K characters (frontend CHUNK_SIZE).
+# The limit leaves room for the largest attachments the frontend allows.
+MAX_MESSAGE_PART_CHARS = 32 * 1024
+MAX_MESSAGE_PARTS = 400
+
 dynamodb_client = boto3.resource("dynamodb")
 table = dynamodb_client.Table(WEBSOCKET_SESSION_TABLE_NAME)
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
 
 
 class _NotifyCommand(TypedDict):
@@ -303,13 +307,6 @@ def handler(event, context):
         return {"statusCode": 200, "body": "Disconnected."}
 
     connection_id = event["requestContext"]["connectionId"]
-    domain_name = event["requestContext"]["domainName"]
-    stage = event["requestContext"]["stage"]
-    endpoint_url = f"https://{domain_name}/{stage}"
-    notificator = NotificationSender(
-        endpoint_url=endpoint_url,
-        connection_id=connection_id,
-    )
 
     now = datetime.now()
     expire = int(now.timestamp()) + 60 * 2  # 2 minute from now
@@ -317,15 +314,10 @@ def handler(event, context):
     step = body.get("step")
     token = body.get("token")
 
-    notification_thread = Thread(
-        target=lambda: notificator.run(),
-        daemon=True,
-    )
-    notification_thread.start()
     try:
         # API Gateway (websocket) has hard limit of 32KB per message, so if the message is larger than that,
         # need to concatenate chunks and send as a single full message.
-        # To do that, we store the chunks in DynamoDB and when the message is complete, send it to SNS.
+        # To do that, we store the chunks in DynamoDB and process the message once it is complete.
         # The life cycle of the message is as follows:
         # 1. Client sends `START` message to the WebSocket API.
         # 2. This handler receives the `Session started` message.
@@ -339,15 +331,7 @@ def handler(event, context):
                 decoded = verify_token(token)
             except Exception:
                 logger.exception("Invalid token")
-                return {
-                    "statusCode": 403,
-                    "body": json.dumps(
-                        dict(
-                            status="ERROR",
-                            reason="Invalid token.",
-                        )
-                    ),
-                }
+                return _error(403, "Invalid token.")
 
             user_id = decoded["sub"]
 
@@ -363,15 +347,16 @@ def handler(event, context):
             )
             return {"statusCode": 200, "body": "Session started."}
         elif step == "END":
-            decoded = verify_token(token)
+            try:
+                decoded = verify_token(token)
+            except Exception:
+                logger.exception("Invalid token")
+                return _error(403, "Invalid token.")
             user = User.from_decoded_token(decoded)
 
-            # Retrieve user id
-            response = table.query(
-                KeyConditionExpression=Key("ConnectionId").eq(connection_id),
-                FilterExpression=Attr("UserId").exists(),
-            )
-            user_id = response["Items"][0]["UserId"]
+            # The request must come from the user who started the session.
+            if _session_user_id(connection_id) != user.id:
+                return _error(403, "Session not started.")
 
             # Concatenate the message parts
             message_parts = []
@@ -404,17 +389,25 @@ def handler(event, context):
 
             # Process the concatenated full message
             chat_input = ChatInput(**json.loads(full_message))
-            return process_chat_input(
-                user=user,
-                chat_input=chat_input,
-                notificator=notificator,
-            )
+            return _process_with_sender(event, context, connection_id, user, chat_input)
 
         else:
-            # Store the message part of full message
+            # Parts are accepted only within a started session and within limits,
+            # because they are stored before the token is checked at END.
+            index = body.get("index")
+            message_part = body.get("part")
+            if (
+                not isinstance(index, int)
+                or not 0 <= index < MAX_MESSAGE_PARTS
+                or not isinstance(message_part, str)
+                or len(message_part) > MAX_MESSAGE_PART_CHARS
+            ):
+                return _error(400, "Invalid message part.")
+            if _session_user_id(connection_id) is None:
+                return _error(403, "Session not started.")
+
             # Zero is reserved for user id, so start from 1
-            part_index = body["index"] + 1
-            message_part = body["part"]
+            part_index = index + 1
 
             # Store the message part with its index
             table.put_item(
@@ -427,18 +420,42 @@ def handler(event, context):
             )
             return {"statusCode": 200, "body": "Message part received."}
 
-    except Exception as e:
+    except Exception:
+        # Unexpected errors may contain resource names and account details.
         logger.exception("Operation failed")
-        return {
-            "statusCode": 500,
-            "body": json.dumps(
-                {
-                    "status": "ERROR",
-                    "reason": str(e),
-                }
-            ),
-        }
+        return _error(500, "Failed to process the request.")
 
+
+def _error(status_code: int, reason: str) -> dict:
+    return {
+        "statusCode": status_code,
+        "body": json.dumps(dict(status="ERROR", reason=reason)),
+    }
+
+
+def _session_user_id(connection_id: str) -> str | None:
+    """Return the user who sent START on this connection, if any."""
+    item = table.get_item(
+        Key={"ConnectionId": connection_id, "MessagePartId": decimal(0)}
+    ).get("Item")
+    return item.get("UserId") if item else None
+
+
+def _process_with_sender(
+    event, context, connection_id: str, user: User, chat_input: ChatInput
+):
+    """Run the chat with a background sender that streams to the connection."""
+    request_context = event["requestContext"]
+    notificator = NotificationSender(
+        endpoint_url=f"https://{request_context['domainName']}/{request_context['stage']}",
+        connection_id=connection_id,
+    )
+    notification_thread = Thread(target=notificator.run, daemon=True)
+    notification_thread.start()
+    try:
+        return process_chat_input(
+            user=user, chat_input=chat_input, notificator=notificator
+        )
     finally:
         notificator.finish()
         # Wait until every queued notification is delivered. Returning earlier freezes

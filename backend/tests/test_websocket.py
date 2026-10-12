@@ -5,7 +5,10 @@ import unittest
 from types import SimpleNamespace
 from unittest.mock import patch
 
+import boto3
+import pytest
 from botocore.exceptions import ClientError
+from moto import mock_aws
 
 sys.path.insert(0, ".")
 os.environ.setdefault("WEBSOCKET_SESSION_TABLE_NAME", "test-websocket-session")
@@ -166,6 +169,117 @@ class TestProcessChatInput(unittest.TestCase):
         run_sender(sender, gatewayapi)
 
         self.assertEqual(gatewayapi.sent, [{"status": "ERROR", "reason": "No access"}])
+
+
+@pytest.fixture
+def session_table():
+    with mock_aws():
+        boto3.client("dynamodb", region_name="us-east-1").create_table(
+            TableName=os.environ["WEBSOCKET_SESSION_TABLE_NAME"],
+            BillingMode="PAY_PER_REQUEST",
+            AttributeDefinitions=[
+                {"AttributeName": "ConnectionId", "AttributeType": "S"},
+                {"AttributeName": "MessagePartId", "AttributeType": "N"},
+            ],
+            KeySchema=[
+                {"AttributeName": "ConnectionId", "KeyType": "HASH"},
+                {"AttributeName": "MessagePartId", "KeyType": "RANGE"},
+            ],
+        )
+        session_table = boto3.resource("dynamodb", region_name="us-east-1").Table(
+            os.environ["WEBSOCKET_SESSION_TABLE_NAME"]
+        )
+        with patch.object(websocket, "table", session_table):
+            yield
+
+
+def frame(body: dict, connection_id: str = "connection") -> dict:
+    return {
+        "requestContext": {
+            "routeKey": "$default",
+            "connectionId": connection_id,
+            "domainName": "example.com",
+            "stage": "dev",
+        },
+        "body": json.dumps(body),
+    }
+
+
+CHAT_INPUT = {
+    "conversationId": "conversation",
+    "message": {
+        "role": "user",
+        "content": [{"contentType": "text", "body": "hello"}],
+        "model": "claude-v5.5-haiku",
+        "parentMessageId": None,
+    },
+    "botId": None,
+}
+TOKEN = {"sub": "user", "cognito:username": "user", "email": "user@example.com"}
+
+
+@pytest.mark.usefixtures("session_table")
+class TestHandler:
+    def start(self, sub: str = "user"):
+        with patch.object(
+            websocket, "verify_token", return_value={**TOKEN, "sub": sub}
+        ):
+            return websocket.handler(frame({"step": "START", "token": "t"}), None)
+
+    def end(self, sub: str = "user"):
+        with (
+            patch.object(websocket, "verify_token", return_value={**TOKEN, "sub": sub}),
+            patch.object(
+                websocket, "_process_with_sender", return_value={"statusCode": 200}
+            ) as process,
+        ):
+            response = websocket.handler(frame({"step": "END", "token": "t"}), None)
+        return response, process
+
+    def test_reassembles_parts_in_order(self):
+        payload = json.dumps(CHAT_INPUT)
+        self.start()
+        for index, part in reversed(list(enumerate([payload[:20], payload[20:]]))):
+            response = websocket.handler(
+                frame({"step": "BODY", "index": index, "part": part}), None
+            )
+            assert response["statusCode"] == 200
+
+        response, process = self.end()
+
+        assert response["statusCode"] == 200
+        chat_input = process.call_args.args[4]
+        assert chat_input.message.content[0].body == "hello"
+
+    def test_rejects_parts_without_a_session(self):
+        response = websocket.handler(
+            frame({"step": "BODY", "index": 0, "part": "x"}), None
+        )
+        assert response["statusCode"] == 403
+
+    @pytest.mark.parametrize(
+        "body",
+        [
+            {"step": "BODY", "index": -1, "part": "x"},
+            {"step": "BODY", "index": websocket.MAX_MESSAGE_PARTS, "part": "x"},
+            {"step": "BODY", "index": "0", "part": "x"},
+            {
+                "step": "BODY",
+                "index": 0,
+                "part": "x" * (websocket.MAX_MESSAGE_PART_CHARS + 1),
+            },
+        ],
+    )
+    def test_rejects_invalid_parts(self, body):
+        self.start()
+        assert websocket.handler(frame(body), None)["statusCode"] == 400
+
+    def test_rejects_end_from_another_user(self):
+        self.start(sub="user")
+        response, process = self.end(sub="someone-else")
+
+        assert response["statusCode"] == 403
+        process.assert_not_called()
 
 
 if __name__ == "__main__":

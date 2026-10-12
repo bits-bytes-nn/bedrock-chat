@@ -53,11 +53,12 @@ from tests.test_usecases.utils.user_factory import (
 )
 
 
+@pytest.mark.usefixtures("dynamodb_tables")
 class TestIssuePresignedUrl(unittest.TestCase):
     def test_issue_presigned_url(self):
         user = create_test_user("test_user")
         url = issue_presigned_url(
-            user, "test_bot", "test_file", content_type="image/png"
+            user, "01J9Z3Q4R5S6T7V8W9X0Y1Z2A3", "test_file", content_type="image/png"
         )
         self.assertEqual(type(url), str)
         self.assertTrue(url.startswith("https://"))

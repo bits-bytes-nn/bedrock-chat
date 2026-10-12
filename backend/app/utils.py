@@ -6,13 +6,11 @@ from typing import Literal
 
 import boto3
 from botocore.config import Config
-from botocore.client import Config
 from botocore.exceptions import ClientError
 
 from app.user import User
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
 
 REGION = os.environ.get("REGION", "us-east-1")
 BEDROCK_REGION = os.environ.get("BEDROCK_REGION", "us-east-1")
@@ -33,21 +31,16 @@ def is_running_on_lambda():
     return "AWS_EXECUTION_ENV" in os.environ
 
 
-def get_bedrock_client(region=BEDROCK_REGION):
-    client = boto3.client("bedrock", region_name=region)
-    return client
-
-
 def get_bedrock_runtime_client(region=BEDROCK_REGION):
-    # Synchronous callers sit behind API Gateway with a 30-second limit, so fail
-    # fast and let botocore retry throttling with short backoff.
+    # Synchronous callers sit behind API Gateway's 29-second integration timeout.
+    # Retries would also repeat timed-out calls and exceed it, so fail fast.
     client = boto3.client(
         "bedrock-runtime",
         region_name=region,
         config=Config(
-            connect_timeout=5,
-            read_timeout=25,
-            retries={"mode": "standard", "max_attempts": 3},
+            connect_timeout=3,
+            read_timeout=23,
+            retries={"mode": "standard", "max_attempts": 1},
         ),
     )
     return client
@@ -182,12 +175,12 @@ def get_user_cognito_groups(user: User, user_pool_id: str = USER_POOL_ID) -> lis
             UserPoolId=user_pool_id, Username=user.email
         )
         groups = [group["GroupName"] for group in response.get("Groups", [])]
-        logger.info(f"Groups for user {user.name}: {groups}")
+        logger.debug("Groups for user %s: %s", user.name, groups)
 
         return groups
 
-    except ClientError as e:
-        print(f"Error retrieving groups for user {user.name}: {e}")
+    except ClientError:
+        logger.exception("Failed to retrieve groups for user %s", user.name)
         return []
 
 
@@ -216,11 +209,7 @@ def store_api_key_to_secret_manager(
         logger.info(f"Attempting to store API key for {secret_name}")
 
         try:
-            # Try to get existing secret
-            existing_secret = secrets_client.describe_secret(SecretId=secret_name)
-            logger.info(f"Found existing secret: {secret_name}")
-
-            # Update existing secret
+            # Update the secret, or create it below if it does not exist yet
             response = secrets_client.update_secret(
                 SecretId=secret_name, SecretString=secret_value
             )

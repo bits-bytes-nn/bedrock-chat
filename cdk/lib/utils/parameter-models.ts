@@ -164,6 +164,10 @@ const ApiPublishParametersSchema = BaseParametersSchema.extend({
   publishedApiDeploymentStage: z.string().default("api"),
   publishedApiId: z.string().optional(),
   publishedApiAllowedOrigins: z.string().default('["*"]'),
+  // Model settings of the main API, passed through as-is.
+  globalAvailableModels: z.string().default("[]"),
+  defaultModel: z.string().default(""),
+  titleModel: z.string().default(""),
 });
 
 /**
@@ -375,6 +379,9 @@ export function resolveApiPublishParameters(): ApiPublishParameters {
     publishedApiDeploymentStage: getEnvVar("PUBLISHED_API_DEPLOYMENT_STAGE"),
     publishedApiId: getEnvVar("PUBLISHED_API_ID"),
     publishedApiAllowedOrigins: getEnvVar("PUBLISHED_API_ALLOWED_ORIGINS"),
+    globalAvailableModels: getEnvVar("GLOBAL_AVAILABLE_MODELS"),
+    defaultModel: getEnvVar("DEFAULT_MODEL"),
+    titleModel: getEnvVar("TITLE_MODEL"),
   };
 
   return ApiPublishParametersSchema.parse(envVars);

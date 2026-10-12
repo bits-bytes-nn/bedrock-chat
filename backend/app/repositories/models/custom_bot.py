@@ -47,7 +47,6 @@ from pydantic import (
 )
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
 
 
 def _create_model_activate_model(model_names: List[str]) -> Type[DynamicBaseModel]:

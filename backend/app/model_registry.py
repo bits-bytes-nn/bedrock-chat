@@ -54,7 +54,6 @@ class ModelSpec:
     supports_prefill: bool = True
     supports_tool_use: bool = True
     prompt_caching: frozenset[CachingTarget] = frozenset()
-    supports_multiple_system_prompts: bool = False
     # Reasoning blocks without a signature cannot be sent back to these models.
     accepts_unsigned_reasoning: bool = True
 
@@ -84,7 +83,6 @@ def _claude(
         top_k_field=None if modern else "claude",
         supports_prefill=supports_prefill and not modern,
         prompt_caching=_ALL_CACHING,
-        supports_multiple_system_prompts=True,
     )
 
 

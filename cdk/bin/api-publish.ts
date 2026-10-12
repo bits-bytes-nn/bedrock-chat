@@ -48,6 +48,11 @@ new ApiPublishmentStack(app, `ApiPublishmentStack${params.publishedApiId}`, {
   tableAccessRoleArn: tableAccessRoleArn,
   webAclArn: webAclArn,
   largeMessageBucketName: largeMessageBucketName,
+  modelEnvironment: {
+    GLOBAL_AVAILABLE_MODELS: params.globalAvailableModels,
+    DEFAULT_MODEL: params.defaultModel,
+    TITLE_MODEL: params.titleModel,
+  },
   usagePlan: {
     throttle:
       params.publishedApiThrottleRateLimit !== undefined &&

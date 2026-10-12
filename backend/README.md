@@ -30,6 +30,13 @@ export CLIENT_ID=xxxxxxxxx
 export OPENSEARCH_DOMAIN_ENDPOINT=https://abcdefghijklmnopqrst.aa-region-1.aoss.amazonaws.com
 ```
 
+  Optional variables:
+
+  - `LOG_LEVEL`: level of the `app` loggers (default `INFO`).
+  - `ENABLE_BEDROCK_GLOBAL_INFERENCE`, `ENABLE_BEDROCK_CROSS_REGION_INFERENCE`: `true` to use inference profiles.
+  - `GLOBAL_AVAILABLE_MODELS`: JSON array of model names users may choose. Empty means all models.
+  - `DEFAULT_MODEL`, `TITLE_MODEL`: model names for new conversations and title generation.
+
 - Configure CDK configration.
 Local development requires OpenSearch data access permissions for the IAM role to be used. You can set this parameter in either `cdk/cdk.json` or `cdk/parameter.ts`.
 

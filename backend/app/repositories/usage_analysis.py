@@ -142,6 +142,19 @@ async def run_athena_query(
     return results
 
 
+def _validate_query(limit: int, from_: str | None, to_: str | None) -> tuple[str, str]:
+    """Validate the admin usage query and return its datehour range.
+
+    Raises:
+        ValueError: If the limit or the period is invalid.
+    """
+    if not 1 <= limit <= 1000:
+        raise ValueError("Limit must be between 1 and 1000.")
+    if bool(from_) != bool(to_):
+        raise ValueError("Both start and end must be specified or omitted.")
+    return _to_datehour_range(from_, to_)
+
+
 def _to_datehour_range(from_: str | None, to_: str | None) -> tuple[str, str]:
     """Convert YYYYMMDDHH bounds to the datehour partition format (YYYY/MM/DD/HH).
 
@@ -171,13 +184,7 @@ async def find_bots_sorted_by_price(
     - start: start date of the period to be analyzed. The format is `YYYYMMDDHH`.
     - end: end date of the period to be analyzed. The format is `YYYYMMDDHH`.
     """
-    assert 1 <= limit <= 1000, "Limit must be between 1 and 1000."
-
-    assert (from_ and to_) or (
-        not from_ and not to_
-    ), "Both from_ and to_ must be specified or omitted."
-
-    from_str, to_str = _to_datehour_range(from_, to_)
+    from_str, to_str = _validate_query(limit, from_, to_)
 
     # To avoid duplication of conversation, apply most the latest conversation by using subquery
     query = f"""
@@ -277,13 +284,7 @@ async def find_users_sorted_by_price(
     from_: str | None = None,
     to_: str | None = None,
 ) -> list[UsagePerUser]:
-    assert 1 <= limit <= 1000, "Limit must be between 1 and 1000."
-
-    assert (from_ and to_) or (
-        not from_ and not to_
-    ), "Both from_ and to_ must be specified or omitted."
-
-    from_str, to_str = _to_datehour_range(from_, to_)
+    from_str, to_str = _validate_query(limit, from_, to_)
 
     # To avoid duplication of conversation, apply most the latest conversation by using subquery
     query = f"""

@@ -10,7 +10,6 @@ from app.routes.schemas.conversation import type_model_name
 from strands.types.tools import AgentTool as StrandsAgentTool
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
 
 
 def get_strands_registered_tools(bot: BotModel | None = None) -> list[StrandsAgentTool]:

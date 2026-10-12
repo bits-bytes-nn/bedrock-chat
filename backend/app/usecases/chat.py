@@ -1,16 +1,17 @@
 import logging
-from typing import Callable
+from typing import Callable, Literal
 
 from app.stream import ToolRunResult
 from app.strands_integration.chat_strands import converse_with_strands
 from app.bedrock import (
     call_converse_api,
     get_text_from_converse_response,
-    compose_args_for_converse_api,
+    get_model_id,
     is_prefill_supported,
     is_tooluse_supported,
 )
 from app.model_registry import get_model_spec
+from mypy_boto3_bedrock_runtime.type_defs import MessageTypeDef
 from app.prompt import build_rag_prompt, get_prompt_to_cite_tool_results
 from app.repositories.conversation import (
     RecordNotFoundError,
@@ -23,7 +24,6 @@ from app.repositories.custom_bot import alias_exists, store_alias
 from app.repositories.models.conversation import (
     ConversationModel,
     MessageModel,
-    ReasoningContentModel,
     RelatedDocumentModel,
     SimpleMessageModel,
     TextContentModel,
@@ -57,7 +57,6 @@ from app.vector_search import (
 from ulid import ULID
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
 
 
 def prepare_conversation(
@@ -76,6 +75,10 @@ def prepare_conversation(
             parent_id = "instruction"
         elif chat_input.message.parent_message_id is None:
             parent_id = conversation.last_message_id
+        # The bot is fixed when a conversation starts. Switching it would skip the
+        # bot's model allowlist and instruction.
+        if chat_input.bot_id != conversation.bot_id:
+            raise ValueError("The bot does not match the conversation.")
         if chat_input.bot_id:
             logger.info("Bot id is provided. Fetching bot.")
             owned, bot = fetch_bot(user, chat_input.bot_id)
@@ -128,16 +131,11 @@ def prepare_conversation(
             )
             initial_message_map["system"].children.append("instruction")
 
-            if not owned:
-                try:
-                    # Check alias is already created
-                    alias_exists(user.id, chat_input.bot_id)
-                except RecordNotFoundError:
-                    logger.info(
-                        "Bot is not owned by the user. Creating alias to shared bot."
-                    )
-                    # Create alias item
-                    store_alias(user.id, BotAliasModel.from_bot_for_initial_alias(bot))
+            if not owned and not alias_exists(user.id, chat_input.bot_id):
+                logger.info(
+                    "Bot is not owned by the user. Creating alias to shared bot."
+                )
+                store_alias(user.id, BotAliasModel.from_bot_for_initial_alias(bot))
 
         # Create new conversation
         conversation = ConversationModel(
@@ -160,7 +158,11 @@ def prepare_conversation(
         if chat_input.message.message_id:
             message_id = chat_input.message.message_id
             # Reusing an existing id would overwrite a message or create a cycle.
-            if message_id in conversation.message_map:
+            # "system" and "instruction" are the roots of every conversation.
+            if message_id in conversation.message_map or message_id in (
+                "system",
+                "instruction",
+            ):
                 raise ValueError(f"Message id {message_id} already exists.")
         else:
             message_id = str(ULID())
@@ -527,34 +529,42 @@ def propose_conversation_title(
         message_map=conversation.message_map,
     )
 
-    # Append message to generate title
-    new_message = SimpleMessageModel(
-        role="user",
-        content=[
-            TextContentModel(
-                content_type="text",
-                body=PROMPT,
-            )
-        ],
-    )
-    messages.append(new_message)
+    # Titles only need the text of the conversation, without tool use or reasoning.
+    title_messages: list[MessageTypeDef] = []
+    for message in messages:
+        text = "\n".join(
+            content.body
+            for content in message.content
+            if isinstance(content, TextContentModel)
+        )
+        if message.role not in ("user", "assistant") or not text:
+            continue
+        role: Literal["user", "assistant"] = (
+            "user" if message.role == "user" else "assistant"
+        )
+        if title_messages and title_messages[-1]["role"] == role:
+            # Converse requires alternating roles.
+            title_messages[-1]["content"] = [
+                {"text": title_messages[-1]["content"][0]["text"] + "\n" + text}
+            ]
+        else:
+            title_messages.append({"role": role, "content": [{"text": text}]})
 
-    # Invoke Bedrock
-    args = compose_args_for_converse_api(
-        messages=[
-            message
-            for message in messages
-            if not any(
-                isinstance(content, ToolUseContentModel)
-                or isinstance(content, ToolResultContentModel)
-                or isinstance(content, ReasoningContentModel)
-                for content in message.content
-            )
-        ],
-        model=model,
-        stream=False,
+    if title_messages and title_messages[-1]["role"] == "user":
+        title_messages[-1]["content"] = [
+            {"text": title_messages[-1]["content"][0]["text"] + "\n\n" + PROMPT}
+        ]
+    else:
+        title_messages.append({"role": "user", "content": [{"text": PROMPT}]})
+
+    response = call_converse_api(
+        {
+            "modelId": get_model_id(model),
+            "messages": title_messages,
+            # Leaves room for models that always reason before answering.
+            "inferenceConfig": {"maxTokens": 2048},
+        }
     )
-    response = call_converse_api(args)
     return get_text_from_converse_response(response)
 
 

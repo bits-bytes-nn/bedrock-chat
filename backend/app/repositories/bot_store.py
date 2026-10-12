@@ -12,7 +12,6 @@ env_prefix = os.environ.get("ENV_PREFIX", "")
 INDEX_NAME = f"{env_prefix}bot"
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
 
 
 def find_bots_by_query(
@@ -28,7 +27,7 @@ def find_bots_by_query(
 
     1. Main Search (must clause):
     - Uses multi_match for flexible text searching
-    - Searches across multiple fields (Description, Title, Instruction)
+    - Searches the description and title. Instructions are private to the owner.
     - Implements fuzzy matching for typo tolerance
     - Requires 30% of search terms to match
 
@@ -47,7 +46,7 @@ def find_bots_by_query(
         - Admins can see their own private bots (`PK.keyword = admin-user`)
     """
     client = client or get_opensearch_client()
-    logger.info(f"Searching bots with query: {query}")
+    logger.info("Searching bots")
 
     # Include only BOT items
     filter_must = [{"prefix": {"SK.keyword": "BOT"}}]
@@ -120,7 +119,7 @@ def find_bots_by_query(
                     {
                         "multi_match": {
                             "query": query,
-                            "fields": ["Description", "Title", "Instruction"],
+                            "fields": ["Description", "Title"],
                             "type": "best_fields",
                             "operator": "or",
                             "minimum_should_match": "30%",
@@ -149,7 +148,7 @@ def find_bots_by_query(
             BotMeta.from_opensearch_response(hit, user.id)
             for hit in response["hits"]["hits"]
         ]
-        logger.info(f"Found {len(bots)} bots matching query: {query}")
+        logger.info("Found %d bots", len(bots))
         return bots
 
     except Exception as e:

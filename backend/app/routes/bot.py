@@ -32,7 +32,6 @@ from app.user import User
 from fastapi import APIRouter, Depends, Request
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
 
 router = APIRouter(tags=["bot"])
 
@@ -50,7 +49,12 @@ def post_bot(
 
 
 @router.patch("/bot/{bot_id}")
-def patch_bot(request: Request, bot_id: str, modify_input: BotModifyInput):
+def patch_bot(
+    request: Request,
+    bot_id: str,
+    modify_input: BotModifyInput,
+    create_bot_check=Depends(check_creating_bot_allowed),
+):
     """Modify owned bot title, instruction and description."""
     current_user: User = request.state.current_user
 
@@ -68,7 +72,10 @@ def patch_bot_star_status(
 
 @router.patch("/bot/{bot_id}/visibility")
 def patch_bot_shared_status(
-    request: Request, bot_id: str, visibility_input: BotSwitchVisibilityInput
+    request: Request,
+    bot_id: str,
+    visibility_input: BotSwitchVisibilityInput,
+    create_bot_check=Depends(check_creating_bot_allowed),
 ):
     """Switch bot visibility"""
     current_user: User = request.state.current_user
@@ -136,7 +143,11 @@ def delete_bot(request: Request, bot_id: str):
 
 @router.get("/bot/{bot_id}/presigned-url", response_model=BotPresignedUrlOutput)
 def get_bot_presigned_url(
-    request: Request, bot_id: str, filename: str, contentType: str
+    request: Request,
+    bot_id: str,
+    filename: str,
+    contentType: str,
+    create_bot_check=Depends(check_creating_bot_allowed),
 ):
     """Get presigned url for bot"""
     current_user: User = request.state.current_user

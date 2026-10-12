@@ -25,6 +25,8 @@ interface ApiPublishmentStackProps extends StackProps {
   readonly usagePlan: apigateway.UsagePlanProps;
   readonly deploymentStage?: string;
   readonly largeMessageBucketName: string;
+  /** Model allowlist and defaults of the main API. */
+  readonly modelEnvironment: Record<string, string>;
   readonly corsOptions?: apigateway.CorsOptions;
 }
 
@@ -94,6 +96,7 @@ export class ApiPublishmentStack extends Stack {
         REGION: Stack.of(this).region,
         BEDROCK_REGION: props.bedrockRegion,
         LARGE_MESSAGE_BUCKET: props.largeMessageBucketName,
+        ...props.modelEnvironment,
         TABLE_ACCESS_ROLE_ARN: props.tableAccessRoleArn,
       },
       role: handlerRole,
@@ -132,6 +135,7 @@ export class ApiPublishmentStack extends Stack {
             props.enableBedrockCrossRegionInference.toString(),
           BEDROCK_REGION: props.bedrockRegion,
           TABLE_ACCESS_ROLE_ARN: props.tableAccessRoleArn,
+          ...props.modelEnvironment,
         },
         role: handlerRole,
         logRetention: logs.RetentionDays.THREE_MONTHS,

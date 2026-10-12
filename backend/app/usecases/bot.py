@@ -83,24 +83,28 @@ from app.utils import (
 )
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
 
 DOCUMENT_BUCKET = os.environ.get("DOCUMENT_BUCKET", "bedrock-documents")
 
 
 def _update_s3_documents_by_diff(
-    user_id: str,
+    uploader_id: str,
+    owner_id: str,
     bot_id: str,
     added_filenames: list[str],
     deleted_filenames: list[str],
 ):
+    """Move uploaded files to the owner's document path and delete removed ones.
+
+    The uploader differs from the owner when an admin edits another user's bot.
+    """
     for filename in added_filenames:
-        tmp_path = compose_upload_temp_s3_path(user_id, bot_id, filename)
-        document_path = compose_upload_document_s3_path(user_id, bot_id, filename)
+        tmp_path = compose_upload_temp_s3_path(uploader_id, bot_id, filename)
+        document_path = compose_upload_document_s3_path(owner_id, bot_id, filename)
         move_file_in_s3(DOCUMENT_BUCKET, tmp_path, document_path)
 
     for filename in deleted_filenames:
-        document_path = compose_upload_document_s3_path(user_id, bot_id, filename)
+        document_path = compose_upload_document_s3_path(owner_id, bot_id, filename)
 
         # Ignore errors when deleting a non-existent file from the S3 bucket used in knowledge bases.
         # This allows users to update bot if the uploaded file is missing after the bot is created.
@@ -153,6 +157,11 @@ def validate_external_resource_references(
         raise PermissionError("Only administrators can add Bedrock agents.")
 
 
+def _validate_bot_id_format(bot_id: str) -> None:
+    if not re.fullmatch(r"[0-9A-HJKMNP-TV-Z]{26}", bot_id):
+        raise ValueError("Bot ID must be a ULID.")
+
+
 def validate_new_bot_id(bot_id: str) -> None:
     """Bot IDs are chosen by the client, so make sure they cannot collide.
 
@@ -162,8 +171,7 @@ def validate_new_bot_id(bot_id: str) -> None:
     Raises:
         ValueError: If the ID is not a ULID or is already used.
     """
-    if not re.fullmatch(r"[0-9A-HJKMNP-TV-Z]{26}", bot_id):
-        raise ValueError("Bot ID must be a ULID.")
+    _validate_bot_id_format(bot_id)
     try:
         find_bot_by_id(bot_id)
     except RecordNotFoundError:
@@ -190,7 +198,7 @@ def create_new_bot(user: User, bot_input: BotInput) -> BotOutput:
 
         # Commit changes to S3
         _update_s3_documents_by_diff(
-            user.id, bot_input.id, bot_input.knowledge.filenames, []
+            user.id, user.id, bot_input.id, bot_input.knowledge.filenames, []
         )
         # Delete files from upload temp directory
         delete_files_with_prefix_from_s3(
@@ -256,13 +264,14 @@ def modify_owned_bot(
         # Commit changes to S3
         _update_s3_documents_by_diff(
             user.id,
+            bot.owner_user_id,
             bot_id,
             added_filenames,
             deleted_filenames,
         )
         # Delete files from upload temp directory
         delete_files_with_prefix_from_s3(
-            DOCUMENT_BUCKET, compose_upload_temp_s3_prefix(bot.owner_user_id, bot_id)
+            DOCUMENT_BUCKET, compose_upload_temp_s3_prefix(user.id, bot_id)
         )
 
         filenames = added_filenames + unchanged_filenames
@@ -355,7 +364,7 @@ def modify_owned_bot(
     if sync_status == "QUEUED":
         # If necessary, start the Embedding state machine.
         start_embedding_state_machine(
-            user_id=user.id,
+            user_id=bot.owner_user_id,
             bot_id=bot.id,
             added_filenames=added_filenames,
             unchanged_filenames=unchanged_filenames,
@@ -694,6 +703,25 @@ def modify_bot_stats(user: User, bot: BotModel, increment: int):
 def issue_presigned_url(
     user: User, bot_id: str, filename: str, content_type: str
 ) -> str:
+    """Issue an upload URL in the user's temporary prefix for the bot.
+
+    Raises:
+        ValueError: If the bot ID or the filename is invalid.
+        PermissionError: If the bot exists and the user cannot edit it.
+    """
+    _validate_bot_id_format(bot_id)
+    if not filename or "/" in filename:
+        raise ValueError("Invalid filename.")
+    try:
+        bot = find_bot_by_id(bot_id)
+    except RecordNotFoundError:
+        # Files are uploaded before a new bot is created.
+        pass
+    else:
+        if not bot.is_editable_by_user(user):
+            raise PermissionError(
+                f"User {user.id} is not authorized to edit bot {bot_id}"
+            )
     response = generate_presigned_url(
         DOCUMENT_BUCKET,
         compose_upload_temp_s3_path(user.id, bot_id, filename),

@@ -1,3 +1,4 @@
+import logging
 import os
 
 import boto3
@@ -7,10 +8,13 @@ from app.routes.schemas.published_api import (
     ChatOutputWithoutBotId,
     MessageRequestedResponse,
 )
-from app.usecases.chat import fetch_conversation
+from app.repositories.custom_bot import find_bot_by_id
+from app.usecases.chat import fetch_conversation, validate_model_is_available
 from app.user import User
 from fastapi import APIRouter, HTTPException, Request
 from ulid import ULID
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["published_api"])
 
@@ -44,6 +48,9 @@ def post_message(request: Request, message_input: ChatInputWithoutBotId):
     # Issue id for the response message
     response_message_id = str(ULID())
 
+    # Reject unavailable models now instead of failing later in the queue consumer.
+    validate_model_is_available(message_input.message.model, find_bot_by_id(bot_id))
+
     chat_input = ChatInput(
         conversation_id=conversation_id,
         message=MessageInput(
@@ -62,8 +69,9 @@ def post_message(request: Request, message_input: ChatInputWithoutBotId):
         _ = sqs_client.send_message(
             QueueUrl=QUEUE_URL, MessageBody=chat_input.model_dump_json()
         )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    except Exception:
+        logger.exception("Failed to queue the message")
+        raise HTTPException(status_code=500, detail="Failed to queue the message.")
 
     return MessageRequestedResponse(
         conversation_id=conversation_id, message_id=response_message_id
@@ -93,6 +101,11 @@ def get_message(request: Request, conversation_id: str, message_id: str):
         raise HTTPException(
             status_code=404,
             detail=f"Message {message_id} not found in conversation {conversation_id}",
+        )
+    if not input_message.children:
+        raise HTTPException(
+            status_code=404,
+            detail=f"The response to message {message_id} is not ready yet",
         )
     output_message_id = input_message.children[0]
     output_message = conversation.message_map.get(output_message_id, None)

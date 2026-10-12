@@ -7,7 +7,6 @@ from app.repositories.common import decompose_conv_id
 from pydantic import BaseModel, Field
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
 
 
 class SearchHighlightModel(BaseModel):

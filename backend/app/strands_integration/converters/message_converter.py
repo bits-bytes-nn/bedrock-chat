@@ -121,7 +121,7 @@ def simple_message_models_to_strands_messages(
                     "cachePoint": {"type": "default"},
                 },
             ]
-            logger.debug(f"Added message cache point to user message: {message}")
+            logger.debug("Added a message cache point to the last user message")
 
     return messages
 
