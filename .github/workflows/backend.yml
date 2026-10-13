@@ -14,7 +14,6 @@ on:
       - "frontend/src/constants/supportedAttachedFiles.ts"
       # tests/test_alarm_log_terms.py checks the log lines that alarms count.
       - "cdk/lib/constructs/monitoring.ts"
-      - "cdk/lib/api-publishment-stack.ts"
       # tests/test_cognito_trigger_resource.py runs this handler.
       - "cdk/custom-resources/cognito-trigger/**"
       - ".github/workflows/backend.yml"
@@ -31,7 +30,6 @@ on:
       - "frontend/src/constants/supportedAttachedFiles.ts"
       # tests/test_alarm_log_terms.py checks the log lines that alarms count.
       - "cdk/lib/constructs/monitoring.ts"
-      - "cdk/lib/api-publishment-stack.ts"
       # tests/test_cognito_trigger_resource.py runs this handler.
       - "cdk/custom-resources/cognito-trigger/**"
       - ".github/workflows/backend.yml"

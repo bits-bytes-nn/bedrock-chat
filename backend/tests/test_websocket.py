@@ -15,7 +15,7 @@ sys.path.insert(0, ".")
 os.environ.setdefault("WEBSOCKET_SESSION_TABLE_NAME", "test-websocket-session")
 
 from app import websocket
-from app.metrics import emit_chat_cost
+from app.metrics import emit_chat_cost, emit_metric
 from app.websocket import NotificationSender, process_chat_input
 
 
@@ -350,6 +350,20 @@ class TestChatCostMetric(unittest.TestCase):
         self.assertEqual(metric["Namespace"], "BedrockChat")
         self.assertEqual(metric["Metrics"][0]["Name"], "ChatCost")
         self.assertEqual(line["ChatCost"], 0.25)
+
+    def test_emits_dimensions(self):
+        import io
+        from contextlib import redirect_stdout
+
+        out = io.StringIO()
+        with redirect_stdout(out):
+            emit_metric("FailedAnswers", 1, {"PublishedApiId": "bot"})
+        line = json.loads(out.getvalue())
+        metric = line["_aws"]["CloudWatchMetrics"][0]
+        self.assertEqual(metric["Dimensions"], [["PublishedApiId"]])
+        self.assertEqual(metric["Metrics"][0]["Name"], "FailedAnswers")
+        self.assertEqual(line["PublishedApiId"], "bot")
+        self.assertEqual(line["FailedAnswers"], 1)
 
 
 if __name__ == "__main__":

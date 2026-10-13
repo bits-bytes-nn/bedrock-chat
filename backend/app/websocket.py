@@ -12,7 +12,6 @@ from app.stream import ToolRunResult
 from app.auth import verify_token
 from app.repositories.conversation import RecordNotFoundError
 from app.routes.schemas.conversation import ChatInput
-from app.metrics import emit_chat_cost
 from app.stream import OnStopInput, OnThinking
 from app.usecases.chat import chat
 from app.user import User
@@ -192,7 +191,6 @@ class NotificationSender:
 
         self.stream_ended = True
         self.notify(payload=payload)
-        emit_chat_cost(arg["price"])
 
     def on_agent_thinking(self, tool_use: OnThinking):
         payload = json.dumps(

@@ -407,6 +407,10 @@ def post_process_result(
 ):
     """Post-process OnStopInput and update conversation."""
 
+    # Every chat entrypoint finalizes its answer here. The model has billed the
+    # answer even if storing it fails below.
+    emit_chat_cost(result["price"])
+
     message = result["message"]
     stop_reason = result["stop_reason"]
 
@@ -469,13 +473,15 @@ def post_process_result(
     if on_stop:
         on_stop(result)
 
-    # Update bot statistics
+    # The answer is stored, so bookkeeping must not fail the chat: a published API
+    # client would see a failure for a stored answer, and its retry would be
+    # rejected because the message id already exists.
     if bot:
-        logger.debug("Bot is provided. Updating bot last used time.")
-        # Update bot last used time
-        modify_bot_last_used_time(user, bot)
-        # Update bot stats
-        modify_bot_stats(user, bot, increment=1)
+        try:
+            modify_bot_last_used_time(user, bot)
+            modify_bot_stats(user, bot, increment=1)
+        except Exception:
+            logger.exception("Failed to update the usage of bot %s", bot.id)
 
     return conversation, message
 

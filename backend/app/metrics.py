@@ -6,13 +6,21 @@ from datetime import datetime
 CHAT_METRICS_NAMESPACE = os.environ.get("METRICS_NAMESPACE", "BedrockChat")
 
 
-def emit_chat_cost(price: float) -> None:
-    """Publish the price of an answer for the daily chat cost alarm.
+def emit_metric(
+    name: str, value: float, dimensions: dict[str, str] | None = None
+) -> None:
+    """Publish a metric value for the alarms.
 
     Lambda turns embedded metric format lines on stdout into CloudWatch metrics
-    without an API call, so this goes to stdout rather than the logger. Without
-    dimensions, the chat and published API handlers add up to one metric.
+    without an API call, so this goes to stdout rather than the logger.
+
+    Args:
+        name: The metric name.
+        value: The value to add to the metric.
+        dimensions: Dimension names and values. Without dimensions, every handler
+            adds to one metric.
     """
+    dimensions = dimensions or {}
     print(
         json.dumps(
             {
@@ -21,13 +29,19 @@ def emit_chat_cost(price: float) -> None:
                     "CloudWatchMetrics": [
                         {
                             "Namespace": CHAT_METRICS_NAMESPACE,
-                            "Dimensions": [[]],
-                            "Metrics": [{"Name": "ChatCost", "Unit": "None"}],
+                            "Dimensions": [list(dimensions)],
+                            "Metrics": [{"Name": name, "Unit": "None"}],
                         }
                     ],
                 },
-                "ChatCost": price,
+                **dimensions,
+                name: value,
             }
         ),
         flush=True,
     )
+
+
+def emit_chat_cost(price: float) -> None:
+    """Publish the price of a model call for the daily chat cost alarm."""
+    emit_metric("ChatCost", price)

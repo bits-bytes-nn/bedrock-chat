@@ -19,10 +19,17 @@ from app.routes.schemas.published_api import (
     ChatInputWithoutBotId,
     MessageInputWithoutMessageId,
 )
+from app.repositories.common import RecordNotFoundError
 from app.user import User
 from fastapi import HTTPException
 
 MODEL = "claude-v4.5-sonnet"
+
+
+@pytest.fixture(autouse=True)
+def published_api_id():
+    with patch.object(published_api, "PUBLISHED_API_ID", "bot1"):
+        yield
 
 
 @pytest.fixture(autouse=True)
@@ -57,7 +64,7 @@ def bot():
         yield find_bot
 
 
-def test_post_message_uses_bot_id_from_user(sqs, bot):
+def test_post_message_uses_the_published_api_id_as_bot_id(sqs, bot):
     with patch.object(published_api, "validate_model_is_available") as validate:
         response = published_api.post_message(_request("bot1"), _chat_input())
 
@@ -151,9 +158,52 @@ def test_get_message_returns_first_child():
 
 def test_get_message_reports_a_failed_answer(no_failed_messages):
     no_failed_messages.return_value = "The answer could not be generated."
-    with patch.object(published_api, "fetch_conversation") as fetch:
+    conversation = _conversation({"m1": _message([])})
+    with patch.object(published_api, "fetch_conversation", return_value=conversation):
         with pytest.raises(HTTPException) as e:
             published_api.get_message(_request("bot1"), "conv1", "m1")
     no_failed_messages.assert_called_once_with("PUBLISHED_API#bot1", "conv1", "m1")
-    fetch.assert_not_called()
     assert e.value.status_code == 500
+
+
+def test_get_message_reports_a_failure_before_the_conversation_is_stored(
+    no_failed_messages,
+):
+    no_failed_messages.return_value = "The bot or the conversation was not found."
+    with patch.object(
+        published_api, "fetch_conversation", side_effect=RecordNotFoundError("x")
+    ):
+        with pytest.raises(HTTPException) as e:
+            published_api.get_message(_request(), "conv1", "m1")
+    assert e.value.status_code == 500
+
+
+def test_get_message_raises_not_found_without_a_conversation_or_failure():
+    with patch.object(
+        published_api, "fetch_conversation", side_effect=RecordNotFoundError("x")
+    ):
+        with pytest.raises(RecordNotFoundError):
+            published_api.get_message(_request(), "conv1", "m1")
+
+
+def test_get_message_returns_a_stored_answer_despite_a_failure(no_failed_messages):
+    # The consumer records a failure when bookkeeping after storing the answer
+    # fails, or when its retry is rejected because the message id exists.
+    no_failed_messages.return_value = "The answer could not be generated."
+    reply = _message([])
+    conversation = _conversation({"m1": _message(["m2"]), "m2": reply})
+    with patch.object(published_api, "fetch_conversation", return_value=conversation):
+        output = published_api.get_message(_request(), "conv1", "m1")
+
+    assert output.message == reply
+    no_failed_messages.assert_not_called()
+
+
+def test_post_message_rejects_continue_generate(sqs, bot):
+    chat_input = _chat_input()
+    chat_input.continue_generate = True
+    with pytest.raises(HTTPException) as e:
+        published_api.post_message(_request(), chat_input)
+
+    assert e.value.status_code == 400
+    sqs.send_message.assert_not_called()
