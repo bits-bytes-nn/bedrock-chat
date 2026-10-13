@@ -11,7 +11,7 @@ from app.bedrock import (
     is_prefill_supported,
     is_tooluse_supported,
 )
-from app.metrics import emit_chat_cost
+from app.metrics import emit_chat_cost, emit_metric
 from app.model_registry import get_model_spec
 from mypy_boto3_bedrock_runtime.type_defs import MessageTypeDef
 from app.prompt import (
@@ -483,6 +483,9 @@ def post_process_result(
             modify_bot_stats(user, bot, increment=1)
         except Exception:
             logger.exception("Failed to update the usage of bot %s", bot.id)
+            # Counted by the BotUsageUpdateFailures alarm, so that a lasting
+            # failure (a missing permission, for example) does not go unnoticed.
+            emit_metric("BotUsageUpdateFailures", 1)
 
     return conversation, message
 

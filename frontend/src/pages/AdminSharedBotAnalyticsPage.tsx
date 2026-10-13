@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import Help from '../components/Help';
 import usePublicBotsForAdmin from '../hooks/usePublicBotsForAdmin';
 import ListItemBot from '../components/ListItemBot';
-import { addDate, formatDate } from '../utils/DateUtils';
+import { addDate, formatDate, toUtcDateHour } from '../utils/DateUtils';
 
 import InputText from '../components/InputText';
 import Button from '../components/Button';
@@ -32,8 +32,10 @@ const AdminSharedBotAnalyticsPage: React.FC = () => {
     error: publicBotsError,
     isLoading: isLoadingPublicBots,
   } = usePublicBotsForAdmin({
-    start: searchDateFrom ? searchDateFrom + '00' : undefined,
-    end: searchDateTo ? searchDateTo + '23' : undefined,
+    start: searchDateFrom
+      ? toUtcDateHour(searchDateFrom, 0, DATA_FORMAT)
+      : undefined,
+    end: searchDateTo ? toUtcDateHour(searchDateTo, 23, DATA_FORMAT) : undefined,
   });
 
   const sortedBots = useMemo(() => {

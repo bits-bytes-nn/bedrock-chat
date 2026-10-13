@@ -413,7 +413,11 @@ describe("Bedrock Chat Stack Test", () => {
       ]),
     });
 
-    template.resourceCountIs("AWS::CloudWatch::Alarm", 9);
+    template.resourceCountIs("AWS::CloudWatch::Alarm", 10);
+    template.hasResourceProperties("AWS::CloudWatch::Alarm", {
+      MetricName: "BotUsageUpdateFailures",
+      Period: 3600,
+    });
     // The bot store's initial table exports hold conversation text, so they expire.
     template.hasResourceProperties("AWS::S3::Bucket", {
       LifecycleConfiguration: {
