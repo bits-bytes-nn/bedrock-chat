@@ -79,9 +79,18 @@
     "enableBotStoreReplicas": false,
     "botStoreLanguage": "en",
     "globalAvailableModels": [],
+    "defaultModel": "",
+    "titleModel": "",
+    "logoPath": "",
     "tokenValidMinutes": 30,
     "alternateDomainName": "",
     "hostedZoneId": "",
+    "alarmEmail": "",
+    "dailyChatCostAlarmUsd": 100,
+    "maxDedicatedKnowledgeBasesPerUser": 2,
+    "usageAnalysisRetentionDays": 90,
+    "apiThrottleRateLimit": 500,
+    "apiThrottleBurstLimit": 1000,
     "devAccessIamRoleArn": ""
   }
 }
