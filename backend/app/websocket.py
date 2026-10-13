@@ -18,7 +18,10 @@ from app.user import User
 from boto3.dynamodb.conditions import Key
 from botocore.config import Config
 from botocore.exceptions import ClientError
-from strands.types.exceptions import ModelThrottledException
+from strands.types.exceptions import (
+    ContextWindowOverflowException,
+    ModelThrottledException,
+)
 
 WEBSOCKET_SESSION_TABLE_NAME = os.environ["WEBSOCKET_SESSION_TABLE_NAME"]
 
@@ -47,6 +50,9 @@ USER_FACING_MODEL_ERRORS = frozenset(
         "ResourceNotFoundException",
     }
 )
+# Caused by the request rather than by the service or the deployment, so they are
+# logged without counting toward the chat error alarm (cdk/lib/constructs/monitoring.ts).
+USER_CAUSED_MODEL_ERRORS = frozenset({"ValidationException"})
 
 dynamodb_client = boto3.resource("dynamodb")
 table = dynamodb_client.Table(WEBSOCKET_SESSION_TABLE_NAME)
@@ -62,6 +68,8 @@ type_error_code = Literal[
     "bot_not_found",
     "invalid_request",
     "generation_failed",
+    "input_too_long",
+    "unauthorized",
 ]
 
 
@@ -315,10 +323,20 @@ def process_chat_input(
             502, "The model is busy. Please try again shortly.", "throttled"
         )
 
+    except ContextWindowOverflowException:
+        logger.warning("Bedrock rejected the request: the input is too long")
+        return error_response(
+            400, "The conversation is too long for the model.", "input_too_long"
+        )
+
     except ClientError as e:
-        logger.exception("Bedrock request failed")
-        if e.operation_name in ("Converse", "ConverseStream"):
-            code = e.response["Error"]["Code"]
+        code = e.response["Error"]["Code"]
+        is_model_call = e.operation_name in ("Converse", "ConverseStream")
+        if is_model_call and code in USER_CAUSED_MODEL_ERRORS:
+            logger.warning("Bedrock rejected the request: %s", code)
+        else:
+            logger.exception("Bedrock request failed")
+        if is_model_call:
             # These messages describe the request or the model, not the account.
             if code in USER_FACING_MODEL_ERRORS:
                 return error_response(
@@ -379,7 +397,7 @@ def handler(event, context):
                 decoded = verify_token(token)
             except Exception:
                 logger.exception("Invalid token")
-                return _error(403, "Invalid token.")
+                return _error(403, "Invalid token.", "unauthorized")
 
             user_id = decoded["sub"]
 
@@ -399,12 +417,12 @@ def handler(event, context):
                 decoded = verify_token(token)
             except Exception:
                 logger.exception("Invalid token")
-                return _error(403, "Invalid token.")
+                return _error(403, "Invalid token.", "unauthorized")
             user = User.from_decoded_token(decoded)
 
             # The request must come from the user who started the session.
             if _session_user_id(connection_id) != user.id:
-                return _error(403, "Session not started.")
+                return _error(403, "Session not started.", "unauthorized")
 
             # Concatenate the message parts
             message_parts = []
@@ -435,14 +453,14 @@ def handler(event, context):
             message_parts.sort(key=lambda x: x["MessagePartId"])
             part_ids = [int(item["MessagePartId"]) for item in message_parts]
             if part_ids != list(range(1, len(part_ids) + 1)):
-                return _error(400, "Message parts are missing.")
+                return _error(400, "Message parts are missing.", "invalid_request")
             full_message = "".join(item["MessagePart"] for item in message_parts)
 
             # JSON and pydantic validation errors are both ValueErrors.
             try:
                 chat_input = ChatInput(**json.loads(full_message))
             except (ValueError, TypeError):
-                return _error(400, "Invalid message.")
+                return _error(400, "Invalid message.", "invalid_request")
             return _process_with_sender(event, context, connection_id, user, chat_input)
 
         else:
@@ -456,9 +474,9 @@ def handler(event, context):
                 or not isinstance(message_part, str)
                 or len(message_part) > MAX_MESSAGE_PART_CHARS
             ):
-                return _error(400, "Invalid message part.")
+                return _error(400, "Invalid message part.", "invalid_request")
             if _session_user_id(connection_id) is None:
-                return _error(403, "Session not started.")
+                return _error(403, "Session not started.", "unauthorized")
 
             # Zero is reserved for user id, so start from 1
             part_index = index + 1
@@ -477,13 +495,13 @@ def handler(event, context):
     except Exception:
         # Unexpected errors may contain resource names and account details.
         logger.exception("Operation failed")
-        return _error(500, "Failed to process the request.")
+        return _error(500, "Failed to process the request.", "generation_failed")
 
 
-def _error(status_code: int, reason: str) -> dict:
+def _error(status_code: int, reason: str, code: type_error_code) -> dict:
     return {
         "statusCode": status_code,
-        "body": json.dumps(dict(status="ERROR", reason=reason)),
+        "body": json.dumps(dict(status="ERROR", reason=reason, code=code)),
     }
 
 

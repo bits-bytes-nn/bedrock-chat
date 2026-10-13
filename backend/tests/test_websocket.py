@@ -8,7 +8,10 @@ from unittest.mock import patch
 import boto3
 import pytest
 from botocore.exceptions import ClientError
-from strands.types.exceptions import ModelThrottledException
+from strands.types.exceptions import (
+    ContextWindowOverflowException,
+    ModelThrottledException,
+)
 from moto import mock_aws
 
 sys.path.insert(0, ".")
@@ -183,6 +186,25 @@ class TestProcessChatInput(unittest.TestCase):
         self.assertEqual(frame["reason"], "Input is too long")
         self.assertEqual(frame["code"], "model_error")
 
+    def test_logs_rejected_requests_without_counting_them_as_failures(self):
+        with self.assertLogs(websocket.logger, "WARNING") as logs:
+            self.bedrock_error("ValidationException", "Input is too long")
+        self.assertEqual([r.levelname for r in logs.records], ["WARNING"])
+        self.assertIn("Bedrock rejected the request", logs.output[0])
+
+    def test_logs_model_failures_for_the_alarm(self):
+        with self.assertLogs(websocket.logger, "WARNING") as logs:
+            frame = self.bedrock_error("ModelErrorException", "The model failed")
+        self.assertEqual([r.levelname for r in logs.records], ["ERROR"])
+        self.assertIn("Bedrock request failed", logs.output[0])
+        self.assertEqual(frame["code"], "model_error")
+
+    def test_reports_context_window_overflow(self):
+        with self.assertLogs(websocket.logger, "WARNING") as logs:
+            frame = self.error_frame(ContextWindowOverflowException("too long"))
+        self.assertEqual([r.levelname for r in logs.records], ["WARNING"])
+        self.assertEqual(frame["code"], "input_too_long")
+
     def test_reports_throttling(self):
         frame = self.error_frame(ModelThrottledException("Too many requests"))
         self.assertIn("busy", frame["reason"])
@@ -282,6 +304,21 @@ class TestHandler:
             frame({"step": "BODY", "index": 0, "part": "x"}), None
         )
         assert response["statusCode"] == 403
+        assert json.loads(response["body"])["code"] == "unauthorized"
+
+    def test_rejects_an_invalid_token(self):
+        with patch.object(websocket, "verify_token", side_effect=ValueError("bad")):
+            response = websocket.handler(frame({"step": "START", "token": "t"}), None)
+        assert response["statusCode"] == 403
+        assert json.loads(response["body"])["code"] == "unauthorized"
+
+    def test_unexpected_errors_carry_a_code(self):
+        with patch.object(websocket, "_session_user_id", side_effect=RuntimeError):
+            response = websocket.handler(
+                frame({"step": "BODY", "index": 0, "part": "x"}), None
+            )
+        assert response["statusCode"] == 500
+        assert json.loads(response["body"])["code"] == "generation_failed"
 
     @pytest.mark.parametrize(
         "body",
@@ -298,13 +335,16 @@ class TestHandler:
     )
     def test_rejects_invalid_parts(self, body):
         self.start()
-        assert websocket.handler(frame(body), None)["statusCode"] == 400
+        response = websocket.handler(frame(body), None)
+        assert response["statusCode"] == 400
+        assert json.loads(response["body"])["code"] == "invalid_request"
 
     def test_rejects_end_from_another_user(self):
         self.start(sub="user")
         response, process = self.end(sub="someone-else")
 
         assert response["statusCode"] == 403
+        assert json.loads(response["body"])["code"] == "unauthorized"
         process.assert_not_called()
 
     def send_parts(self, parts: dict[int, str]) -> None:
@@ -332,7 +372,9 @@ class TestHandler:
         response, process = self.end()
 
         assert response["statusCode"] == 400
-        assert json.loads(response["body"])["status"] == "ERROR"
+        body = json.loads(response["body"])
+        assert body["status"] == "ERROR"
+        assert body["code"] == "invalid_request"
         process.assert_not_called()
 
 
