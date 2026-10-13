@@ -382,9 +382,6 @@ export class BedrockChatStack extends cdk.Stack {
       }
     );
 
-    new CfnOutput(this, "DocumentBucketName", {
-      value: props.documentBucket.bucketName,
-    });
     new CfnOutput(this, "FrontendURL", {
       value: frontend.getOrigin(),
     });

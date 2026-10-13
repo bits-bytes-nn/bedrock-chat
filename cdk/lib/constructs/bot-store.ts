@@ -273,9 +273,9 @@ export class BotStore extends Construct {
         `,
     });
 
-    this.collection.addDependency(encryptionPolicy);
-    this.collection.addDependency(networkPolicy);
-    this.collection.addDependency(dataAccessPolicy);
+    this.collection.node.addDependency(encryptionPolicy);
+    this.collection.node.addDependency(networkPolicy);
+    this.collection.node.addDependency(dataAccessPolicy);
 
     const region = Stack.of(this).region;
     const botOsisPipelineConfig = this._createBotOsisPipelineConfig({
@@ -399,7 +399,7 @@ export class BotStore extends Construct {
       ]),
     });
 
-    newPolicy.addDependency(this.collection);
+    newPolicy.node.addDependency(this.collection);
   }
 
   /**

@@ -34,7 +34,7 @@ import { IBucket } from "aws-cdk-lib/aws-s3";
 import * as codebuild from "aws-cdk-lib/aws-codebuild";
 import * as sfn from "aws-cdk-lib/aws-stepfunctions";
 import { UsageAnalysis } from "./usage-analysis";
-import { excludeDockerImage } from "../constants/docker";
+import { excludeDockerImage, POETRY_VERSION } from "../constants/docker";
 import { PythonFunction } from "@aws-cdk/aws-lambda-python-alpha";
 import { Database } from "./database";
 import {
@@ -200,7 +200,7 @@ export class Api extends Construct {
       index: "app/main.py",
       bundling: {
         assetExcludes: [...excludeDockerImage],
-        buildArgs: { POETRY_VERSION: "1.8.5" },
+        buildArgs: { POETRY_VERSION },
       },
       runtime: Runtime.PYTHON_3_13,
       architecture: Architecture.X86_64,

@@ -1,5 +1,10 @@
 import * as cdk from "aws-cdk-lib";
-import { BedrockChatStack } from "../lib/bedrock-chat-stack";
+import * as fs from "fs";
+import * as path from "path";
+import {
+  BedrockChatStack,
+  BedrockChatStackProps,
+} from "../lib/bedrock-chat-stack";
 import { Template } from "aws-cdk-lib/assertions";
 import {
   getEmbeddingModel,
@@ -30,6 +35,52 @@ const roleStatementsOf = (template: Template, fn: any): any[] => {
 };
 const actionsOf = (statements: any[]): string[] =>
   statements.flatMap((statement: any) => [statement.Action].flat());
+
+/** Chat stack with the settings of the default stack test, changed by `overrides`. */
+const newChatStack = (
+  overrides: Partial<BedrockChatStackProps> = {}
+): Template => {
+  const app = new cdk.App(testAppProps);
+  const regionStack = new BedrockRegionResourcesStack(
+    app,
+    "BedrockRegionResourcesStack",
+    { env: { region: "us-east-1" }, crossRegionReferences: true }
+  );
+  const stack = new BedrockChatStack(app, "MyTestStack", {
+    env: { region: "us-west-2" },
+    envName: "test",
+    envPrefix: "test-",
+    bedrockRegion: "us-east-1",
+    crossRegionReferences: true,
+    webAclId: "",
+    identityProviders: [],
+    userPoolDomainPrefix: "",
+    publishedApiAllowedIpV4AddressRanges: [""],
+    publishedApiAllowedIpV6AddressRanges: [""],
+    allowedSignUpEmailDomains: [],
+    autoJoinUserGroups: [],
+    selfSignUpEnabled: true,
+    enableIpV6: true,
+    allowedIpV4AddressRanges: [""],
+    allowedIpV6AddressRanges: [""],
+    documentBucket: regionStack.documentBucket,
+    enableRagReplicas: false,
+    enableBedrockGlobalInference: false,
+    enableBedrockCrossRegionInference: false,
+    enableLambdaSnapStart: true,
+    enableBotStore: true,
+    enableBotStoreReplicas: false,
+    botStoreLanguage: "en",
+    tokenValidMinutes: 60,
+    alarmEmail: "",
+    dailyChatCostAlarmUsd: 100,
+    maxDedicatedKnowledgeBasesPerUser: 2,
+    usageAnalysisRetentionDays: 90,
+    apiThrottle: { rateLimit: 500, burstLimit: 1000 },
+    ...overrides,
+  });
+  return Template.fromStack(stack);
+};
 
 describe("Bedrock Chat Stack Test", () => {
   test("Identity Provider Generation", () => {
@@ -582,6 +633,13 @@ describe("Bedrock Chat Stack Test", () => {
       MaximumRecordAgeInSeconds: 12 * 3600,
       DestinationConfig: Match.objectLike({ OnFailure: Match.anyValue() }),
     });
+    // The document bucket is an output of the Bedrock Region stack only.
+    expect(Object.keys(template.toJSON().Outputs)).not.toContain(
+      "DocumentBucketName"
+    );
+    expect(Object.keys(regionTemplate.toJSON().Outputs)).toContain(
+      "DocumentBucketName"
+    );
     // The lock handler reads the bucket and the Bedrock Region only.
     const lockHandler = Object.values(functions).find((fn: any) =>
       JSON.stringify(fn.Properties.ImageConfig ?? {}).includes(".lock.handler")
@@ -589,6 +647,47 @@ describe("Bedrock Chat Stack Test", () => {
     expect(Object.keys(lockHandler.Properties.Environment.Variables).sort()).toEqual(
       ["BEDROCK_REGION", "DOCUMENT_BUCKET"]
     );
+  });
+
+  test("auto-joined user groups register the Cognito triggers", () => {
+    const template = newChatStack({ autoJoinUserGroups: ["Users"] });
+
+    // Registered again on every deployment, because CloudFormation's user pool
+    // updates reset the triggers.
+    template.hasResourceProperties("Custom::CognitoTrigger", {
+      Triggers: {
+        PostConfirmation: Match.anyValue(),
+        PostAuthentication: Match.anyValue(),
+      },
+      DeployedAt: Match.anyValue(),
+    });
+    const actions = actionsOf(
+      Object.values(template.findResources("AWS::IAM::Policy")).flatMap(
+        (policy: any) => policy.Properties.PolicyDocument.Statement
+      )
+    );
+    expect(actions).toContain("cognito-idp:UpdateUserPool");
+    expect(actions).toContain("cognito-idp:AdminAddUserToGroup");
+
+    // The registration function's logs expire as well.
+    const registrationFunctionId = Object.keys(
+      template.findResources("AWS::Lambda::Function")
+    ).find((id) => id.startsWith("CognitoTriggerRegistrationFunctiona84c6122"));
+    expect(registrationFunctionId).toBeDefined();
+    template.hasResourceProperties("Custom::LogRetention", {
+      LogGroupName: {
+        "Fn::Join": ["", ["/aws/lambda/", { Ref: registrationFunctionId }]],
+      },
+      RetentionInDays: 90,
+    });
+  });
+
+  test("the Cognito trigger code fits in an inline CloudFormation function", () => {
+    // CloudFormation accepts at most 4096 bytes of ZipFile code.
+    const code = fs.readFileSync(
+      path.join(__dirname, "../custom-resources/cognito-trigger/index.py")
+    );
+    expect(code.byteLength).toBeLessThan(4096);
   });
 
   test("custom domain configuration", () => {
