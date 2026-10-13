@@ -181,18 +181,12 @@ const BedrockChatParametersSchema = BaseParametersSchema.extend({
  */
 const ApiPublishParametersSchema = BaseParametersSchema.extend({
   // API publishing configuration
-  publishedApiThrottleRateLimit: z
-    .string()
-    .optional()
-    .transform((val) => (val ? Number(val) : undefined)),
-  publishedApiThrottleBurstLimit: z
-    .string()
-    .optional()
-    .transform((val) => (val ? Number(val) : undefined)),
-  publishedApiQuotaLimit: z
-    .string()
-    .optional()
-    .transform((val) => (val ? Number(val) : undefined)),
+  // API Gateway takes a fractional rate, and whole numbers for the others.
+  publishedApiThrottleRateLimit: contextNumber.pipe(z.number().positive()).optional(),
+  publishedApiThrottleBurstLimit: contextNumber
+    .pipe(z.number().int().positive())
+    .optional(),
+  publishedApiQuotaLimit: contextNumber.pipe(z.number().int().positive()).optional(),
   publishedApiQuotaPeriod: z.enum(["DAY", "WEEK", "MONTH"]).optional(),
   publishedApiDeploymentStage: z.string().default("api"),
   publishedApiId: z.string().optional(),

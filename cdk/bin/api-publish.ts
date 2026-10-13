@@ -6,6 +6,7 @@ import * as cdk from "aws-cdk-lib";
 import { ApiPublishmentStack } from "../lib/api-publishment-stack";
 import * as apigateway from "aws-cdk-lib/aws-apigateway";
 import { resolveApiPublishParameters } from "../lib/utils/parameter-models";
+import { apiPublishmentStackPrefix } from "../lib/utils/stack-names";
 
 const app = new cdk.App();
 
@@ -43,7 +44,7 @@ const alarmTopicArn = cdk.Fn.importValue(
 const DEFAULT_PUBLISHED_API_THROTTLE = { rateLimit: 10, burstLimit: 20 };
 
 // NOTE: DO NOT change the stack id naming rule.
-new ApiPublishmentStack(app, `ApiPublishmentStack${params.publishedApiId}`, {
+new ApiPublishmentStack(app, `${apiPublishmentStackPrefix}${params.publishedApiId}`, {
   env: {
     region: process.env.CDK_DEFAULT_REGION,
   },

@@ -456,6 +456,11 @@ npx cdk deploy --all
 
 6. **Resource Isolation**: Each environment creates its own set of resources, allowing you to have development, testing, and production environments in the same AWS account without conflicts.
 
+### Upgrading an Existing Deployment
+
+- **Shared knowledge bases of named environments**: An environment other than `default` now has its own shared knowledge base stack, `<envPrefix>-BrChatSharedKbStack`, in the Bedrock region. Before, every environment used `BrChatSharedKbStack`, and the bots of a named environment keep its knowledge base IDs until they sync again. To move them, set `SyncStatus='QUEUED'` on the environment's bots with a shared knowledge base and start its state machine (output `EmbeddingStateMachineArn`), as in [Multi-Tenant Usage of Knowledge Base](#multi-tenant-usage-of-knowledge-base). The old `BrChatSharedKbStack` is not removed. Delete it in CloudFormation only if no `default` environment is deployed in the same account and Bedrock region (it uses this stack), and no item in the bot table (output `BotTableNameV3`) of any environment has a `BedrockKnowledgeBase.knowledge_base_id` equal to one of the stack's `KnowledgeBaseId*` outputs.
+- **Values in `cdk.context.json`**: `cdk.json` now defines `defaultModel`, `titleModel`, `logoPath`, `dailyChatCostAlarmUsd`, `maxDedicatedKnowledgeBasesPerUser`, `usageAnalysisRetentionDays`, `apiThrottleRateLimit` and `apiThrottleBurstLimit`. Values for these keys in `cdk/cdk.context.json` are ignored because `cdk.json` wins; move them into `cdk.json` or pass them with `-c`.
+
 ## Others
 
 ### Remove resources

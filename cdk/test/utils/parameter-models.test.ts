@@ -713,6 +713,37 @@ describe("resolveApiPublishParameters", () => {
       }
     });
 
+    test.each([
+      ["PUBLISHED_API_THROTTLE_RATE_LIMIT", "0", "PUBLISHED_API_THROTTLE_BURST_LIMIT", "20"],
+      ["PUBLISHED_API_THROTTLE_RATE_LIMIT", "abc", "PUBLISHED_API_THROTTLE_BURST_LIMIT", "20"],
+      ["PUBLISHED_API_THROTTLE_BURST_LIMIT", "1.5", "PUBLISHED_API_THROTTLE_RATE_LIMIT", "10"],
+      ["PUBLISHED_API_QUOTA_LIMIT", "-1", "PUBLISHED_API_QUOTA_PERIOD", "DAY"],
+    ])("rejects %s=%s", (name, value, otherName, otherValue) => {
+      const originalEnv = process.env;
+      process.env = { ...originalEnv, [name]: value, [otherName]: otherValue };
+
+      try {
+        expect(() => resolveApiPublishParameters()).toThrow(ZodError);
+      } finally {
+        process.env = originalEnv;
+      }
+    });
+
+    test("accepts a fractional throttle rate", () => {
+      const originalEnv = process.env;
+      process.env = {
+        ...originalEnv,
+        PUBLISHED_API_THROTTLE_RATE_LIMIT: "0.5",
+        PUBLISHED_API_THROTTLE_BURST_LIMIT: "1",
+      };
+
+      try {
+        expect(resolveApiPublishParameters().publishedApiThrottleRateLimit).toBe(0.5);
+      } finally {
+        process.env = originalEnv;
+      }
+    });
+
     test("should handle invalid publishedApiAllowedOrigins format", () => {
       // Given
       // Mock environment variables

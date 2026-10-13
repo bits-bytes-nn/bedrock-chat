@@ -26,7 +26,11 @@ import {
   bedrockIngestionPolicyStatement,
   firecrawlSecretPolicyStatement,
 } from "../utils/bedrock-policies";
-import { sharedKnowledgeBasesStackName } from "../utils/stack-names";
+import {
+  apiPublishmentStackPrefix,
+  customBotStackPrefix,
+  sharedKnowledgeBasesStackName,
+} from "../utils/stack-names";
 
 /** Lets the handlers write their logs, in this account and Region only. */
 const lambdaLogsPolicyStatement = (stack: Stack): iam.PolicyStatement =>
@@ -107,7 +111,7 @@ export class Embedding extends Construct {
       // are named in cdk/bin/bedrock-custom-bot.ts and bedrock-shared-knowledge-bases.ts.
       new iam.PolicyStatement({
         actions: ["cloudformation:DescribeStacks"],
-        resources: ["BrChatKbStack*", sharedStackName].map(
+        resources: [`${customBotStackPrefix}*`, sharedStackName].map(
           (stackName) =>
             `arn:${Stack.of(this).partition}:cloudformation:${props.bedrockRegion}:${
               Stack.of(this).account
@@ -648,8 +652,8 @@ export class Embedding extends Construct {
     );
     removeHandlerRole.addToPolicy(
       botStackPolicyStatement(Stack.of(this), [
-        { stackNamePrefix: "ApiPublishmentStack", region: Stack.of(this).region },
-        { stackNamePrefix: "BrChatKbStack", region: props.bedrockRegion },
+        { stackNamePrefix: apiPublishmentStackPrefix, region: Stack.of(this).region },
+        { stackNamePrefix: customBotStackPrefix, region: props.bedrockRegion },
       ])
     );
     removeHandlerRole.addToPolicy(publishedApiKeyPolicyStatement(Stack.of(this)));
