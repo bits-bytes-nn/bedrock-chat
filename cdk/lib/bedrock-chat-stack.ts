@@ -171,6 +171,7 @@ export class BedrockChatStack extends cdk.Stack {
       alternateDomainName: props.alternateDomainName,
       hostedZoneId: props.hostedZoneId,
       allowedCountries: props.allowedCountries,
+      logoPath: props.logoPath,
     });
 
     let cognitoWebAcl: WebAclForCognito | undefined;

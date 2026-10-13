@@ -1010,6 +1010,8 @@ How would you categorize this email?`,
         'The answer was cut off because it reached the maximum output length. Increase Max Tokens in the bot generation settings.',
       notSupportedImage: 'The selected model does not support images.',
       unsupportedFileFormat: 'The selected file format is not supported.',
+      emptyAnswer:
+        'No answer was returned. The model may have blocked it with its content filter. Rephrase the message and try again.',
       totalFileSizeToSendExceeded:
         'The total file size must be no more than {{maxSize}}.',
       attachment: {

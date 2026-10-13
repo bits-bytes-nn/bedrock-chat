@@ -148,6 +148,12 @@ const ChatMessage: React.FC<Props> = (props) => {
     [chatContent, props]
   );
 
+  const assistantText =
+    chatContent?.content
+      .filter((content): content is TextContent => content.contentType === 'text')
+      .map((content) => content.body)
+      .join('\n') ?? '';
+
   return (
     <div className={twMerge(props.className, 'grid grid-cols-12 gap-2 p-3')}>
       <div className="col-start-1 lg:col-start-2 ">
@@ -341,12 +347,19 @@ const ChatMessage: React.FC<Props> = (props) => {
               isStreaming={props.isStreaming}
               relatedDocuments={relatedDocuments}
               messageId={chatContent.id}>
-              {chatContent.content
-                .filter((content) => content.contentType === 'text')
-                .map((content) => (content as TextContent).body)
-                .join('\n')}
+              {assistantText}
             </ChatMessageMarkdown>
           )}
+          {chatContent?.role === 'assistant' &&
+            !props.isStreaming &&
+            assistantText.trim() === '' &&
+            !reasoning &&
+            !(tools && tools.length > 0) && (
+              // For example, the model's content filter blocked the answer.
+              <p className="italic text-aws-font-color-light/70 dark:text-gray">
+                {t('error.emptyAnswer')}
+              </p>
+            )}
         </div>
       </div>
 

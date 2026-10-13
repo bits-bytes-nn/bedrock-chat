@@ -58,6 +58,9 @@ export class Auth extends Construct {
         username: false,
         email: true,
       },
+      // A changed email takes effect only after it is verified, so a user cannot
+      // claim another user's address.
+      keepOriginal: { email: true },
       // Keep user accounts when the stack is deleted.
       removalPolicy: RemovalPolicy.RETAIN,
       deletionProtection: true,

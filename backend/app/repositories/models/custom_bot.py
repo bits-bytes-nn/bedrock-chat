@@ -33,7 +33,6 @@ from app.user import User
 from app.utils import (
     get_api_key_from_secret_manager,
     get_current_time,
-    get_user_cognito_groups,
     store_api_key_to_secret_manager,
 )
 from pydantic import (
@@ -518,9 +517,9 @@ class BotModel(BaseModel):
         if user.id in self.allowed_cognito_users:
             return True
 
-        # Check if the user is in the allowed Cognito groups
-        user_groups = get_user_cognito_groups(user)
-        return any(group in self.allowed_cognito_groups for group in user_groups)
+        # Groups come from the signed ID token. Looking them up by the email claim
+        # would let a user who changed their email to another user's inherit them.
+        return any(group in self.allowed_cognito_groups for group in user.groups)
 
     def is_editable_by_user(self, user: User) -> bool:
         """Check if the bot is editable by the user. This is used for updating and deleting the bot."""

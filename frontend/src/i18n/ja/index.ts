@@ -1013,6 +1013,8 @@ const translation: typeof en = {
         '最大出力長に達したため回答が途中で終了しました。ボットの生成設定で最大トークン数を増やしてください。',
       notSupportedImage: '選択しているモデルは、画像を利用できません。',
       unsupportedFileFormat: '選択したファイル形式はサポートされていません。',
+      emptyAnswer:
+        '回答がありません。モデルのコンテンツフィルターが応答をブロックした可能性があります。質問を変えて再度お試しください。',
       totalFileSizeToSendExceeded:
         'ファイルサイズの合計が{{maxSize}}を超えています。',
       attachment: {

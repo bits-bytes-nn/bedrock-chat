@@ -32,8 +32,10 @@ MEDIA_EXTENSIONS = frozenset(
     {".mp3", ".mp4", ".wav", ".flac", ".ogg", ".amr", ".webm", ".m4a"}
 )
 CONVERTIBLE_EXTENSIONS = PRESENTATION_EXTENSIONS | MEDIA_EXTENSIONS
-# Presentations are parsed in the API Lambda, so their size is limited.
+# Presentations are parsed in the API Lambda, so their size is limited. Recordings
+# are limited because transcription is billed per minute.
 MAX_PRESENTATION_BYTES = 100 * 1024 * 1024
+MAX_MEDIA_BYTES = 500 * 1024 * 1024
 # Languages that Transcribe chooses from when identifying the spoken language.
 TRANSCRIPTION_LANGUAGES = ["ko-KR", "en-US", "ja-JP", "zh-CN"]
 MAX_SPEAKERS = 10
@@ -202,6 +204,8 @@ def start_conversion(source_key: str) -> ConversionStatus:
             ContentType="text/plain; charset=utf-8",
         )
         return ConversionStatus(status="COMPLETED")
+    if source["ContentLength"] > MAX_MEDIA_BYTES:
+        raise ValueError("Recordings must be 500 MB or smaller.")
     job_name = _job_name(source_key, source)
     try:
         transcribe_client.start_transcription_job(

@@ -9,6 +9,8 @@ import {
 import {
   CachePolicy,
   Distribution,
+  HeadersFrameOption,
+  HeadersReferrerPolicy,
   ResponseHeadersPolicy,
   ViewerProtocolPolicy,
   GeoRestriction,
@@ -41,6 +43,8 @@ export interface FrontendProps {
    * If empty, all countries will be allowed.
    */
   readonly allowedCountries?: string[];
+  /** Logo shown in the drawer. Its origin is allowed to load images. */
+  readonly logoPath?: string;
 }
 
 export class Frontend extends Construct {
@@ -83,15 +87,40 @@ export class Frontend extends Construct {
       });
     }
 
+    // Images may only come from the app itself or be embedded in the page, so a
+    // prompt-injected answer cannot send data to another server in an image URL.
+    const logoOrigin = /^https?:\/\//.test(props.logoPath ?? "")
+      ? ` ${new URL(props.logoPath!).origin}`
+      : "";
+    const responseHeadersPolicy = new ResponseHeadersPolicy(this, "SecurityHeaders", {
+      securityHeadersBehavior: {
+        contentSecurityPolicy: {
+          contentSecurityPolicy: `img-src 'self' data: blob:${logoOrigin}; object-src 'none'; base-uri 'self'; frame-ancestors 'none'`,
+          override: true,
+        },
+        strictTransportSecurity: {
+          accessControlMaxAge: Duration.days(365),
+          includeSubdomains: true,
+          override: true,
+        },
+        contentTypeOptions: { override: true },
+        frameOptions: { frameOption: HeadersFrameOption.DENY, override: true },
+        referrerPolicy: {
+          referrerPolicy: HeadersReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN,
+          override: true,
+        },
+        xssProtection: { protection: true, modeBlock: true, override: true },
+      },
+    });
+
     const distribution = new Distribution(this, "Distribution", {
       defaultRootObject: "index.html",
       defaultBehavior: {
         origin: S3BucketOrigin.withOriginAccessControl(assetBucket),
         viewerProtocolPolicy: ViewerProtocolPolicy.HTTPS_ONLY,
         cachePolicy: CachePolicy.CACHING_OPTIMIZED,
-        // HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy and
-        // X-XSS-Protection. The app keeps Cognito tokens in the browser.
-        responseHeadersPolicy: ResponseHeadersPolicy.SECURITY_HEADERS,
+        // The app keeps Cognito tokens in the browser.
+        responseHeadersPolicy,
       },
       // Apply geo restriction allowlist only when countries are provided
       ...(this.allowedCountries.length

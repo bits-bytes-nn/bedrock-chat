@@ -1007,6 +1007,8 @@ const translation: typeof en = {
         '최대 출력 길이에 도달해 답변이 중간에 끝났습니다. 봇 생성 설정에서 최대 토큰 수를 늘려 주세요.',
       notSupportedImage: '선택한 모델은 이미지를 지원하지 않습니다.',
       unsupportedFileFormat: '선택한 파일 형식은 지원되지 않습니다.',
+      emptyAnswer:
+        '답변이 비어 있습니다. 모델의 콘텐츠 필터가 응답을 차단했을 수 있습니다. 질문을 바꿔 다시 시도하세요.',
       totalFileSizeToSendExceeded:
         '전체 파일 크기는 {{maxSize}} 이하여야 합니다.',
       attachment: {
