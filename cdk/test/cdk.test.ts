@@ -916,6 +916,12 @@ describe("Api Publishment Stack", () => {
       MetricName: "ApproximateNumberOfMessagesVisible",
       AlarmActions: ["arn:aws:sns:us-east-1:123456789012:alarms"],
     });
+    // Failures recorded for the client end the message normally, so they are
+    // counted from the consumer's log as well.
+    template.resourceCountIs("AWS::CloudWatch::Alarm", 2);
+    template.hasResourceProperties("AWS::Logs::MetricFilter", {
+      FilterPattern: '"Failed to answer message"',
+    });
     template.hasResourceProperties("AWS::Lambda::Function", {
       Environment: {
         Variables: Match.objectLike({

@@ -62,6 +62,9 @@ export class ApiPublishmentStack extends Stack {
         queue: chatQueueDLQ,
       },
     });
+    const alarmAction = new SnsAction(
+      sns.Topic.fromTopicArn(this, "AlarmTopic", props.alarmTopicArn)
+    );
     new cloudwatch.Alarm(this, "ChatQueueDlqMessages", {
       metric: chatQueueDLQ.metricApproximateNumberOfMessagesVisible({
         period: cdk.Duration.minutes(5),
@@ -72,9 +75,7 @@ export class ApiPublishmentStack extends Stack {
         cloudwatch.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
       treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
       alarmDescription: `Published API ${id} could not answer messages.`,
-    }).addAlarmAction(
-      new SnsAction(sns.Topic.fromTopicArn(this, "AlarmTopic", props.alarmTopicArn))
-    );
+    }).addAlarmAction(alarmAction);
 
     const handlerRole = new iam.Role(this, "HandlerRole", {
       assumedBy: new iam.ServicePrincipal("lambda.amazonaws.com"),
@@ -177,6 +178,25 @@ export class ApiPublishmentStack extends Stack {
         logRetention: logs.RetentionDays.THREE_MONTHS,
       }
     );
+    // Failures that the consumer records for the client end the message normally,
+    // so they never reach the dead-letter queue.
+    new cloudwatch.Alarm(this, "FailedAnswers", {
+      metric: new logs.MetricFilter(this, "FailedAnswerCount", {
+        logGroup: sqsConsumeHandler.logGroup,
+        // Logged by backend/app/sqs_consumer.py.
+        filterPattern: logs.FilterPattern.literal('"Failed to answer message"'),
+        metricNamespace: props.metricsNamespace,
+        metricName: `${id}FailedAnswers`,
+        metricValue: "1",
+      }).metric({ period: cdk.Duration.minutes(5), statistic: "Sum" }),
+      threshold: 1,
+      evaluationPeriods: 1,
+      comparisonOperator:
+        cloudwatch.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
+      treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
+      alarmDescription: `Published API ${id} could not answer a message.`,
+    }).addAlarmAction(alarmAction);
+
     sqsConsumeHandler.addEventSource(
       // One message per invocation so that a failure does not re-run, and re-bill,
       // the other messages of the batch.

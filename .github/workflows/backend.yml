@@ -14,6 +14,7 @@ on:
       - "frontend/src/constants/supportedAttachedFiles.ts"
       # tests/test_alarm_log_terms.py checks the log lines that alarms count.
       - "cdk/lib/constructs/monitoring.ts"
+      - "cdk/lib/api-publishment-stack.ts"
       - ".github/workflows/backend.yml"
   push:
     branches:
@@ -28,6 +29,7 @@ on:
       - "frontend/src/constants/supportedAttachedFiles.ts"
       # tests/test_alarm_log_terms.py checks the log lines that alarms count.
       - "cdk/lib/constructs/monitoring.ts"
+      - "cdk/lib/api-publishment-stack.ts"
       - ".github/workflows/backend.yml"
   workflow_dispatch: {}
 

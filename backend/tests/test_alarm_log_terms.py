@@ -37,5 +37,12 @@ class TestAlarmLogTerms(unittest.TestCase):
         self.assertIn(term, logs.output[0])
 
 
+    def test_published_api_failures_are_logged(self):
+        stack = (REPO / "cdk/lib/api-publishment-stack.ts").read_text()
+        consumer = (REPO / "backend/app/sqs_consumer.py").read_text()
+        (term,) = re.findall(r"FilterPattern\.literal\('\"([^\"]+)\"'\)", stack)
+        self.assertIn(f'logger.exception("{term}', consumer)
+
+
 if __name__ == "__main__":
     unittest.main()
