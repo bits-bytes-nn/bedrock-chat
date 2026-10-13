@@ -603,6 +603,7 @@ const translation: typeof en = {
         },
         button: {
           deleteApi: 'API削除',
+          deleteBot: 'ボット削除',
         },
       },
       validationError: {

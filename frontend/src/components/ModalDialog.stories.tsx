@@ -88,13 +88,6 @@ export const DeleteBot = () => {
       target={{
         id: '1',
         title: 'Bot 1',
-        description: 'Bot 1',
-        createTime: new Date(),
-        lastUsedTime: new Date(),
-        isStarred: false,
-        owned: true,
-        syncStatus: 'SUCCEEDED',
-        sharedScope: 'private',
         sharedStatus: '',
       }}
       onDelete={() => {

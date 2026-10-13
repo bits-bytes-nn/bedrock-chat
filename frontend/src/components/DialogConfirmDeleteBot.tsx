@@ -9,7 +9,7 @@ import { isPinnedBot } from '../utils/BotUtils';
 
 type Props = BaseProps & {
   isOpen: boolean;
-  target?: BotMeta;
+  target?: Pick<BotMeta, 'id' | 'title' | 'sharedStatus'>;
   onDelete: (botId: string) => void;
   onClose: () => void;
 };

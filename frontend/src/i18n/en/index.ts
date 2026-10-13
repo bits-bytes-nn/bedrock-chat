@@ -599,6 +599,7 @@ How would you categorize this email?`,
         },
         button: {
           deleteApi: 'Delete API',
+          deleteBot: 'Delete Bot',
         },
       },
       validationError: {

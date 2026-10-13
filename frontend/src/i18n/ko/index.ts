@@ -598,6 +598,7 @@ const translation: typeof en = {
         },
         button: {
           deleteApi: 'API 삭제',
+          deleteBot: '봇 삭제',
         },
       },
       validationError: {

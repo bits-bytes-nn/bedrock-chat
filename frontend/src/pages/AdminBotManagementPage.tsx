@@ -17,6 +17,10 @@ import useBotApiSettingsForAdmin from '../hooks/useBotApiSettingsForAdmin';
 import ApiKeyItem from '../components/ApiKeyItem';
 
 import DialogConfirmDeleteApi from '../components/DialogConfirmDeleteApi';
+import DialogConfirmDeleteBot from '../components/DialogConfirmDeleteBot';
+import useBotApi from '../hooks/useBotApi';
+import { getApiErrorMessage } from '../utils/ErrorUtils';
+import { useSWRConfig } from 'swr';
 import useSnackbar from '../hooks/useSnackbar';
 import ButtonCopy from '../components/ButtonCopy';
 import Skeleton from '../components/Skeleton';
@@ -96,10 +100,38 @@ const AdminBotManagementPage: React.FC = () => {
     history.back();
   }, []);
 
+  // Admins can delete a bot that is stuck, for example in a synchronization.
+  const { deleteBot } = useBotApi();
+  const { mutate: mutateCache } = useSWRConfig();
+  const [isOpenDeleteBotDialog, setIsOpenDeleteBotDialog] = useState(false);
+  const onDeleteBot = useCallback(
+    (targetBotId: string) => {
+      setIsOpenDeleteBotDialog(false);
+      deleteBot(targetBotId)
+        .then(() => {
+          // Drop the bot from the bot lists, such as the starred bots.
+          mutateCache((key) => Array.isArray(key) && key[0] === 'bot');
+          history.back();
+        })
+        .catch((e) => {
+          open(getApiErrorMessage(e) ?? t('bot.error.failDelete'));
+        });
+    },
+    [deleteBot, mutateCache, open, t]
+  );
+
   const { user, isLoading: isLoadingUser } = useUser(bot?.ownerUserId);
 
   return (
     <>
+      <DialogConfirmDeleteBot
+        isOpen={isOpenDeleteBotDialog}
+        target={bot}
+        onDelete={onDeleteBot}
+        onClose={() => {
+          setIsOpenDeleteBotDialog(false);
+        }}
+      />
       <DialogConfirmDeleteApi
         isOpen={isOpenDeleteApiDialog}
         loading={isDeletingApi}
@@ -490,15 +522,26 @@ const AdminBotManagementPage: React.FC = () => {
                 {t('button.back')}
               </Button>
 
-              {!isLoadingBotPublication && botPublication && (
-                <Button
-                  className="bg-red"
-                  onClick={() => {
-                    setIsOpenDeleteApiDialog(true);
-                  }}>
-                  {t('admin.botManagement.button.deleteApi')}
-                </Button>
-              )}
+              <div className="flex gap-2">
+                {!isLoadingBotPublication && botPublication && (
+                  <Button
+                    className="bg-red"
+                    onClick={() => {
+                      setIsOpenDeleteApiDialog(true);
+                    }}>
+                    {t('admin.botManagement.button.deleteApi')}
+                  </Button>
+                )}
+                {bot && (
+                  <Button
+                    className="bg-red"
+                    onClick={() => {
+                      setIsOpenDeleteBotDialog(true);
+                    }}>
+                    {t('admin.botManagement.button.deleteBot')}
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
         </div>
