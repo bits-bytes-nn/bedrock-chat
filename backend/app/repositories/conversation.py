@@ -196,7 +196,8 @@ def find_conversation_by_user_id(user_id: str) -> list[ConversationMeta]:
         # NOTE: Need SK to fetch only conversations
         & Key("SK").begins_with(f"{user_id}#CONV#"),
         "ScanIndexForward": False,
-        "ProjectionExpression": "SK, CreateTime, Title, MessageMap, BotId",
+        # The messages are not needed, but they still count toward the 1 MB pages.
+        "ProjectionExpression": "SK, CreateTime, Title, BotId",
     }
 
     conversations: list[ConversationMeta] = []
@@ -211,8 +212,6 @@ def find_conversation_by_user_id(user_id: str) -> list[ConversationMeta]:
                 id=decompose_conv_id(item["SK"]),
                 create_time=float(item["CreateTime"]),
                 title=item["Title"],
-                # NOTE: all message has the same model
-                model=json.loads(item["MessageMap"]).get("system", {}).get("model", ""),
                 bot_id=item.get("BotId"),
             )
             for item in response["Items"]

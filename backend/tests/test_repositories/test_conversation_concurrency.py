@@ -173,11 +173,9 @@ class TestStoreConversationConcurrently(unittest.TestCase):
         self.assertEqual(stored.version, answering.version)
 
     def test_lists_every_conversation_across_pages(self):
-        models = ["claude-v5.5-haiku", "claude-v5.5-sonnet"]
         for i in range(7):
             conv = conversation()
             conv.id = f"c{i}"
-            conv.message_map["system"].model = models[i % 2]
             store_conversation("user", conv)
         get_table = conversation_repository.get_conversation_table_client
 
@@ -195,10 +193,7 @@ class TestStoreConversationConcurrently(unittest.TestCase):
         ):
             listed = find_conversation_by_user_id("user")
 
-        self.assertEqual(
-            {(c.id, c.model) for c in listed},
-            {(f"c{i}", models[i % 2]) for i in range(7)},
-        )
+        self.assertEqual({c.id for c in listed}, {f"c{i}" for i in range(7)})
 
     def test_upgrades_items_without_a_version(self):
         legacy = conversation()

@@ -263,7 +263,6 @@ class ConversationMetaOutput(BaseSchema):
     id: str
     title: str
     create_time: float
-    model: str
     bot_id: str | None
 
 

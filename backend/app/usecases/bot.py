@@ -252,6 +252,12 @@ def modify_owned_bot(
         raise PermissionError(
             f"User {user.id} is not authorized to modify bot {bot_id}"
         )
+    # Saving would overwrite the sync status of the running sync, which then no
+    # longer protects the bot from deletion while its stack is being built.
+    if bot.sync_status in ("QUEUED", "RUNNING") and not user.is_admin():
+        raise ResourceConflictError(
+            "The knowledge base is being synchronized. Edit the bot after it finishes."
+        )
     validate_external_resource_references(user, modify_input, current_bot=bot)
 
     source_urls = []

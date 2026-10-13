@@ -92,6 +92,14 @@ class TestDeleteDuringBuild(unittest.TestCase):
             bot_usecase.remove_bot_by_id(self.user, "bot")
         delete.assert_called_once()
 
+    def test_rejects_editing_while_the_knowledge_base_is_built(self):
+        with patch.object(
+            bot_usecase, "find_bot_by_id", return_value=self.bot("QUEUED")
+        ), patch.object(bot_usecase, "update_bot") as update:
+            with self.assertRaises(ResourceConflictError):
+                bot_usecase.modify_owned_bot(self.user, "bot", MagicMock())
+        update.assert_not_called()
+
 
 class TestIsBuildRunning(unittest.TestCase):
     def test_treats_every_terminal_status_as_finished(self):
