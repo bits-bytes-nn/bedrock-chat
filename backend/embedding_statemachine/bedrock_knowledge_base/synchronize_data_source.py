@@ -111,7 +111,13 @@ def handle_ingest(event):
                 document["identifier"]["s3"]["uri"]
                 for document in get_documents_response["documentDetails"]
                 if document["status"]
-                in ("NOT_FOUND", "FAILED", "METADATA_UPDATE_FAILED")
+                in (
+                    "NOT_FOUND",
+                    "FAILED",
+                    "PARTIALLY_INDEXED",
+                    "METADATA_UPDATE_FAILED",
+                    "METADATA_PARTIALLY_INDEXED",
+                )
                 and "s3" in document["identifier"]
             )
 

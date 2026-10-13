@@ -54,20 +54,25 @@ class TestFailedSyncReason(unittest.TestCase):
 
 @pytest.mark.usefixtures("dynamodb_tables")
 class TestUpdateSyncStatus(unittest.TestCase):
-    def test_does_not_recreate_a_deleted_bot(self):
-        update_bot_status.update_sync_status(
-            {
-                "user_id": "user",
-                "bot_id": "deleted",
-                "status": "FAILED",
-                "reason": "",
-                "last_exec_id": "",
-            }
-        )
+    def test_does_not_recreate_a_deleted_bot_and_deletes_its_stack(self):
+        with patch.object(
+            update_bot_status, "delete_custom_bot_stack_by_bot_id"
+        ) as delete_stack:
+            update_bot_status.update_sync_status(
+                {
+                    "user_id": "user",
+                    "bot_id": "deleted",
+                    "status": "FAILED",
+                    "reason": "",
+                    "last_exec_id": "",
+                }
+            )
         table = boto3.resource("dynamodb", region_name=common.REGION).Table(
             common.BOT_TABLE_NAME
         )
         self.assertEqual(table.scan()["Items"], [])
+        # The sync may have built the stack again after the bot was deleted.
+        delete_stack.assert_called_once_with("deleted")
 
 
 if __name__ == "__main__":

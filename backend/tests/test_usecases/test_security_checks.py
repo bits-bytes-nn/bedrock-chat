@@ -427,6 +427,22 @@ class TestPrepareConversation(unittest.TestCase):
                     USER, self.chat_input(body="x" * limit)
                 )
 
+    def test_a_message_that_only_fits_alone_is_too_large(self):
+        # Within the limit alone, but not with the roots of a new conversation.
+        overhead = len(message(None).model_dump_json().encode("utf-8"))
+        with patch.object(
+            chat_usecase,
+            "find_conversation_by_id",
+            side_effect=RecordNotFoundError(),
+        ):
+            with self.assertRaises(chat_usecase.MessageTooLargeError):
+                chat_usecase.prepare_conversation(
+                    USER,
+                    self.chat_input(
+                        body="x" * (chat_usecase.MAX_CONVERSATION_BYTES - overhead - 50)
+                    ),
+                )
+
 
 class TestFetchBot(unittest.TestCase):
     def test_a_forbidden_bot_without_alias_stays_forbidden(self):

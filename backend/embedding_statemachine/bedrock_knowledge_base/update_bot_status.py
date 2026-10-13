@@ -2,6 +2,7 @@ import json
 import logging
 from typing import TypedDict
 
+from app.bot_remove import delete_custom_bot_stack_by_bot_id
 from app.repositories.common import compose_sk, get_bot_table_client
 from app.routes.schemas.bot import type_sync_status
 from botocore.exceptions import ClientError
@@ -24,7 +25,13 @@ def update_sync_status(sync_status: SyncStatus):
     except ClientError as e:
         if e.response["Error"]["Code"] != "ConditionalCheckFailedException":
             raise
-        logger.info("Bot %s was deleted during the sync.", sync_status["bot_id"])
+        # Deleting the bot removed its knowledge base stack, which the sync may have
+        # built again since; a stack left behind keeps billing.
+        logger.info(
+            "Bot %s was deleted during the sync. Deleting its knowledge base stack.",
+            sync_status["bot_id"],
+        )
+        delete_custom_bot_stack_by_bot_id(sync_status["bot_id"])
 
 
 def _update(table, sync_status: SyncStatus):
