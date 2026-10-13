@@ -9,12 +9,13 @@ import SnackbarProvider from '../providers/SnackbarProvider';
 import { Outlet } from 'react-router-dom';
 import { useSWRConfig } from 'swr';
 import { useTranslation } from 'react-i18next';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import useDrawer from '../hooks/useDrawer';
 import useConversation from '../hooks/useConversation';
 import useBot from '../hooks/useBot';
 import {
   clearChats,
+  useChatConversationId,
   useIsGeneratedTitle,
   useNewChat,
 } from '../hooks/useChat';
@@ -36,7 +37,8 @@ const AppContent: React.FC<Props> = (props) => {
   const { getPageLabel } = usePageLabel();
   const { switchOpen: switchDrawer } = useDrawer();
   const navigate = useNavigate();
-  const { conversationId } = useParams();
+  // The conversation ID of the chat state, which a new chat gets after its first answer.
+  const conversationId = useChatConversationId();
   const {
     conversations,
     getTitle,
@@ -69,12 +71,15 @@ const AppContent: React.FC<Props> = (props) => {
   // Disables the dialog buttons so that a double click does not delete twice.
   const [isDeleting, setIsDeleting] = useState(false);
   const deleteChat = useCallback(
-    (conversationId: string) => {
+    (targetConversationId: string) => {
       setIsDeleting(true);
-      deleteConversation(conversationId)
+      deleteConversation(targetConversationId)
         .then(() => {
-          newChat();
-          navigate('');
+          // Leave the chat only if the deleted conversation is the open one.
+          if (targetConversationId === conversationId) {
+            newChat();
+            navigate('');
+          }
           setIsOpenDeleteChat(false);
           setDeleteTarget(undefined);
         })
@@ -85,7 +90,7 @@ const AppContent: React.FC<Props> = (props) => {
           setIsDeleting(false);
         });
     },
-    [deleteConversation, newChat, navigate, openSnackbar, t]
+    [conversationId, deleteConversation, newChat, navigate, openSnackbar, t]
   );
 
   const [isOpenClearConversations, setIsOpenClearConversations] =
