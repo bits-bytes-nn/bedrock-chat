@@ -202,5 +202,36 @@ class TestStoreConversationConcurrently(unittest.TestCase):
         self.assertEqual(stored.version, 1)
 
 
+@pytest.mark.usefixtures("dynamodb_tables")
+class TestRelatedDocuments(unittest.TestCase):
+    def test_finds_a_stored_document_by_its_key(self):
+        from app.repositories.common import RecordNotFoundError
+        from app.repositories.conversation import (
+            find_related_document_by_id,
+            store_related_documents,
+        )
+        from app.repositories.models.conversation import (
+            RelatedDocumentModel,
+            TextToolResultModel,
+        )
+
+        store_related_documents(
+            "user",
+            "c",
+            [
+                RelatedDocumentModel(
+                    content=TextToolResultModel(text="body"),
+                    source_id="s1",
+                    source_name="doc.pdf",
+                )
+            ],
+        )
+
+        found = find_related_document_by_id("user", "c", "s1")
+        self.assertEqual(found.source_name, "doc.pdf")
+        with self.assertRaises(RecordNotFoundError):
+            find_related_document_by_id("user", "c", "missing")
+
+
 if __name__ == "__main__":
     unittest.main()

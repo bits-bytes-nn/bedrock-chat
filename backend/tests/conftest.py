@@ -48,13 +48,6 @@ def _create_tables() -> None:
             {"AttributeName": "PK", "KeyType": "HASH"},
             {"AttributeName": "SK", "KeyType": "RANGE"},
         ],
-        GlobalSecondaryIndexes=[
-            {
-                "IndexName": "SKIndex",
-                "KeySchema": [{"AttributeName": "SK", "KeyType": "HASH"}],
-                "Projection": {"ProjectionType": "ALL"},
-            }
-        ],
     )
 
     def gsi(name: str, hash_key: str, range_key: str | None = None) -> dict:

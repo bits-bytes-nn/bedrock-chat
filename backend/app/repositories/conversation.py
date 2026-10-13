@@ -466,24 +466,21 @@ def find_related_document_by_id(
     source_id: str,
 ) -> RelatedDocumentModel:
     table = get_conversation_table_client(user_id)
-    response = table.query(
-        IndexName="SKIndex",
-        KeyConditionExpression=(
-            Key("SK").eq(
-                compose_related_document_source_id(
-                    user_id=user_id,
-                    conversation_id=conversation_id,
-                    source_id=source_id,
-                )
-            )
-        ),
-    )
-    if len(response["Items"]) == 0:
+    item = table.get_item(
+        Key={
+            "PK": user_id,
+            "SK": compose_related_document_source_id(
+                user_id=user_id,
+                conversation_id=conversation_id,
+                source_id=source_id,
+            ),
+        }
+    ).get("Item")
+    if item is None:
         raise RecordNotFoundError(
             f"No related document found with id: {conversation_id}#{source_id}"
         )
 
-    item = response["Items"][0]
     return RelatedDocumentModel(
         content=TypeAdapter(ToolResultModel).validate_python(item["Content"]),
         source_id=source_id,
