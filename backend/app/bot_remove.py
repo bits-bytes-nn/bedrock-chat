@@ -5,6 +5,8 @@ from typing import Any
 import boto3
 from app.repositories.api_publication import delete_published_api
 from app.repositories.common import decompose_sk
+from app.repositories.conversation import delete_conversation_by_user_id
+from app.user import User
 from app.utils import delete_api_key_from_secret_manager, delete_s3_prefix
 
 DOCUMENT_BUCKET = os.environ.get("DOCUMENT_BUCKET", "bedrock-documents")
@@ -56,6 +58,9 @@ def handler(event: dict, context: Any) -> None:
         lambda: delete_published_api(bot_id),
         lambda: delete_from_s3(user_id, bot_id),
         lambda: delete_api_key_from_secret_manager(user_id, bot_id, "firecrawl"),
+        # Last, because it can take long: the conversations of the API's clients,
+        # stored under the API's own user. A retry continues where it stopped.
+        lambda: delete_conversation_by_user_id(User.from_published_api_id(bot_id).id),
     ):
         try:
             step()

@@ -18,7 +18,9 @@ def handler(event: dict, context) -> dict:
         principal, effect = claims["sub"], "Allow"
     except Exception as e:
         # Only the reason is logged; the token stays out of the logs.
-        logger.info("Rejected a connection: %s", type(e).__name__)
+        # WARNING, because the runtime drops INFO; failing to fetch the signing keys
+        # would otherwise reject everyone without a trace.
+        logger.warning("Rejected a connection: %s", type(e).__name__)
         principal, effect = "anonymous", "Deny"
     return {
         "principalId": principal,

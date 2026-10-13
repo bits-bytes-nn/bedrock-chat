@@ -2,6 +2,7 @@ import { CfnOutput, RemovalPolicy, Stack } from "aws-cdk-lib";
 import {
   AttributeType,
   BillingMode,
+  ProjectionType,
   Table,
   TableEncryption,
   StreamViewType,
@@ -33,6 +34,16 @@ export class Database extends Construct {
       pointInTimeRecoverySpecification: { pointInTimeRecoveryEnabled: true },
       encryption: TableEncryption.AWS_MANAGED,
     });
+    // Lists conversations without reading their messages. Only conversation items
+    // have CreateTime, so related documents stay out of the index.
+    conversationTable.addGlobalSecondaryIndex({
+      indexName: "ConversationListIndex",
+      partitionKey: { name: "PK", type: AttributeType.STRING },
+      sortKey: { name: "CreateTime", type: AttributeType.NUMBER },
+      projectionType: ProjectionType.INCLUDE,
+      nonKeyAttributes: ["Title", "BotId"],
+    });
+
     // Bot Table
     const botTable = new Table(this, "BotTableV3", {
       // PK: UserId

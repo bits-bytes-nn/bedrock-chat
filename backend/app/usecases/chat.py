@@ -4,12 +4,14 @@ from typing import Callable, Literal
 from app.stream import ToolRunResult
 from app.strands_integration.chat_strands import converse_with_strands
 from app.bedrock import (
+    calculate_price,
     call_converse_api,
     get_text_from_converse_response,
     get_model_id,
     is_prefill_supported,
     is_tooluse_supported,
 )
+from app.metrics import emit_chat_cost
 from app.model_registry import get_model_spec
 from mypy_boto3_bedrock_runtime.type_defs import MessageTypeDef
 from app.prompt import (
@@ -61,6 +63,9 @@ from app.vector_search import (
 from ulid import ULID
 
 logger = logging.getLogger(__name__)
+
+# Characters of the conversation that title generation reads, from the beginning.
+TITLE_CONTEXT_CHARS = 4000
 
 
 def prepare_conversation(
@@ -535,16 +540,19 @@ def propose_conversation_title(
         message_map=conversation.message_map,
     )
 
-    # Titles only need the text of the conversation, without tool use or reasoning.
+    # Titles only need the beginning of the conversation, without tool use or
+    # reasoning; the route can be called repeatedly on long conversations.
     title_messages: list[MessageTypeDef] = []
+    remaining = TITLE_CONTEXT_CHARS
     for message in messages:
         text = "\n".join(
             content.body
             for content in message.content
             if isinstance(content, TextContentModel)
-        )
+        )[:remaining]
         if message.role not in ("user", "assistant") or not text:
             continue
+        remaining -= len(text)
         role: Literal["user", "assistant"] = (
             "user" if message.role == "user" else "assistant"
         )
@@ -570,6 +578,16 @@ def propose_conversation_title(
             # Leaves room for models that always reason before answering.
             "inferenceConfig": {"maxTokens": 2048},
         }
+    )
+    usage = response.get("usage", {})
+    emit_chat_cost(
+        calculate_price(
+            model,
+            input_tokens=usage.get("inputTokens", 0),
+            output_tokens=usage.get("outputTokens", 0),
+            cache_read_input_tokens=usage.get("cacheReadInputTokens", 0),
+            cache_write_input_tokens=usage.get("cacheWriteInputTokens", 0),
+        )
     )
     return get_text_from_converse_response(response)
 

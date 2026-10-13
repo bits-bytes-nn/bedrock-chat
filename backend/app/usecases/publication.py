@@ -183,6 +183,8 @@ def remove_bot_publication(user: User, bot_id: str):
             )
 
     delete_published_api(bot_id)
+    # The conversations of the API's clients are deleted with the bot; deleting
+    # many of them here would exceed the API's timeout.
     delete_bot_publication(bot.owner_user_id, bot_id)
 
 

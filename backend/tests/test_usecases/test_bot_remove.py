@@ -27,7 +27,9 @@ class TestBotRemoval(unittest.TestCase):
             bot_remove, "delete_from_s3"
         ) as delete_files, patch.object(
             bot_remove, "delete_api_key_from_secret_manager"
-        ) as delete_secret:
+        ) as delete_secret, patch.object(
+            bot_remove, "delete_conversation_by_user_id"
+        ) as delete_conversations:
             with self.assertRaises(RuntimeError):
                 bot_remove.handler(EVENT, None)
 
@@ -35,6 +37,7 @@ class TestBotRemoval(unittest.TestCase):
         delete_api.assert_called_once_with("bot")
         delete_files.assert_called_once_with("user", "bot")
         delete_secret.assert_called_once()
+        delete_conversations.assert_called_once_with("PUBLISHED_API#bot")
 
     def test_ignores_items_other_than_bots(self):
         event = {"Records": [{"dynamodb": {"Keys": {"PK": {"S": "user"}}}}]}

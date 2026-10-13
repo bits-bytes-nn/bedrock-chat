@@ -31,6 +31,8 @@ export interface EmbeddingProps {
   readonly database: Database;
   readonly bedrockRegion: string;
   readonly documentBucket: IBucket;
+  /** Holds large messages of the conversations of published APIs, removed with the bot. */
+  readonly largeMessageBucket: IBucket;
   readonly bedrockCustomBotProject: codebuild.IProject;
   readonly bedrockSharedKnowledgeBasesProject: codebuild.IProject;
   readonly enableRagReplicas: boolean;
@@ -653,6 +655,8 @@ export class Embedding extends Construct {
     );
     props.database.botTable.grantStreamRead(removeHandlerRole);
     props.documentBucket.grantReadWrite(removeHandlerRole);
+    props.largeMessageBucket.grantRead(removeHandlerRole);
+    props.largeMessageBucket.grantDelete(removeHandlerRole);
 
     const removalHandler = new DockerImageFunction(this, "BotRemovalHandler", {
       code: DockerImageCode.fromImageAsset(
@@ -664,7 +668,8 @@ export class Embedding extends Construct {
           exclude: [...excludeDockerImage],
         }
       ),
-      timeout: Duration.minutes(1),
+      // Deleting the conversations of a busy published API takes long.
+      timeout: Duration.minutes(15),
       environment: {
         ACCOUNT: Stack.of(this).account,
         REGION: Stack.of(this).region,
@@ -673,6 +678,7 @@ export class Embedding extends Construct {
         BOT_TABLE_NAME: props.database.botTable.tableName,
         TABLE_ACCESS_ROLE_ARN: props.database.tableAccessRole.roleArn,
         DOCUMENT_BUCKET: props.documentBucket.bucketName,
+        LARGE_MESSAGE_BUCKET: props.largeMessageBucket.bucketName,
       },
       role: removeHandlerRole,
       logRetention: logs.RetentionDays.THREE_MONTHS,

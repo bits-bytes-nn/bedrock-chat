@@ -11,6 +11,7 @@ import io
 import json
 import logging
 import os
+import zipfile
 from pathlib import PurePosixPath
 from typing import Literal
 
@@ -36,6 +37,8 @@ CONVERTIBLE_EXTENSIONS = PRESENTATION_EXTENSIONS | MEDIA_EXTENSIONS
 # are limited because transcription is billed per minute.
 MB = 1024 * 1024
 MAX_PRESENTATION_BYTES = 100 * MB
+# python-pptx loads every part into memory, and the API Lambda has 1 GB.
+MAX_PRESENTATION_UNCOMPRESSED_BYTES = 300 * MB
 MAX_MEDIA_BYTES = 500 * MB
 # Languages that Transcribe chooses from when identifying the spoken language.
 TRANSCRIPTION_LANGUAGES = ["ko-KR", "en-US", "ja-JP", "zh-CN"]
@@ -146,6 +149,24 @@ def _shape_lines(shapes) -> list[str]:
     return lines
 
 
+def _check_uncompressed_size(data: bytes) -> None:
+    """Reject archives that expand beyond the memory the conversion can use.
+
+    Raises:
+        ValueError: If the presentation is not a ZIP archive or expands too much.
+    """
+    try:
+        with zipfile.ZipFile(io.BytesIO(data)) as archive:
+            size = sum(info.file_size for info in archive.infolist())
+    except zipfile.BadZipFile:
+        raise ValueError("The presentation could not be read.") from None
+    if size > MAX_PRESENTATION_UNCOMPRESSED_BYTES:
+        raise ValueError(
+            "The presentation expands to more than "
+            f"{MAX_PRESENTATION_UNCOMPRESSED_BYTES // MB} MB."
+        )
+
+
 def presentation_to_text(data: bytes) -> str:
     """Extract the text of every slide, including tables and speaker notes."""
     presentation = Presentation(io.BytesIO(data))
@@ -204,6 +225,7 @@ def start_conversion(source_key: str) -> ConversionStatus:
         data = s3_client.get_object(Bucket=DOCUMENT_BUCKET, Key=source_key)[
             "Body"
         ].read()
+        _check_uncompressed_size(data)
         try:
             text = presentation_to_text(data)
         except Exception as e:  # python-pptx raises several types for broken files

@@ -189,6 +189,22 @@ class TestConversion(unittest.TestCase):
             with self.assertRaises(ValueError):
                 file_conversion.start_conversion(key)
 
+    def test_rejects_presentations_that_expand_too_much(self):
+        import io
+        import zipfile
+
+        bomb = io.BytesIO()
+        with zipfile.ZipFile(bomb, "w", zipfile.ZIP_DEFLATED) as archive:
+            archive.writestr("ppt/media/zeros.bin", b"\0" * (2 * 1024 * 1024))
+        key = "u/b/_temp/bomb.pptx"
+        self.s3.put_object(Bucket=BUCKET, Key=key, Body=bomb.getvalue())
+        with patch.object(
+            file_conversion, "MAX_PRESENTATION_UNCOMPRESSED_BYTES", 1024 * 1024
+        ), patch.object(file_conversion, "presentation_to_text") as parse:
+            with self.assertRaisesRegex(ValueError, "expands"):
+                file_conversion.start_conversion(key)
+        parse.assert_not_called()
+
     def test_rejects_large_recordings(self):
         key = "u/b/_temp/meeting.mp3"
         self.s3.put_object(Bucket=BUCKET, Key=key, Body=b"audio")

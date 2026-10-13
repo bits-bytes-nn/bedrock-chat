@@ -142,6 +142,9 @@ const BedrockChatParametersSchema = BaseParametersSchema.extend({
   // Bots with their own knowledge base per user; each has an OpenSearch Serverless
   // collection billed while it exists. 0 means no limit. Admins are not limited.
   maxDedicatedKnowledgeBasesPerUser: z.number().int().min(0).default(2),
+  // Days to keep the hourly conversation exports for usage analysis. They contain
+  // conversation text, including deleted conversations.
+  usageAnalysisRetentionDays: z.number().int().min(1).default(90),
   // Requests per second for the REST and WebSocket APIs. API Gateway's account limit
   // still applies; these defaults only stop runaway clients.
   apiThrottleRateLimit: z.number().default(500),
@@ -299,6 +302,7 @@ export function resolveBedrockChatParameters(
     maxDedicatedKnowledgeBasesPerUser: app.node.tryGetContext(
       "maxDedicatedKnowledgeBasesPerUser"
     ),
+    usageAnalysisRetentionDays: app.node.tryGetContext("usageAnalysisRetentionDays"),
     apiThrottleRateLimit: app.node.tryGetContext("apiThrottleRateLimit"),
     apiThrottleBurstLimit: app.node.tryGetContext("apiThrottleBurstLimit"),
   };

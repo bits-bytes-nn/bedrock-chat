@@ -20,7 +20,10 @@ def text(body: str) -> TextContentModel:
 class TestProposeConversationTitle(unittest.TestCase):
     def propose(self, messages: list[SimpleMessageModel]) -> dict:
         conversation = SimpleNamespace(last_message_id="last", message_map={})
-        response = {"output": {"message": {"content": [{"text": "Title"}]}}}
+        response = {
+            "output": {"message": {"content": [{"text": "Title"}]}},
+            "usage": {"inputTokens": 1000, "outputTokens": 10},
+        }
         with (
             patch.object(
                 chat_usecase, "find_conversation_by_id", return_value=conversation
@@ -30,10 +33,12 @@ class TestProposeConversationTitle(unittest.TestCase):
             patch.object(
                 chat_usecase, "call_converse_api", return_value=response
             ) as call,
+            patch.object(chat_usecase, "emit_chat_cost") as emit,
         ):
             self.assertEqual(
                 chat_usecase.propose_conversation_title("user", "c"), "Title"
             )
+        self.costs = [c.args[0] for c in emit.call_args_list]
         return call.call_args.args[0]
 
     def test_keeps_answer_text_and_drops_reasoning(self):
@@ -73,6 +78,19 @@ class TestProposeConversationTitle(unittest.TestCase):
         self.assertTrue(
             args["messages"][0]["content"][0]["text"].startswith("First\nSecond")
         )
+
+    def test_reads_only_the_beginning_and_counts_the_cost(self):
+        long = "x" * (chat_usecase.TITLE_CONTEXT_CHARS * 3)
+        args = self.propose(
+            [
+                SimpleMessageModel(role="user", content=[text(long)]),
+                SimpleMessageModel(role="assistant", content=[text(long)]),
+            ]
+        )
+        sent = "".join(message["content"][0]["text"] for message in args["messages"])
+        self.assertLess(len(sent), chat_usecase.TITLE_CONTEXT_CHARS + 1000)
+        self.assertEqual(len(self.costs), 1)
+        self.assertGreater(self.costs[0], 0)
 
 
 if __name__ == "__main__":

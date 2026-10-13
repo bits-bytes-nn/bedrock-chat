@@ -43,10 +43,27 @@ def _create_tables() -> None:
     dynamodb.create_table(
         TableName=common.CONVERSATION_TABLE_NAME,
         BillingMode="PAY_PER_REQUEST",
-        AttributeDefinitions=[_string_key("PK"), _string_key("SK")],
+        AttributeDefinitions=[
+            _string_key("PK"),
+            _string_key("SK"),
+            {"AttributeName": "CreateTime", "AttributeType": "N"},
+        ],
         KeySchema=[
             {"AttributeName": "PK", "KeyType": "HASH"},
             {"AttributeName": "SK", "KeyType": "RANGE"},
+        ],
+        GlobalSecondaryIndexes=[
+            {
+                "IndexName": "ConversationListIndex",
+                "KeySchema": [
+                    {"AttributeName": "PK", "KeyType": "HASH"},
+                    {"AttributeName": "CreateTime", "KeyType": "RANGE"},
+                ],
+                "Projection": {
+                    "ProjectionType": "INCLUDE",
+                    "NonKeyAttributes": ["Title", "BotId"],
+                },
+            }
         ],
     )
 

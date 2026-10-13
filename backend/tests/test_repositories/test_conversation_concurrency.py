@@ -326,6 +326,10 @@ class TestRelatedDocuments(unittest.TestCase):
             ],
         )
 
+        store_conversation("user", conversation())
+        listed = find_conversation_by_user_id("user")
+        self.assertEqual([c.id for c in listed], ["c"])
+
         found = find_related_document_by_id("user", "c", "s1")
         self.assertEqual(found.source_name, "doc.pdf")
         with self.assertRaises(RecordNotFoundError):

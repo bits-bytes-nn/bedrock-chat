@@ -97,7 +97,8 @@ const BotKbEditPage: React.FC = () => {
   const { data: globalConfig } = getGlobalConfig();
 
   const [isLoading, setIsLoading] = useState(false);
-  // The backend rejects saving while the knowledge base is synchronized.
+  // The backend rejects saving while the knowledge base is synchronized. The state
+  // is read once, so Save stays enabled and the backend has the final word.
   const [isSyncing, setIsSyncing] = useState(false);
 
   const [title, setTitle] = useState('');
@@ -1579,12 +1580,8 @@ const BotKbEditPage: React.FC = () => {
   const [isOpenSamples, setIsOpenSamples] = useState(false);
 
   const disabledRegister = useMemo(() => {
-    return (
-      title === '' ||
-      files.findIndex((f) => f.status !== 'UPLOADED') > -1 ||
-      (isSyncing && !isAdmin)
-    );
-  }, [files, title, isSyncing, isAdmin]);
+    return title === '' || files.findIndex((f) => f.status !== 'UPLOADED') > -1;
+  }, [files, title]);
 
   return (
     <>

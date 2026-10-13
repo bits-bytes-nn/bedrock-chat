@@ -64,6 +64,7 @@ export interface BedrockChatStackProps extends StackProps {
   readonly logoPath?: string;
   readonly alarmEmail: string;
   readonly dailyChatCostAlarmUsd: number;
+  readonly usageAnalysisRetentionDays: number;
   readonly maxDedicatedKnowledgeBasesPerUser: number;
   readonly apiThrottle: ThrottleSettings;
 }
@@ -227,12 +228,14 @@ export class BedrockChatStack extends cdk.Stack {
       envPrefix: props.envPrefix,
       accessLogBucket,
       sourceDatabase: database,
+      retentionDays: props.usageAnalysisRetentionDays,
     });
 
     const embedding = new Embedding(this, "Embedding", {
       bedrockRegion: props.bedrockRegion,
       database,
       documentBucket: props.documentBucket,
+      largeMessageBucket,
       bedrockCustomBotProject: bedrockCustomBotCodebuild.project,
       bedrockSharedKnowledgeBasesProject: bedrockSharedKnowledgeBasesCodebuild.project,
       enableRagReplicas: props.enableRagReplicas,
