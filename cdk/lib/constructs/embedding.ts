@@ -39,7 +39,7 @@ export class Embedding extends Construct {
   /** Bot removals that failed after the retries, which may leave stacks behind. */
   readonly removalDeadLetterQueue: sqs.Queue;
 
-  private _updateSyncStatusHandler: IFunction;
+  private _updateSyncStatusHandler: lambda.Function;
   private _bootstrapStateMachineHandler: IFunction;
   private _finalizeCustomBotBuildHandler: IFunction;
   private _finalizeSharedKnowledgeBasesBuildHandler: IFunction;
@@ -56,6 +56,11 @@ export class Embedding extends Construct {
       enforceSSL: true,
     });
     this.removalHandler = this.setupRemovalHandler(props);
+  }
+
+  /** Log group of the handler that logs `Knowledge sync failed` for failed bots. */
+  get syncStatusLogGroup(): logs.ILogGroup {
+    return this._updateSyncStatusHandler.logGroup;
   }
 
   private setupStateMachineHandlers(props: EmbeddingProps) {

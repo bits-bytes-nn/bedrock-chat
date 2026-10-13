@@ -278,7 +278,10 @@ describe("Bedrock Chat Stack Test", () => {
     }
 
     // Alarms and API throttling.
-    template.resourceCountIs("AWS::CloudWatch::Alarm", 5);
+    template.resourceCountIs("AWS::CloudWatch::Alarm", 6);
+    // Handlers answer errors without failing, so chat errors and failed bot syncs
+    // are counted from their logs.
+    template.resourceCountIs("AWS::Logs::MetricFilter", 2);
     // Failed bot removals are kept for investigation instead of being dropped.
     template.hasResourceProperties("AWS::Lambda::EventSourceMapping", {
       DestinationConfig: Match.objectLike({ OnFailure: Match.anyValue() }),

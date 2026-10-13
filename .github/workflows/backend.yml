@@ -12,6 +12,8 @@ on:
       - "frontend/src/i18n/en/index.ts"
       # tests/test_usecases/test_file_conversion.py checks the convertible files.
       - "frontend/src/constants/supportedAttachedFiles.ts"
+      # tests/test_alarm_log_terms.py checks the log lines that alarms count.
+      - "cdk/lib/constructs/monitoring.ts"
       - ".github/workflows/backend.yml"
   push:
     branches:
@@ -24,6 +26,8 @@ on:
       - "frontend/src/i18n/en/index.ts"
       # tests/test_usecases/test_file_conversion.py checks the convertible files.
       - "frontend/src/constants/supportedAttachedFiles.ts"
+      # tests/test_alarm_log_terms.py checks the log lines that alarms count.
+      - "cdk/lib/constructs/monitoring.ts"
       - ".github/workflows/backend.yml"
   workflow_dispatch: {}
 

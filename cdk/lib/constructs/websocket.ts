@@ -35,6 +35,7 @@ export interface WebSocketProps {
 export class WebSocket extends Construct {
   readonly webSocketApi: apigwv2.IWebSocketApi;
   readonly handler: IFunction;
+  readonly handlerLogGroup: logs.ILogGroup;
   private readonly defaultStageName = "dev";
 
   constructor(scope: Construct, id: string, props: WebSocketProps) {
@@ -162,6 +163,7 @@ export class WebSocket extends Construct {
 
     this.webSocketApi = webSocketApi;
     this.handler = handler;
+    this.handlerLogGroup = handler.logGroup;
 
     new CfnOutput(this, "WebSocketEndpoint", {
       value: this.apiEndpoint,
