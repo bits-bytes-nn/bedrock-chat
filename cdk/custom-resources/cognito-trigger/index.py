@@ -86,6 +86,7 @@ def update_user_pool_lambda_config(user_pool_id, attr, lambda_config):
                 'AdminCreateUserConfig',
                 'UserPoolAddOns',
                 'AccountRecoverySetting',
+                'UserPoolTier',
             ]
         },
         LambdaConfig=lambda_config,
