@@ -183,28 +183,6 @@ const translation: typeof en = {
         toolOutput: '출력: ',
       },
       tools: {
-        get_weather: {
-          name: '현재 날씨',
-          description: '현재 날씨 예보를 가져옵니다.',
-        },
-        sql_db_query: {
-          name: '데이터베이스 쿼리',
-          description:
-            '정확하고 상세한 SQL 쿼리를 실행해 데이터베이스에서 결과를 가져옵니다.',
-        },
-        sql_db_schema: {
-          name: '데이터베이스 스키마',
-          description: '테이블 목록의 스키마와 샘플 행을 가져옵니다.',
-        },
-        sql_db_list_tables: {
-          name: '데이터베이스 테이블 목록',
-          description:
-            '데이터베이스에서 사용할 수 있는 모든 테이블을 나열합니다.',
-        },
-        sql_db_query_checker: {
-          name: '쿼리 검사기',
-          description: '실행 전에 SQL 쿼리가 올바른지 확인합니다.',
-        },
         internet_search: {
           name: '인터넷 검색',
           description: '인터넷에서 정보를 검색합니다.',

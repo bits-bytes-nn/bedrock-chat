@@ -85,28 +85,6 @@ const translation = {
         toolOutput: 'Saída: ',
       },
       tools: {
-        get_weather: {
-          name: 'Previsão do Tempo Atual',
-          description: 'Obtenha a previsão do tempo atual.',
-        },
-        sql_db_query: {
-          name: 'Consulta ao Banco de Dados',
-          description:
-            'Execute uma consulta SQL detalhada e correta para recuperar resultados do banco de dados.',
-        },
-        sql_db_schema: {
-          name: 'Esquema do Banco de Dados',
-          description:
-            'Recupere o esquema e linhas de exemplo para uma lista de tabelas.',
-        },
-        sql_db_list_tables: {
-          name: 'Listar Tabelas do Banco de Dados',
-          description: 'Liste todas as tabelas disponíveis no banco de dados.',
-        },
-        sql_db_query_checker: {
-          name: 'Verificador de Consulta',
-          description: 'Verifique se sua consulta SQL está correta antes da execução.',
-        },
         internet_search: {
           name: 'Busca na Internet',
           description: 'Pesquise na internet por informações.',
@@ -624,14 +602,6 @@ Como você categorizaria este e-mail?`,
           'Este parâmetro pode influenciar quanto texto é examinado junto para determinar os limites de cada chunk, impactando a granularidade e coerência dos chunks resultantes. Um tamanho de buffer maior pode capturar mais contexto, mas também pode introduzir ruído, enquanto um tamanho de buffer menor pode perder contexto importante, mas garante um chunking mais preciso.',
         breakpointPercentileThreshold:
           'Um limite mais alto requer que as frases sejam mais distinguíveis para serem divididas em chunks diferentes. Um limite mais alto resulta em menos chunks e normalmente em um tamanho médio de chunk maior.',
-      },
-      alert: {
-        sync: {
-          error: {
-            title: 'Erro de Divisão de Frases',
-            body: 'Tente novamente com um valor menor de sobreposição de chunk',
-          },
-        },
       },
     },
     generationConfig: {

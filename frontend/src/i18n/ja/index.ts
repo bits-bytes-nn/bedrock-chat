@@ -183,28 +183,6 @@ const translation: typeof en = {
         toolOutput: '出力: ',
       },
       tools: {
-        get_weather: {
-          name: '現在の天気',
-          description: '現在の天気予報を取得します。',
-        },
-        sql_db_query: {
-          name: 'データベースクエリ',
-          description:
-            'データベースから結果を取得するために、詳細で正確なSQLクエリを実行します。',
-        },
-        sql_db_schema: {
-          name: 'データベーススキーマ',
-          description: 'テーブルのリストのスキーマとサンプル行を取得します。',
-        },
-        sql_db_list_tables: {
-          name: 'データベーステーブル一覧',
-          description:
-            'データベースで利用可能なすべてのテーブルをリストします。',
-        },
-        sql_db_query_checker: {
-          name: 'クエリチェッカー',
-          description: '実行前にSQLクエリが正しいかどうかを確認します。',
-        },
         internet_search: {
           name: 'インターネット検索',
           description: 'インターネットで情報を検索します。',

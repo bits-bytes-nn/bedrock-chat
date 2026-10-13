@@ -67,27 +67,6 @@ const translation = {
         toolOutput: 'Wyjście: ',
       },
       tools: {
-        get_weather: {
-          name: 'Aktualna Pogoda',
-          description: 'Pobierz aktualną prognozę pogody.',
-        },
-        sql_db_query: {
-          name: 'Zapytanie do Bazy Danych',
-          description:
-            'Wykonaj szczegółowe i poprawne zapytanie SQL, aby pobrać wyniki z bazy danych.',
-        },
-        sql_db_schema: {
-          name: 'Schema Bazy Danych',
-          description: 'Pobierz schemat i przykładowe wiersze dla listy tabel.',
-        },
-        sql_db_list_tables: {
-          name: 'Lista Tabel Bazy Danych',
-          description: 'Wyświetl wszystkie dostępne tabele w bazie danych.',
-        },
-        sql_db_query_checker: {
-          name: 'Sprawdzanie Zapytań',
-          description: 'Sprawdź poprawność zapytania SQL przed wykonaniem.',
-        },
         internet_search: {
           name: 'Wyszukiwanie w Internecie',
           description: 'Wyszukaj informacje w internecie.',
@@ -213,11 +192,6 @@ Jak sklasyfikowałbyś ten e-mail?`,
         title: 'Nazwa',
         description: 'Opis',
         instruction: 'Instrukcje',
-      },
-      explore: {
-        label: {
-          pageTitle: 'Konsola Bota',
-        },
       },
       apiSettings: {
         pageTitle: 'Ustawienia Publikacji API Bota Współdzielonego',
@@ -345,26 +319,6 @@ Jak sklasyfikowałbyś ten e-mail?`,
       },
     },
     admin: {
-      sharedBotAnalytics: {
-        label: {
-          pageTitle: 'Analityka Botów Współdzielonych',
-          noPublicBotUsages:
-            'W Okresie Obliczeniowym nie wykorzystano żadnych botów publicznych.',
-          published: 'API jest opublikowane.',
-          SearchCondition: {
-            title: 'Okres Obliczeniowy',
-            from: 'Od',
-            to: 'Do',
-          },
-          sortByCost: 'Sortuj według Kosztu',
-        },
-        help: {
-          overview:
-            'Monitoruj status użytkowania Botów Współdzielonych i Opublikowanych API Botów.',
-          calculationPeriod:
-            'Jeśli Okres Obliczeniowy nie jest ustawiony, wyświetlony zostanie koszt za dzisiaj.',
-        },
-      },
       apiManagement: {
         label: {
           pageTitle: 'Zarządzanie API',
@@ -440,7 +394,6 @@ Jak sklasyfikowałbyś ten e-mail?`,
     },
     button: {
       newChat: 'Nowy Czat',
-      sharedBotAnalytics: 'Analityka Botów Współdzielonych',
       SaveAndSubmit: 'Zapisz i Wyślij',
       resend: 'Wyślij Ponownie',
       regenerate: 'Wygeneruj Ponownie',
@@ -483,14 +436,6 @@ Jak sklasyfikowałbyś ten e-mail?`,
           'Ten parametr może wpływać na ilość tekstu analizowanego razem w celu określenia granic każdego fragmentu, wpływając na granularność i spójność powstałych fragmentów. Większy rozmiar bufora może uchwycić więcej kontekstu, ale może też wprowadzić szum, podczas gdy mniejszy rozmiar bufora może pominąć ważny kontekst, ale zapewnia bardziej precyzyjne dzielenie.',
         breakpointPercentileThreshold:
           'Wyższy próg wymaga, aby zdania były bardziej rozróżnialne, aby zostały podzielone na różne fragmenty. Wyższy próg skutkuje mniejszą liczbą fragmentów i zazwyczaj większym średnim rozmiarem fragmentu.',
-      },
-      alert: {
-        sync: {
-          error: {
-            title: 'Błąd Podziału Zdań',
-            body: 'Spróbuj ponownie z mniejszą wartością nakładania fragmentów',
-          },
-        },
       },
     },
     generationConfig: {
@@ -601,10 +546,6 @@ Jak sklasyfikowałbyś ten e-mail?`,
       bufferSize: {
         label: 'Rozmiar Bufora',
         hint: 'liczba otaczających zdań do dodania przy tworzeniu embeddingu. Rozmiar bufora 1 skutkuje połączeniem i embeddingiem 3 zdań (bieżącego, poprzedniego i następnego)',
-      },
-      breakpointThreshold: {
-        label: 'Próg percentylowy punktów przełomowych',
-        hint: 'Próg percentylowy odległości/różnic między zdaniami do wyznaczania punktów przełomowych między zdaniami.',
       },
       opensearchAnalyzer: {
         label: 'Analizator (Tokenizacja, Normalizacja)',
