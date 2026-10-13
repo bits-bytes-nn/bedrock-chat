@@ -107,9 +107,11 @@ export type BotSummary = BotMeta & {
 
 export type BotFile = {
   // Client-side id of a row in the knowledge file uploader.
-  uid?: string;
+  uid: string;
   filename: string;
   status: 'UPLOADING' | 'CONVERTING' | 'UPLOADED' | 'ERROR';
+  // Rejected before the upload, so the row does not stand for a bot file.
+  rejected?: boolean;
   errorMessage?: string;
   progress?: number;
 };

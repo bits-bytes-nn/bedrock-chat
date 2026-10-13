@@ -1,4 +1,4 @@
-import { SharedScope } from '../@types/bot';
+import { BotFile, SharedScope } from '../@types/bot';
 import copy from 'copy-to-clipboard';
 
 export const getBotUrl = (botId: string) => {
@@ -25,4 +25,23 @@ export const isPinnedBot = (botSharedStatus: string): boolean => {
  */
 export const canBePinned = (botSharedScope: SharedScope): boolean => {
   return botSharedScope === 'all';
+};
+
+/**
+ * Removes a row of the knowledge file uploader
+ * @param files Rows of the uploader
+ * @param uid Id of the row to remove
+ * @returns The remaining rows and the name of the bot file to delete, which is
+ * undefined when the row was rejected before the upload
+ */
+export const removeBotFile = (
+  files: BotFile[],
+  uid: string
+): { files: BotFile[]; deletedFilename?: string } => {
+  const removed = files.find((f) => f.uid === uid);
+  return {
+    files: files.filter((f) => f.uid !== uid),
+    deletedFilename:
+      removed && !removed.rejected ? removed.filename : undefined,
+  };
 };

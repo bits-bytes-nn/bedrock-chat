@@ -204,7 +204,11 @@ const BotRecentlyUsedPage: React.FC = () => {
                   isStarred={bot.isStarred}
                   disabled={!bot.available}
                   onClick={() => {
-                    updateStarred(bot.id, !bot.isStarred);
+                    updateStarred(bot.id, !bot.isStarred).catch((e) => {
+                      openSnackbar(
+                        getApiErrorMessage(e) ?? t('bot.error.failStar')
+                      );
+                    });
                   }}
                 />
               </div>

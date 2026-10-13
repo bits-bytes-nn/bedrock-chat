@@ -43,6 +43,7 @@ type Props = BaseProps & {
   // Disables editing and switching branches while an answer is being posted.
   disabled?: boolean;
   disabledEdit?: boolean;
+  disabledBranch?: boolean;
   relatedDocuments?: RelatedDocument[];
   onChangeMessageId?: (messageId: string) => void;
   onSubmit?: (messageId: string, content: string) => void;
@@ -169,7 +170,9 @@ const ChatMessage: React.FC<Props> = (props) => {
             <ButtonIcon
               className="text-xs"
               label={t('button.previous')}
-              disabled={props.disabled || nodeIndex === 0}
+              disabled={
+                props.disabled || props.disabledBranch || nodeIndex === 0
+              }
               onClick={() => {
                 onClickChange(nodeIndex - 1);
               }}>
@@ -183,6 +186,7 @@ const ChatMessage: React.FC<Props> = (props) => {
               label={t('button.next')}
               disabled={
                 props.disabled ||
+                props.disabledBranch ||
                 nodeIndex >= (chatContent?.sibling.length ?? 0) - 1
               }
               onClick={() => {

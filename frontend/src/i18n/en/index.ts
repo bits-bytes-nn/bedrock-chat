@@ -186,7 +186,6 @@ const translation = {
           name: 'Internet Search',
           description: 'Search the internet for information.',
           settings: 'Search Settings',
-          engine: 'Search Engine',
           engines: {
             duckduckgo: {
               label: 'DuckDuckGo (For Trial)',
@@ -211,8 +210,6 @@ const translation = {
           maxResults: 'Maximum Results',
         },
         bedrockAgent: {
-          name: 'Bedrock Agent',
-          description: 'Use Bedrock Agent as a tool.',
           agentId: {
             label: 'Agent ID',
             placeholder: 'Enter Agent ID',
@@ -497,6 +494,8 @@ How would you categorize this email?`,
       error: {
         notSupportedFile: 'This file is not supported.',
         duplicatedFile: 'A file with the same name has been uploaded.',
+        failUpload: 'Failed to upload the file.',
+        failStar: 'Failed to update the starred bots.',
         failDeleteApi: 'Failed to delete the API.',
         failDelete: 'Failed to delete the bot.',
         failPublish: 'Failed to publish the API.',

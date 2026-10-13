@@ -2,7 +2,7 @@ import React, { useCallback, useMemo, useState } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 import InputText from '../components/InputText';
 import Button from '../components/Button';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import {
   PiArrowSquareOut,
   PiCaretLeft,
@@ -32,6 +32,7 @@ import useUser from '../hooks/useUser';
 
 const AdminBotManagementPage: React.FC = () => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const { botId } = useParams();
 
   const {
@@ -104,20 +105,32 @@ const AdminBotManagementPage: React.FC = () => {
   const { deleteBot } = useBotApi();
   const { mutate: mutateCache } = useSWRConfig();
   const [isOpenDeleteBotDialog, setIsOpenDeleteBotDialog] = useState(false);
+  const [isDeletingBot, setIsDeletingBot] = useState(false);
   const onDeleteBot = useCallback(
     (targetBotId: string) => {
       setIsOpenDeleteBotDialog(false);
+      setIsDeletingBot(true);
       deleteBot(targetBotId)
         .then(() => {
-          // Drop the bot from the bot lists, such as the starred bots.
-          mutateCache((key) => Array.isArray(key) && key[0] === 'bot');
-          history.back();
+          // Drop the bot from the bot lists, such as the starred bots, and
+          // from the admin lists.
+          mutateCache(
+            (key) =>
+              Array.isArray(key) &&
+              ['bot', '/admin/public-bots', '/admin/published-bots'].includes(
+                key[0]
+              )
+          );
+          navigate('/admin/shared-bot-analytics');
         })
         .catch((e) => {
           open(getApiErrorMessage(e) ?? t('bot.error.failDelete'));
+        })
+        .finally(() => {
+          setIsDeletingBot(false);
         });
     },
-    [deleteBot, mutateCache, open, t]
+    [deleteBot, mutateCache, navigate, open, t]
   );
 
   const { user, isLoading: isLoadingUser } = useUser(bot?.ownerUserId);
@@ -535,6 +548,7 @@ const AdminBotManagementPage: React.FC = () => {
                 {bot && (
                   <Button
                     className="bg-red"
+                    loading={isDeletingBot}
                     onClick={() => {
                       setIsOpenDeleteBotDialog(true);
                     }}>

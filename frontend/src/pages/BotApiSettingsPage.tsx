@@ -22,6 +22,10 @@ import Help from '../components/Help';
 import DialogConfirmDeleteApi from '../components/DialogConfirmDeleteApi';
 import useSnackbar from '../hooks/useSnackbar';
 import { getApiErrorMessage } from '../utils/ErrorUtils';
+import {
+  hasDeployFailed,
+  isDeploying as isPublicationDeploying,
+} from '../utils/PublicationUtils';
 import DialogShareBot from '../components/DialogShareBot';
 import useShareBot from '../hooks/useShareBot';
 import IconPinnedBot from '../components/IconPinnedBot';
@@ -63,8 +67,8 @@ const BotApiSettingsPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
 
   const isDeploying = useMemo(() => {
-    return botPublication?.codebuildStatus === 'IN_PROGRESS';
-  }, [botPublication?.codebuildStatus]);
+    return !!botPublication && isPublicationDeploying(botPublication);
+  }, [botPublication]);
 
   const hasShared = useMemo(() => {
     return myBot?.sharedScope === 'all';
@@ -149,10 +153,7 @@ const BotApiSettingsPage: React.FC = () => {
     }
     if (botPublication.cfnStatus === 'CREATE_COMPLETE') {
       fillApiSettings();
-    } else if (
-      botPublication.cfnStatus === 'ROLLBACK_COMPLETE' ||
-      botPublication.codebuildStatus === 'FAILED'
-    ) {
+    } else if (hasDeployFailed(botPublication)) {
       setHasFailedDeploy(true);
     }
   }, [botPublication, fillApiSettings]);

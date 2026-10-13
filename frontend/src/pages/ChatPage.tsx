@@ -67,6 +67,7 @@ type ChatMessageWithRelatedDocumentsProps = {
   streamingRelatedDocuments: RelatedDocument[];
   streamingStateValue: string;
   disabledEdit: boolean;
+  disabledBranch: boolean;
   botHasAgent: boolean;
   botHasKnowledge: boolean;
   relatedDocuments: RelatedDocument[];
@@ -145,6 +146,7 @@ const ChatMessageWithRelatedDocuments: React.FC<ChatMessageWithRelatedDocumentsP
       isStreaming={props.isStreaming}
       disabled={props.disabled}
       disabledEdit={props.disabledEdit}
+      disabledBranch={props.disabledBranch}
       relatedDocuments={relatedDocumentsForCitation}
       onChangeMessageId={props.onChangeMessageId}
       onSubmit={props.onSubmit}
@@ -405,12 +407,17 @@ const ChatPage: React.FC = () => {
       }
     );
 
-    updateBotStarred(bot.id, { starred: isStarred }).finally(() => {
-      mutateBot();
-      // Refresh the bot lists, such as the starred bots in the drawer.
-      mutateCache((key) => Array.isArray(key) && key[0] === 'bot');
-    });
-  }, [bot, mutateBot, mutateCache, updateBotStarred]);
+    updateBotStarred(bot.id, { starred: isStarred })
+      .catch((e) => {
+        openSnackbar(getApiErrorMessage(e) ?? t('bot.error.failStar'));
+      })
+      .finally(() => {
+        // Also reverts the optimistic update after a failure.
+        mutateBot();
+        // Refresh the bot lists, such as the starred bots in the drawer.
+        mutateCache((key) => Array.isArray(key) && key[0] === 'bot');
+      });
+  }, [bot, mutateBot, mutateCache, openSnackbar, t, updateBotStarred]);
 
   const onClickCopyUrl = useCallback((botId: string) => {
     copyBotUrl(botId);
@@ -664,6 +671,8 @@ const ChatPage: React.FC = () => {
                         disabled={postingMessage}
                         // Editing an earlier message would branch off the unsaved failed one.
                         disabledEdit={hasError && !isLast}
+                        // Switching branches would leave the unsaved failed message.
+                        disabledBranch={hasError}
                         streamingReasoning={isLast ? streamingState.context.reasoning : ''}
                         streamingTools={isLast ? streamingState.context.tools : NO_TOOLS}
                         streamingRelatedDocuments={
