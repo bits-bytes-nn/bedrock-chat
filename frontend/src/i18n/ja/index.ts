@@ -525,8 +525,6 @@ const translation: typeof en = {
         failDelete: 'ボットを削除できませんでした。',
         failPublish: 'APIを公開できませんでした。',
         failSave: 'ボットを保存できませんでした。',
-        failDeleteInProgress:
-          'ナレッジの同期中または API の公開中はボットを削除できません。完了後にもう一度お試しください。',
         failShare: '共有設定を変更できませんでした。',
         failAddApiKey: 'API キーを追加できませんでした。',
         failDeleteApiKey: 'API キーを削除できませんでした。',

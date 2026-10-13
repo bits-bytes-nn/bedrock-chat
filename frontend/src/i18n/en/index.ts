@@ -521,8 +521,6 @@ How would you categorize this email?`,
         failDelete: 'Failed to delete the bot.',
         failPublish: 'Failed to publish the API.',
         failSave: 'Failed to save the bot.',
-        failDeleteInProgress:
-          'The bot cannot be deleted while its knowledge is syncing or its API is being published. Try again after it finishes.',
         failShare: 'Failed to change the sharing settings.',
         failAddApiKey: 'Failed to add the API key.',
         failDeleteApiKey: 'Failed to delete the API key.',

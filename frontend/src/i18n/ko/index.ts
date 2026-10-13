@@ -521,8 +521,6 @@ const translation: typeof en = {
         failDelete: '봇을 삭제하지 못했습니다.',
         failPublish: 'API를 게시하지 못했습니다.',
         failSave: '봇을 저장하지 못했습니다.',
-        failDeleteInProgress:
-          '지식을 동기화하거나 API를 게시하는 동안에는 봇을 삭제할 수 없습니다. 작업이 끝난 뒤 다시 시도하세요.',
         failShare: '공유 설정을 변경하지 못했습니다.',
         failAddApiKey: 'API 키를 추가하지 못했습니다.',
         failDeleteApiKey: 'API 키를 삭제하지 못했습니다.',
