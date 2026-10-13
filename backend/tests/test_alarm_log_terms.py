@@ -36,7 +36,6 @@ class TestAlarmLogTerms(unittest.TestCase):
             )
         self.assertIn(term, logs.output[0])
 
-
     def test_published_api_failures_are_logged(self):
         stack = (REPO / "cdk/lib/api-publishment-stack.ts").read_text()
         consumer = (REPO / "backend/app/sqs_consumer.py").read_text()
