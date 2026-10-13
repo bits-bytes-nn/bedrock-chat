@@ -153,7 +153,6 @@ def converse_with_strands(
     cache_read_input_tokens = metrics.accumulated_usage.get("cacheReadInputTokens", 0)
     cache_write_input_tokens = metrics.accumulated_usage.get("cacheWriteInputTokens", 0)
 
-    # Calculate price using the same function as chat_legacy
     price = calculate_price(
         model=chat_input.message.model,
         input_tokens=input_tokens,

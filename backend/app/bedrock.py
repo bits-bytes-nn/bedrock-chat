@@ -38,8 +38,6 @@ ENABLE_BEDROCK_CROSS_REGION_INFERENCE = (
     os.environ.get("ENABLE_BEDROCK_CROSS_REGION_INFERENCE", "false") == "true"
 )
 
-# Base model IDs mapping
-
 
 def is_nova_model(model: type_model_name) -> bool:
     """Check if the model is an Amazon Nova model"""

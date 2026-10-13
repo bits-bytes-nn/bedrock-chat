@@ -21,7 +21,7 @@ def find_conversations_by_query(
     """Search conversations by query string.
     This method searches through both the conversation title and message content.
     """
-    client = client or get_opensearch_client(collection_type="conversation")
+    client = client or get_opensearch_client()
 
     logger.info("Searching conversations in index %s", INDEX_NAME)
 

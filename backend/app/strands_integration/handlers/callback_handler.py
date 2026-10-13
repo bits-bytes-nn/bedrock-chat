@@ -22,7 +22,6 @@ class CallbackHandler:
         self.on_stream = on_stream
         self.on_reasoning = on_reasoning
         self.on_message = on_message
-        self.collected_messages: list[Message] = []
 
     def __call__(self, **kwargs):
         """Make the instance callable like a function."""

@@ -752,14 +752,14 @@ def update_bot_publication(
     owner_user_id: str, bot_id: str, published_api_id: str, build_id: str
 ):
     table = get_bot_table_client()
-    current_time = get_current_time()  # epoch time (int) を取得
+    current_time = get_current_time()
     logger.info(f"Updating bot publication: {bot_id}")
     try:
         response = table.update_item(
             Key={"PK": owner_user_id, "SK": compose_sk(bot_id, "bot")},
             UpdateExpression="SET ApiPublishmentStackName = :val, ApiPublishedDatetime = :time, ApiPublishCodeBuildId = :build_id",
             # NOTE: Stack naming rule: ApiPublishmentStack{published_api_id}.
-            # See bedrock-chat-stack.ts > `ApiPublishmentStack`
+            # See cdk/bin/api-publish.ts > `ApiPublishmentStack`
             ExpressionAttributeValues={
                 ":val": f"ApiPublishmentStack{published_api_id}",
                 ":time": current_time,

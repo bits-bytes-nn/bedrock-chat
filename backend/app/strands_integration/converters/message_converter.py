@@ -107,7 +107,7 @@ def simple_message_models_to_strands_messages(
         if _is_conversation_role(message.role)
     ]
 
-    # Add message cache points (same logic as legacy bedrock.py)
+    # Add message cache points
     if prompt_caching_enabled and is_prompt_caching_supported(model, target="message"):
         for order, message in enumerate(
             filter(lambda m: m["role"] == "user", reversed(messages))
