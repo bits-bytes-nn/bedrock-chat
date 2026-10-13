@@ -830,10 +830,11 @@ describe("CDK context values from the command line", () => {
     expect(result.apiThrottleBurstLimit).toBe(100);
   });
 
-  test("rejects non-numeric strings", () => {
+  // An empty value (`-c name=`) must not silently become 0 and turn a guard off.
+  test.each(["ninety", "", " "])("rejects %p as a number", (value) => {
     expect(() =>
       resolveBedrockChatParameters(
-        createTestApp({ usageAnalysisRetentionDays: "ninety" })
+        createTestApp({ dailyChatCostAlarmUsd: value })
       )
     ).toThrow(ZodError);
   });

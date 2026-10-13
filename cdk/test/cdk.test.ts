@@ -398,6 +398,21 @@ describe("Bedrock Chat Stack Test", () => {
     expect(actions).not.toContain("aoss:ListCollections");
 
     // Alarms and API throttling.
+    // Roles are trusted by tag as well, because long stack names are shortened in
+    // generated role names.
+    const tagTrust = Object.values(template.findResources("AWS::IAM::Role")).find(
+      (role: any) =>
+        JSON.stringify(role.Properties.AssumeRolePolicyDocument).includes(
+          "aws:PrincipalTag/bedrock-chat:table-access"
+        )
+    );
+    expect(tagTrust).toBeDefined();
+    template.hasResourceProperties("AWS::IAM::Role", {
+      Tags: Match.arrayWith([
+        Match.objectLike({ Key: "bedrock-chat:table-access" }),
+      ]),
+    });
+
     template.resourceCountIs("AWS::CloudWatch::Alarm", 9);
     // The bot store's initial table exports hold conversation text, so they expire.
     template.hasResourceProperties("AWS::S3::Bucket", {

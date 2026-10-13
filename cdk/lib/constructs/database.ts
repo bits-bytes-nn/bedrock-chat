@@ -7,8 +7,17 @@ import {
   TableEncryption,
   StreamViewType,
 } from "aws-cdk-lib/aws-dynamodb";
-import { AccountPrincipal, Role } from "aws-cdk-lib/aws-iam";
+import { AccountPrincipal, PolicyStatement, Role } from "aws-cdk-lib/aws-iam";
+import {
+  TABLE_ACCESS_TAG_KEY,
+  tableAccessTagValue,
+} from "../utils/table-access";
 import { Construct } from "constructs";
+
+export interface DatabaseProps {
+  /** Environment prefix, used for the table access tag of trusted roles. */
+  readonly envPrefix: string;
+}
 
 export class Database extends Construct {
   readonly conversationTable: Table;
@@ -16,7 +25,7 @@ export class Database extends Construct {
   readonly tableAccessRole: Role;
   readonly websocketSessionTable: Table;
 
-  constructor(scope: Construct, id: string) {
+  constructor(scope: Construct, id: string, props: DatabaseProps) {
     super(scope, id);
 
     // Conversation Table
@@ -104,7 +113,9 @@ export class Database extends Construct {
     });
 
     // Assumed by the Lambda roles of this stack and of the published API stacks
-    // (cdk/bin/api-publish.ts), which CloudFormation names after their stacks.
+    // (cdk/bin/api-publish.ts). CloudFormation names roles after their stacks, but
+    // shortens long stack names, so roles carrying the table access tag are trusted
+    // too.
     const { partition, account, stackName } = Stack.of(this);
     const tableAccessRole = new Role(this, "TableAccessRole", {
       assumedBy: new AccountPrincipal(account).withConditions({
@@ -116,6 +127,19 @@ export class Database extends Construct {
         },
       }),
     });
+    tableAccessRole.assumeRolePolicy?.addStatements(
+      new PolicyStatement({
+        actions: ["sts:AssumeRole"],
+        principals: [new AccountPrincipal(account)],
+        conditions: {
+          StringEquals: {
+            [`aws:PrincipalTag/${TABLE_ACCESS_TAG_KEY}`]: tableAccessTagValue(
+              props.envPrefix
+            ),
+          },
+        },
+      })
+    );
     conversationTable.grantReadWriteData(tableAccessRole);
     botTable.grantReadWriteData(tableAccessRole);
 

@@ -27,6 +27,7 @@ import { BedrockCustomBotCodebuild } from "./constructs/bedrock-custom-bot-codeb
 import { BedrockSharedKnowledgeBasesCodebuild } from "./constructs/bedrock-shared-knowledge-bases-codebuild";
 import { BotStore, Language } from "./constructs/bot-store";
 import { Duration } from "aws-cdk-lib";
+import { tagTableAccessRoles } from "./utils/table-access";
 import { metricsNamespace } from "./utils/metrics";
 import { Monitoring } from "./constructs/monitoring";
 import { ThrottleSettings } from "aws-cdk-lib/aws-apigatewayv2";
@@ -211,7 +212,10 @@ export class BedrockChatStack extends cdk.Stack {
       serverAccessLogsPrefix: "LargeMessageBucket",
     });
 
-    const database = new Database(this, "Database");
+    const database = new Database(this, "Database", {
+      envPrefix: props.envPrefix,
+    });
+    tagTableAccessRoles(this, props.envPrefix);
 
     // Custom Bot Store
     let botStore = undefined;

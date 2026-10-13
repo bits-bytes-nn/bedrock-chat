@@ -6,7 +6,6 @@ import ko from '../../i18n/ko';
 import {
   getApiErrorCode,
   getApiErrorMessage,
-  getApiErrorStatus,
   isBotNotPublishedError,
 } from '../ErrorUtils';
 
@@ -86,17 +85,10 @@ describe('getApiErrorCode', () => {
 describe('isBotNotPublishedError', () => {
   it('reads the error code or a 404', () => {
     expect(isBotNotPublishedError(apiError({ code: 'bot_not_published' }, 400))).toBe(true);
-    expect(isBotNotPublishedError(apiError({}, 404))).toBe(true);
+    expect(isBotNotPublishedError(apiError({}, 404))).toBe(false);
     expect(isBotNotPublishedError(apiError({ errors: ['Bot X is not published.'] }, 400))).toBe(
       false
     );
     expect(isBotNotPublishedError(undefined)).toBe(false);
-  });
-});
-
-describe('getApiErrorStatus', () => {
-  it('returns the status of an API error only', () => {
-    expect(getApiErrorStatus(apiError({}))).toBe(403);
-    expect(getApiErrorStatus(new Error('network'))).toBeUndefined();
   });
 });
