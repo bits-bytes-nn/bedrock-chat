@@ -8,12 +8,13 @@ from threading import Thread
 from typing import Literal, TypedDict
 
 import boto3
+import jwt
 from app.stream import ToolRunResult
 from app.auth import verify_token
 from app.repositories.conversation import RecordNotFoundError
 from app.routes.schemas.conversation import ChatInput
 from app.stream import OnStopInput, OnThinking
-from app.usecases.chat import chat
+from app.usecases.chat import ConversationTooLargeError, MessageTooLargeError, chat
 from app.user import User
 from boto3.dynamodb.conditions import Key
 from botocore.config import Config
@@ -38,10 +39,10 @@ SENDER_DRAIN_MARGIN_SECONDS = 5
 # count leaves room for the largest attachments the frontend allows.
 MAX_MESSAGE_PART_CHARS = 8 * 1024
 MAX_MESSAGE_PARTS = 1600
+SESSION_NOT_STARTED = "The session has not started. Send START first."
 USER_FACING_MODEL_ERRORS = frozenset(
     {
         "ValidationException",
-        "ThrottlingException",
         "ServiceQuotaExceededException",
         "ModelTimeoutException",
         "ModelNotReadyException",
@@ -50,9 +51,6 @@ USER_FACING_MODEL_ERRORS = frozenset(
         "ResourceNotFoundException",
     }
 )
-# Caused by the request rather than by the service or the deployment, so they are
-# logged without counting toward the chat error alarm (cdk/lib/constructs/monitoring.ts).
-USER_CAUSED_MODEL_ERRORS = frozenset({"ValidationException"})
 
 dynamodb_client = boto3.resource("dynamodb")
 table = dynamodb_client.Table(WEBSOCKET_SESSION_TABLE_NAME)
@@ -69,6 +67,8 @@ type_error_code = Literal[
     "invalid_request",
     "generation_failed",
     "input_too_long",
+    "message_too_large",
+    "conversation_too_large",
     "unauthorized",
 ]
 
@@ -313,6 +313,14 @@ def process_chat_input(
         else:
             return error_response(400, "Invalid request.", "invalid_request")
 
+    except MessageTooLargeError as e:
+        logger.warning("Rejected chat input: %s", e)
+        return error_response(400, str(e), "message_too_large")
+
+    except ConversationTooLargeError as e:
+        logger.warning("Rejected chat input: %s", e)
+        return error_response(400, str(e), "conversation_too_large")
+
     except (PermissionError, ValueError) as e:
         logger.exception("Rejected chat input")
         return error_response(400, str(e), "invalid_request")
@@ -332,10 +340,9 @@ def process_chat_input(
     except ClientError as e:
         code = e.response["Error"]["Code"]
         is_model_call = e.operation_name in ("Converse", "ConverseStream")
-        if is_model_call and code in USER_CAUSED_MODEL_ERRORS:
-            logger.warning("Bedrock rejected the request: %s", code)
-        else:
-            logger.exception("Bedrock request failed")
+        # Validation errors are counted too: a misconfigured model id causes them.
+        # The traceback names the error code.
+        logger.exception("Bedrock request failed")
         if is_model_call:
             # These messages describe the request or the model, not the account.
             if code in USER_FACING_MODEL_ERRORS:
@@ -395,7 +402,8 @@ def handler(event, context):
             try:
                 # Verify JWT token
                 decoded = verify_token(token)
-            except Exception:
+            except jwt.PyJWTError:
+                # Other errors, such as a failed key fetch, are server errors.
                 logger.exception("Invalid token")
                 return _error(403, "Invalid token.", "unauthorized")
 
@@ -415,14 +423,19 @@ def handler(event, context):
         elif step == "END":
             try:
                 decoded = verify_token(token)
-            except Exception:
+            except jwt.PyJWTError:
                 logger.exception("Invalid token")
                 return _error(403, "Invalid token.", "unauthorized")
             user = User.from_decoded_token(decoded)
 
             # The request must come from the user who started the session.
-            if _session_user_id(connection_id) != user.id:
-                return _error(403, "Session not started.", "unauthorized")
+            session_user_id = _session_user_id(connection_id)
+            if session_user_id is None:
+                return _error(400, SESSION_NOT_STARTED, "invalid_request")
+            if session_user_id != user.id:
+                return _error(
+                    403, "The session belongs to another user.", "unauthorized"
+                )
 
             # Concatenate the message parts
             message_parts = []
@@ -476,7 +489,7 @@ def handler(event, context):
             ):
                 return _error(400, "Invalid message part.", "invalid_request")
             if _session_user_id(connection_id) is None:
-                return _error(403, "Session not started.", "unauthorized")
+                return _error(400, SESSION_NOT_STARTED, "invalid_request")
 
             # Zero is reserved for user id, so start from 1
             part_index = index + 1

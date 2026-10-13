@@ -33,9 +33,11 @@ const AdminSharedBotAnalyticsPage: React.FC = () => {
     isLoading: isLoadingPublicBots,
   } = usePublicBotsForAdmin({
     start: searchDateFrom
-      ? toUtcDateHour(searchDateFrom, 0, DATA_FORMAT)
+      ? toUtcDateHour(searchDateFrom, 0, 0, DATA_FORMAT)
       : undefined,
-    end: searchDateTo ? toUtcDateHour(searchDateTo, 23, DATA_FORMAT) : undefined,
+    end: searchDateTo
+      ? toUtcDateHour(searchDateTo, 23, 59, DATA_FORMAT)
+      : undefined,
   });
 
   const sortedBots = useMemo(() => {

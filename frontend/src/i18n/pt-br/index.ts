@@ -89,7 +89,6 @@ const translation = {
           name: 'Busca na Internet',
           description: 'Pesquise na internet por informações.',
           settings: 'Configurações de Busca',
-          engine: 'Mecanismo de Busca',
           engines: {
             duckduckgo: {
               label: 'DuckDuckGo (Para Teste)',
@@ -114,8 +113,6 @@ const translation = {
           maxResults: 'Máximo de Resultados',
         },
         bedrockAgent: {
-          name: 'Agente Bedrock',
-          description: 'Use o Agente Bedrock como uma ferramenta.',
           agentId: {
             label: 'ID do Agente',
             placeholder: 'Digite o ID do Agente',

@@ -6,7 +6,9 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 import boto3
+import jwt
 import pytest
+import requests
 from botocore.exceptions import ClientError
 from strands.types.exceptions import (
     ContextWindowOverflowException,
@@ -17,8 +19,9 @@ from moto import mock_aws
 sys.path.insert(0, ".")
 os.environ.setdefault("WEBSOCKET_SESSION_TABLE_NAME", "test-websocket-session")
 
-from app import websocket
+from app import auth, websocket
 from app.metrics import emit_chat_cost, emit_metric
+from app.usecases.chat import ConversationTooLargeError, MessageTooLargeError
 from app.websocket import NotificationSender, process_chat_input
 
 
@@ -186,11 +189,21 @@ class TestProcessChatInput(unittest.TestCase):
         self.assertEqual(frame["reason"], "Input is too long")
         self.assertEqual(frame["code"], "model_error")
 
-    def test_logs_rejected_requests_without_counting_them_as_failures(self):
+    def test_counts_validation_errors_for_the_alarm(self):
+        # A misconfigured model id is reported as a validation error.
         with self.assertLogs(websocket.logger, "WARNING") as logs:
-            self.bedrock_error("ValidationException", "Input is too long")
-        self.assertEqual([r.levelname for r in logs.records], ["WARNING"])
-        self.assertIn("Bedrock rejected the request", logs.output[0])
+            self.bedrock_error("ValidationException", "The model id is invalid")
+        self.assertEqual([r.levelname for r in logs.records], ["ERROR"])
+        self.assertIn("Bedrock request failed", logs.output[0])
+        self.assertIn("ValidationException", logs.output[0])
+
+    def test_reports_a_conversation_that_is_too_large(self):
+        frame = self.error_frame(ConversationTooLargeError("too large"))
+        self.assertEqual(frame["code"], "conversation_too_large")
+
+    def test_reports_a_message_that_is_too_large(self):
+        frame = self.error_frame(MessageTooLargeError("too large"))
+        self.assertEqual(frame["code"], "message_too_large")
 
     def test_logs_model_failures_for_the_alarm(self):
         with self.assertLogs(websocket.logger, "WARNING") as logs:
@@ -303,14 +316,38 @@ class TestHandler:
         response = websocket.handler(
             frame({"step": "BODY", "index": 0, "part": "x"}), None
         )
-        assert response["statusCode"] == 403
-        assert json.loads(response["body"])["code"] == "unauthorized"
+        assert response["statusCode"] == 400
+        body = json.loads(response["body"])
+        assert body["code"] == "invalid_request"
+        assert "START" in body["reason"]
+
+    def test_rejects_end_without_a_session(self):
+        response, process = self.end()
+        assert response["statusCode"] == 400
+        assert json.loads(response["body"])["code"] == "invalid_request"
+        process.assert_not_called()
 
     def test_rejects_an_invalid_token(self):
-        with patch.object(websocket, "verify_token", side_effect=ValueError("bad")):
+        with patch.object(
+            websocket, "verify_token", side_effect=jwt.InvalidTokenError("bad")
+        ):
             response = websocket.handler(frame({"step": "START", "token": "t"}), None)
         assert response["statusCode"] == 403
         assert json.loads(response["body"])["code"] == "unauthorized"
+
+    def test_rejects_an_empty_token(self):
+        with patch.object(auth, "CLIENT_ID", "client"):
+            response = websocket.handler(frame({"step": "START", "token": ""}), None)
+        assert response["statusCode"] == 403
+        assert json.loads(response["body"])["code"] == "unauthorized"
+
+    def test_a_failed_key_fetch_is_a_server_error(self):
+        with patch.object(
+            websocket, "verify_token", side_effect=requests.ConnectionError("down")
+        ):
+            response = websocket.handler(frame({"step": "START", "token": "t"}), None)
+        assert response["statusCode"] == 500
+        assert json.loads(response["body"])["code"] == "generation_failed"
 
     def test_unexpected_errors_carry_a_code(self):
         with patch.object(websocket, "_session_user_id", side_effect=RuntimeError):

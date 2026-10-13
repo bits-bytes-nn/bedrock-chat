@@ -68,6 +68,18 @@ logger = logging.getLogger(__name__)
 # Characters of the conversation that title generation reads, from the beginning.
 TITLE_CONTEXT_CHARS = 4000
 
+# Loading a conversation returns it whole, so it must stay within the Lambda response
+# limit (6 MB). The margin leaves room for the answer and the response envelope.
+MAX_CONVERSATION_BYTES = 5 * 1024 * 1024
+
+
+class ConversationTooLargeError(ValueError):
+    """The conversation would become too large to load."""
+
+
+class MessageTooLargeError(ConversationTooLargeError):
+    """The message alone is too large for any conversation."""
+
 
 def prepare_conversation(
     user: User,
@@ -164,6 +176,11 @@ def prepare_conversation(
         new_message = MessageModel.from_message_input(chat_input.message)
         new_message.parent = parent_id
         new_message.create_time = current_time
+        # A new conversation would not help either.
+        if len(new_message.model_dump_json().encode("utf-8")) > MAX_CONVERSATION_BYTES:
+            raise MessageTooLargeError(
+                "The message is too large. Remove some attachments."
+            )
 
         if chat_input.message.message_id:
             message_id = chat_input.message.message_id
@@ -185,6 +202,13 @@ def prepare_conversation(
         message_id = (
             conversation.message_map[conversation.last_message_id].parent
             or "instruction"
+        )
+
+    # The stored model serializes about like the conversation response (attachments
+    # in base64), plus the instruction and the price, so it is a close upper estimate.
+    if len(conversation.model_dump_json().encode("utf-8")) > MAX_CONVERSATION_BYTES:
+        raise ConversationTooLargeError(
+            "The conversation is too large. Start a new conversation."
         )
 
     return (message_id, conversation, bot)

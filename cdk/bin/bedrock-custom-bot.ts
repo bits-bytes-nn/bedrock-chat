@@ -22,6 +22,7 @@ import {
 } from "@cdklabs/generative-ai-cdk-constructs/lib/cdk-lib/bedrock/data-sources/web-crawler-data-source";
 import { Analyzer } from "@cdklabs/generative-ai-cdk-constructs/lib/cdk-lib/opensearch-vectorindex";
 import { resolveBedrockCustomBotParameters } from "../lib/utils/parameter-models";
+import { customBotStackPrefix } from "../lib/utils/stack-names";
 
 const app = new cdk.App();
 
@@ -205,7 +206,7 @@ console.log(
 );
 
 // Create the stack
-new BedrockCustomBotStack(app, `BrChatKbStack${baseConfig.botId}`, {
+new BedrockCustomBotStack(app, `${customBotStackPrefix}${baseConfig.botId}`, {
   // Environment configuration
   env: {
     region: baseConfig.bedrockRegion,

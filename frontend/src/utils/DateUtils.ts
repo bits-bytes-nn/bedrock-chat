@@ -25,17 +25,20 @@ export const addDate = (
 };
 
 /**
- * The UTC hour (`YYYYMMDDHH`) of an hour of a local date. The usage exports are
+ * The UTC hour (`YYYYMMDDHH`) of a time of a local date. The usage exports are
  * partitioned by UTC hour, so a local day maps to UTC hours that can span two dates.
+ * Pass the last minute for the end of a range: with a half-hour offset, the last
+ * local hour spans two UTC hours.
  */
 export const toUtcDateHour = (
   localDate: string,
   hour: number,
+  minute: number,
   format: string
 ): string | undefined => {
   const date = dayjs(localDate, format, true);
   return date.isValid()
-    ? date.hour(hour).utc().format('YYYYMMDDHH')
+    ? date.hour(hour).minute(minute).utc().format('YYYYMMDDHH')
     : undefined;
 };
 

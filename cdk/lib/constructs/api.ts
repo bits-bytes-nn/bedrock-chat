@@ -28,6 +28,7 @@ import {
   botStackPolicyStatement,
   publishedApiKeyPolicyStatement,
 } from "../utils/publication-policies";
+import { apiPublishmentStackPrefix } from "../utils/stack-names";
 import * as logs from "aws-cdk-lib/aws-logs";
 import * as path from "path";
 import { IBucket } from "aws-cdk-lib/aws-s3";
@@ -107,9 +108,12 @@ export class Api extends Construct {
       })
     );
     props.embeddingStateMachine.grantStartExecution(handlerRole);
+    // Checks whether a knowledge base sync of a bot is running before it is deleted.
+    props.embeddingStateMachine.grant(handlerRole, "states:ListExecutions");
+    props.embeddingStateMachine.grantExecution(handlerRole, "states:DescribeExecution");
     handlerRole.addToPolicy(
       botStackPolicyStatement(Stack.of(this), [
-        { stackNamePrefix: "ApiPublishmentStack", region: Stack.of(this).region },
+        { stackNamePrefix: apiPublishmentStackPrefix, region: Stack.of(this).region },
       ])
     );
     handlerRole.addToPolicy(publishedApiKeyPolicyStatement(Stack.of(this)));

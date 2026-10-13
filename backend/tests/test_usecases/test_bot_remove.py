@@ -1,8 +1,9 @@
+import json
 import unittest
 from unittest.mock import MagicMock, call, patch
 
 import pytest
-from app import bot_remove
+from app import bot_remove, utils
 from app.repositories.conversation import find_conversation_by_id, store_conversation
 from app.repositories.models.conversation import ConversationModel
 from app.usecases import publication
@@ -92,7 +93,9 @@ class TestUnpublish(unittest.TestCase):
 
 class TestDeleteDuringBuild(unittest.TestCase):
     def bot(self, sync_status: str, build_id: str | None = None) -> MagicMock:
-        bot = MagicMock(sync_status=sync_status, published_api_codebuild_id=build_id)
+        bot = MagicMock(
+            id="bot", sync_status=sync_status, published_api_codebuild_id=build_id
+        )
         self.user = MagicMock()
         self.user.is_admin.return_value = False
         bot.is_pinned.return_value = False
@@ -102,10 +105,30 @@ class TestDeleteDuringBuild(unittest.TestCase):
     def test_rejects_deleting_while_the_knowledge_base_is_built(self):
         with patch.object(
             bot_usecase, "find_bot_by_id", return_value=self.bot("RUNNING")
-        ), patch.object(bot_usecase, "delete_bot_by_id") as delete:
-            with self.assertRaises(ResourceConflictError):
+        ), patch.object(
+            bot_usecase, "is_embedding_running", return_value=True
+        ) as running, patch.object(
+            bot_usecase, "delete_bot_by_id"
+        ) as delete:
+            with self.assertRaises(ResourceConflictError) as e:
                 bot_usecase.remove_bot_by_id(self.user, "bot")
+        self.assertEqual(e.exception.code, "knowledge_base_syncing")
+        running.assert_called_once_with("bot")
         delete.assert_not_called()
+
+    def test_allows_deleting_a_bot_whose_sync_status_is_stuck(self):
+        for status in ("QUEUED", "RUNNING"):
+            with patch.object(
+                bot_usecase, "find_bot_by_id", return_value=self.bot(status)
+            ), patch.object(
+                bot_usecase, "is_embedding_running", return_value=False
+            ), patch.object(
+                bot_usecase, "is_build_running", return_value=False
+            ), patch.object(
+                bot_usecase, "delete_bot_by_id"
+            ) as delete:
+                bot_usecase.remove_bot_by_id(self.user, "bot")
+            delete.assert_called_once()
 
     def test_rejects_deleting_while_the_api_is_published(self):
         with patch.object(
@@ -119,14 +142,24 @@ class TestDeleteDuringBuild(unittest.TestCase):
                 bot_usecase.remove_bot_by_id(self.user, "bot")
         delete.assert_not_called()
 
-    def test_lets_admins_delete_a_stuck_bot(self):
-        bot = self.bot("RUNNING")
-        self.user.is_admin.return_value = True
-        with patch.object(
-            bot_usecase, "find_bot_by_id", return_value=bot
-        ), patch.object(bot_usecase, "delete_bot_by_id") as delete:
-            bot_usecase.remove_bot_by_id(self.user, "bot")
-        delete.assert_called_once()
+    def test_rejects_admins_deleting_during_a_build(self):
+        for bot, build_running in (
+            (self.bot("RUNNING"), False),
+            (self.bot("SUCCEEDED", "build"), True),
+        ):
+            self.user.is_admin.return_value = True
+            with patch.object(
+                bot_usecase, "find_bot_by_id", return_value=bot
+            ), patch.object(
+                bot_usecase, "is_build_running", return_value=build_running
+            ), patch.object(
+                bot_usecase, "is_embedding_running", return_value=True
+            ), patch.object(
+                bot_usecase, "delete_bot_by_id"
+            ) as delete:
+                with self.assertRaises(ResourceConflictError):
+                    bot_usecase.remove_bot_by_id(self.user, "bot")
+            delete.assert_not_called()
 
     def test_allows_deleting_when_the_build_has_finished(self):
         with patch.object(
@@ -134,18 +167,120 @@ class TestDeleteDuringBuild(unittest.TestCase):
         ), patch.object(
             bot_usecase, "is_build_running", return_value=False
         ), patch.object(
+            bot_usecase, "is_embedding_running"
+        ) as running, patch.object(
             bot_usecase, "delete_bot_by_id"
         ) as delete:
             bot_usecase.remove_bot_by_id(self.user, "bot")
         delete.assert_called_once()
+        # A finished sync needs no Step Functions calls.
+        running.assert_not_called()
 
     def test_rejects_editing_while_the_knowledge_base_is_built(self):
-        with patch.object(
-            bot_usecase, "find_bot_by_id", return_value=self.bot("QUEUED")
-        ), patch.object(bot_usecase, "update_bot") as update:
-            with self.assertRaises(ResourceConflictError):
-                bot_usecase.modify_owned_bot(self.user, "bot", MagicMock())
-        update.assert_not_called()
+        for is_admin in (False, True):
+            bot = self.bot("QUEUED")
+            self.user.is_admin.return_value = is_admin
+            with patch.object(
+                bot_usecase, "find_bot_by_id", return_value=bot
+            ), patch.object(
+                bot_usecase, "is_embedding_running", return_value=True
+            ), patch.object(
+                bot_usecase, "update_bot"
+            ) as update:
+                with self.assertRaises(ResourceConflictError):
+                    bot_usecase.modify_owned_bot(self.user, "bot", MagicMock())
+            update.assert_not_called()
+
+    def save_unchanged(
+        self,
+        current_status: str,
+        knowledge_base_type: str = "dedicated",
+        files_changed: bool = False,
+    ) -> tuple[str, MagicMock]:
+        """Save the bot without changing its knowledge base settings.
+
+        Returns the new sync status and the mock of the state machine start.
+        """
+        bot = self.bot(current_status)
+        bot.bedrock_knowledge_base = MagicMock(type=knowledge_base_type)
+        modify_input = MagicMock(
+            knowledge=None,
+            agent=None,
+            generation_params=None,
+            bedrock_knowledge_base=None,
+            bedrock_guardrails=None,
+            conversation_quick_starters=None,
+        )
+        modify_input.is_embedding_required.return_value = files_changed
+        modify_input.is_guardrails_update_required.return_value = False
+        modify_input.is_sync_shared_knowledge_bases_required.return_value = False
+        with patch.multiple(
+            bot_usecase,
+            find_bot_by_id=MagicMock(return_value=bot),
+            validate_external_resource_references=MagicMock(),
+            AgentModel=MagicMock(),
+            Agent=MagicMock(),
+            BotModifyOutput=MagicMock(),
+            ActiveModelsOutput=MagicMock(),
+            update_bot=MagicMock(),
+            start_embedding_state_machine=MagicMock(),
+        ):
+            bot_usecase.modify_owned_bot(self.user, "bot", modify_input)
+            return (
+                bot_usecase.update_bot.call_args.kwargs["sync_status"],
+                bot_usecase.start_embedding_state_machine,
+            )
+
+    def test_saving_retries_a_failed_sync(self):
+        status, start = self.save_unchanged("FAILED")
+        self.assertEqual(status, "QUEUED")
+        start.assert_called_once()
+        status, start = self.save_unchanged("SUCCEEDED")
+        self.assertEqual(status, "SUCCEEDED")
+        start.assert_not_called()
+
+    def test_syncs_an_unchanged_shared_knowledge_base(self):
+        # Otherwise the state machine skips the unchanged shared knowledge base.
+        for status, files_changed in (("FAILED", False), ("SUCCEEDED", True)):
+            _, start = self.save_unchanged(status, "shared", files_changed)
+            self.assertTrue(
+                start.call_args.kwargs["sync_shared_knowledge_bases_required"]
+            )
+        _, start = self.save_unchanged("FAILED", "dedicated")
+        self.assertFalse(start.call_args.kwargs["sync_shared_knowledge_bases_required"])
+
+
+class TestIsEmbeddingRunning(unittest.TestCase):
+    def running(self, *inputs: dict) -> bool:
+        client = MagicMock()
+        client.get_paginator.return_value.paginate.return_value = [
+            {"executions": [{"executionArn": str(i)} for i in range(len(inputs))]}
+        ]
+        client.describe_execution.side_effect = lambda executionArn: {
+            "input": json.dumps(inputs[int(executionArn)])
+        }
+        with patch.object(utils.boto3, "client", return_value=client):
+            result = utils.is_embedding_running("bot")
+        client.get_paginator.return_value.paginate.assert_called_once_with(
+            stateMachineArn=utils.EMBEDDING_STATE_MACHINE_ARN, statusFilter="RUNNING"
+        )
+        return result
+
+    def test_finds_an_execution_for_the_bot(self):
+        self.assertTrue(
+            self.running(
+                {"QueuedBots": [{"BotId": "other"}]},
+                {"QueuedBots": [{"BotId": "bot"}]},
+            )
+        )
+
+    def test_finds_an_execution_for_every_queued_bot(self):
+        # Started without input, as in the README, it processes every queued bot.
+        self.assertTrue(self.running({}))
+
+    def test_ignores_executions_for_other_bots(self):
+        self.assertFalse(self.running({"QueuedBots": [{"BotId": "other"}]}))
+        self.assertFalse(self.running())
 
 
 class TestIsBuildRunning(unittest.TestCase):
@@ -187,8 +322,10 @@ class TestFindPublishedStack(unittest.TestCase):
             "Stack with id ApiPublishmentStackbot does not exist"
         )
         with patch.object(api_publication.boto3, "client", return_value=client):
-            with self.assertRaises(RecordNotFoundError):
+            with self.assertRaises(RecordNotFoundError) as e:
                 api_publication.find_stack_by_bot_id("bot")
+        self.assertEqual(e.exception.code, "bot_not_published")
+        self.assertIn("bot", str(e.exception))
 
     def test_raises_other_errors(self):
         client = MagicMock()

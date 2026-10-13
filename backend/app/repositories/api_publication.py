@@ -2,6 +2,7 @@ import logging
 
 import boto3
 from app.repositories.common import RecordNotFoundError
+from app.utils import API_PUBLISHMENT_STACK_PREFIX
 from botocore.exceptions import ClientError
 from app.repositories.models.api_publication import (
     ApiKeyModel,
@@ -87,8 +88,7 @@ def delete_api_key(api_key_id: str):
 
 def find_stack_by_bot_id(bot_id: str) -> PublishedApiStackModel:
     client = boto3.client("cloudformation")
-    # DO NOT change the stack naming rule
-    stack_name = f"ApiPublishmentStack{bot_id}"
+    stack_name = f"{API_PUBLISHMENT_STACK_PREFIX}{bot_id}"
 
     try:
         response = client.describe_stacks(StackName=stack_name)
@@ -98,7 +98,9 @@ def find_stack_by_bot_id(bot_id: str) -> PublishedApiStackModel:
         if error.get("Code") == "ValidationError" and "does not exist" in error.get(
             "Message", ""
         ):
-            raise RecordNotFoundError() from e
+            raise RecordNotFoundError(
+                f"Bot {bot_id} is not published.", code="bot_not_published"
+            ) from e
         raise
 
     stack = response["Stacks"][0]
@@ -151,7 +153,7 @@ def find_stack_by_bot_id(bot_id: str) -> PublishedApiStackModel:
 
 def delete_stack_by_bot_id(bot_id: str):
     client = boto3.client("cloudformation")
-    stack_name = f"ApiPublishmentStack{bot_id}"
+    stack_name = f"{API_PUBLISHMENT_STACK_PREFIX}{bot_id}"
     response = client.delete_stack(StackName=stack_name)
     return response
 

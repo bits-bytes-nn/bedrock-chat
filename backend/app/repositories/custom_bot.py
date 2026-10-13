@@ -29,7 +29,7 @@ from app.repositories.models.custom_bot import (
 from app.repositories.models.custom_bot_guardrails import BedrockGuardrailsModel
 from app.repositories.models.custom_bot_kb import BedrockKnowledgeBaseModel
 from app.routes.schemas.bot import type_shared_scope, type_sync_status
-from app.utils import get_current_time
+from app.utils import API_PUBLISHMENT_STACK_PREFIX, get_current_time
 from boto3.dynamodb.conditions import Attr, Key
 from botocore.exceptions import ClientError
 
@@ -780,10 +780,8 @@ def update_bot_publication(
         response = table.update_item(
             Key={"PK": owner_user_id, "SK": compose_sk(bot_id, "bot")},
             UpdateExpression="SET ApiPublishmentStackName = :val, ApiPublishedDatetime = :time, ApiPublishCodeBuildId = :build_id",
-            # NOTE: Stack naming rule: ApiPublishmentStack{published_api_id}.
-            # See cdk/bin/api-publish.ts > `ApiPublishmentStack`
             ExpressionAttributeValues={
-                ":val": f"ApiPublishmentStack{published_api_id}",
+                ":val": f"{API_PUBLISHMENT_STACK_PREFIX}{published_api_id}",
                 ":time": current_time,
                 ":build_id": build_id,
             },

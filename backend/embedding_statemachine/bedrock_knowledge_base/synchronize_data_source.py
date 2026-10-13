@@ -89,7 +89,8 @@ def handle_ingest(event):
                 for deleted_file in bot_files_diff["Deleted"]
             )
 
-        # If an 'unchanged' document doesn't actually exist, treat it as an 'added' document.
+        # If an 'unchanged' document doesn't actually exist or failed in an earlier
+        # sync, treat it as an 'added' document.
         for i in range(0, len(unchanged_documents), DOCUMENTS_PER_REQUEST):
             get_documents_response = bedrock_agent.get_knowledge_base_documents(
                 knowledgeBaseId=knowledge_base_id,
@@ -109,7 +110,9 @@ def handle_ingest(event):
             added_documents.extend(
                 document["identifier"]["s3"]["uri"]
                 for document in get_documents_response["documentDetails"]
-                if document["status"] == "NOT_FOUND" and "s3" in document["identifier"]
+                if document["status"]
+                in ("NOT_FOUND", "FAILED", "METADATA_UPDATE_FAILED")
+                and "s3" in document["identifier"]
             )
 
         documents_diff: DocumentsDiff = {

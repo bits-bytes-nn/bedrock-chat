@@ -68,6 +68,42 @@ class TestHandleIngest(unittest.TestCase):
             )
         return agent.start_ingestion_job.call_args.kwargs
 
+    def test_reingests_unchanged_documents_that_failed(self):
+        # Retrying a failed sync without changes must not skip the failed files.
+        statuses = {"a": "INDEXED", "b": "FAILED", "c": "NOT_FOUND"}
+        uri = synchronize_data_source.compose_upload_document_s3_uri
+        with patch.object(synchronize_data_source, "bedrock_agent") as agent:
+            agent.get_data_source.return_value = {
+                "dataSource": {"dataSourceConfiguration": {"type": "S3"}}
+            }
+            agent.get_knowledge_base_documents.return_value = {
+                "documentDetails": [
+                    {"status": status, "identifier": {"s3": {"uri": uri("u", "b", f)}}}
+                    for f, status in statuses.items()
+                ]
+            }
+            agent.ingest_knowledge_base_documents.return_value = {"documentDetails": []}
+            synchronize_data_source.handle_ingest(
+                {
+                    "KnowledgeBaseId": "kb",
+                    "DataSourceId": "ds",
+                    "FilesDiffs": [
+                        {
+                            "OwnerUserId": "u",
+                            "BotId": "b",
+                            "Added": [],
+                            "Unchanged": list(statuses),
+                            "Deleted": [],
+                        }
+                    ],
+                }
+            )
+        documents = agent.ingest_knowledge_base_documents.call_args.kwargs["documents"]
+        self.assertEqual(
+            [d["content"]["s3"]["s3Location"]["uri"] for d in documents],
+            [uri("u", "b", "b"), uri("u", "b", "c")],
+        )
+
     def test_retries_of_a_task_reuse_the_job(self):
         first = self.start("arn:execution:1")
         self.assertEqual(

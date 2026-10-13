@@ -18,6 +18,7 @@ from app.repositories.custom_bot import (
     find_bot_by_id,
     update_bot_publication,
 )
+from app.repositories.models.api_publication import PublishedApiStackModel
 from app.repositories.models.custom_bot import BotModel
 from app.routes.schemas.api_publication import (
     ApiKeyInput,
@@ -191,12 +192,11 @@ def remove_bot_publication(user: User, bot_id: str):
             f"Bot {bot_id} is not published.", code="bot_not_published"
         )
 
-    # If Codebuild is not succeeded, just delete bot attribute from DDB and return
-    if bot.published_api_codebuild_id is not None:
-        if is_build_running(bot.published_api_codebuild_id):
-            raise ValueError(
-                f"Bot {bot_id} publication is requested (build id: {bot.published_api_codebuild_id}) but not completed. Wait until the publication is completed."
-            )
+    if is_build_running(bot.published_api_codebuild_id):
+        raise ResourceConflictError(
+            f"Bot {bot_id} publication is requested (build id: {bot.published_api_codebuild_id}) but not completed. Wait until the publication is completed.",
+            code="api_publishing",
+        )
 
     delete_published_api(bot_id)
     # The conversations of the API's clients are deleted with the bot; deleting
@@ -204,13 +204,26 @@ def remove_bot_publication(user: User, bot_id: str):
     delete_bot_publication(bot.owner_user_id, bot_id)
 
 
+def _find_created_stack(bot_id: str) -> PublishedApiStackModel:
+    stack = find_stack_by_bot_id(bot_id)
+    # Publishing again replaces the stack instead of updating it, so a stack that is
+    # not created is still being deployed or has failed.
+    if stack.stack_status != "CREATE_COMPLETE":
+        raise ResourceConflictError(
+            f"The API of bot {bot_id} is not ready (stack status: {stack.stack_status}).",
+            code=(
+                "api_publishing"
+                if stack.stack_status in ("REVIEW_IN_PROGRESS", "CREATE_IN_PROGRESS")
+                else None
+            ),
+        )
+    return stack
+
+
 def fetch_api_key(user: User, bot_id: str, api_key: str) -> ApiKeyOutput:
     bot = _fetch_bot_with_permission_check(user, bot_id)
 
-    stack = find_stack_by_bot_id(bot_id)
-    assert (
-        stack.stack_status == "CREATE_COMPLETE"
-    ), f"Bot {bot_id} stack creation is not completed."
+    stack = _find_created_stack(bot_id)
     usage_plan = find_usage_plan_by_id(stack.api_usage_plan_id)  # type: ignore
 
     # Check if the API key is associated with the bot and user
@@ -233,10 +246,7 @@ def create_new_api_key(
 ) -> ApiKeyOutput:
     bot = _fetch_bot_with_permission_check(user, bot_id)
 
-    stack = find_stack_by_bot_id(bot_id)
-    assert (
-        stack.stack_status == "CREATE_COMPLETE"
-    ), f"Bot {bot_id} stack creation is not completed."
+    stack = _find_created_stack(bot_id)
     usage_plan = find_usage_plan_by_id(stack.api_usage_plan_id)  # type: ignore
 
     # Create API Key
@@ -253,10 +263,7 @@ def create_new_api_key(
 def remove_api_key(user: User, bot_id: str, api_key_id: str):
     bot = _fetch_bot_with_permission_check(user, bot_id)
 
-    stack = find_stack_by_bot_id(bot_id)
-    assert (
-        stack.stack_status == "CREATE_COMPLETE"
-    ), f"Bot {bot_id} stack creation is not completed."
+    stack = _find_created_stack(bot_id)
     usage_plan = find_usage_plan_by_id(stack.api_usage_plan_id)  # type: ignore
 
     # Check if the API key is associated with the bot and user

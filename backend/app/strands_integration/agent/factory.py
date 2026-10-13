@@ -12,6 +12,7 @@ from app.repositories.models.custom_bot import BotModel, GenerationParamsModel
 from app.repositories.models.custom_bot_guardrails import BedrockGuardrailsModel
 from app.strands_integration.utils import get_strands_tools
 from strands import Agent
+from strands.agent import NullConversationManager
 from strands.hooks import HookCallback, HookProvider
 from strands.models import BedrockModel
 
@@ -67,5 +68,9 @@ def create_strands_agent(
         hooks=agent_hooks,
         system_prompt=system_prompt,
         retry_strategy=None,
+        # The default manager drops the oldest messages when the context overflows,
+        # which silently loses context; the error is reported as input_too_long.
+        # This also gives up its truncation of oversized tool results on overflow.
+        conversation_manager=NullConversationManager(),
     )
     return agent

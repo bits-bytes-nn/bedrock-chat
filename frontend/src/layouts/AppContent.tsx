@@ -196,7 +196,7 @@ const AppContent: React.FC<Props> = (props) => {
             <PiList />
           </button>
 
-          <div className="flex-1 justify-center">
+          <div className="min-w-0 flex-1 justify-center truncate">
             {isGeneratedTitle ? (
               <>
                 <LazyOutputText text={getTitle(conversationId ?? '')} />

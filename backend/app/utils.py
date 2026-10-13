@@ -8,8 +8,6 @@ import boto3
 from botocore.config import Config
 from botocore.exceptions import ClientError
 
-from app.user import User
-
 logger = logging.getLogger(__name__)
 
 REGION = os.environ.get("REGION", "us-east-1")
@@ -25,6 +23,10 @@ PUBLISH_API_CODEBUILD_PROJECT_NAME = os.environ.get(
 )
 USER_POOL_ID = os.environ.get("USER_POOL_ID", "")
 EMBEDDING_STATE_MACHINE_ARN = os.environ.get("EMBEDDING_STATE_MACHINE_ARN")
+# Prefixes of the stacks created at runtime, followed by the bot ID. They must match
+# cdk/lib/utils/stack-names.ts (tests/test_error_codes.py).
+API_PUBLISHMENT_STACK_PREFIX = "ApiPublishmentStack"
+CUSTOM_BOT_STACK_PREFIX = "BrChatKbStack"
 
 
 def is_running_on_lambda():
@@ -323,3 +325,29 @@ def start_embedding_state_machine(
             }
         ),
     )
+
+
+def is_embedding_running(bot_id: str) -> bool:
+    """Check whether a running execution of the Embedding state machine may process the bot.
+
+    Args:
+        bot_id (str): Bot ID.
+
+    Returns:
+        bool: Whether an execution processes the bot, or every queued bot because it
+            was started without the bots to process.
+    """
+    client = boto3.client("stepfunctions")
+    paginator = client.get_paginator("list_executions")
+    for page in paginator.paginate(
+        stateMachineArn=EMBEDDING_STATE_MACHINE_ARN, statusFilter="RUNNING"
+    ):
+        for execution in page["executions"]:
+            response = client.describe_execution(executionArn=execution["executionArn"])
+            queued_bots = json.loads(response.get("input") or "{}").get("QueuedBots")
+            if queued_bots is None or any(
+                queued_bot.get("BotId") == bot_id for queued_bot in queued_bots
+            ):
+                return True
+
+    return False

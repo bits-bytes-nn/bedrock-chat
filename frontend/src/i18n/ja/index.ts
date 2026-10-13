@@ -187,7 +187,6 @@ const translation: typeof en = {
           name: 'インターネット検索',
           description: 'インターネットで情報を検索します。',
           settings: '検索設定',
-          engine: '検索エンジン',
           engines: {
             duckduckgo: {
               label: 'DuckDuckGo (For Trial)',
@@ -212,8 +211,6 @@ const translation: typeof en = {
           maxResults: '最大結果数',
         },
         bedrockAgent: {
-          name: 'Bedrock Agent',
-          description: 'Bedrock Agentをツールとして使用します。',
           agentId: {
             label: 'Agent ID',
             placeholder: 'Agent IDを入力',
@@ -501,6 +498,8 @@ const translation: typeof en = {
         notSupportedFile: 'このファイル形式はサポートされていません。',
         duplicatedFile:
           '同一ファイル名のファイルが既にアップロードされています。',
+        failUpload: 'ファイルのアップロードに失敗しました。',
+        failStar: 'スターの変更に失敗しました。',
         failDeleteApi: 'APIの削除に失敗しました。',
         failDelete: 'ボットを削除できませんでした。',
         failPublish: 'APIを公開できませんでした。',
@@ -966,6 +965,10 @@ const translation: typeof en = {
           '回答を生成できませんでした。もう一度お試しください。',
         input_too_long:
           '会話または添付ファイルがこのモデルには長すぎます。添付ファイルを削除するか、新しい会話を開始してください。',
+        message_too_large:
+          'メッセージが大きすぎます。添付ファイルを一部削除してください。',
+        conversation_too_large:
+          '会話が大きすぎるため、これ以上メッセージを保存できません。新しい会話を開始してください。',
         unauthorized: 'セッションの有効期限が切れました。再度サインインしてください。',
         invalidResponse: '想定外のResponseが返ってきました。',
         connectionClosed:

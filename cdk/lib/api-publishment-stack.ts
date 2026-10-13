@@ -15,6 +15,7 @@ import * as sqs from "aws-cdk-lib/aws-sqs";
 import * as s3 from "aws-cdk-lib/aws-s3";
 import * as logs from "aws-cdk-lib/aws-logs";
 import { excludeDockerImage } from "./constants/docker";
+import { apiPublishmentStackPrefix } from "./utils/stack-names";
 import {
   bedrockChatPolicyStatement,
   firecrawlSecretPolicyStatement,
@@ -57,7 +58,7 @@ export class ApiPublishmentStack extends Stack {
 
     const deploymentStage = props.deploymentStage ?? "dev";
     // Read by the backend as PUBLISHED_API_ID.
-    const publishedApiId = id.replace("ApiPublishmentStack", "");
+    const publishedApiId = id.replace(apiPublishmentStackPrefix, "");
 
     const chatQueueDLQ = new sqs.Queue(this, "ChatQueueDlq", {
       retentionPeriod: cdk.Duration.days(14),
@@ -176,6 +177,8 @@ export class ApiPublishmentStack extends Stack {
         environment: {
           // Dimension of the FailedAnswers metric.
           PUBLISHED_API_ID: publishedApiId,
+          // The consumer shortens the visibility timeout of a message to retry.
+          QUEUE_URL: chatQueue.queueUrl,
           CONVERSATION_TABLE_NAME: props.conversationTableName,
           BOT_TABLE_NAME: props.botTableName,
           ACCOUNT: Stack.of(this).account,
@@ -219,8 +222,10 @@ export class ApiPublishmentStack extends Stack {
       ],
       [
         "SqsConsumeHandlerErrors",
-        // Timeouts, out-of-memory and init failures end the invocation before the
-        // consumer can record the failure for the client.
+        // Messages to retry are reported as batch item failures, not errors. Errors
+        // are failures that escape the handler (backend/app/sqs_consumer.py): timeouts,
+        // out-of-memory and init failures, unparsable messages, and failures to check
+        // or record a failed answer.
         sqsConsumeHandler.metricErrors({ period }),
         `The queue consumer of published API ${id} failed (for example a timeout or an init error).`,
       ],
@@ -243,9 +248,11 @@ export class ApiPublishmentStack extends Stack {
       new lambdaEventSources.SqsEventSource(chatQueue, {
         batchSize: 1,
         maxConcurrency: CONSUMER_MAX_CONCURRENCY,
+        reportBatchItemFailures: true,
       })
     );
     chatQueue.grantSendMessages(apiHandler);
+    // Includes sqs:ChangeMessageVisibility on this queue.
     chatQueue.grantConsumeMessages(sqsConsumeHandler);
 
     const api = new apigateway.LambdaRestApi(this, "Api", {

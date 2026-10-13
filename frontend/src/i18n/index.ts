@@ -114,7 +114,7 @@ i18next.on('languageChanged', (language) => {
 });
 
 // Settings i18n
-const i18n = i18next
+i18next
   .use(initReactI18next)
   .use(detector)
   .init({
@@ -127,5 +127,3 @@ const i18n = i18next
       escapeValue: false, // react already safes from xss => https://www.i18next.com/translation-function/interpolation#unescape
     },
   });
-
-export default i18n;

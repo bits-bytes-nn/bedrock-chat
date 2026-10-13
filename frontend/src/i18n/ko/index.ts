@@ -187,7 +187,6 @@ const translation: typeof en = {
           name: '인터넷 검색',
           description: '인터넷에서 정보를 검색합니다.',
           settings: '검색 설정',
-          engine: '검색 엔진',
           engines: {
             duckduckgo: {
               label: 'DuckDuckGo (체험용)',
@@ -212,8 +211,6 @@ const translation: typeof en = {
           maxResults: '최대 결과 수',
         },
         bedrockAgent: {
-          name: 'Bedrock Agent',
-          description: 'Bedrock Agent를 도구로 사용합니다.',
           agentId: {
             label: '에이전트 ID',
             placeholder: '에이전트 ID를 입력하세요',
@@ -497,6 +494,8 @@ const translation: typeof en = {
       error: {
         notSupportedFile: '지원되지 않는 파일입니다.',
         duplicatedFile: '같은 이름의 파일이 이미 업로드되어 있습니다.',
+        failUpload: '파일을 업로드하지 못했습니다.',
+        failStar: '즐겨찾기를 변경하지 못했습니다.',
         failDeleteApi: 'API를 삭제하지 못했습니다.',
         failDelete: '봇을 삭제하지 못했습니다.',
         failPublish: 'API를 게시하지 못했습니다.',
@@ -959,6 +958,9 @@ const translation: typeof en = {
         generation_failed: '답변을 생성하지 못했습니다. 다시 시도하세요.',
         input_too_long:
           '대화나 첨부 파일이 이 모델에서 처리하기에 너무 깁니다. 첨부 파일을 빼거나 새 대화를 시작하세요.',
+        message_too_large: '메시지가 너무 큽니다. 첨부 파일을 일부 빼세요.',
+        conversation_too_large:
+          '대화가 너무 커서 메시지를 더 저장할 수 없습니다. 새 대화를 시작하세요.',
         unauthorized: '세션이 만료되었습니다. 다시 로그인하세요.',
         invalidResponse:
           '예상치 못한 응답을 받았습니다. 응답 형식이 예상 형식과 일치하지 않습니다.',
