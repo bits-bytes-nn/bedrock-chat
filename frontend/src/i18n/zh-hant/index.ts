@@ -19,9 +19,7 @@ const translation = {
         recentlyUsedBots: '最近使用過的共用 Bots',
         knowledge: '知識',
         url: 'URL',
-        sitemap: 'Sitemap URL',
         file: '檔案',
-        loadingBot: '載入中...',
         normalChat: '聊天',
         notAvailableBot: '[不存在]',
         notAvailableBotInputMessage: '這個 Bot 不存在。',
@@ -59,8 +57,6 @@ const translation = {
           overview:
             '透過向 Bot 提供外部知識，它就能夠回答那些不包括在預訓練資料的問題。',
           url: '透過 URL 指定網頁內容作為知識。',
-          sitemap:
-            '透過指定網站的 sitemap URL，Bot 將自動抓取 sitemap 中的網頁資訊作為知識。',
           file: '上傳的檔案將作為知識。',
         },
       },
@@ -141,7 +137,6 @@ const translation = {
           rateLimit: 'Rate',
           quota: '額度',
           requestLimit: '請求',
-          offset: 'Offset',
         },
         help: {
           overview:
@@ -306,10 +301,6 @@ const translation = {
     },
     button: {
       newChat: '新的聊天',
-      botConsole: 'Bot 主控台',
-      botAnalytics: 'Bot 用量分析',
-      apiManagement: 'API 管理',
-      userUsages: '使用者用量',
       SaveAndSubmit: '保存並提交',
       resend: '重新發送',
       regenerate: '重新生成',

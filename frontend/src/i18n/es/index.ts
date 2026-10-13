@@ -58,11 +58,6 @@ const translation = {
       progressCard: {
         toolInput: 'Entrada: ',
         toolOutput: 'Salida: ',
-        status: {
-          running: 'Ejecutando...',
-          success: 'Éxito',
-          error: 'Error',
-        },
       },
       tools: {
         get_weather: {
@@ -102,9 +97,7 @@ const translation = {
         knowledge: 'Conocimiento',
         url: 'URL',
         s3url: 'Fuente de Datos S3',
-        sitemap: 'URL del Sitemap',
         file: 'Archivo',
-        loadingBot: 'Cargando...',
         normalChat: 'Chat',
         notAvailableBot: '[NO Disponible]',
         notAvailableBotInputMessage: 'Este bot NO está disponible.',
@@ -134,7 +127,6 @@ const translation = {
           example: 'Ejemplo de Conversación',
         },
         citeRetrievedContexts: 'Cita de Contextos Recuperados',
-        unsupported: 'No Compatible, Solo Lectura',
       },
       titleSubmenu: {
         edit: 'Editar',
@@ -152,8 +144,6 @@ const translation = {
           url: 'La información de la URL especificada se usará como Conocimiento. Si configuras la URL de un video de YouTube, la transcripción de ese video se usará como Conocimiento.',
           s3url:
             'Ingresando el URI de S3, puedes agregar S3 como fuente de datos. Puedes añadir hasta 4 fuentes. Solo admite buckets que existen en la misma cuenta y región de Bedrock.',
-          sitemap:
-            'Especificando la URL del sitemap, la información obtenida mediante scraping automático de los sitios web dentro de este se usará como Conocimiento.',
           file: 'Los archivos subidos se usarán como Conocimiento.',
           citeRetrievedContexts:
             'Configura si se debe mostrar el contexto recuperado para responder las consultas de los usuarios como información de citación.\nSi está habilitado, los usuarios pueden acceder a las URLs o archivos originales.',
@@ -246,7 +236,6 @@ Las categorías de clasificación son:
           rateLimit: 'Límite de Velocidad',
           quota: 'Cuota',
           requestLimit: 'Límite de Solicitudes',
-          offset: 'Desplazamiento',
         },
         help: {
           overview:
@@ -437,10 +426,6 @@ Las categorías de clasificación son:
     },
     button: {
       newChat: 'Nuevo Chat',
-      botConsole: 'Consola de Bot',
-      botAnalytics: 'Analíticas de Bot',
-      apiManagement: 'Gestión de API',
-      userUsages: 'Usos de Usuario',
       SaveAndSubmit: 'Guardar y Enviar',
       resend: 'Reenviar',
       regenerate: 'Regenerar',
@@ -468,22 +453,6 @@ Las categorías de clasificación son:
       },
     },
     embeddingSettings: {
-      title: 'Configuración de Embeddings',
-      description:
-        'Puedes configurar los parámetros para las incrustaciones vectoriales. Al ajustar los parámetros, puedes cambiar la precisión de la recuperación de documentos.',
-      chunkSize: {
-        label: 'Tamaño de Fragmento',
-        hint: 'El tamaño de fragmento se refiere al tamaño en el que un documento se divide en segmentos más pequeños',
-      },
-      chunkOverlap: {
-        label: 'Superposición de Fragmentos',
-        hint: 'Puedes especificar el número de caracteres superpuestos entre fragmentos adyacentes.',
-      },
-      enablePartitionPdf: {
-        label:
-          'Habilitar análisis detallado de PDF. Si está habilitado, el PDF se analizará en detalle con el tiempo.',
-        hint: 'Es efectivo cuando deseas mejorar la precisión de búsqueda. Los costos de cálculo aumentan porque el procesamiento toma más tiempo.',
-      },
       help: {
         chunkSize:
           'Cuando el tamaño del fragmento es demasiado pequeño, se puede perder información contextual, y cuando es demasiado grande, puede existir información contextual diferente dentro del mismo fragmento, lo que reduce la precisión de la búsqueda.',
@@ -668,16 +637,11 @@ Las categorías de clasificación son:
       },
     },
     validation: {
-      title: 'Error de Validación',
       maxRange: {
         message: 'El valor máximo que se puede configurar es {{size}}',
       },
       minRange: {
         message: 'El valor mínimo que se puede configurar es {{size}}',
-      },
-      chunkOverlapLessThanChunkSize: {
-        message:
-          'La superposición de fragmentos debe configurarse en menos que el tamaño del fragmento',
       },
       parentTokenRange: {
         message: 'El tamaño de token del padre debe ser mayor que el del hijo',
@@ -697,12 +661,8 @@ Las categorías de clasificación son:
       },
     },
     guardrails: {
-      title: 'Guardrails',
-      label: 'Habilitar Guardrails para Amazon Bedrock',
-      hint: 'Los Guardrails para Amazon Bedrock se usan para implementar medidas de seguridad específicas de la aplicación según tus casos de uso y políticas de IA responsable.',
       harmfulCategories: {
         label: 'Categorías de Contenido Dañino',
-        hint: 'Configura filtros de contenido ajustando el grado de filtrado para detectar y bloquear entradas de usuario y respuestas del modelo dañinas que violen tus políticas de uso. 0: desactivar, 1: bajo, 2: medio, 3: Alto',
         hate: {
           label: 'Odio',
           hint: 'Describe indicaciones de entrada y respuestas del modelo que discriminan, critican, insultan, denuncian o deshumanizan a una persona o grupo en función de una identidad (como raza, etnia, género, religión, orientación sexual, habilidad y origen nacional). 0: desactivar, 1: bajo, 2: medio, 3: Alto',
@@ -726,7 +686,6 @@ Las categorías de clasificación son:
       },
       contextualGroundingCheck: {
         label: 'Verificación de Fundamento Contextual',
-        hint: 'Usa esta política para validar si las respuestas del modelo están fundamentadas en la fuente de referencia y son relevantes para la consulta del usuario para filtrar la alucinación del modelo.',
         groundingThreshold: {
           label: 'Fundamento',
           hint: 'Valida si las respuestas del modelo están fundamentadas y son factualmente correctas en función de la información proporcionada en la fuente de referencia y bloquea las respuestas que estén por debajo del umbral de fundamento definido. 0: no bloquea nada, 0.99: bloquea casi todo',

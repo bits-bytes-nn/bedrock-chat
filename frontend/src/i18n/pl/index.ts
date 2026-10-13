@@ -65,11 +65,6 @@ const translation = {
       progressCard: {
         toolInput: 'Wejście: ',
         toolOutput: 'Wyjście: ',
-        status: {
-          running: 'W trakcie...',
-          success: 'Sukces',
-          error: 'Błąd',
-        },
       },
       tools: {
         get_weather: {
@@ -110,9 +105,7 @@ const translation = {
         knowledge: 'Wiedza',
         url: 'URL',
         s3url: 'Źródło Danych S3',
-        sitemap: 'URL Strony',
         file: 'Plik',
-        loadingBot: 'Ładowanie...',
         normalChat: 'Czat',
         notAvailableBot: '[Niedostępny]',
         notAvailableBotInputMessage: 'Ten bot jest niedostępny.',
@@ -142,7 +135,6 @@ const translation = {
           example: 'Przykład Konwersacji',
         },
         citeRetrievedContexts: 'Cytowanie Pobranego Kontekstu',
-        unsupported: 'Nieobsługiwane, Tylko do Odczytu',
       },
       titleSubmenu: {
         edit: 'Edytuj',
@@ -160,8 +152,6 @@ const translation = {
           url: 'Informacje z określonego URL będą wykorzystane jako Baza Wiedzy.',
           s3url:
             'Podając URI S3, możesz dodać S3 jako źródło danych. Możesz dodać do 4 źródeł. Obsługuje tylko S3 istniejące w tym samym koncie i regionie co Region Bedrock.',
-          sitemap:
-            'Określając URL witryny, informacje uzyskane poprzez automatyczne przeszukiwanie stron w niej zawartych będą wykorzystane jako Baza Wiedzy.',
           file: 'Przesłane pliki będą wykorzystane jako Baza Wiedzy.',
           citeRetrievedContexts:
             'Skonfiguruj, czy wyświetlać kontekst pobrany do odpowiedzi na zapytania użytkownika jako informacje o cytowaniu.\nJeśli włączone, użytkownicy mogą uzyskać dostęp do oryginalnych URL-i źródłowych lub plików.',
@@ -254,7 +244,6 @@ Jak sklasyfikowałbyś ten e-mail?`,
           rateLimit: 'Limit częstotliwości',
           quota: 'Limit',
           requestLimit: 'Limit żądań',
-          offset: 'Przesunięcie',
         },
         help: {
           overview:
@@ -451,10 +440,7 @@ Jak sklasyfikowałbyś ten e-mail?`,
     },
     button: {
       newChat: 'Nowy Czat',
-      botConsole: 'Konsola Bota',
       sharedBotAnalytics: 'Analityka Botów Współdzielonych',
-      apiManagement: 'Zarządzanie API',
-      userUsages: 'Wykorzystanie zasobów',
       SaveAndSubmit: 'Zapisz i Wyślij',
       resend: 'Wyślij Ponownie',
       regenerate: 'Wygeneruj Ponownie',
@@ -482,22 +468,6 @@ Jak sklasyfikowałbyś ten e-mail?`,
       },
     },
     embeddingSettings: {
-      title: 'Ustawienia Embeddingu',
-      description:
-        'Możesz skonfigurować parametry dla Embeddingu wektorowego. Dostosowując parametry, możesz zmienić dokładność wyszukiwania dokumentów.',
-      chunkSize: {
-        label: 'rozmiar fragmentu',
-        hint: 'Rozmiar fragmentu odnosi się do wielkości, na jaką dokument jest dzielony na mniejsze segmenty',
-      },
-      chunkOverlap: {
-        label: 'nakładanie fragmentów',
-        hint: 'Możesz określić liczbę nakładających się znaków między sąsiadującymi fragmentami.',
-      },
-      enablePartitionPdf: {
-        label:
-          'Włącz szczegółową analizę PDF. Jeśli włączone, PDF będzie analizowany szczegółowo w czasie.',
-        hint: 'Jest skuteczne, gdy chcesz poprawić dokładność wyszukiwania. Koszty obliczeniowe wzrastają, ponieważ obliczenia zajmują więcej czasu.',
-      },
       help: {
         chunkSize:
           'Gdy rozmiar fragmentu jest zbyt mały, informacje kontekstowe mogą zostać utracone, a gdy jest zbyt duży, różne informacje kontekstowe mogą istnieć w tym samym fragmencie, potencjalnie zmniejszając dokładność wyszukiwania.',
@@ -658,12 +628,9 @@ Jak sklasyfikowałbyś ten e-mail?`,
       },
       advancedParsing: {
         label: 'Zaawansowane parsowanie',
-        description:
-          'Wybierz model do użycia w zaawansowanych funkcjach parsowania dokumentów.',
         hint: 'Odpowiednie do parsowania złożonych tekstów w obsługiwanych formatach dokumentów, włącznie z tabelami w plikach PDF z zachowaniem ich struktury. Parsowanie przy użyciu AI generatywnego wiąże się z dodatkowymi kosztami.',
       },
       parsingModel: {
-        label: 'Model zaawansowanego parsowania',
         none: {
           label: 'Wyłączone',
           hint: 'Zaawansowane parsowanie nie będzie stosowane.',
@@ -741,16 +708,11 @@ Jak sklasyfikowałbyś ten e-mail?`,
       },
     },
     validation: {
-      title: 'Błąd Walidacji',
       maxRange: {
         message: 'Maksymalna wartość, którą można ustawić, to {{size}}',
       },
       minRange: {
         message: 'Minimalna wartość, którą można ustawić, to {{size}}',
-      },
-      chunkOverlapLessThanChunkSize: {
-        message:
-          'Nakładanie fragmentów musi być mniejsze niż rozmiar fragmentu',
       },
       parentTokenRange: {
         message:
@@ -770,12 +732,8 @@ Jak sklasyfikowałbyś ten e-mail?`,
       },
     },
     guardrails: {
-      title: 'Zabezpieczenia',
-      label: 'Włącz zabezpieczenia dla Amazon Bedrock',
-      hint: 'Zabezpieczenia dla Amazon Bedrock służą do wdrażania dodatkowych zabezpieczeń specyficznych dla Twojej aplikacji w oparciu o przypadki użycia i politykami odpowiedzialnego wykorzystania sztucznej inteligencji.',
       harmfulCategories: {
         label: 'Szkodliwe Kategorie',
-        hint: 'Skonfiguruj filtry treści, dostosowując stopień filtrowania, aby wykrywać i blokować szkodliwe dane wejściowe użytkownika i odpowiedzi modelu, które naruszają zasady użytkowania. 0: wyłączone, 1: niskie, 2: średnie, 3: wysokie',
         hate: {
           label: 'Nienawiść',
           hint: 'Opisuje dane wejściowe i odpowiedzi modelu, które dyskryminują, krytykują, obrażają, potępiają lub dehumanizują osobę lub grupę na podstawie tożsamości (takiej jak rasa, pochodzenie etniczne, płeć, religia, orientacja seksualna, niepełnosprawność i pochodzenie narodowe). 0: wyłączone, 1: niskie, 2: średnie, 3: wysokie',
@@ -799,7 +757,6 @@ Jak sklasyfikowałbyś ten e-mail?`,
       },
       contextualGroundingCheck: {
         label: 'Kontrola Ugruntowania Kontekstowego',
-        hint: 'Użyj tej polityki, aby sprawdzić, czy odpowiedzi modelu mają odzwierciedlenie w źródle referencyjnym i są adekwatne do zapytania użytkownika, aby filtrować niepoprawne.',
         groundingThreshold: {
           label: 'Ugruntowanie',
           hint: 'Sprawdź, czy odpowiedzi modelu mają odzwierciedlenie i są oparte o informacje dostarczone w źródle referencyjnym, i blokuj odpowiedzi, które są poniżej zdefiniowanego progu ugruntowania. 0: nie blokuje nic, 1: blokuje prawie wszystko',

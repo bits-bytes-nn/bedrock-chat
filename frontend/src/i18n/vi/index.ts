@@ -65,11 +65,6 @@ const translation = {
       progressCard: {
         toolInput: 'Đầu vào: ',
         toolOutput: 'Đầu ra: ',
-        status: {
-          running: 'Đang chạy...',
-          success: 'Thành công',
-          error: 'Lỗi',
-        },
       },
       tools: {
         get_weather: {
@@ -111,9 +106,7 @@ const translation = {
         knowledge: 'Kiến thức',
         url: 'URL',
         s3url: 'Nguồn Dữ liệu S3',
-        sitemap: 'URL Sitemap',
         file: 'Tệp',
-        loadingBot: 'Đang tải...',
         normalChat: 'Trò chuyện',
         notAvailableBot: '[KHÔNG khả dụng]',
         notAvailableBotInputMessage: 'Bot này KHÔNG khả dụng.',
@@ -143,7 +136,6 @@ const translation = {
           example: 'Ví dụ Hội thoại',
         },
         citeRetrievedContexts: 'Trích dẫn Ngữ cảnh Truy xuất',
-        unsupported: 'Không hỗ trợ, Chỉ đọc',
       },
       titleSubmenu: {
         edit: 'Chỉnh sửa',
@@ -161,8 +153,6 @@ const translation = {
           url: 'Thông tin từ URL được chỉ định sẽ được sử dụng làm Kiến thức.',
           s3url:
             'Bằng cách nhập URI của S3, bạn có thể thêm S3 làm nguồn dữ liệu. Bạn có thể thêm tối đa 4 nguồn. Chỉ hỗ trợ bucket ở cùng tài khoản và cùng khu vực với khu vực bedrock.',
-          sitemap:
-            'Bằng cách chỉ định URL của sitemap, thông tin thu thập được thông qua việc tự động quét web trong sitemap sẽ được sử dụng làm Kiến thức.',
           file: 'Các tệp tải lên sẽ được dùng làm Kiến thức.',
           citeRetrievedContexts:
             'Cấu hình việc hiển thị ngữ cảnh được truy xuất để trả lời câu hỏi người dùng dưới dạng thông tin trích dẫn.\nNếu bật, người dùng có thể truy cập URL hoặc tệp nguồn gốc.',
@@ -254,7 +244,6 @@ Bạn sẽ phân loại email này như thế nào?`,
           rateLimit: 'Tốc độ',
           quota: 'Hạn mức',
           requestLimit: 'Số yêu cầu',
-          offset: 'Độ trễ',
         },
         help: {
           overview:
@@ -448,10 +437,6 @@ Bạn sẽ phân loại email này như thế nào?`,
     },
     button: {
       newChat: 'Trò chuyện Mới',
-      botConsole: 'Bảng điều khiển Bot',
-      botAnalytics: 'Phân tích Bot',
-      apiManagement: 'Quản lý API',
-      userUsages: 'Lượt Sử dụng của Người dùng',
       SaveAndSubmit: 'Lưu & Gửi',
       resend: 'Gửi lại',
       regenerate: 'Tạo lại',
@@ -479,22 +464,6 @@ Bạn sẽ phân loại email này như thế nào?`,
       },
     },
     embeddingSettings: {
-      title: 'Cài đặt Embedding',
-      description:
-        'Bạn có thể cấu hình tham số cho việc tạo vector embedding. Bằng cách điều chỉnh các tham số, bạn có thể thay đổi độ chính xác của việc truy xuất tài liệu.',
-      chunkSize: {
-        label: 'kích thước chunk',
-        hint: 'Kích thước chunk là số lượng ký tự chia tài liệu thành các đoạn nhỏ hơn',
-      },
-      chunkOverlap: {
-        label: 'phần chồng lấp chunk',
-        hint: 'Bạn có thể chỉ định số lượng ký tự chồng lấp giữa các chunk liền kề.',
-      },
-      enablePartitionPdf: {
-        label:
-          'Bật phân tích PDF chi tiết. Nếu bật, PDF sẽ được phân tích kỹ hơn trong thời gian dài.',
-        hint: 'Hữu ích khi bạn muốn cải thiện độ chính xác tìm kiếm. Chi phí tính toán tăng do tốn nhiều thời gian hơn.',
-      },
       help: {
         chunkSize:
           'Khi kích thước chunk quá nhỏ, thông tin ngữ cảnh có thể bị mất, còn quá lớn, nhiều thông tin ngữ cảnh khác nhau có thể nằm trong cùng một chunk, làm giảm độ chính xác tìm kiếm.',
@@ -654,12 +623,9 @@ Bạn sẽ phân loại email này như thế nào?`,
       },
       advancedParsing: {
         label: 'Phân tích Nâng cao',
-        description:
-          'Chọn mô hình để sử dụng cho khả năng phân tích tài liệu nâng cao.',
         hint: 'Phù hợp cho việc phân tích nhiều hơn văn bản chuẩn trong các định dạng tài liệu được hỗ trợ, bao gồm cả bảng trong PDF với cấu trúc của chúng. Tốn chi phí thêm khi sử dụng AI sinh để phân tích.',
       },
       parsingModel: {
-        label: 'Mô hình Phân tích Nâng cao',
         none: {
           label: 'Tắt',
           hint: 'Không áp dụng phân tích nâng cao.',
@@ -720,15 +686,11 @@ Bạn sẽ phân loại email này như thế nào?`,
       },
     },
     validation: {
-      title: 'Lỗi Xác thực',
       maxRange: {
         message: 'Giá trị tối đa có thể đặt là {{size}}',
       },
       minRange: {
         message: 'Giá trị tối thiểu có thể đặt là {{size}}',
-      },
-      chunkOverlapLessThanChunkSize: {
-        message: 'Phần chồng lấp chunk phải nhỏ hơn kích thước chunk',
       },
       parentTokenRange: {
         message: 'Kích thước token cha phải lớn hơn kích thước token con',
@@ -747,12 +709,8 @@ Bạn sẽ phân loại email này như thế nào?`,
       },
     },
     guardrails: {
-      title: 'Guardrails',
-      label: 'Bật Guardrails cho Amazon Bedrock',
-      hint: 'Guardrails cho Amazon Bedrock dùng để thực hiện các biện pháp bảo vệ dựa trên trường hợp sử dụng và chính sách AI có trách nhiệm của bạn.',
       harmfulCategories: {
         label: 'Danh mục gây hại',
-        hint: 'Cấu hình bộ lọc nội dung bằng cách điều chỉnh mức độ lọc để phát hiện và chặn đầu vào, phản hồi mô hình vi phạm chính sách sử dụng của bạn. 0: tắt, 1: thấp, 2: trung bình, 3: cao',
         hate: {
           label: 'Ngôn từ thù ghét',
           hint: 'Mô tả đầu vào và phản hồi mô hình phân biệt, chỉ trích, xúc phạm, hay hạ thấp một người hoặc nhóm người dựa trên đặc điểm (chủng tộc, dân tộc, giới tính, tôn giáo, xu hướng tính dục, khả năng, quốc tịch). 0: tắt, 1: thấp, 2: trung bình, 3: cao',
@@ -776,7 +734,6 @@ Bạn sẽ phân loại email này như thế nào?`,
       },
       contextualGroundingCheck: {
         label: 'Kiểm tra Định hướng Ngữ cảnh',
-        hint: 'Dùng chính sách này để xác thực xem phản hồi mô hình có căn cứ vào nguồn tham chiếu và liên quan đến truy vấn người dùng hay không, nhằm lọc bỏ thông tin "hallucination" của mô hình.',
         groundingThreshold: {
           label: 'Căn cứ',
           hint: 'Xác nhận xem phản hồi mô hình có căn cứ và chính xác dựa trên thông tin trong nguồn tham chiếu hay không, và chặn phản hồi dưới ngưỡng căn cứ đã định. 0: không chặn, 1: chặn gần như tất cả',

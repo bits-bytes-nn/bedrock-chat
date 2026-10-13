@@ -28,11 +28,6 @@ const translation = {
       progressCard: {
         toolInput: 'Inndata: ',
         toolOutput: 'Utdata: ',
-        status: {
-          running: 'Kjører...',
-          success: 'Suksess',
-          error: 'Feil',
-        },
         sql_db_query: {
           name: 'Databaseforespørsel',
           description:
@@ -64,9 +59,7 @@ const translation = {
         knowledge: 'Kunnskap',
         url: 'URL',
         s3url: 'S3-datakilde',
-        sitemap: 'Sitemap URL',
         file: 'Fil',
-        loadingBot: 'Laster...',
         normalChat: 'Chat',
         notAvailableBot: '[IKKE tilgjengelig]',
         notAvailableBotInputMessage: 'Denne boten er IKKE tilgjengelig.',
@@ -96,7 +89,6 @@ const translation = {
           example: 'Eksempel på samtale',
         },
         citeRetrievedContexts: 'Sitering av hentet kontekst',
-        unsupported: 'Ikke støttet, skrivebeskyttet',
       },
       titleSubmenu: {
         edit: 'Rediger',
@@ -114,8 +106,6 @@ const translation = {
           url: 'Informasjonen fra den spesifiserte URL-en vil bli brukt som kunnskap.',
           s3url:
             'Ved å angi S3 URI kan du legge til S3 som en datakilde. Du kan legge til opptil 4 kilder. Det støtter kun bøtter som eksisterer i samme konto og samme region som distribusjonsdestinasjonen.',
-          sitemap:
-            'Ved å spesifisere URL-en til sitemap, vil informasjonen som hentes gjennom automatisk skraping av nettsteder innenfor den brukes som kunnskap.',
           file: 'De opplastede filene vil bli brukt som kunnskap.',
           citeRetrievedContexts:
             'Konfigurer om du vil vise konteksten som er hentet for å svare på brukerforespørsler som siteringsinformasjon.\nHvis aktivert, kan brukere få tilgang til de opprinnelige kilde-URL-ene eller filene.',
@@ -208,7 +198,6 @@ Hvordan vil du kategorisere denne e-posten?`,
           rateLimit: 'Hastighet',
           quota: 'Kvote',
           requestLimit: 'Forespørsler',
-          offset: 'Forskyvning',
         },
         help: {
           overview:
@@ -397,10 +386,6 @@ Hvordan vil du kategorisere denne e-posten?`,
     },
     button: {
       newChat: 'Ny chat',
-      botConsole: 'Botkonsoll',
-      botAnalytics: 'Analyser for bot',
-      apiManagement: 'API-administrasjon',
-      userUsages: 'Brukerbruk',
       SaveAndSubmit: 'Lagre og send inn',
       resend: 'Send på nytt',
       regenerate: 'Regenerer',
@@ -428,22 +413,6 @@ Hvordan vil du kategorisere denne e-posten?`,
       },
     },
     embeddingSettings: {
-      title: 'Innstilling av innebygging',
-      description:
-        'Du kan konfigurere parameterne for vektorinnebygginger. Ved å justere parameterne kan du endre nøyaktigheten av dokumenthenting.',
-      chunkSize: {
-        label: 'størrelse på chunk',
-        hint: 'Størrelsen på chunk refererer til størrelsen et dokument deles opp i mindre segmenter på',
-      },
-      chunkOverlap: {
-        label: 'overlapp mellom chunks',
-        hint: 'Du kan spesifisere antall overlappende tegn mellom tilstøtende chunks.',
-      },
-      enablePartitionPdf: {
-        label:
-          'Aktiver detaljert PDF-analyse. Hvis aktivert, vil PDF-en bli analysert i detalj over tid.',
-        hint: 'Det er effektivt når du vil forbedre søkenøyaktigheten. Beregningskostnadene øker fordi beregningen tar lengre tid.',
-      },
       help: {
         chunkSize:
           'Når chunk-størrelsen er for liten, kan kontekstuell informasjon gå tapt, og når den er for stor, kan ulik kontekstuell informasjon eksistere innenfor samme chunk, noe som potensielt reduserer søkenøyaktigheten.',
@@ -589,15 +558,11 @@ Hvordan vil du kategorisere denne e-posten?`,
       },
     },
     validation: {
-      title: 'Validation Error',
       maxRange: {
         message: 'Max verdien som kan bli satt er {{size}}',
       },
       minRange: {
         message: 'Minimum verdien som kan bli satt er {{size}}',
-      },
-      chunkOverlapLessThanChunkSize: {
-        message: 'Chunk overlap må bli satt til mindre enn Chunk size',
       },
       quickStarter: {
         message: 'Vennligst sett inn både Tittel og chat eksempel.',
@@ -613,12 +578,8 @@ Hvordan vil du kategorisere denne e-posten?`,
       },
     },
     guardrails: {
-      title: 'Guardrails',
-      label: 'Enable Guardrails for Amazon Bedrock',
-      hint: 'Guardrails for Amazon Bedrock are used to implement application-specific safeguards based on your use cases and responsible AI policies.',
       harmfulCategories: {
         label: 'Harmful Categories',
-        hint: 'Configure content filters by adjusting the degree of filtering to detect and block harmful user inputs and model responses that violate your usage policies. 0: disable, 1: low, 2: middle, 3: High',
         hate: {
           label: 'Hate',
           hint: 'Describes input prompts and model responses that discriminate, criticize, insult, denounce, or dehumanize a person or group on the basis of an identity (such as race, ethnicity, gender, religion, sexual orientation, ability, and national origin). 0: disable, 1: low, 2: middle, 3: High',
@@ -642,7 +603,6 @@ Hvordan vil du kategorisere denne e-posten?`,
       },
       contextualGroundingCheck: {
         label: 'Sjekk av kontekstuell forankring',
-        hint: 'Bruk denne policyen for å validere om modellens svar er forankret i referansekilden og relevante for brukerens forespørsel for å filtrere modellhallusinasjoner.',
         groundingThreshold: {
           label: 'Forankring',
           hint: 'alider om modellsvarene er forankret og faktisk korrekte basert på informasjonen gitt i referansekilden, og blokker svar som er under den definerte terskelen for forankring. 0: blokkerer ingenting, 1: blokkerer nesten alt',
