@@ -1,7 +1,12 @@
 import unittest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, call, patch
 
+import pytest
 from app import bot_remove
+from app.repositories.conversation import find_conversation_by_id, store_conversation
+from app.repositories.models.conversation import ConversationModel
+from app.usecases import publication
+from app.user import User
 from app.repositories import api_publication
 from app.repositories.common import RecordNotFoundError
 from botocore.exceptions import ClientError
@@ -9,41 +14,90 @@ from app.repositories.common import ResourceConflictError
 from app.usecases import bot as bot_usecase
 
 EVENT = {
-    "Records": [
-        {"dynamodb": {"Keys": {"PK": {"S": "user"}, "SK": {"S": "user#BOT#bot"}}}}
-    ]
+    "Records": [{"dynamodb": {"Keys": {"PK": {"S": "user"}, "SK": {"S": "BOT#bot"}}}}]
 }
 
 
 class TestBotRemoval(unittest.TestCase):
     def test_runs_every_step_and_reports_failures(self):
-        with patch.object(
-            bot_remove,
-            "delete_custom_bot_stack_by_bot_id",
-            side_effect=RuntimeError("throttled"),
-        ) as delete_kb_stack, patch.object(
-            bot_remove, "delete_published_api"
-        ) as delete_api, patch.object(
-            bot_remove, "delete_from_s3"
-        ) as delete_files, patch.object(
-            bot_remove, "delete_api_key_from_secret_manager"
-        ) as delete_secret, patch.object(
-            bot_remove, "delete_conversation_by_user_id"
-        ) as delete_conversations:
+        # One parent records the order of the calls to every step.
+        steps = MagicMock()
+        steps.delete_custom_bot_stack_by_bot_id.side_effect = RuntimeError("throttled")
+        with (
+            patch.object(
+                bot_remove,
+                "delete_custom_bot_stack_by_bot_id",
+                steps.delete_custom_bot_stack_by_bot_id,
+            ),
+            patch.object(
+                bot_remove, "delete_published_api", steps.delete_published_api
+            ),
+            patch.object(bot_remove, "delete_from_s3", steps.delete_from_s3),
+            patch.object(
+                bot_remove,
+                "delete_api_key_from_secret_manager",
+                steps.delete_api_key_from_secret_manager,
+            ),
+            patch.object(
+                bot_remove,
+                "delete_conversation_by_user_id",
+                steps.delete_conversation_by_user_id,
+            ),
+        ):
             with self.assertRaises(RuntimeError):
                 bot_remove.handler(EVENT, None)
 
-        delete_kb_stack.assert_called_once_with("bot")
-        delete_api.assert_called_once_with("bot")
-        delete_files.assert_called_once_with("user", "bot")
-        delete_secret.assert_called_once()
-        delete_conversations.assert_called_once_with("PUBLISHED_API#bot")
+        steps.delete_custom_bot_stack_by_bot_id.assert_called_once_with("bot")
+        steps.delete_published_api.assert_called_once_with("bot")
+        steps.delete_from_s3.assert_called_once_with("user", "bot")
+        steps.delete_api_key_from_secret_manager.assert_called_once()
+        # The published API's conversations can take long, so they go last.
+        self.assertEqual(
+            steps.method_calls[-1],
+            call.delete_conversation_by_user_id("PUBLISHED_API#bot"),
+        )
+        self.assertEqual(len(steps.method_calls), 5)
 
     def test_ignores_items_other_than_bots(self):
-        event = {"Records": [{"dynamodb": {"Keys": {"PK": {"S": "user"}}}}]}
-        with patch.object(bot_remove, "delete_from_s3") as delete_files:
-            bot_remove.handler(event, None)
-        delete_files.assert_not_called()
+        for keys in (
+            {"PK": {"S": "user"}},
+            {"PK": {"S": "user"}, "SK": {"S": "ALIAS#bot"}},
+        ):
+            event = {"Records": [{"dynamodb": {"Keys": keys}}]}
+            with patch.object(bot_remove, "delete_from_s3") as delete_files:
+                bot_remove.handler(event, None)
+            delete_files.assert_not_called()
+
+
+@pytest.mark.usefixtures("dynamodb_tables")
+class TestUnpublish(unittest.TestCase):
+    def test_keeps_the_published_api_conversations(self):
+        user_id = User.from_published_api_id("bot").id
+        store_conversation(
+            user_id,
+            ConversationModel(
+                id="c",
+                create_time=0,
+                title="t",
+                total_price=0,
+                message_map={},
+                last_message_id="",
+                bot_id="bot",
+                should_continue=False,
+            ),
+        )
+        bot = MagicMock(published_api_codebuild_id="build", owner_user_id="owner")
+        with (
+            patch.object(publication, "find_bot_by_id", return_value=bot),
+            patch.object(publication, "is_build_running", return_value=False),
+            patch.object(publication, "delete_published_api") as delete_api,
+            patch.object(publication, "delete_bot_publication"),
+        ):
+            publication.remove_bot_publication(MagicMock(), "bot")
+
+        delete_api.assert_called_once_with("bot")
+        # Deleted with the bot instead (bot_remove).
+        self.assertEqual(find_conversation_by_id(user_id, "c").id, "c")
 
 
 class TestDeleteDuringBuild(unittest.TestCase):
@@ -56,21 +110,26 @@ class TestDeleteDuringBuild(unittest.TestCase):
         return bot
 
     def test_rejects_deleting_while_the_knowledge_base_is_built(self):
-        with patch.object(
-            bot_usecase, "find_bot_by_id", return_value=self.bot("RUNNING")
-        ), patch.object(bot_usecase, "delete_bot_by_id") as delete:
+        with (
+            patch.object(
+                bot_usecase, "find_bot_by_id", return_value=self.bot("RUNNING")
+            ),
+            patch.object(bot_usecase, "delete_bot_by_id") as delete,
+        ):
             with self.assertRaises(ResourceConflictError):
                 bot_usecase.remove_bot_by_id(self.user, "bot")
         delete.assert_not_called()
 
     def test_rejects_deleting_while_the_api_is_published(self):
-        with patch.object(
-            bot_usecase, "find_bot_by_id", return_value=self.bot("SUCCEEDED", "build")
-        ), patch.object(
-            bot_usecase, "is_build_running", return_value=True
-        ), patch.object(
-            bot_usecase, "delete_bot_by_id"
-        ) as delete:
+        with (
+            patch.object(
+                bot_usecase,
+                "find_bot_by_id",
+                return_value=self.bot("SUCCEEDED", "build"),
+            ),
+            patch.object(bot_usecase, "is_build_running", return_value=True),
+            patch.object(bot_usecase, "delete_bot_by_id") as delete,
+        ):
             with self.assertRaises(ResourceConflictError):
                 bot_usecase.remove_bot_by_id(self.user, "bot")
         delete.assert_not_called()
@@ -78,27 +137,31 @@ class TestDeleteDuringBuild(unittest.TestCase):
     def test_lets_admins_delete_a_stuck_bot(self):
         bot = self.bot("RUNNING")
         self.user.is_admin.return_value = True
-        with patch.object(
-            bot_usecase, "find_bot_by_id", return_value=bot
-        ), patch.object(bot_usecase, "delete_bot_by_id") as delete:
+        with (
+            patch.object(bot_usecase, "find_bot_by_id", return_value=bot),
+            patch.object(bot_usecase, "delete_bot_by_id") as delete,
+        ):
             bot_usecase.remove_bot_by_id(self.user, "bot")
         delete.assert_called_once()
 
     def test_allows_deleting_when_the_build_has_finished(self):
-        with patch.object(
-            bot_usecase, "find_bot_by_id", return_value=self.bot("SUCCEEDED", "old")
-        ), patch.object(
-            bot_usecase, "is_build_running", return_value=False
-        ), patch.object(
-            bot_usecase, "delete_bot_by_id"
-        ) as delete:
+        with (
+            patch.object(
+                bot_usecase, "find_bot_by_id", return_value=self.bot("SUCCEEDED", "old")
+            ),
+            patch.object(bot_usecase, "is_build_running", return_value=False),
+            patch.object(bot_usecase, "delete_bot_by_id") as delete,
+        ):
             bot_usecase.remove_bot_by_id(self.user, "bot")
         delete.assert_called_once()
 
     def test_rejects_editing_while_the_knowledge_base_is_built(self):
-        with patch.object(
-            bot_usecase, "find_bot_by_id", return_value=self.bot("QUEUED")
-        ), patch.object(bot_usecase, "update_bot") as update:
+        with (
+            patch.object(
+                bot_usecase, "find_bot_by_id", return_value=self.bot("QUEUED")
+            ),
+            patch.object(bot_usecase, "update_bot") as update,
+        ):
             with self.assertRaises(ResourceConflictError):
                 bot_usecase.modify_owned_bot(self.user, "bot", MagicMock())
         update.assert_not_called()

@@ -486,7 +486,9 @@ def find_owned_bots_by_user_id(user_id: str, limit: int | None = None) -> list[B
     query_count = 0
     MAX_QUERY_COUNT = 5
 
-    while query_count < MAX_QUERY_COUNT:
+    # Every page is read before the limit applies, because the index is not
+    # ordered by last used time.
+    while True:
         query_count += 1
         response = table.query(**query_params)
 
@@ -495,17 +497,12 @@ def find_owned_bots_by_user_id(user_id: str, limit: int | None = None) -> list[B
             for item in response["Items"]
         )
 
-        if limit and len(bots) >= limit:
-            break
         if "LastEvaluatedKey" not in response:
             break
+        if query_count == MAX_QUERY_COUNT:
+            logger.warning("There are more bots than the query limit.")
+            break
         query_params["ExclusiveStartKey"] = response["LastEvaluatedKey"]
-
-    if query_count == MAX_QUERY_COUNT:
-        logger.warning("There are more bots than the query limit.")
-
-    if limit:
-        bots = bots[:limit]
 
     # Sort by last used time.
     # NOTE:
@@ -532,6 +529,8 @@ def find_owned_bots_by_user_id(user_id: str, limit: int | None = None) -> list[B
     # - Performance impact is minimal with expected dataset size (hundreds of bots per user)
     # - Simplifies bot creation by not requiring `LastUsedTime` to be set initially
     bots.sort(key=lambda x: x.last_used_time, reverse=True)
+    if limit:
+        bots = bots[:limit]
 
     logger.info(f"Found all owned {len(bots)} bots.")
     return bots

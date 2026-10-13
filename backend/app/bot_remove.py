@@ -4,7 +4,7 @@ from typing import Any
 
 import boto3
 from app.repositories.api_publication import delete_published_api
-from app.repositories.common import decompose_sk
+from app.repositories.common import compose_sk, decompose_sk
 from app.repositories.conversation import delete_conversation_by_user_id
 from app.user import User
 from app.utils import delete_api_key_from_secret_manager, delete_s3_prefix
@@ -41,7 +41,7 @@ def handler(event: dict, context: Any) -> None:
 
     pk = record["dynamodb"]["Keys"]["PK"]["S"]
     sk = record["dynamodb"]["Keys"].get("SK", {}).get("S")
-    if not sk or "BOT#" not in sk:
+    if not sk or not sk.startswith(compose_sk("", "bot")):
         # Ignore non-bot items
         logger.info("Skipping event for SK: %s", sk)
         return

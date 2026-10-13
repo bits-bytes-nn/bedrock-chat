@@ -71,26 +71,6 @@ class KnowledgeModel(BaseModel):
     filenames: list[str]
     s3_urls: list[str]
 
-    def __str_in_claude_format__(self) -> str:
-        """Description of the knowledge in Claude format."""
-        _source_urls = "<source_urls>"
-        for url in self.source_urls:
-            _source_urls += f"<url>{url}</url>"
-        _source_urls += "</source_urls>"
-        _sitemap_urls = "<sitemap_urls>"
-        for url in self.sitemap_urls:
-            _sitemap_urls += f"<url>{url}</url>"
-        _sitemap_urls += "</sitemap_urls>"
-        _filenames = "<filenames>"
-        for filename in self.filenames:
-            _filenames += f"<filename>{filename}</filename>"
-        _filenames += "</filenames>"
-        _s3_urls = "<s3_urls>"
-        for url in self.s3_urls:
-            _s3_urls += f"<url>{url}</url>"
-        _s3_urls += "</s3_urls>"
-        return f"{_source_urls}{_sitemap_urls}{_filenames}{_s3_urls}"
-
 
 class ReasoningParamsModel(BaseModel):
     budget_tokens: int

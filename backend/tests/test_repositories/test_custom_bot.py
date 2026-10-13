@@ -1,9 +1,12 @@
 import pytest
 import sys
 import unittest
+from types import SimpleNamespace
+from unittest.mock import MagicMock, patch
 
 sys.path.insert(0, ".")
 
+from app.repositories import custom_bot as custom_bot_repo
 from app.repositories.common import RecordNotFoundError
 from app.repositories.custom_bot import (
     alias_exists,
@@ -733,3 +736,41 @@ class TestStarStatusOfMissingItems(unittest.TestCase):
         for update in (update_bot_star_status, update_alias_star_status):
             with self.assertRaises(RecordNotFoundError):
                 update("user", "missing", True)
+
+
+class TestFindOwnedBotsPaging(unittest.TestCase):
+    """Reads pages from a fake index, which is not ordered by last used time."""
+
+    def find(self, pages: list[list[float]], limit: int | None = None):
+        responses = [
+            {
+                "Items": [{"t": t} for t in page],
+                **({"LastEvaluatedKey": {"k": i}} if i < len(pages) - 1 else {}),
+            }
+            for i, page in enumerate(pages)
+        ]
+        table = MagicMock()
+        table.query.side_effect = responses
+        with (
+            patch.object(custom_bot_repo, "get_bot_table_client", return_value=table),
+            patch.object(
+                custom_bot_repo.BotMeta,
+                "from_dynamo_item",
+                side_effect=lambda item, **_: SimpleNamespace(last_used_time=item["t"]),
+            ),
+        ):
+            bots = custom_bot_repo.find_owned_bots_by_user_id("user", limit=limit)
+        return [bot.last_used_time for bot in bots], table.query.call_count
+
+    def test_sorts_every_page_before_the_limit(self):
+        times, _ = self.find([[1.0, 2.0], [5.0]], limit=2)
+        self.assertEqual(times, [5.0, 2.0])
+
+    def test_warns_only_when_pages_are_left_unread(self):
+        with self.assertNoLogs(custom_bot_repo.logger, "WARNING"):
+            _, count = self.find([[float(i)] for i in range(5)])
+        self.assertEqual(count, 5)
+
+        with self.assertLogs(custom_bot_repo.logger, "WARNING"):
+            _, count = self.find([[float(i)] for i in range(6)])
+        self.assertEqual(count, 5)
