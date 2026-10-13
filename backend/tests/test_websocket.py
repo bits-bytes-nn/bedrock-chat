@@ -306,6 +306,45 @@ class TestHandler:
         assert response["statusCode"] == 403
         process.assert_not_called()
 
+    def send_parts(self, parts: dict[int, str]) -> None:
+        for index, part in parts.items():
+            response = websocket.handler(
+                frame({"step": "BODY", "index": index, "part": part}), None
+            )
+            assert response["statusCode"] == 200
+
+    MALFORMED_MESSAGES = [
+        pytest.param(
+            {0: json.dumps(CHAT_INPUT)[:20], 2: json.dumps(CHAT_INPUT)[40:]},
+            id="gap-in-part-indexes",
+        ),
+        pytest.param({}, id="no-parts"),
+        pytest.param({0: "{not json"}, id="invalid-json"),
+        pytest.param({0: json.dumps({"message": "hi"})}, id="not-a-chat-input"),
+    ]
+
+    @pytest.mark.parametrize("parts", MALFORMED_MESSAGES)
+    def test_malformed_message_is_not_processed(self, parts):
+        self.start()
+        self.send_parts(parts)
+
+        response, process = self.end()
+
+        # Current behavior: the parse error falls into the generic handler.
+        assert response["statusCode"] == 500
+        assert json.loads(response["body"])["status"] == "ERROR"
+        process.assert_not_called()
+
+    @pytest.mark.xfail(strict=True, reason="should be 400")
+    @pytest.mark.parametrize("parts", MALFORMED_MESSAGES)
+    def test_malformed_message_returns_400(self, parts):
+        self.start()
+        self.send_parts(parts)
+
+        response, _ = self.end()
+
+        assert response["statusCode"] == 400
+
 
 if __name__ == "__main__":
     unittest.main()

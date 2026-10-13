@@ -86,6 +86,96 @@ class TestMergeConversations(unittest.TestCase):
         self.assertNotIn("old", merged.message_map)
         self.assertEqual(merged.message_map["a"].children, [])
 
+    def test_mine_wins_when_both_change_the_same_field(self):
+        base = conversation()
+        mine, theirs = base.model_copy(deep=True), base.model_copy(deep=True)
+        mine.title = "Mine"
+        theirs.title = "Theirs"
+        mine.message_map["a"].feedback = FeedbackModel(
+            thumbs_up=True, category="mine", comment=""
+        )
+        theirs.message_map["a"].feedback = FeedbackModel(
+            thumbs_up=False, category="theirs", comment=""
+        )
+
+        merged = merge_conversations(base, mine, theirs)
+
+        self.assertEqual(merged.title, "Mine")
+        self.assertEqual(merged.message_map["a"].feedback.category, "mine")
+
+    def test_without_base_sums_prices_and_keeps_both_messages(self):
+        mine, theirs = conversation(), conversation()
+        add_reply(mine, "mine", 0.5)
+        add_reply(theirs, "theirs", 0.25)
+
+        merged = merge_conversations(None, mine, theirs)
+
+        self.assertAlmostEqual(merged.total_price, 1.0 + 0.5 + 1.0 + 0.25)
+        self.assertEqual(merged.message_map["a"].children, ["theirs", "mine"])
+        self.assertEqual(merged.last_message_id, "mine")
+
+    def test_mine_edit_restores_a_message_theirs_deleted(self):
+        base = conversation()
+        add_reply(base, "old", 0)
+        mine, theirs = base.model_copy(deep=True), base.model_copy(deep=True)
+        del theirs.message_map["old"]
+        theirs.message_map["a"].children.remove("old")
+        mine.message_map["old"].content[0].body = "edited"
+
+        merged = merge_conversations(base, mine, theirs)
+
+        self.assertEqual(merged.message_map["old"].content[0].body, "edited")
+
+    @pytest.mark.xfail(
+        strict=True,
+        reason="the restored message is not linked from its parent's children",
+    )
+    def test_restored_message_is_linked_from_its_parent(self):
+        base = conversation()
+        add_reply(base, "old", 0)
+        mine, theirs = base.model_copy(deep=True), base.model_copy(deep=True)
+        del theirs.message_map["old"]
+        theirs.message_map["a"].children.remove("old")
+        mine.message_map["old"].content[0].body = "edited"
+
+        merged = merge_conversations(base, mine, theirs)
+
+        self.assertIn("old", merged.message_map["a"].children)
+
+    def test_mine_removal_wins_over_a_child_theirs_added(self):
+        base = conversation()
+        add_reply(base, "old", 0)
+        mine, theirs = base.model_copy(deep=True), base.model_copy(deep=True)
+        theirs.message_map["child"] = message("old", "child")
+        theirs.message_map["old"].children.append("child")
+        del mine.message_map["old"]
+        mine.message_map["a"].children.remove("old")
+
+        merged = merge_conversations(base, mine, theirs)
+
+        self.assertNotIn("old", merged.message_map)
+        self.assertEqual(merged.message_map["a"].children, [])
+
+    @pytest.mark.xfail(
+        strict=True,
+        reason="a child that theirs added under a message mine removed is left "
+        "with a missing parent",
+    )
+    def test_no_message_is_left_without_its_parent(self):
+        base = conversation()
+        add_reply(base, "old", 0)
+        mine, theirs = base.model_copy(deep=True), base.model_copy(deep=True)
+        theirs.message_map["child"] = message("old", "child")
+        theirs.message_map["old"].children.append("child")
+        del mine.message_map["old"]
+        mine.message_map["a"].children.remove("old")
+
+        merged = merge_conversations(base, mine, theirs)
+
+        for message_id, node in merged.message_map.items():
+            if node.parent is not None:
+                self.assertIn(node.parent, merged.message_map, message_id)
+
 
 @pytest.mark.usefixtures("dynamodb_tables")
 class TestStoreConversationConcurrently(unittest.TestCase):
