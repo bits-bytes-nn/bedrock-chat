@@ -121,8 +121,11 @@ def find_conversations_by_query(
             conversation_meta = ConversationSearchModel.from_opensearch_response(hit)
             conversations.append(conversation_meta)
         except Exception as e:
-            # The hit holds conversation text, so only its ID is logged.
-            logger.error(f"Error processing hit {hit.get('_id')}: {e}")
+            # The hit holds conversation text, and validation errors quote their
+            # input, so only the hit ID and the error type are logged.
+            logger.error(
+                "Error processing hit %s: %s", hit.get("_id"), type(e).__name__
+            )
             continue
     logger.info("Found %d conversations", len(conversations))
     return conversations

@@ -380,9 +380,11 @@ def modify_owned_bot(
     # if knowledge is not updated, skip embeding process.
     # 'sync_status = "QUEUED"' will execute embeding process and update dynamodb record.
     # 'sync_status= "SUCCEEDED"' will update only dynamodb record.
+    # A failed sync is retried even if nothing changed, or saving would hide it.
     sync_status: type_sync_status = (
         "QUEUED"
-        if modify_input.is_embedding_required(bot)
+        if bot.sync_status == "FAILED"
+        or modify_input.is_embedding_required(bot)
         or modify_input.is_guardrails_update_required(bot)
         else "SUCCEEDED"
     )
@@ -528,7 +530,11 @@ def fetch_bot(user: User, bot_id: str) -> tuple[bool, BotModel]:
         logger.info(
             f"User {user.id} is not authorized to access bot {bot_id}. Update alias."
         )
-        update_alias_is_origin_accessible(user.id, bot_id, False)
+        try:
+            update_alias_is_origin_accessible(user.id, bot_id, False)
+        except RecordNotFoundError:
+            # Without an alias the bot is still forbidden, not missing.
+            pass
         raise PermissionError(
             f"User {user.id} is not authorized to access bot {bot_id}"
         )
@@ -663,21 +669,21 @@ def remove_bot_by_id(user: User, bot_id: str):
         raise PermissionError(
             f"User {user.id} is not authorized to access bot {bot_id}"
         )
-    # A stack built after the removal would be left running and billing. Admins can
-    # still delete a bot whose sync is stuck.
-    if not user.is_admin():
-        if bot.sync_status in ("QUEUED", "RUNNING"):
-            raise ResourceConflictError(
-                "The knowledge base is being synchronized. Delete the bot after it finishes.",
-                code="knowledge_base_syncing",
-            )
-        if bot.published_api_codebuild_id is not None and is_build_running(
-            bot.published_api_codebuild_id
-        ):
-            raise ResourceConflictError(
-                "The API is being published. Delete the bot after it finishes.",
-                code="api_publishing",
-            )
+    # A stack built after the removal would be left running and billing, so admins
+    # are rejected too. An admin clears a stuck sync by saving the bot, which resets
+    # its sync status.
+    if bot.sync_status in ("QUEUED", "RUNNING"):
+        raise ResourceConflictError(
+            "The knowledge base is being synchronized. Delete the bot after it finishes.",
+            code="knowledge_base_syncing",
+        )
+    if bot.published_api_codebuild_id is not None and is_build_running(
+        bot.published_api_codebuild_id
+    ):
+        raise ResourceConflictError(
+            "The API is being published. Delete the bot after it finishes.",
+            code="api_publishing",
+        )
 
     if bot.is_editable_by_user(user):
         owner_user_id = bot.owner_user_id

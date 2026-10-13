@@ -966,6 +966,8 @@ const translation: typeof en = {
           '回答を生成できませんでした。もう一度お試しください。',
         input_too_long:
           '会話または添付ファイルがこのモデルには長すぎます。添付ファイルを削除するか、新しい会話を開始してください。',
+        conversation_too_large:
+          '会話が大きすぎるため、これ以上メッセージを保存できません。新しい会話を開始してください。',
         unauthorized: 'セッションの有効期限が切れました。再度サインインしてください。',
         invalidResponse: '想定外のResponseが返ってきました。',
         connectionClosed:

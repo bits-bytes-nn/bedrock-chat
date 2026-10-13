@@ -8,8 +8,6 @@ import boto3
 from botocore.config import Config
 from botocore.exceptions import ClientError
 
-from app.user import User
-
 logger = logging.getLogger(__name__)
 
 REGION = os.environ.get("REGION", "us-east-1")

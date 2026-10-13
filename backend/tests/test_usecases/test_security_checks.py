@@ -9,7 +9,11 @@ from unittest.mock import MagicMock, patch
 sys.path.insert(0, ".")
 
 from app import auth
-from app.repositories.models.conversation import MessageModel, TextContentModel
+from app.repositories.models.conversation import (
+    ConversationModel,
+    MessageModel,
+    TextContentModel,
+)
 from app.repositories.common import RecordNotFoundError, ResourceConflictError
 from app.repositories.models.custom_bot import ActiveModelsModel
 from app.routes.schemas.api_publication import (
@@ -65,6 +69,29 @@ class TestPublication(unittest.TestCase):
                 with self.assertRaises(RecordNotFoundError) as e:
                     call(USER, "bot")
                 self.assertEqual(e.exception.code, "bot_not_published")
+
+    def test_rejects_unpublishing_during_the_build(self):
+        bot = MagicMock(published_api_codebuild_id="build")
+        with patch.object(
+            publication, "find_bot_by_id", return_value=bot
+        ), patch.object(publication, "is_build_running", return_value=True):
+            with self.assertRaises(ResourceConflictError) as e:
+                publication.remove_bot_publication(USER, "bot")
+        self.assertEqual(e.exception.code, "api_publishing")
+
+    def test_api_keys_wait_for_the_stack(self):
+        bot = MagicMock()
+        stack = MagicMock(stack_status="CREATE_IN_PROGRESS")
+        with patch.object(
+            publication, "find_bot_by_id", return_value=bot
+        ), patch.object(publication, "find_stack_by_bot_id", return_value=stack):
+            for call in (
+                lambda: publication.fetch_api_key(USER, "bot", "key"),
+                lambda: publication.create_new_api_key(USER, "bot", MagicMock()),
+                lambda: publication.remove_api_key(USER, "bot", "key"),
+            ):
+                with self.assertRaises(ResourceConflictError):
+                    call()
 
     def test_rejects_publishing_while_the_previous_api_is_removed(self):
         bot = MagicMock(shared_scope="all", published_api_codebuild_id=None)
@@ -352,6 +379,49 @@ class TestPrepareConversation(unittest.TestCase):
                     chat_usecase.prepare_conversation(
                         USER, self.chat_input(message_id=message_id)
                     )
+
+    def test_rejects_a_message_that_makes_the_conversation_too_large(self):
+        def conversation(body_chars: int) -> ConversationModel:
+            system = message(None)
+            system.content = [
+                TextContentModel(content_type="text", body="x" * body_chars)
+            ]
+            return ConversationModel(
+                id="c",
+                create_time=0,
+                title="t",
+                total_price=0,
+                message_map={"system": system},
+                last_message_id="system",
+                bot_id=None,
+                should_continue=False,
+            )
+
+        limit = chat_usecase.MAX_CONVERSATION_BYTES
+        with patch.object(
+            chat_usecase, "find_conversation_by_id", return_value=conversation(1000)
+        ):
+            chat_usecase.prepare_conversation(USER, self.chat_input())
+        with patch.object(
+            chat_usecase, "find_conversation_by_id", return_value=conversation(limit)
+        ):
+            with self.assertRaises(chat_usecase.ConversationTooLargeError):
+                chat_usecase.prepare_conversation(USER, self.chat_input())
+
+
+class TestFetchBot(unittest.TestCase):
+    def test_a_forbidden_bot_without_alias_stays_forbidden(self):
+        bot = MagicMock()
+        bot.is_accessible_by_user.return_value = False
+        with patch.object(
+            bot_usecase, "find_bot_by_id", return_value=bot
+        ), patch.object(
+            bot_usecase,
+            "update_alias_is_origin_accessible",
+            side_effect=RecordNotFoundError("no alias"),
+        ):
+            with self.assertRaises(PermissionError):
+                bot_usecase.fetch_bot(USER, "bot")
 
 
 class TestAdminEditsAnotherUsersBot(unittest.TestCase):

@@ -959,6 +959,8 @@ const translation: typeof en = {
         generation_failed: '답변을 생성하지 못했습니다. 다시 시도하세요.',
         input_too_long:
           '대화나 첨부 파일이 이 모델에서 처리하기에 너무 깁니다. 첨부 파일을 빼거나 새 대화를 시작하세요.',
+        conversation_too_large:
+          '대화가 너무 커서 메시지를 더 저장할 수 없습니다. 새 대화를 시작하세요.',
         unauthorized: '세션이 만료되었습니다. 다시 로그인하세요.',
         invalidResponse:
           '예상치 못한 응답을 받았습니다. 응답 형식이 예상 형식과 일치하지 않습니다.',

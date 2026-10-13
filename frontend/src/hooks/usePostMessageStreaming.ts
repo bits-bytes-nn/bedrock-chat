@@ -44,6 +44,7 @@ const PREDICT_ERROR_CODES = [
   'invalid_request',
   'generation_failed',
   'input_too_long',
+  'conversation_too_large',
   'unauthorized',
 ] as const;
 type PredictErrorCode = (typeof PREDICT_ERROR_CODES)[number];

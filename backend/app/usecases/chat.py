@@ -68,6 +68,14 @@ logger = logging.getLogger(__name__)
 # Characters of the conversation that title generation reads, from the beginning.
 TITLE_CONTEXT_CHARS = 4000
 
+# Loading a conversation returns it whole, so it must stay within the Lambda response
+# limit (6 MB). The margin leaves room for the answer and the response envelope.
+MAX_CONVERSATION_BYTES = 5 * 1024 * 1024
+
+
+class ConversationTooLargeError(ValueError):
+    """The conversation would become too large to load."""
+
 
 def prepare_conversation(
     user: User,
@@ -185,6 +193,13 @@ def prepare_conversation(
         message_id = (
             conversation.message_map[conversation.last_message_id].parent
             or "instruction"
+        )
+
+    # The stored model serializes about like the conversation response (attachments
+    # in base64), plus the instruction and the price, so it is a close upper estimate.
+    if len(conversation.model_dump_json().encode("utf-8")) > MAX_CONVERSATION_BYTES:
+        raise ConversationTooLargeError(
+            "The conversation is too large. Start a new conversation."
         )
 
     return (message_id, conversation, bot)
