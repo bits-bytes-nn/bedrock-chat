@@ -130,6 +130,19 @@ export class Monitoring extends Construct {
         "The hourly conversation export for usage analysis failed.",
       ],
     ];
+    alarms.push([
+      "BotUsageUpdateFailures",
+      new cloudwatch.Metric({
+        // Published by backend/app/usecases/chat.py when updating a bot's usage
+        // fails; answers are kept, so only this alarm shows a lasting failure.
+        namespace: props.metricsNamespace,
+        metricName: "BotUsageUpdateFailures",
+        statistic: "Sum",
+        period: Duration.hours(1),
+      }),
+      errorThreshold,
+      `Updating the usage of bots failed at least ${errorThreshold} times in an hour.`,
+    ]);
     if (props.dailyChatCostAlarmUsd > 0) {
       alarms.push([
         "DailyChatCost",

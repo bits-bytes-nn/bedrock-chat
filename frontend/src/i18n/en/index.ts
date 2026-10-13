@@ -940,6 +940,8 @@ How would you categorize this email?`,
         dedicated_knowledge_base_limit:
           'You can have at most {{limit}} bots with their own knowledge base. Delete one, or use a shared knowledge base.',
         bot_not_published: 'This bot is not published.',
+        api_unpublishing:
+          'The previous API is still being removed. Publish again after that.',
       },
       answerResponse: 'An error occurred while responding.',
       notFoundConversation:

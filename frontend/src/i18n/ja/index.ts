@@ -942,6 +942,8 @@ const translation: typeof en = {
         dedicated_knowledge_base_limit:
           '専用のナレッジベースを持つボットは最大 {{limit}} 個までです。既存のボットを削除するか、共有ナレッジベースを使用してください。',
         bot_not_published: 'このボットは公開されていません。',
+        api_unpublishing:
+          '以前の API を削除しています。削除が完了してから再度公開してください。',
       },
       answerResponse: '回答中にエラーが発生しました。',
       notFoundConversation:

@@ -937,6 +937,8 @@ const translation: typeof en = {
         dedicated_knowledge_base_limit:
           '전용 지식 기반이 있는 봇은 최대 {{limit}}개까지 만들 수 있습니다. 기존 봇을 삭제하거나 공유 지식 기반을 사용하세요.',
         bot_not_published: '게시되지 않은 봇입니다.',
+        api_unpublishing:
+          '이전 API를 삭제하는 중입니다. 삭제가 끝난 뒤 다시 게시하세요.',
       },
       answerResponse: '응답 중 오류가 발생했습니다.',
       notFoundConversation: '지정한 채팅이 없어 새 채팅 화면을 표시했습니다.',

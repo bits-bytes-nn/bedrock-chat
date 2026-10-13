@@ -107,15 +107,15 @@ class TestChatFlow(unittest.TestCase):
         bot.has_knowledge.return_value = True
         request = chat_input("c3", None, "What is the project code name?")
         request.bot_id = "bot"
-        with patch.object(
-            chat_usecase, "fetch_bot", return_value=(True, bot)
-        ), patch.object(chat_usecase, "validate_model_is_available"), patch.object(
-            chat_usecase, "modify_bot_last_used_time"
-        ), patch.object(
-            chat_usecase, "modify_bot_stats"
-        ), patch.object(
-            chat_usecase, "converse_with_strands", return_value=answer("BLUEFIN-42")
-        ) as converse:
+        with (
+            patch.object(chat_usecase, "fetch_bot", return_value=(True, bot)),
+            patch.object(chat_usecase, "validate_model_is_available"),
+            patch.object(chat_usecase, "modify_bot_last_used_time"),
+            patch.object(chat_usecase, "modify_bot_stats"),
+            patch.object(
+                chat_usecase, "converse_with_strands", return_value=answer("BLUEFIN-42")
+            ) as converse,
+        ):
             chat_usecase.chat(USER, request)
 
         self.assertIn(KNOWLEDGE_BASE_PROMPT, converse.call_args.kwargs["instructions"])
@@ -153,9 +153,11 @@ class TestChatFlow(unittest.TestCase):
                 chat_usecase, "converse_with_strands", return_value=answer("hi")
             ),
             self.assertLogs(chat_usecase.logger, "ERROR"),
+            patch.object(chat_usecase, "emit_metric") as emit,
         ):
             _, message = chat_usecase.chat(USER, request, on_stop=on_stop)
 
+        emit.assert_called_once_with("BotUsageUpdateFailures", 1)
         on_stop.assert_called_once()
         stored = find_conversation_by_id(USER.id, "c5")
         self.assertEqual(

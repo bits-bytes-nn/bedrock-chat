@@ -10,7 +10,7 @@ sys.path.insert(0, ".")
 
 from app import auth
 from app.repositories.models.conversation import MessageModel, TextContentModel
-from app.repositories.common import RecordNotFoundError
+from app.repositories.common import RecordNotFoundError, ResourceConflictError
 from app.repositories.models.custom_bot import ActiveModelsModel
 from app.routes.schemas.api_publication import (
     BotPublishInput,
@@ -66,12 +66,43 @@ class TestPublication(unittest.TestCase):
                     call(USER, "bot")
                 self.assertEqual(e.exception.code, "bot_not_published")
 
+    def test_rejects_publishing_while_the_previous_api_is_removed(self):
+        bot = MagicMock(shared_scope="all", published_api_codebuild_id=None)
+        with patch.object(
+            publication, "find_bot_by_id", return_value=bot
+        ), patch.object(
+            publication,
+            "find_stack_by_bot_id",
+            return_value=MagicMock(stack_status="DELETE_IN_PROGRESS"),
+        ), patch.object(
+            publication, "start_codebuild_project"
+        ) as start:
+            with self.assertRaises(ResourceConflictError) as e:
+                publication.create_bot_publication(
+                    USER,
+                    "bot",
+                    BotPublishInput(
+                        stage="api",
+                        quota=PublishedApiQuota(limit=None, offset=None, period=None),
+                        throttle=PublishedApiThrottle(
+                            rate_limit=None, burst_limit=None
+                        ),
+                        allowed_origins=[],
+                    ),
+                )
+        self.assertEqual(e.exception.code, "api_unpublishing")
+        start.assert_not_called()
+
     def test_passes_allowed_origins_as_json(self):
         origins = ["https://a.example.com", "https://b.example.com:8443"]
         bot = MagicMock(shared_scope="all", published_api_codebuild_id=None)
         with patch.object(
             publication, "find_bot_by_id", return_value=bot
-        ), patch.object(publication, "start_codebuild_project") as start, patch.object(
+        ), patch.object(
+            publication, "find_stack_by_bot_id", side_effect=RecordNotFoundError()
+        ), patch.object(
+            publication, "start_codebuild_project"
+        ) as start, patch.object(
             publication, "update_bot_publication"
         ):
             publication.create_bot_publication(

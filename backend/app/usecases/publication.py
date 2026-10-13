@@ -63,6 +63,17 @@ def create_bot_publication(user: User, bot_id: str, bot_publish_input: BotPublis
                 f"Bot {bot_id} is already published. Please remove the publication before re-publishing."
             )
 
+    # Right after unpublishing, the stack is still being deleted and a new
+    # deployment of the same stack would fail.
+    try:
+        if find_stack_by_bot_id(bot_id).stack_status == "DELETE_IN_PROGRESS":
+            raise ResourceConflictError(
+                f"The previous API of bot {bot_id} is still being removed. Publish it again after that.",
+                code="api_unpublishing",
+            )
+    except RecordNotFoundError:
+        pass
+
     # Same value as `bot_id` is used for `public_bot_id`
     published_api_id = bot_id
 

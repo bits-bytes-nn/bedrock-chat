@@ -36,6 +36,11 @@ class TestAlarmLogTerms(unittest.TestCase):
             )
         self.assertIn(term, logs.output[0])
 
+    def test_bot_usage_failures_are_published(self):
+        source = (REPO / "backend/app/usecases/chat.py").read_text()
+        self.assertIn('metricName: "BotUsageUpdateFailures"', MONITORING.read_text())
+        self.assertIn('emit_metric("BotUsageUpdateFailures", 1)', source)
+
 
 if __name__ == "__main__":
     unittest.main()
