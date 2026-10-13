@@ -30,7 +30,9 @@ def handler(event, context):
 
     response = client.export_table_to_point_in_time(
         TableArn=TABLE_ARN,
-        # ClientToken="string",
+        # Lambda retries a failed invocation, and EventBridge can deliver an event
+        # twice, with the same event id; the export of the hour then starts once.
+        ClientToken=event["id"],
         S3Bucket=BUCKET_NAME,
         S3Prefix=s3_prefix,
         ExportType="INCREMENTAL_EXPORT",

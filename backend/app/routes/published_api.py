@@ -136,13 +136,8 @@ def get_message(request: Request, conversation_id: str, message_id: str):
 
     if conversation is None:
         raise RecordNotFoundError(f"No conversation found with id: {conversation_id}")
-    input_message = conversation.message_map.get(message_id)
-    if input_message is None or input_message.children:
-        raise HTTPException(
-            status_code=404,
-            detail=f"Message {message_id} not found in conversation {conversation_id}",
-        )
+    # A message is stored together with its answer, so it is missing until then.
     raise HTTPException(
         status_code=404,
-        detail=f"The response to message {message_id} is not ready yet",
+        detail=f"No answer to message {message_id} in conversation {conversation_id} yet",
     )

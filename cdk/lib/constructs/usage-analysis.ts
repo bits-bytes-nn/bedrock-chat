@@ -251,6 +251,9 @@ export class UsageAnalysis extends Construct {
     const exportHandler = new python.PythonFunction(this, "ExportHandler", {
       entry: path.join(__dirname, "../../../backend/s3_exporter/"),
       runtime: Runtime.PYTHON_3_13,
+      // The handler only starts the export, which runs on its own. The default 3
+      // seconds do not cover a cold start and the SDK's retries of a throttled call.
+      timeout: Duration.seconds(30),
       environment: {
         BUCKET_NAME: ddbBucket.bucketName,
         TABLE_ARN: props.sourceDatabase.conversationTable.tableArn,

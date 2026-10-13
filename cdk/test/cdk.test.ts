@@ -677,6 +677,8 @@ describe("Bedrock Chat Stack Test", () => {
       MetricName: "Errors",
       Dimensions: [{ Name: "FunctionName", Value: { Ref: exportHandlerId } }],
     });
+    // Longer than the 3 second default, for a cold start and SDK retries.
+    expect((functions[exportHandlerId] as any).Properties.Timeout).toBe(30);
 
     // Bot removals have the memory of the other backend handlers, and a stuck
     // record goes to the dead-letter queue before the stream drops it.
@@ -1283,17 +1285,16 @@ describe("Api Publishment Stack", () => {
       (fn: any) => fn.Properties.Environment?.Variables?.MAX_RECEIVE_COUNT
     ) as any;
     const apiHandler = Object.values(functions).find(
-      (fn: any) => fn.Properties.Environment?.Variables?.QUEUE_URL
+      (fn: any) => fn.Properties.Environment?.Variables?.CORS_ALLOW_ORIGINS
     ) as any;
-    // The consumer reads the API ID for the metric dimension, not the queue or CORS.
+    // The consumer reads the API ID for the metric dimension and the queue to retry
+    // messages soon, not CORS.
     expect(consumer.Properties.Environment.Variables).toMatchObject({
       MAX_RECEIVE_COUNT: "2",
       METRICS_NAMESPACE: "BedrockChat",
       PUBLISHED_API_ID: "Test",
+      QUEUE_URL: expect.anything(),
     });
-    expect(consumer.Properties.Environment.Variables).not.toHaveProperty(
-      "QUEUE_URL"
-    );
     expect(consumer.Properties.Environment.Variables).not.toHaveProperty(
       "CORS_ALLOW_ORIGINS"
     );
@@ -1308,12 +1309,15 @@ describe("Api Publishment Stack", () => {
     expect(apiActions.some((action) => action.startsWith("bedrock:"))).toBe(false);
     expect(apiActions).not.toContain("s3:PutObject");
     expect(roleActions(consumer)).toContain("bedrock:InvokeModelWithResponseStream");
+    expect(roleActions(consumer)).toContain("sqs:ChangeMessageVisibility");
 
     // Concurrent answers are bounded, and a message stays invisible for six times
     // the consumer timeout.
+    // The consumer reports messages to retry instead of failing the invocation.
     template.hasResourceProperties("AWS::Lambda::EventSourceMapping", {
       BatchSize: 1,
       ScalingConfig: { MaximumConcurrency: 10 },
+      FunctionResponseTypes: ["ReportBatchItemFailures"],
     });
     expect(consumer.Properties.Timeout).toBe(900);
     template.hasResourceProperties("AWS::SQS::Queue", {

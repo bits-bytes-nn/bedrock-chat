@@ -390,6 +390,11 @@ npx cdk deploy --all
 
 6. **리소스 격리**: 각 환경은 자체 리소스 세트를 생성하므로 동일한 AWS 계정에서 충돌 없이 개발, 테스트 및 프로덕션 환경을 가질 수 있습니다.
 
+### 기존 배포 업그레이드
+
+- **이름 있는 환경의 공유 지식 기반**: `default`가 아닌 환경은 이제 Bedrock 리전에 자체 공유 지식 기반 스택 `<envPrefix>-BrChatSharedKbStack`을 사용합니다. 이전에는 모든 환경이 `BrChatSharedKbStack`을 사용했으며, 이름 있는 환경의 봇은 다시 동기화될 때까지 이 스택의 지식 기반 ID를 그대로 가집니다. 옮기려면 해당 환경에서 공유 지식 기반을 쓰는 봇에 `SyncStatus='QUEUED'`를 지정하고, 그 환경의 상태 머신(출력 `EmbeddingStateMachineArn`)을 시작하세요. 명령은 [README의 Multi-Tenant Usage of Knowledge Base](../README.md#multi-tenant-usage-of-knowledge-base)를 참고하세요. 기존 `BrChatSharedKbStack`은 자동으로 삭제되지 않습니다. 같은 계정과 Bedrock 리전에 `default` 환경이 배포되어 있지 않고(이 환경이 이 스택을 사용합니다), 모든 환경의 봇 테이블(출력 `BotTableNameV3`)에서 `BedrockKnowledgeBase.knowledge_base_id`가 이 스택의 `KnowledgeBaseId*` 출력값과 같은 항목이 없을 때만 CloudFormation에서 삭제하세요.
+- **`cdk.context.json`의 값**: 이제 `cdk.json`에 `defaultModel`, `titleModel`, `logoPath`, `dailyChatCostAlarmUsd`, `maxDedicatedKnowledgeBasesPerUser`, `usageAnalysisRetentionDays`, `apiThrottleRateLimit`, `apiThrottleBurstLimit`가 정의되어 있습니다. `cdk/cdk.context.json`에 둔 이 키의 값은 `cdk.json`이 우선하므로 적용되지 않습니다. `cdk.json`으로 옮기거나 `-c`로 넘기세요.
+
 ## 기타
 
 ### 리소스 제거

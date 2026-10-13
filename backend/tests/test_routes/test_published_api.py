@@ -126,15 +126,9 @@ def _conversation(message_map: dict[str, MessageOutput]) -> Conversation:
     )
 
 
-@pytest.mark.parametrize(
-    "message_map, detail",
-    [
-        pytest.param({}, "not found", id="no-input-message"),
-        pytest.param({"m1": _message([])}, "not ready", id="no-response-yet"),
-        pytest.param({"m1": _message(["m2"])}, "not found", id="response-missing"),
-    ],
-)
-def test_get_message_returns_404(message_map, detail):
+def test_get_message_returns_404_until_the_message_is_answered():
+    # A message is stored together with its answer.
+    message_map = {"m0": _message([])}
     with patch.object(
         published_api, "fetch_conversation", return_value=_conversation(message_map)
     ) as fetch:
@@ -143,7 +137,7 @@ def test_get_message_returns_404(message_map, detail):
 
     fetch.assert_called_once_with("PUBLISHED_API#bot1", "conv1")
     assert e.value.status_code == 404
-    assert detail in e.value.detail
+    assert "m1" in e.value.detail
 
 
 def test_get_message_returns_first_child():
@@ -187,8 +181,8 @@ def test_get_message_raises_not_found_without_a_conversation_or_failure():
 
 
 def test_get_message_returns_a_stored_answer_despite_a_failure(no_failed_messages):
-    # The consumer records a failure when bookkeeping after storing the answer
-    # fails, or when its retry is rejected because the message id exists.
+    # SQS can deliver a message twice, and one receive can fail while the other
+    # stores the answer.
     no_failed_messages.return_value = "The answer could not be generated."
     reply = _message([])
     conversation = _conversation({"m1": _message(["m2"]), "m2": reply})

@@ -5,6 +5,7 @@ import * as s3 from "aws-cdk-lib/aws-s3";
 import * as iam from "aws-cdk-lib/aws-iam";
 import * as logs from "aws-cdk-lib/aws-logs";
 import { NagSuppressions } from "cdk-nag";
+import { apiPublishmentStackPrefix } from "../utils/stack-names";
 
 export interface ApiPublishCodebuildProps {
   readonly envName: string;
@@ -60,7 +61,7 @@ export class ApiPublishCodebuild extends Construct {
               "npm ci",
               // Replace cdk's entrypoint. This is a workaround to avoid the issue that cdk synthesize all stacks.
               "sed -i 's|bin/bedrock-chat.ts|bin/api-publish.ts|' cdk.json",
-              "npx cdk deploy --require-approval never ApiPublishmentStack$PUBLISHED_API_ID",
+              `npx cdk deploy --require-approval never ${apiPublishmentStackPrefix}$PUBLISHED_API_ID`,
             ],
           },
         },

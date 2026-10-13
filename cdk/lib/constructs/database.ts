@@ -9,6 +9,7 @@ import {
 } from "aws-cdk-lib/aws-dynamodb";
 import { AccountPrincipal, Role } from "aws-cdk-lib/aws-iam";
 import { tableAccessRolePath } from "../utils/table-access";
+import { apiPublishmentStackPrefix } from "../utils/stack-names";
 import { Construct } from "constructs";
 
 export interface DatabaseProps {
@@ -122,7 +123,7 @@ export class Database extends Construct {
         ArnLike: {
           "aws:PrincipalArn": [
             `arn:${partition}:iam::${account}:role/${stackName}-*`,
-            `arn:${partition}:iam::${account}:role/ApiPublishmentStack*`,
+            `arn:${partition}:iam::${account}:role/${apiPublishmentStackPrefix}*`,
             `arn:${partition}:iam::${account}:role${this.tableAccessRolePath}*`,
           ],
         },
