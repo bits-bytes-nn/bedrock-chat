@@ -1,6 +1,9 @@
 import json
 import os
-from typing import Literal
+import threading
+from collections import OrderedDict
+from datetime import datetime, timedelta, timezone
+from typing import Any, Literal
 
 import boto3
 from opensearchpy import OpenSearch, RequestsHttpConnection
@@ -21,6 +24,14 @@ OPENSEARCH_DOMAIN_ENDPOINT = os.environ.get(
 # Ref: https://docs.aws.amazon.com/en_en/amazondynamodb/latest/developerguide/read-write-operations.html
 TRANSACTION_BATCH_WRITE_SIZE = 25
 TRANSACTION_BATCH_READ_SIZE = 100
+
+# Resources with assumed-role credentials, reused until shortly before they expire.
+# Bounded, because each user of the conversation table and each thread has its own
+# entry.
+_RESOURCE_CACHE: "OrderedDict[tuple, tuple[Any, datetime]]" = OrderedDict()
+_RESOURCE_CACHE_LOCK = threading.Lock()
+RESOURCE_CACHE_SIZE = 32
+CREDENTIALS_REFRESH_MARGIN = timedelta(minutes=5)
 
 type_table = Literal["conversation", "bot"]
 _table_name_map = {"conversation": CONVERSATION_TABLE_NAME, "bot": BOT_TABLE_NAME}
@@ -95,6 +106,17 @@ def _get_aws_resource(service_name, table_name: str, user_id: str | None = None)
         else:
             return boto3.resource(service_name, region_name=REGION)  # type: ignore[call-overload]
 
+    # boto3 resources must not be shared between threads.
+    key = (service_name, table_name, user_id, threading.get_ident())
+    with _RESOURCE_CACHE_LOCK:
+        cached = _RESOURCE_CACHE.get(key)
+        if cached and cached[1] - CREDENTIALS_REFRESH_MARGIN > datetime.now(
+            timezone.utc
+        ):
+            _RESOURCE_CACHE.move_to_end(key)
+            return cached[0]
+
+    partition = boto3.Session().get_partition_for_region(REGION)
     policy_document: dict[str, list[dict]] = {
         "Statement": [
             {
@@ -113,8 +135,8 @@ def _get_aws_resource(service_name, table_name: str, user_id: str | None = None)
                     "dynamodb:UpdateItem",
                 ],
                 "Resource": [
-                    f"arn:aws:dynamodb:{REGION}:{ACCOUNT}:table/{table_name}",
-                    f"arn:aws:dynamodb:{REGION}:{ACCOUNT}:table/{table_name}/index/*",
+                    f"arn:{partition}:dynamodb:{REGION}:{ACCOUNT}:table/{table_name}",
+                    f"arn:{partition}:dynamodb:{REGION}:{ACCOUNT}:table/{table_name}/index/*",
                 ],
             }
         ]
@@ -138,7 +160,13 @@ def _get_aws_resource(service_name, table_name: str, user_id: str | None = None)
         aws_secret_access_key=credentials["SecretAccessKey"],
         aws_session_token=credentials["SessionToken"],
     )
-    return session.resource(service_name, region_name=REGION)  # type: ignore[call-overload]
+    resource = session.resource(service_name, region_name=REGION)  # type: ignore[call-overload]
+    with _RESOURCE_CACHE_LOCK:
+        _RESOURCE_CACHE[key] = (resource, credentials["Expiration"])
+        _RESOURCE_CACHE.move_to_end(key)
+        while len(_RESOURCE_CACHE) > RESOURCE_CACHE_SIZE:
+            _RESOURCE_CACHE.popitem(last=False)
+    return resource
 
 
 def get_dynamodb_client(user_id=None, table_type: type_table = "conversation"):
@@ -164,13 +192,8 @@ def get_bot_table_client():
     )
 
 
-def get_opensearch_client(collection_type: str = "bot") -> OpenSearch:
-    """Get OpenSearch client with AWS authentication.
-
-    Args:
-        collection_type: Type of collection to connect to ("bot" or "conversation")
-        Note: This method now uses a single shared endpoint for both bot and conversation collections
-    """
+def get_opensearch_client() -> OpenSearch:
+    """Get an OpenSearch client for the collection that indexes bots and conversations."""
     endpoint = OPENSEARCH_DOMAIN_ENDPOINT
     if not endpoint:
         raise ValueError("OPENSEARCH_DOMAIN_ENDPOINT is not set")

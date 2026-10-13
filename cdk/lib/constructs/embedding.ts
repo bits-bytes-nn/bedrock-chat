@@ -706,6 +706,8 @@ export class Embedding extends Construct {
         KnowledgeBaseId: sfn.JsonPath.stringAt("$.KnowledgeBaseId"),
         DataSourceId: sfn.JsonPath.stringAt("$.DataSourceId"),
         FilesDiffs: sfn.JsonPath.objectAt("$.FilesDiffs"),
+        // Makes a retried task reuse the ingestion job that it already started.
+        ExecutionId: sfn.JsonPath.executionId,
       }),
       resultSelector: {
         KnowledgeBaseId: sfn.JsonPath.stringAt("$.Payload.KnowledgeBaseId"),

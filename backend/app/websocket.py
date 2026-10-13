@@ -54,6 +54,17 @@ table = dynamodb_client.Table(WEBSOCKET_SESSION_TABLE_NAME)
 logger = logging.getLogger(__name__)
 
 
+# Lets the frontend show a translated message; `reason` stays for other clients.
+type_error_code = Literal[
+    "throttled",
+    "model_unavailable",
+    "model_error",
+    "bot_not_found",
+    "invalid_request",
+    "generation_failed",
+]
+
+
 class _NotifyCommand(TypedDict):
     type: Literal["notify"]
     payload: bytes
@@ -229,7 +240,7 @@ class NotificationSender:
             {"type": "completion", "status": "REASONING", "completion": token}
         )
 
-    def on_error(self, reason: str):
+    def on_error(self, reason: str, code: type_error_code):
         """Send an error to the client unless the stream has already ended.
 
         The route response cannot carry errors after the API Gateway integration
@@ -239,7 +250,9 @@ class NotificationSender:
             return
 
         self.notify(
-            payload=json.dumps(dict(status="ERROR", reason=reason)).encode("utf-8")
+            payload=json.dumps(dict(status="ERROR", reason=reason, code=code)).encode(
+                "utf-8"
+            )
         )
 
 
@@ -256,11 +269,11 @@ def process_chat_input(
         chat_input.message.model,
     )
 
-    def error_response(status_code: int, reason: str) -> dict:
-        notificator.on_error(reason)
+    def error_response(status_code: int, reason: str, code: type_error_code) -> dict:
+        notificator.on_error(reason, code)
         return {
             "statusCode": status_code,
-            "body": json.dumps(dict(status="ERROR", reason=reason)),
+            "body": json.dumps(dict(status="ERROR", reason=reason, code=code)),
         }
 
     try:
@@ -286,17 +299,21 @@ def process_chat_input(
 
     except RecordNotFoundError:
         if chat_input.bot_id:
-            return error_response(404, f"bot {chat_input.bot_id} not found.")
+            return error_response(
+                404, f"bot {chat_input.bot_id} not found.", "bot_not_found"
+            )
         else:
-            return error_response(400, "Invalid request.")
+            return error_response(400, "Invalid request.", "invalid_request")
 
     except (PermissionError, ValueError) as e:
         logger.exception("Rejected chat input")
-        return error_response(400, str(e))
+        return error_response(400, str(e), "invalid_request")
 
     except ModelThrottledException:
         logger.exception("Bedrock throttled the request")
-        return error_response(502, "The model is busy. Please try again shortly.")
+        return error_response(
+            502, "The model is busy. Please try again shortly.", "throttled"
+        )
 
     except ClientError as e:
         logger.exception("Bedrock request failed")
@@ -304,16 +321,24 @@ def process_chat_input(
             code = e.response["Error"]["Code"]
             # These messages describe the request or the model, not the account.
             if code in USER_FACING_MODEL_ERRORS:
-                return error_response(502, e.response["Error"]["Message"])
+                return error_response(
+                    502, e.response["Error"]["Message"], "model_error"
+                )
             if code == "AccessDeniedException":
                 # IAM denials name the role, so keep them out of the response.
-                return error_response(502, "The model is not available.")
-        return error_response(500, "Failed to generate the answer.")
+                return error_response(
+                    502, "The model is not available.", "model_unavailable"
+                )
+        return error_response(
+            500, "Failed to generate the answer.", "generation_failed"
+        )
 
     except Exception:
         # Unexpected errors may contain resource names and account details.
         logger.exception("Failed to run stream handler")
-        return error_response(500, "Failed to generate the answer.")
+        return error_response(
+            500, "Failed to generate the answer.", "generation_failed"
+        )
 
 
 def handler(event, context):
@@ -408,10 +433,16 @@ def handler(event, context):
 
             logger.info("Number of message chunks: %d", len(message_parts))
             message_parts.sort(key=lambda x: x["MessagePartId"])
+            part_ids = [int(item["MessagePartId"]) for item in message_parts]
+            if part_ids != list(range(1, len(part_ids) + 1)):
+                return _error(400, "Message parts are missing.")
             full_message = "".join(item["MessagePart"] for item in message_parts)
 
-            # Process the concatenated full message
-            chat_input = ChatInput(**json.loads(full_message))
+            # JSON and pydantic validation errors are both ValueErrors.
+            try:
+                chat_input = ChatInput(**json.loads(full_message))
+            except (ValueError, TypeError):
+                return _error(400, "Invalid message.")
             return _process_with_sender(event, context, connection_id, user, chat_input)
 
         else:

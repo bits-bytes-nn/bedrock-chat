@@ -1,34 +1,17 @@
-import logging
+import functools
 
+from app.routes.schemas.bot_kb import type_kb_resource_type
 from app.utils import get_bedrock_agent_client
-from app.repositories.models.custom_bot_kb import (
-    BedrockAgentGetKnowledgeBaseResponse,
-    KnowledgeBase,
-    KnowledgeBaseConfiguration,
-)
-
-logger = logging.getLogger(__name__)
 
 
-def get_knowledge_base_info(
-    knowledge_base_id: str | None,
-) -> BedrockAgentGetKnowledgeBaseResponse:
-    client = get_bedrock_agent_client()
-    try:
-        response = client.get_knowledge_base(knowledgeBaseId=knowledge_base_id)
-        return BedrockAgentGetKnowledgeBaseResponse(
-            knowledge_base=KnowledgeBase(
-                knowledge_base_configuration=KnowledgeBaseConfiguration(
-                    type=response.get("knowledgeBase", {})
-                    .get("knowledgeBaseConfiguration", {})
-                    .get("type", "VECTOR")
-                )
-            )
-        )
-    except Exception as e:
-        logger.error(f"Failed to get knowledge base info: {e}")
-        return BedrockAgentGetKnowledgeBaseResponse(
-            knowledge_base=KnowledgeBase(
-                knowledge_base_configuration=KnowledgeBaseConfiguration(type="VECTOR")
-            )
-        )
+@functools.cache
+def get_knowledge_base_type(knowledge_base_id: str) -> type_kb_resource_type:
+    """Return the type of the knowledge base, which never changes after creation.
+
+    Raises:
+        botocore.exceptions.ClientError: If the knowledge base cannot be read.
+    """
+    response = get_bedrock_agent_client().get_knowledge_base(
+        knowledgeBaseId=knowledge_base_id
+    )
+    return response["knowledgeBase"]["knowledgeBaseConfiguration"]["type"]

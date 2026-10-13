@@ -83,6 +83,7 @@ from app.utils import (
     compose_upload_temp_s3_prefix,
     delete_file_from_s3,
     delete_files_with_prefix_from_s3,
+    UPLOAD_URL_EXPIRATION_SECONDS,
     generate_presigned_url,
     move_file_in_s3,
     start_embedding_state_machine,
@@ -251,6 +252,12 @@ def modify_owned_bot(
     if not bot.is_editable_by_user(user):
         raise PermissionError(
             f"User {user.id} is not authorized to modify bot {bot_id}"
+        )
+    # Saving would overwrite the sync status of the running sync, which then no
+    # longer protects the bot from deletion while its stack is being built.
+    if bot.sync_status in ("QUEUED", "RUNNING") and not user.is_admin():
+        raise ResourceConflictError(
+            "The knowledge base is being synchronized. Edit the bot after it finishes."
         )
     validate_external_resource_references(user, modify_input, current_bot=bot)
 
@@ -756,7 +763,7 @@ def issue_presigned_url(
         DOCUMENT_BUCKET,
         _knowledge_upload_key(user, bot_id, filename),
         content_type=content_type,
-        expiration=3600,
+        expiration=UPLOAD_URL_EXPIRATION_SECONDS,
         client_method="put_object",
     )
 

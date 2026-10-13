@@ -214,30 +214,6 @@ test = ["anyio[trio]", "blockbuster (>=1.5.23)", "coverage[toml] (>=7)", "except
 trio = ["trio (>=0.26.1)"]
 
 [[package]]
-name = "argparse"
-version = "1.4.0"
-description = "Python command-line parsing library"
-optional = false
-python-versions = "*"
-groups = ["main"]
-files = [
-    {file = "argparse-1.4.0-py2.py3-none-any.whl", hash = "sha256:c31647edb69fd3d465a847ea3157d37bed1f95f19760b11a47aa91c04b666314"},
-    {file = "argparse-1.4.0.tar.gz", hash = "sha256:62b089a55be1d8949cd2bc7e0df0bddb9e028faefc8c32038cc84862aefdd6e4"},
-]
-
-[[package]]
-name = "asn1crypto"
-version = "1.5.1"
-description = "Fast ASN.1 parser and serializer with definitions for private keys, public keys, certificates, CRL, OCSP, CMS, PKCS#3, PKCS#7, PKCS#8, PKCS#12, PKCS#5, X.509 and TSP"
-optional = false
-python-versions = "*"
-groups = ["main"]
-files = [
-    {file = "asn1crypto-1.5.1-py2.py3-none-any.whl", hash = "sha256:db4e40728b728508912cbb3d44f19ce188f218e9eba635821bb4b68564f8fd67"},
-    {file = "asn1crypto-1.5.1.tar.gz", hash = "sha256:13ae38502be632115abf8a24cbe5f4da52e3b5231990aff31123c805306ccb9c"},
-]
-
-[[package]]
 name = "attrs"
 version = "25.3.0"
 description = "Classes Without Boilerplate"
@@ -1509,21 +1485,6 @@ files = [
 referencing = ">=0.31.0"
 
 [[package]]
-name = "langdetect"
-version = "1.0.9"
-description = "Language detection library ported from Google's language-detection."
-optional = false
-python-versions = "*"
-groups = ["main"]
-files = [
-    {file = "langdetect-1.0.9-py2-none-any.whl", hash = "sha256:7cbc0746252f19e76f77c0b1690aadf01963be835ef0cd4b56dddf2a8f1dfc2a"},
-    {file = "langdetect-1.0.9.tar.gz", hash = "sha256:cbc1fef89f8d062739774bd51eda3da3274006b3661d199c2655f6b3f6d605a0"},
-]
-
-[package.dependencies]
-six = "*"
-
-[[package]]
 name = "lxml"
 version = "6.1.0"
 description = "Powerful and Pythonic XML processing library combining libxml2/libxslt with the ElementTree API."
@@ -2309,22 +2270,6 @@ hyperscan = ["hyperscan (>=0.7)"]
 optional = ["typing-extensions (>=4)"]
 re2 = ["google-re2 (>=1.1)"]
 tests = ["pytest (>=9)", "typing-extensions (>=4.15)"]
-
-[[package]]
-name = "pg8000"
-version = "1.31.5"
-description = "PostgreSQL interface library"
-optional = false
-python-versions = ">=3.9"
-groups = ["main"]
-files = [
-    {file = "pg8000-1.31.5-py3-none-any.whl", hash = "sha256:0af2c1926b153307639868d2ee5cef6cd3a7d07448e12736989b10e1d491e201"},
-    {file = "pg8000-1.31.5.tar.gz", hash = "sha256:46ebb03be52b7a77c03c725c79da2ca281d6e8f59577ca66b17c9009618cae78"},
-]
-
-[package.dependencies]
-python-dateutil = ">=2.8.2"
-scramp = ">=1.4.5"
 
 [[package]]
 name = "pillow"
@@ -3146,18 +3091,6 @@ requests = "*"
 httpx = ["httpx"]
 
 [[package]]
-name = "reretry"
-version = "0.11.8"
-description = "An easy to use, but functional decorator for retrying on exceptions."
-optional = false
-python-versions = ">=3.7"
-groups = ["main"]
-files = [
-    {file = "reretry-0.11.8-py2.py3-none-any.whl", hash = "sha256:5ec1084cd9644271ee386d34cd5dd24bdb3e91d55961b076d1a31d585ad68a79"},
-    {file = "reretry-0.11.8.tar.gz", hash = "sha256:f2791fcebe512ea2f1d153a2874778523a8064860b591cd90afc21a8bed432e3"},
-]
-
-[[package]]
 name = "responses"
 version = "0.26.3"
 description = "A utility library for mocking out the `requests` Python library."
@@ -3350,21 +3283,6 @@ botocore = ">=1.37.4,<2.0a.0"
 crt = ["botocore[crt] (>=1.37.4,<2.0a.0)"]
 
 [[package]]
-name = "scramp"
-version = "1.4.5"
-description = "An implementation of the SCRAM protocol."
-optional = false
-python-versions = ">=3.8"
-groups = ["main"]
-files = [
-    {file = "scramp-1.4.5-py3-none-any.whl", hash = "sha256:50e37c464fc67f37994e35bee4151e3d8f9320e9c204fca83a5d313c121bbbe7"},
-    {file = "scramp-1.4.5.tar.gz", hash = "sha256:be3fbe774ca577a7a658117dca014e5d254d158cecae3dd60332dfe33ce6d78e"},
-]
-
-[package.dependencies]
-asn1crypto = ">=1.5.1"
-
-[[package]]
 name = "six"
 version = "1.17.0"
 description = "Python 2 and 3 compatibility utilities"
@@ -3480,22 +3398,6 @@ web-fetch = ["beautifulsoup4 (>=4.9.0,<5.0.0)", "markdownify (>=1.1.0,<2.0.0)"]
 writer = ["writer-sdk (>=2.2.0,<4.0.0)"]
 
 [[package]]
-name = "tenacity"
-version = "8.3.0"
-description = "Retry code until it succeeds"
-optional = false
-python-versions = ">=3.8"
-groups = ["main"]
-files = [
-    {file = "tenacity-8.3.0-py3-none-any.whl", hash = "sha256:3649f6443dbc0d9b01b9d8020a9c4ec7a1ff5f6f3c6c8a036ef371f573fe9185"},
-    {file = "tenacity-8.3.0.tar.gz", hash = "sha256:953d4e6ad24357bceffbc9707bc74349aca9d245f68eb65419cf0c249a1949a2"},
-]
-
-[package.extras]
-doc = ["reno", "sphinx"]
-test = ["pytest", "tornado (>=4.5)", "typeguard"]
-
-[[package]]
 name = "types-awscrt"
 version = "0.25.7"
 description = "Type annotations and code completion for awscrt"
@@ -3509,30 +3411,18 @@ files = [
 
 [[package]]
 name = "types-requests"
-version = "2.32.0.20250328"
+version = "2.33.0.20261006"
 description = "Typing stubs for requests"
 optional = false
-python-versions = ">=3.9"
-groups = ["main"]
+python-versions = ">=3.10"
+groups = ["dev"]
 files = [
-    {file = "types_requests-2.32.0.20250328-py3-none-any.whl", hash = "sha256:72ff80f84b15eb3aa7a8e2625fffb6a93f2ad5a0c20215fc1dcfa61117bcb2a2"},
-    {file = "types_requests-2.32.0.20250328.tar.gz", hash = "sha256:c9e67228ea103bd811c96984fac36ed2ae8da87a36a633964a21f199d60baf32"},
+    {file = "types_requests-2.33.0.20261006-py3-none-any.whl", hash = "sha256:26cc8146505cab33cda9737991929e4144c559bebe05078ccc6998f27c4ca2c1"},
+    {file = "types_requests-2.33.0.20261006.tar.gz", hash = "sha256:0652999e9306aea345f40732d58fa49a7f6cade6a0d74d92119c5c8d82eddaf0"},
 ]
 
 [package.dependencies]
 urllib3 = ">=2"
-
-[[package]]
-name = "types-retry"
-version = "0.9.9.20250322"
-description = "Typing stubs for retry"
-optional = false
-python-versions = ">=3.9"
-groups = ["main"]
-files = [
-    {file = "types_retry-0.9.9.20250322-py3-none-any.whl", hash = "sha256:77cf8dbbe1640c6c471eafd5b9a4ce206f30b7faa6dac41a16cbcb18b1cc8ec2"},
-    {file = "types_retry-0.9.9.20250322.tar.gz", hash = "sha256:2eaa6f4b832c187121056988bbe6d2d0b6f4eb03631fdc9752e2ac2802f7b726"},
-]
 
 [[package]]
 name = "types-s3transfer"
@@ -4008,4 +3898,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.13.0"
-content-hash = "185eb3239d4ee90acba2728aaf564abbf7d52ae8fedf7a2f84a28c82652ea744"
+content-hash = "c7e802c2d7f190fef843767286277aeb2b0182a06c7c7ae6eef192ebbd99906c"

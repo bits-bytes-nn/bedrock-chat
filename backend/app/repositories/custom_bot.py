@@ -3,6 +3,7 @@ import json
 import logging
 import random
 import time
+from typing import Literal
 from decimal import Decimal as decimal
 
 from app.repositories.common import (
@@ -285,58 +286,44 @@ def update_bot_stats(owner_user_id: str, bot_id: str, increment: int):
             raise e
 
 
+def _update_star_status(
+    user_id: str, bot_id: str, item_type: Literal["bot", "alias"], starred: bool
+):
+    """Star or unstar a bot or an alias.
+
+    Raises:
+        RecordNotFoundError: If the item does not exist.
+    """
+    table = get_bot_table_client()
+    update: dict = (
+        {
+            "UpdateExpression": "SET IsStarred = :val",
+            "ExpressionAttributeValues": {":val": "TRUE"},
+        }
+        if starred
+        else {"UpdateExpression": "REMOVE IsStarred"}
+    )
+    try:
+        return table.update_item(
+            Key={"PK": user_id, "SK": compose_sk(bot_id, item_type)},
+            ConditionExpression="attribute_exists(PK) AND attribute_exists(SK)",
+            ReturnValues="ALL_NEW",
+            **update,
+        )
+    except ClientError as e:
+        if e.response["Error"]["Code"] == "ConditionalCheckFailedException":
+            raise RecordNotFoundError(f"No {item_type} found with id: {bot_id}")
+        raise
+
+
 def update_bot_star_status(user_id: str, bot_id: str, starred: bool):
     """Update starred status for bot."""
-    table = get_bot_table_client()
-    logger.info(f"Updating starred status for bot: {bot_id}")
-
-    key = {"PK": user_id, "SK": compose_sk(bot_id, "bot")}
-
-    if starred:
-        response = table.update_item(
-            Key=key,
-            UpdateExpression="SET IsStarred = :val",
-            ExpressionAttributeValues={":val": "TRUE"},
-            ConditionExpression="attribute_exists(PK) AND attribute_exists(SK)",
-            ReturnValues="ALL_NEW",
-        )
-    else:
-        response = table.update_item(
-            Key=key,
-            UpdateExpression="REMOVE IsStarred",
-            ConditionExpression="attribute_exists(PK) AND attribute_exists(SK)",
-            ReturnValues="ALL_NEW",
-        )
-
-    logger.info(f"Updated starred status for bot: {bot_id} successfully")
-    return response
+    return _update_star_status(user_id, bot_id, "bot", starred)
 
 
 def update_alias_star_status(user_id: str, original_bot_id: str, starred: bool):
     """Update starred status for alias."""
-    table = get_bot_table_client()
-    logger.info(f"Updating starred status for alias: {original_bot_id}")
-
-    key = {"PK": user_id, "SK": compose_sk(original_bot_id, "alias")}
-
-    if starred:
-        response = table.update_item(
-            Key=key,
-            UpdateExpression="SET IsStarred = :val",
-            ExpressionAttributeValues={":val": "TRUE"},
-            ConditionExpression="attribute_exists(PK) AND attribute_exists(SK)",
-            ReturnValues="ALL_NEW",
-        )
-    else:
-        response = table.update_item(
-            Key=key,
-            UpdateExpression="REMOVE IsStarred",
-            ConditionExpression="attribute_exists(PK) AND attribute_exists(SK)",
-            ReturnValues="ALL_NEW",
-        )
-
-    logger.info(f"Updated starred status for alias: {original_bot_id} successfully")
-    return response
+    return _update_star_status(user_id, original_bot_id, "alias", starred)
 
 
 def update_knowledge_base_id(
@@ -765,14 +752,14 @@ def update_bot_publication(
     owner_user_id: str, bot_id: str, published_api_id: str, build_id: str
 ):
     table = get_bot_table_client()
-    current_time = get_current_time()  # epoch time (int) を取得
+    current_time = get_current_time()
     logger.info(f"Updating bot publication: {bot_id}")
     try:
         response = table.update_item(
             Key={"PK": owner_user_id, "SK": compose_sk(bot_id, "bot")},
             UpdateExpression="SET ApiPublishmentStackName = :val, ApiPublishedDatetime = :time, ApiPublishCodeBuildId = :build_id",
             # NOTE: Stack naming rule: ApiPublishmentStack{published_api_id}.
-            # See bedrock-chat-stack.ts > `ApiPublishmentStack`
+            # See cdk/bin/api-publish.ts > `ApiPublishmentStack`
             ExpressionAttributeValues={
                 ":val": f"ApiPublishmentStack{published_api_id}",
                 ":time": current_time,

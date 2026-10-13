@@ -570,6 +570,29 @@ def _merge_children(base: list[str], mine: list[str], theirs: list[str]) -> list
     return [child for child in theirs if child not in removed] + added
 
 
+def _repair_tree(message_map: dict[str, MessageModel]) -> None:
+    """Make parents and children agree after a merge.
+
+    A removal by one writer wins over children that the other added below it, so
+    those are removed too. A message that one writer edited after the other removed
+    it is linked from its parent again.
+    """
+    orphaned = True
+    while orphaned:
+        orphaned = False
+        for message_id, message in list(message_map.items()):
+            if message.parent is not None and message.parent not in message_map:
+                del message_map[message_id]
+                orphaned = True
+    for message_id, message in message_map.items():
+        message.children = [c for c in message.children if c in message_map]
+    for message_id, message in message_map.items():
+        if message.parent is not None:
+            siblings = message_map[message.parent].children
+            if message_id not in siblings:
+                siblings.append(message_id)
+
+
 def merge_conversations(
     base: ConversationModel | None,
     mine: ConversationModel,
@@ -609,6 +632,8 @@ def merge_conversations(
             elif getattr(message, field) != getattr(base_message, field):
                 setattr(target, field, getattr(message, field))
 
+    _repair_tree(message_map)
+
     if base is None:
         merged.total_price = theirs.total_price + mine.total_price
     else:
@@ -624,7 +649,6 @@ class ConversationMeta(BaseModel):
     id: str
     title: str
     create_time: float
-    model: str
     bot_id: str | None
 
 

@@ -48,3 +48,29 @@ class TestHandleCheck(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestHandleIngest(unittest.TestCase):
+    def start(self, execution_id: str) -> dict:
+        with patch.object(synchronize_data_source, "bedrock_agent") as agent:
+            agent.start_ingestion_job.return_value = {
+                "ingestionJob": {"ingestionJobId": "job"}
+            }
+            synchronize_data_source.handle_ingest(
+                {
+                    "KnowledgeBaseId": "kb",
+                    "DataSourceId": "ds",
+                    "FilesDiffs": None,
+                    "ExecutionId": execution_id,
+                }
+            )
+        return agent.start_ingestion_job.call_args.kwargs
+
+    def test_retries_of_a_task_reuse_the_job(self):
+        first = self.start("arn:execution:1")
+        self.assertEqual(
+            first["clientToken"], self.start("arn:execution:1")["clientToken"]
+        )
+        self.assertNotEqual(
+            first["clientToken"], self.start("arn:execution:2")["clientToken"]
+        )

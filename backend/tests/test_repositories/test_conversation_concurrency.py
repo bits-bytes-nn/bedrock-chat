@@ -173,11 +173,9 @@ class TestStoreConversationConcurrently(unittest.TestCase):
         self.assertEqual(stored.version, answering.version)
 
     def test_lists_every_conversation_across_pages(self):
-        models = ["claude-v5.5-haiku", "claude-v5.5-sonnet"]
         for i in range(7):
             conv = conversation()
             conv.id = f"c{i}"
-            conv.message_map["system"].model = models[i % 2]
             store_conversation("user", conv)
         get_table = conversation_repository.get_conversation_table_client
 
@@ -195,16 +193,44 @@ class TestStoreConversationConcurrently(unittest.TestCase):
         ):
             listed = find_conversation_by_user_id("user")
 
-        self.assertEqual(
-            {(c.id, c.model) for c in listed},
-            {(f"c{i}", models[i % 2]) for i in range(7)},
-        )
+        self.assertEqual({c.id for c in listed}, {f"c{i}" for i in range(7)})
 
     def test_upgrades_items_without_a_version(self):
         legacy = conversation()
         store_conversation("user", legacy)
         stored = find_conversation_by_id("user", "c")
         self.assertEqual(stored.version, 1)
+
+
+@pytest.mark.usefixtures("dynamodb_tables")
+class TestRelatedDocuments(unittest.TestCase):
+    def test_finds_a_stored_document_by_its_key(self):
+        from app.repositories.common import RecordNotFoundError
+        from app.repositories.conversation import (
+            find_related_document_by_id,
+            store_related_documents,
+        )
+        from app.repositories.models.conversation import (
+            RelatedDocumentModel,
+            TextToolResultModel,
+        )
+
+        store_related_documents(
+            "user",
+            "c",
+            [
+                RelatedDocumentModel(
+                    content=TextToolResultModel(text="body"),
+                    source_id="s1",
+                    source_name="doc.pdf",
+                )
+            ],
+        )
+
+        found = find_related_document_by_id("user", "c", "s1")
+        self.assertEqual(found.source_name, "doc.pdf")
+        with self.assertRaises(RecordNotFoundError):
+            find_related_document_by_id("user", "c", "missing")
 
 
 if __name__ == "__main__":

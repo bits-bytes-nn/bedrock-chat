@@ -61,6 +61,10 @@ def get_current_time():
     return int(datetime.now().timestamp() * 1000)
 
 
+# S3 checks the expiration when a request starts, so long uploads still finish.
+UPLOAD_URL_EXPIRATION_SECONDS = 15 * 60
+
+
 def generate_presigned_url(
     bucket: str,
     key: str,
@@ -125,16 +129,18 @@ def delete_file_from_s3(bucket: str, key: str, ignore_not_exist: bool = False):
     return response
 
 
+def delete_s3_prefix(client, bucket: str, prefix: str):
+    """Delete every object under the prefix, a page of up to 1,000 at a time."""
+    paginator = client.get_paginator("list_objects_v2")
+    for page in paginator.paginate(Bucket=bucket, Prefix=prefix):
+        keys = [{"Key": obj["Key"]} for obj in page.get("Contents", [])]
+        if keys:
+            client.delete_objects(Bucket=bucket, Delete={"Objects": keys})
+
+
 def delete_files_with_prefix_from_s3(bucket: str, prefix: str):
     """Delete all objects with the given prefix from the given bucket."""
-    client = boto3.client("s3", region_name=BEDROCK_REGION)
-    response = client.list_objects_v2(Bucket=bucket, Prefix=prefix)
-
-    if "Contents" not in response:
-        return
-
-    for obj in response["Contents"]:
-        client.delete_object(Bucket=bucket, Key=obj["Key"])
+    delete_s3_prefix(boto3.client("s3", region_name=BEDROCK_REGION), bucket, prefix)
 
 
 def move_file_in_s3(bucket: str, key: str, new_key: str):

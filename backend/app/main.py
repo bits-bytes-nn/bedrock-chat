@@ -2,7 +2,7 @@ import logging
 import os
 from typing import Callable
 
-from app.dependencies import get_current_user
+from app.dependencies import user_from_token
 from app.repositories.common import (
     RecordAccessNotAllowedError,
     RecordNotFoundError,
@@ -22,7 +22,6 @@ from app.utils import is_running_on_lambda
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from fastapi.security import HTTPAuthorizationCredentials
 from pydantic import ValidationError
 from starlette.responses import Response
 from starlette.types import ASGIApp
@@ -92,9 +91,7 @@ def _user_from_authorization(authorization: str) -> User:
     scheme, _, credentials = authorization.partition(" ")
     if scheme.lower() != "bearer" or not credentials:
         raise HTTPException(status_code=403, detail="Could not validate credentials")
-    return get_current_user(
-        HTTPAuthorizationCredentials(scheme="Bearer", credentials=credentials)
-    )
+    return user_from_token(credentials)
 
 
 @app.middleware("http")

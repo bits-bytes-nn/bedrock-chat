@@ -19,8 +19,8 @@ logger = logging.getLogger(__name__)
 
 
 def get_bedrock_model_config(
-    model_name: type_model_name = "claude-v3.5-sonnet",
-    instructions: list[str] = [],
+    model_name: type_model_name,
+    instructions: list[str],
     generation_params: GenerationParamsModel | None = None,
     guardrail: BedrockGuardrailsModel | None = None,
     enable_reasoning: bool = False,

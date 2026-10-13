@@ -1,3 +1,4 @@
+import hashlib
 import os
 from itertools import islice
 from typing import TypedDict
@@ -166,9 +167,16 @@ def handle_ingest(event):
 
     else:
         # Otherwise, start the entire synchronization job.
+        # Without a token, a retry of this task fails with a ConflictException
+        # because the job it started is still running.
+        token = {}
+        if event.get("ExecutionId"):
+            seed = f"{event['ExecutionId']}:{knowledge_base_id}:{data_source_id}"
+            token["clientToken"] = hashlib.sha256(seed.encode()).hexdigest()
         start_job_response = bedrock_agent.start_ingestion_job(
             knowledgeBaseId=knowledge_base_id,
             dataSourceId=data_source_id,
+            **token,
         )
         ingestion_job_id = start_job_response["ingestionJob"]["ingestionJobId"]
 

@@ -2,6 +2,7 @@ import logging
 
 import boto3
 from app.repositories.common import RecordNotFoundError
+from botocore.exceptions import ClientError
 from app.repositories.models.api_publication import (
     ApiKeyModel,
     ApiUsagePlanModel,
@@ -21,7 +22,13 @@ def find_usage_plan_by_id(usage_plan_id: str) -> ApiUsagePlanModel:
     except client.exceptions.NotFoundException:
         raise RecordNotFoundError("The usage plan does not exist.")
 
-    key_response = client.get_usage_plan_keys(usagePlanId=usage_plan_id, limit=100)
+    key_ids = [
+        key["id"]
+        for page in client.get_paginator("get_usage_plan_keys").paginate(
+            usagePlanId=usage_plan_id
+        )
+        for key in page["items"]
+    ]
 
     return ApiUsagePlanModel(
         id=plan_response["id"],
@@ -35,7 +42,7 @@ def find_usage_plan_by_id(usage_plan_id: str) -> ApiUsagePlanModel:
             rate_limit=plan_response.get("throttle", {}).get("rateLimit"),
             burst_limit=plan_response.get("throttle", {}).get("burstLimit"),
         ),
-        key_ids=[key["id"] for key in key_response["items"]],
+        key_ids=key_ids,
     )
 
 
@@ -167,3 +174,28 @@ def find_build_status_by_build_id(build_id: str) -> str:
     if len(response["builds"]) == 0:
         raise RecordNotFoundError("Build not found.")
     return response["builds"][0]["buildStatus"]
+
+
+def delete_published_api(bot_id: str) -> None:
+    """Delete the API keys and the stack of a published API. Safe to repeat."""
+    try:
+        stack = find_stack_by_bot_id(bot_id)
+    except RecordNotFoundError:
+        logger.info("Bot %s has no published API stack.", bot_id)
+        return
+
+    # The keys are not part of the stack, so delete them first.
+    if stack.api_usage_plan_id:
+        try:
+            usage_plan = find_usage_plan_by_id(stack.api_usage_plan_id)
+        except RecordNotFoundError:
+            # Deleted by an earlier attempt.
+            usage_plan = None
+        for key_id in usage_plan.key_ids if usage_plan else []:
+            try:
+                delete_api_key(key_id)
+            except ClientError as e:
+                if e.response["Error"]["Code"] != "NotFoundException":
+                    raise
+
+    delete_stack_by_bot_id(bot_id)

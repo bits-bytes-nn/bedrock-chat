@@ -5,12 +5,8 @@ from typing import TypedDict
 from app.repositories.common import compose_sk, get_bot_table_client
 from app.routes.schemas.bot import type_sync_status
 from botocore.exceptions import ClientError
-from reretry import retry
 
 logger = logging.getLogger(__name__)
-
-RETRIES_TO_UPDATE_SYNC_STATUS = 4
-RETRY_DELAY_TO_UPDATE_SYNC_STATUS = 2
 
 
 class SyncStatus(TypedDict):
@@ -21,7 +17,6 @@ class SyncStatus(TypedDict):
     last_exec_id: str
 
 
-@retry(tries=RETRIES_TO_UPDATE_SYNC_STATUS, delay=RETRY_DELAY_TO_UPDATE_SYNC_STATUS)
 def update_sync_status(sync_status: SyncStatus):
     table = get_bot_table_client()
     try:

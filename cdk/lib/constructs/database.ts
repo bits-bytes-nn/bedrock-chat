@@ -36,12 +36,6 @@ export class Database extends Construct {
       pointInTimeRecovery: props?.pointInTimeRecovery,
       encryption: TableEncryption.AWS_MANAGED,
     });
-    conversationTable.addGlobalSecondaryIndex({
-      // Used to fetch conversation or bot by id
-      indexName: "SKIndex",
-      partitionKey: { name: "SK", type: AttributeType.STRING },
-    });
-
     // Bot Table
     const botTable = new Table(this, "BotTableV3", {
       // PK: UserId
