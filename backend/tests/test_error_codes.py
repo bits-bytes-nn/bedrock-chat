@@ -5,18 +5,12 @@ import re
 from pathlib import Path
 from typing import get_args
 
-import pytest
-
 os.environ.setdefault("WEBSOCKET_SESSION_TABLE_NAME", "test-websocket-session")
 
 from app import websocket  # noqa: E402
 
 BACKEND = Path(__file__).resolve().parents[1]
 FRONTEND = BACKEND.parent / "frontend" / "src"
-
-pytestmark = pytest.mark.xfail(
-    strict=False, reason="frontend keys land in fix/r10-frontend"
-)
 
 
 def test_websocket_codes_match_the_frontend():
