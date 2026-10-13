@@ -9,6 +9,7 @@ import {
 } from "../lib/utils/bedrock-knowledge-base-args";
 import { BedrockCustomBotStack } from "../lib/bedrock-custom-bot-stack";
 import { BedrockRegionResourcesStack } from "../lib/bedrock-region-resources";
+import { ApiPublishmentStack } from "../lib/api-publishment-stack";
 import { Analyzer } from "@cdklabs/generative-ai-cdk-constructs/lib/cdk-lib/opensearch-vectorindex";
 import { Match } from "aws-cdk-lib/assertions";
 
@@ -297,7 +298,12 @@ describe("Bedrock Chat Stack Test", () => {
     expect(actions).not.toContain("aoss:ListCollections");
 
     // Alarms and API throttling.
-    template.resourceCountIs("AWS::CloudWatch::Alarm", 6);
+    template.resourceCountIs("AWS::CloudWatch::Alarm", 7);
+    template.hasResourceProperties("AWS::CloudWatch::Alarm", {
+      Namespace: "AWS/Lambda",
+      MetricName: "Errors",
+      Statistic: "Sum",
+    });
     // Handlers answer errors without failing, so chat errors and failed bot syncs
     // are counted from their logs.
     template.resourceCountIs("AWS::Logs::MetricFilter", 2);
@@ -780,5 +786,39 @@ describe("Bedrock Knowledge Base Stack", () => {
       }`,
     });
     expect(template).toBeDefined();
+  });
+});
+
+describe("Api Publishment Stack", () => {
+  test("queues deny requests without TLS", () => {
+    const app = new cdk.App(testAppProps);
+    const stack = new ApiPublishmentStack(app, "ApiPublishmentStackTest", {
+      env: { region: "us-east-1" },
+      bedrockRegion: "us-east-1",
+      enableBedrockGlobalInference: false,
+      enableBedrockCrossRegionInference: false,
+      conversationTableName: "conversation-table",
+      botTableName: "bot-table",
+      tableAccessRoleArn: "arn:aws:iam::123456789012:role/table-access",
+      webAclArn: "arn:aws:wafv2:us-east-1:123456789012:regional/webacl/test/id",
+      largeMessageBucketName: "large-message-bucket",
+      modelEnvironment: {},
+      usagePlan: {},
+    });
+    const template = Template.fromStack(stack);
+
+    template.resourceCountIs("AWS::SQS::Queue", 2);
+    const queuePolicies = Object.values(
+      template.findResources("AWS::SQS::QueuePolicy")
+    );
+    expect(queuePolicies).toHaveLength(2);
+    for (const policy of queuePolicies as any[]) {
+      expect(policy.Properties.PolicyDocument.Statement).toContainEqual(
+        expect.objectContaining({
+          Effect: "Deny",
+          Condition: { Bool: { "aws:SecureTransport": "false" } },
+        })
+      );
+    }
   });
 });

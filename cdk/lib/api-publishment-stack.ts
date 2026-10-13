@@ -43,9 +43,11 @@ export class ApiPublishmentStack extends Stack {
 
     const chatQueueDLQ = new sqs.Queue(this, "ChatQueueDlq", {
       retentionPeriod: cdk.Duration.days(14),
+      enforceSSL: true,
     });
     const chatQueue = new sqs.Queue(this, "ChatQueue", {
       visibilityTimeout: cdk.Duration.minutes(30),
+      enforceSSL: true,
       deadLetterQueue: {
         maxReceiveCount: 2, // one retry
         queue: chatQueueDLQ,

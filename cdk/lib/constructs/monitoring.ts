@@ -71,6 +71,14 @@ export class Monitoring extends Construct {
         `Generating chat answers failed at least ${errorThreshold} times in ${minutes} minutes.`,
       ],
       [
+        "WebSocketHandlerErrors",
+        // Timeouts, out-of-memory and init failures end the invocation before the
+        // handler can log, so the log-based count above misses them.
+        props.webSocketHandler.metricErrors({ period, statistic: "Sum" }),
+        1,
+        "The chat handler Lambda failed (for example a timeout, out of memory or an init error).",
+      ],
+      [
         "WebSocketHandlerThrottles",
         props.webSocketHandler.metricThrottles({ period }),
         1,
