@@ -208,7 +208,13 @@ Frontend URL: https://xxxxxxxxx.cloudfront.net
 
 ![](./docs/imgs/signin.png)
 
-The sign-up screen will appear as shown above, where you can register your email and log in.
+The sign-in screen will appear as shown above. Self sign-up is off, so create the first user and make them an administrator. The user pool ID is the `AuthUserPoolId...` output of `BedrockChatStack` in the deployment region; Cognito emails a temporary password.
+
+```sh
+aws cognito-idp admin-create-user --user-pool-id <user-pool-id> --username user@example.com \
+  --desired-delivery-mediums EMAIL --user-attributes Name=email,Value=user@example.com Name=email_verified,Value=true
+aws cognito-idp admin-add-user-to-group --user-pool-id <user-pool-id> --username user@example.com --group-name Admin
+```
 
 > [!Important]
 > Self sign-up is disabled by default. If you enable it with `--enable-self-register`, anyone who knows the URL can sign up, so also restrict IP addresses (`--ipv4-ranges`, `--ipv6-ranges`) and email domains (`--allowed-signup-email-domains`).
@@ -428,7 +434,9 @@ npx cdk deploy --all
 
 ### Remove resources
 
-If using cli and CDK, please `npx cdk destroy`. If not, access [CloudFormation](https://console.aws.amazon.com/cloudformation/home) and then delete `BedrockChatStack` and `FrontendWafStack` manually. Please note that `FrontendWafStack` is in `us-east-1` region.
+Delete the resources that the application created at runtime first, because they keep billing and `cdk destroy` does not know about them: delete every bot with a knowledge base and every published API in the app, or delete the stacks in [CloudFormation](https://console.aws.amazon.com/cloudformation/home): `BrChatKbStack*` and `BrChatSharedKbStack` in the Bedrock region, and `ApiPublishmentStack*` in the deployment region.
+
+Then run `npx cdk destroy --all` in `cdk`. Without the CDK, delete `BedrockChatStack`, `BedrockRegionResourcesStack` and `FrontendWafStack` in CloudFormation. Please note that `FrontendWafStack` is in `us-east-1` region.
 
 The conversation and bot tables, the Cognito user pool, the document bucket and the large message bucket are retained so that user data is not lost. To delete them as well, turn off deletion protection on the tables and the user pool, empty the buckets, and delete them in the console or with the AWS CLI.
 
@@ -440,7 +448,7 @@ This asset automatically detects the language using [i18next-browser-languageDet
 
 ### Disable self sign up
 
-Self sign up is disabled by default, so administrators create users in the Cognito user pool and the sign-in page has no sign-up tab. To let anyone who can reach the URL create an account, set `selfSignUpEnabled` to `true` in [cdk.json](./cdk/cdk.json). If you configure [external identity provider](#external-identity-provider), the value is ignored and self sign up stays disabled.
+Self sign up is disabled by default, so administrators create users in the Cognito user pool and the sign-in page has no sign-up tab. To let anyone who can reach the URL create an account, set `selfSignUpEnabled` to `true` in [cdk.json](./cdk/cdk.json). If you configure [external identity provider](#external-identity-provider), the value is ignored, but anyone the provider accepts can sign in; see that section.
 
 ### Restrict Domains for Sign-Up Email Addresses
 
@@ -453,6 +461,9 @@ By default, this sample does not restrict the domains for sign-up email addresse
 ### External Identity Provider
 
 This sample supports external identity provider. Currently we support [Google](./docs/idp/SET_UP_GOOGLE.md) and [custom OIDC provider](./docs/idp/SET_UP_CUSTOM_OIDC.md).
+
+> [!Important]
+> The provider decides who can sign in: every account it authenticates gets a user, and with the default `autoJoinUserGroups` that user can create bots. Restrict the provider (for example, an internal Google OAuth app) or set [`allowedSignUpEmailDomains`](#restrict-domains-for-sign-up-email-addresses).
 
 ### Optional Frontend WAF
 
@@ -582,6 +593,9 @@ bedrockChatParams.set("default", {
   apiThrottleBurstLimit: 1000,
 });
 ```
+
+> [!Important]
+> Defining the `default` environment in `parameter.ts` replaces every setting in `cdk.json`, including IP restrictions. To change a single setting, add it to `cdk.json` or pass it on the command line instead, for example `npx cdk deploy --all -c alarmEmail=ops@example.com`, or `./bin.sh --cdk-json-override '{"context":{"alarmEmail":"ops@example.com"}}'`.
 
 ### Lambda SnapStart
 

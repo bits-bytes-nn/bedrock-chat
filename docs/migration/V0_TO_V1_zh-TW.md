@@ -28,7 +28,7 @@ git pull origin v1
 
 - 如果您想要使用 DMS 還原項目，切記要停用密碼輪換並記下存取資料庫的密碼。如果使用遷移腳本([migrate_v0_v1.py](./migrate_v0_v1.py))進行還原，則不需要記下密碼。
 - 移除所有[已發布的 API](../PUBLISH_API_zh-TW.md)，以便 CloudFormation 可以移除現有的 Aurora 叢集。
-- 執行 [npx cdk deploy](../README.md#deploy-using-cdk) 會觸發 Aurora 叢集替換並刪除所有向量項目。
+- 執行 [npx cdk deploy](../../README.md#deploy-using-cdk) 會觸發 Aurora 叢集替換並刪除所有向量項目。
 - 依照[資料庫遷移指南](./DATABASE_MIGRATION_zh-TW.md)還原向量項目。
 - 驗證使用者是否可以使用具有知識（例如 RAG 機器人）的現有機器人。
 

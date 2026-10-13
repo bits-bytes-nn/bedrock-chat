@@ -11,7 +11,7 @@
 
 ## 遷移步驟
 
-- 在使用 Aurora 替換完成 [npx cdk deploy](../README.md#deploy-using-cdk) 後，開啟 [migrate_v0_v1.py](./migrate_v0_v1.py) 腳本並更新以下變數為適當的值。這些值可以在 `CloudFormation` > `BedrockChatStack` > `Outputs` 分頁中找到。
+- 在使用 Aurora 替換完成 [npx cdk deploy](../../README.md#deploy-using-cdk) 後，開啟 [migrate_v0_v1.py](./migrate_v0_v1.py) 腳本並更新以下變數為適當的值。這些值可以在 `CloudFormation` > `BedrockChatStack` > `Outputs` 分頁中找到。
 
 ```py
 # 在 AWS Management Console 中開啟 CloudFormation 堆疊並從 Outputs 分頁複製這些值。

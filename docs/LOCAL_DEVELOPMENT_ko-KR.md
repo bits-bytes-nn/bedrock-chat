@@ -2,7 +2,7 @@
 
 ## 백엔드 개발
 
-[backend/README](../backend/README_ko-KR.md)를 참조하세요.
+[backend/README](../backend/README.md)를 참조하세요.
 
 ## 프론트엔드 개발
 
@@ -37,7 +37,7 @@ pip install poetry
 poetry install
 ```
 
-자세한 내용은 [backend README](../backend/README_ko-KR.md)를 확인해 주세요.
+자세한 내용은 [backend README](../backend/README.md)를 확인해 주세요.
 
 ### pre-commit 훅 생성하기
 

@@ -28,7 +28,7 @@ git pull origin v1
 
 - Jeśli chcesz przywrócić elementy za pomocą DMS, NIE ZAPOMNIJ wyłączyć rotacji haseł i zanotować hasło dostępu do bazy danych. Jeśli przywracasz przy użyciu skryptu migracji ([migrate_v0_v1.py](./migrate_v0_v1.py)), nie musisz notować hasła.
 - Usuń wszystkie [opublikowane API](../PUBLISH_API_pl-PL.md), aby CloudFormation mógł usunąć istniejący klaster Aurora.
-- Uruchomienie [npx cdk deploy](../README.md#deploy-using-cdk) spowoduje wymianę klastra Aurora i USUNIE WSZYSTKIE ELEMENTY WEKTOROWE.
+- Uruchomienie [npx cdk deploy](../../README.md#deploy-using-cdk) spowoduje wymianę klastra Aurora i USUNIE WSZYSTKIE ELEMENTY WEKTOROWE.
 - Postępuj zgodnie z [Przewodnikiem Migracji Bazy Danych](./DATABASE_MIGRATION_pl-PL.md), aby przywrócić elementy wektorowe.
 - Sprawdź, czy użytkownik może korzystać z istniejących botów posiadających wiedzę, np. botów RAG.
 

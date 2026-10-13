@@ -11,7 +11,7 @@ Proces migracji obejmuje skanowanie wszystkich botów i uruchamianie zadań osad
 
 ## Kroki migracji
 
-- Po wykonaniu [npx cdk deploy](../README.md#deploy-using-cdk) z wymianą Aurora, otwórz skrypt [migrate_v0_v1.py](./migrate_v0_v1.py) i zaktualizuj następujące zmienne odpowiednimi wartościami. Wartości można znaleźć w zakładce `CloudFormation` > `BedrockChatStack` > `Outputs`.
+- Po wykonaniu [npx cdk deploy](../../README.md#deploy-using-cdk) z wymianą Aurora, otwórz skrypt [migrate_v0_v1.py](./migrate_v0_v1.py) i zaktualizuj następujące zmienne odpowiednimi wartościami. Wartości można znaleźć w zakładce `CloudFormation` > `BedrockChatStack` > `Outputs`.
 
 ```py
 # Otwórz stos CloudFormation w konsoli AWS Management Console i skopiuj wartości z zakładki Outputs.

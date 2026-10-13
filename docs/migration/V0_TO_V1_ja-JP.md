@@ -28,7 +28,7 @@ git pull origin v1
 
 - DMSでアイテムを復元する場合は、パスワードローテーションを無効にし、データベースにアクセスするためのパスワードをメモすることを忘れないでください。移行スクリプト([migrate_v0_v1.py](./migrate_v0_v1.py))で復元する場合は、パスワードをメモする必要はありません。
 - CloudFormationが既存のAuroraクラスターを削除できるように、すべての[公開API](../PUBLISH_API_ja-JP.md)を削除します。
-- [npx cdk deploy](../README.md#deploy-using-cdk)を実行すると、Auroraクラスターの置き換えがトリガーされ、すべてのベクターアイテムが削除されます。
+- [npx cdk deploy](../../README.md#deploy-using-cdk)を実行すると、Auroraクラスターの置き換えがトリガーされ、すべてのベクターアイテムが削除されます。
 - [データベース移行ガイド](./DATABASE_MIGRATION_ja-JP.md)に従ってベクターアイテムを復元します。
 - ユーザーが既存のボット（RAGボットなど）の知識を利用できることを確認します。
 

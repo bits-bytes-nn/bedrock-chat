@@ -11,7 +11,7 @@
 
 ## 迁移步骤
 
-- 使用Aurora替换后执行[npx cdk deploy](../README.md#deploy-using-cdk)，打开[migrate_v0_v1.py](./migrate_v0_v1.py)脚本并用适当的值更新以下变量。这些值可以在`CloudFormation` > `BedrockChatStack` > `Outputs`标签页中找到。
+- 使用Aurora替换后执行[npx cdk deploy](../../README.md#deploy-using-cdk)，打开[migrate_v0_v1.py](./migrate_v0_v1.py)脚本并用适当的值更新以下变量。这些值可以在`CloudFormation` > `BedrockChatStack` > `Outputs`标签页中找到。
 
 ```py
 # 在AWS管理控制台中打开CloudFormation堆栈，从Outputs标签页复制值。

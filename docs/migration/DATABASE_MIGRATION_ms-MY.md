@@ -11,7 +11,7 @@ Proses penghijrahan melibatkan pengimbasan semua bot dan melancarkan tugas ECS p
 
 ## Langkah-langkah Penghijrahan
 
-- Selepas [npx cdk deploy](../README.md#deploy-using-cdk) dengan penggantian Aurora, buka skrip [migrate_v0_v1.py](./migrate_v0_v1.py) dan kemaskini pembolehubah berikut dengan nilai yang sesuai. Nilai-nilai tersebut boleh dirujuk pada tab `CloudFormation` > `BedrockChatStack` > `Outputs`.
+- Selepas [npx cdk deploy](../../README.md#deploy-using-cdk) dengan penggantian Aurora, buka skrip [migrate_v0_v1.py](./migrate_v0_v1.py) dan kemaskini pembolehubah berikut dengan nilai yang sesuai. Nilai-nilai tersebut boleh dirujuk pada tab `CloudFormation` > `BedrockChatStack` > `Outputs`.
 
 ```py
 # Open the CloudFormation stack in the AWS Management Console and copy the values from the Outputs tab.

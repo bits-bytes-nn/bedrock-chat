@@ -28,7 +28,7 @@ git pull origin v1
 
 - Wenn Sie Elemente mit DMS wiederherstellen möchten, VERGESSEN SIE NICHT die Passwortrotation zu deaktivieren und notieren Sie sich das Passwort für den Datenbankzugriff. Bei der Wiederherstellung mit dem Migrationsskript ([migrate_v0_v1.py](./migrate_v0_v1.py)) müssen Sie sich das Passwort nicht notieren.
 - Entfernen Sie alle [veröffentlichten APIs](../PUBLISH_API_de-DE.md), damit CloudFormation den bestehenden Aurora-Cluster entfernen kann.
-- Die Ausführung von [npx cdk deploy](../README.md#deploy-using-cdk) löst den Austausch des Aurora-Clusters aus und LÖSCHT ALLE VECTOR-ELEMENTE.
+- Die Ausführung von [npx cdk deploy](../../README.md#deploy-using-cdk) löst den Austausch des Aurora-Clusters aus und LÖSCHT ALLE VECTOR-ELEMENTE.
 - Folgen Sie der [Datenbank-Migrationsanleitung](./DATABASE_MIGRATION_de-DE.md), um Vector-Elemente wiederherzustellen.
 - Überprüfen Sie, ob Benutzer existierende Bots mit Wissen (z.B. RAG-Bots) verwenden können.
 
