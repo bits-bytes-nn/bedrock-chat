@@ -64,7 +64,7 @@ class TestDeleteDuringBuild(unittest.TestCase):
         with patch.object(
             bot_usecase, "find_bot_by_id", return_value=self.bot("SUCCEEDED", "build")
         ), patch.object(
-            bot_usecase, "find_build_status_by_build_id", return_value="IN_PROGRESS"
+            bot_usecase, "is_build_running", return_value=True
         ), patch.object(
             bot_usecase, "delete_bot_by_id"
         ) as delete:
@@ -81,18 +81,39 @@ class TestDeleteDuringBuild(unittest.TestCase):
             bot_usecase.remove_bot_by_id(self.user, "bot")
         delete.assert_called_once()
 
-    def test_allows_deleting_when_the_build_has_expired(self):
+    def test_allows_deleting_when_the_build_has_finished(self):
         with patch.object(
             bot_usecase, "find_bot_by_id", return_value=self.bot("SUCCEEDED", "old")
         ), patch.object(
-            bot_usecase,
-            "find_build_status_by_build_id",
-            side_effect=bot_usecase.RecordNotFoundError("gone"),
+            bot_usecase, "is_build_running", return_value=False
         ), patch.object(
             bot_usecase, "delete_bot_by_id"
         ) as delete:
             bot_usecase.remove_bot_by_id(self.user, "bot")
         delete.assert_called_once()
+
+
+class TestIsBuildRunning(unittest.TestCase):
+    def test_treats_every_terminal_status_as_finished(self):
+        for status in ("SUCCEEDED", "FAILED", "FAULT", "STOPPED", "TIMED_OUT"):
+            with patch.object(
+                api_publication, "find_build_status_by_build_id", return_value=status
+            ):
+                self.assertFalse(api_publication.is_build_running("b"))
+
+    def test_treats_an_expired_build_as_finished(self):
+        with patch.object(
+            api_publication,
+            "find_build_status_by_build_id",
+            side_effect=RecordNotFoundError("gone"),
+        ):
+            self.assertFalse(api_publication.is_build_running("b"))
+
+    def test_reports_a_running_build(self):
+        with patch.object(
+            api_publication, "find_build_status_by_build_id", return_value="IN_PROGRESS"
+        ):
+            self.assertTrue(api_publication.is_build_running("b"))
 
 
 class TestFindPublishedStack(unittest.TestCase):

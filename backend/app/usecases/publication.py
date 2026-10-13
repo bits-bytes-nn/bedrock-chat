@@ -9,6 +9,7 @@ from app.repositories.api_publication import (
     find_build_status_by_build_id,
     find_stack_by_bot_id,
     find_usage_plan_by_id,
+    is_build_running,
 )
 from app.repositories.common import RecordNotFoundError, ResourceConflictError
 from app.repositories.custom_bot import (
@@ -51,8 +52,7 @@ def create_bot_publication(user: User, bot_id: str, bot_publish_input: BotPublis
         raise ValueError(f"Bot {bot_id} is not shared for all users. Cannot publish.")
 
     if bot.published_api_codebuild_id is not None:
-        codebuild_status = find_build_status_by_build_id(bot.published_api_codebuild_id)
-        if codebuild_status not in ["SUCCEEDED", "FAILED"]:
+        if is_build_running(bot.published_api_codebuild_id):
             raise ResourceConflictError(
                 f"Bot {bot_id} publication is already requested (build id: {bot.published_api_codebuild_id}). Please wait until the previous publication is completed."
             )
@@ -176,8 +176,7 @@ def remove_bot_publication(user: User, bot_id: str):
 
     # If Codebuild is not succeeded, just delete bot attribute from DDB and return
     if bot.published_api_codebuild_id is not None:
-        codebuild_status = find_build_status_by_build_id(bot.published_api_codebuild_id)
-        if codebuild_status not in ["SUCCEEDED", "FAILED"]:
+        if is_build_running(bot.published_api_codebuild_id):
             raise ValueError(
                 f"Bot {bot_id} publication is requested (build id: {bot.published_api_codebuild_id}) but not completed. Wait until the publication is completed."
             )

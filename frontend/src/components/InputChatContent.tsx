@@ -33,6 +33,8 @@ import {
   MAX_FILE_SIZE_MB,
   SUPPORTED_FILE_EXTENSIONS,
   MAX_ATTACHED_FILES,
+  MB,
+  convertedFileName,
   isConvertibleFile,
   maxConvertibleFileSizeMb,
 } from '../constants/supportedAttachedFiles';
@@ -79,7 +81,7 @@ const MAX_IMAGE_HEIGHT = 1568;
 // so we limit the size to 6 MB to prevent the error.
 // Need to refactor if want to increase the limit by using s3 presigned URL.
 const MAX_FILE_SIZE_TO_SEND_MB = 6;
-const MAX_FILE_SIZE_TO_SEND_BYTES = MAX_FILE_SIZE_TO_SEND_MB * 1024 * 1024;
+const MAX_FILE_SIZE_TO_SEND_BYTES = MAX_FILE_SIZE_TO_SEND_MB * MB;
 
 const useInputChatContentState = create<{
   base64EncodedImages: string[];
@@ -201,6 +203,22 @@ const InputChatContent = forwardRef<HTMLElement, Props>(
 
     const { open } = useSnackbar();
 
+    // Shows an error when an attachment would exceed the request size limit.
+    const fitsSendLimit = useCallback(
+      (size: number) => {
+        if (getTotalFileSizeToSend() + size <= MAX_FILE_SIZE_TO_SEND_BYTES) {
+          return true;
+        }
+        open(
+          t('error.totalFileSizeToSendExceeded', {
+            maxSize: `${MAX_FILE_SIZE_TO_SEND_MB} MB`,
+          })
+        );
+        return false;
+      },
+      [getTotalFileSizeToSend, open, t]
+    );
+
     const { convertToText } = useAttachmentApi();
     // Attachments that are being converted to text.
     const [convertingFiles, setConvertingFiles] = useState<
@@ -303,16 +321,7 @@ const InputChatContent = forwardRef<HTMLElement, Props>(
 
             const resizedImageData = canvas.toDataURL('image/png');
 
-            // Total file size check
-            if (
-              getTotalFileSizeToSend() + resizedImageData.length >
-              MAX_FILE_SIZE_TO_SEND_BYTES
-            ) {
-              open(
-                t('error.totalFileSizeToSendExceeded', {
-                  maxSize: `${MAX_FILE_SIZE_TO_SEND_MB} MB`,
-                })
-              );
+            if (!fitsSendLimit(resizedImageData.length)) {
               return;
             }
 
@@ -320,12 +329,7 @@ const InputChatContent = forwardRef<HTMLElement, Props>(
           };
         };
       },
-      [
-        pushBase64EncodedImage,
-        getTotalFileSizeToSend,
-        open,
-        t,
-      ]
+      [pushBase64EncodedImage, fitsSendLimit]
     );
 
     const handleAttachedFileRead = useCallback(
@@ -344,16 +348,7 @@ const InputChatContent = forwardRef<HTMLElement, Props>(
           if (reader.result instanceof ArrayBuffer) {
             const base64String = bytesToBase64(new Uint8Array(reader.result));
 
-            // Total file size check
-            if (
-              getTotalFileSizeToSend() + base64String.length >
-              MAX_FILE_SIZE_TO_SEND_BYTES
-            ) {
-              open(
-                t('error.totalFileSizeToSendExceeded', {
-                  maxSize: `${MAX_FILE_SIZE_TO_SEND_MB} MB`,
-                })
-              );
+            if (!fitsSendLimit(base64String.length)) {
               return;
             }
             pushTextFile({
@@ -366,7 +361,7 @@ const InputChatContent = forwardRef<HTMLElement, Props>(
         };
         reader.readAsArrayBuffer(file);
       },
-      [pushTextFile, getTotalFileSizeToSend, open, t]
+      [pushTextFile, fitsSendLimit, open, t]
     );
 
     // Presentations and recordings are converted to text by the backend and
@@ -374,7 +369,7 @@ const InputChatContent = forwardRef<HTMLElement, Props>(
     const handleConvertibleFile = useCallback(
       (file: File) => {
         const maxSizeMb = maxConvertibleFileSizeMb(file.name);
-        if (file.size > maxSizeMb * 1024 * 1024) {
+        if (file.size > maxSizeMb * MB) {
           open(
             t('error.attachment.fileSizeExceeded', { maxSize: `${maxSizeMb} MB` })
           );
@@ -392,19 +387,11 @@ const InputChatContent = forwardRef<HTMLElement, Props>(
               return;
             }
             const content = textToBase64(text);
-            if (
-              getTotalFileSizeToSend() + content.length >
-              MAX_FILE_SIZE_TO_SEND_BYTES
-            ) {
-              open(
-                t('error.totalFileSizeToSendExceeded', {
-                  maxSize: `${MAX_FILE_SIZE_TO_SEND_MB} MB`,
-                })
-              );
+            if (!fitsSendLimit(content.length)) {
               return;
             }
             pushTextFile({
-              name: `${file.name}.txt`,
+              name: convertedFileName(file.name),
               type: 'text/plain',
               size: content.length,
               content,
@@ -423,7 +410,7 @@ const InputChatContent = forwardRef<HTMLElement, Props>(
             setConvertingFiles((files) => files.filter((f) => f.id !== id));
           });
       },
-      [convertToText, getTotalFileSizeToSend, open, pushTextFile, t]
+      [convertToText, fitsSendLimit, open, pushTextFile, t]
     );
 
     useEffect(() => {

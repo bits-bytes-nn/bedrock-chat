@@ -30,35 +30,38 @@ export class Monitoring extends Construct {
     }
     const action = new SnsAction(this.alarmTopic);
 
+    const period = Duration.minutes(5);
+    const minutes = period.toMinutes();
+    const errorThreshold = 5;
     const alarms: [string, cloudwatch.IMetric, number, string][] = [
       [
         "ApiHandlerErrors",
-        props.apiHandler.metricErrors({ period: Duration.minutes(5) }),
-        5,
-        "The REST API handler failed at least 5 times in 5 minutes.",
+        props.apiHandler.metricErrors({ period }),
+        errorThreshold,
+        `The REST API handler failed at least ${errorThreshold} times in ${minutes} minutes.`,
       ],
       [
         "WebSocketHandlerErrors",
-        props.webSocketHandler.metricErrors({ period: Duration.minutes(5) }),
-        5,
-        "The chat streaming handler failed at least 5 times in 5 minutes.",
+        props.webSocketHandler.metricErrors({ period }),
+        errorThreshold,
+        `The chat streaming handler failed at least ${errorThreshold} times in ${minutes} minutes.`,
       ],
       [
         "WebSocketHandlerThrottles",
-        props.webSocketHandler.metricThrottles({ period: Duration.minutes(5) }),
+        props.webSocketHandler.metricThrottles({ period }),
         1,
         "Chat requests were throttled by Lambda concurrency limits.",
       ],
       [
         "KnowledgeSyncFailures",
-        props.embeddingStateMachine.metricFailed({ period: Duration.minutes(5) }),
+        props.embeddingStateMachine.metricFailed({ period }),
         1,
         "A bot knowledge sync (embedding state machine) failed.",
       ],
       [
         "BotRemovalFailures",
         props.botRemovalDeadLetterQueue.metricApproximateNumberOfMessagesVisible({
-          period: Duration.minutes(5),
+          period,
         }),
         1,
         "Removing a deleted bot's resources failed. Its knowledge base or API stack may still be running and billing.",

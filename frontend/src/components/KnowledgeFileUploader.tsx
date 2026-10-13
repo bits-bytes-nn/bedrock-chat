@@ -14,6 +14,8 @@ import { ulid } from 'ulid';
 import ButtonFileChoose from './ButtonFileChoose';
 import {
   CONVERTIBLE_FILE_EXTENSIONS,
+  MB,
+  convertedFileName,
   isConvertibleFile,
   maxConvertibleFileSizeMb,
 } from '../constants/supportedAttachedFiles';
@@ -87,7 +89,7 @@ const KnowledgeFileUploader: React.FC<Props> = (props) => {
             );
             // A converted file is registered as `<filename>.txt`.
             const registeredNames = isConvertibleFile(file.name)
-              ? [file.name, `${file.name}.txt`]
+              ? [file.name, convertedFileName(file.name)]
               : [file.name];
             const isDuplicatedFile = props.files.some((botFile) =>
               registeredNames.includes(botFile.filename)
@@ -96,7 +98,7 @@ const KnowledgeFileUploader: React.FC<Props> = (props) => {
               ? maxConvertibleFileSizeMb(file.name)
               : undefined;
             const isTooLarge =
-              maxSizeMb !== undefined && file.size > maxSizeMb * 1024 * 1024;
+              maxSizeMb !== undefined && file.size > maxSizeMb * MB;
 
             if (isSupportedFile && !isDuplicatedFile && !isTooLarge) {
               draft.push({

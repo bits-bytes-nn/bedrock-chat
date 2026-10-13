@@ -1,6 +1,8 @@
 import io
 import json
+import re
 import unittest
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import boto3
@@ -212,6 +214,37 @@ class TestConversion(unittest.TestCase):
             status = file_conversion.get_conversion("u/b/_temp/meeting.mp3")
         self.assertEqual(
             (status.status, status.reason), ("FAILED", "Unsupported media")
+        )
+
+
+class TestFrontendContract(unittest.TestCase):
+    """The frontend decides which files to send for conversion and their limits."""
+
+    source = (
+        Path(__file__).resolve().parents[3]
+        / "frontend/src/constants/supportedAttachedFiles.ts"
+    ).read_text()
+
+    def test_offers_the_convertible_extensions(self):
+        block = re.search(r"CONVERTIBLE_FILE_EXTENSIONS = \[(.*?)\]", self.source, re.S)
+        assert block
+        self.assertEqual(
+            set(re.findall(r"'([^']+)'", block.group(1))),
+            set(file_conversion.CONVERTIBLE_EXTENSIONS),
+        )
+
+    def test_uses_the_same_size_limits(self):
+        def limit(name: str) -> int:
+            match = re.search(rf"{name} = (\d+);", self.source)
+            assert match
+            return int(match.group(1)) * file_conversion.MB
+
+        self.assertEqual(
+            limit("MAX_PRESENTATION_FILE_SIZE_MB"),
+            file_conversion.MAX_PRESENTATION_BYTES,
+        )
+        self.assertEqual(
+            limit("MAX_MEDIA_FILE_SIZE_MB"), file_conversion.MAX_MEDIA_BYTES
         )
 
 
