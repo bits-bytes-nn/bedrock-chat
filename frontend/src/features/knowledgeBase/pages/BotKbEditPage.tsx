@@ -4,6 +4,7 @@ import { Trans, useTranslation } from 'react-i18next';
 import InputText from '../../../components/InputText';
 import Button from '../../../components/Button';
 import useBot from '../../../hooks/useBot';
+import useBotSummary from '../../../hooks/useBotSummary';
 import { useNavigate, useParams } from 'react-router-dom';
 import { PiCaretLeft, PiNote, PiPlus, PiTrash } from 'react-icons/pi';
 import Textarea from '../../../components/Textarea';
@@ -97,9 +98,6 @@ const BotKbEditPage: React.FC = () => {
   const { data: globalConfig } = getGlobalConfig();
 
   const [isLoading, setIsLoading] = useState(false);
-  // The backend rejects saving while the knowledge base is synchronized. The state
-  // is read once, so Save stays enabled and the backend has the final word.
-  const [isSyncing, setIsSyncing] = useState(false);
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -177,6 +175,8 @@ const BotKbEditPage: React.FC = () => {
       setKnowledgeBaseType('existing');
     }
   }, [existKnowledgeBaseId, knowledgeBaseType]);
+
+  const isSharedKnowledgeBase = knowledgeBaseType === 'shared';
 
   const disabledKnowledgeEdit = useMemo(() => {
     return !!existKnowledgeBaseId;
@@ -449,6 +449,14 @@ const BotKbEditPage: React.FC = () => {
     return isNewBot ? ulid() : (paramsBotId ?? '');
   }, [isNewBot, paramsBotId]);
 
+  // The backend rejects saving while the knowledge base is synchronized, except
+  // for admins. The summary is polled during the sync, so Save is enabled again
+  // when it finishes.
+  const { data: botSummary } = useBotSummary(isNewBot ? undefined : botId);
+  const isSyncing =
+    botSummary?.syncStatus === SyncStatus.QUEUED ||
+    botSummary?.syncStatus === SyncStatus.RUNNING;
+
   const onChangeIncludePattern = useCallback(
     (pattern: string, idx: number) => {
       setWebCrawlingFilters(
@@ -559,17 +567,8 @@ const BotKbEditPage: React.FC = () => {
           setUnchangedFilenames([...bot.knowledge.filenames]);
           setDisplayRetrievedChunks(bot.displayRetrievedChunks);
           setPromptCachingEnabled(bot.promptCachingEnabled);
-          setIsSyncing(
-            bot.syncStatus === SyncStatus.QUEUED ||
-              bot.syncStatus === SyncStatus.RUNNING
-          );
           if (bot.syncStatus === 'FAILED') {
-            setErrorMessages(
-              isSyncChunkError(bot.syncStatusReason)
-                ? 'syncChunkError'
-                : 'syncError',
-              bot.syncStatusReason
-            );
+            setErrorMessages('syncError', bot.syncStatusReason);
           }
           setConversationQuickStarters(
             bot.conversationQuickStarters.length > 0
@@ -690,12 +689,6 @@ const BotKbEditPage: React.FC = () => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isNewBot, botId]);
-
-  const isSyncChunkError = useCallback((syncErrorMessage: string) => {
-    const pattern =
-      /Got a larger chunk overlap \(\d+\) than chunk size \(\d+\), should be smaller\./;
-    return pattern.test(syncErrorMessage);
-  }, []);
 
   const onChangeActiveModels = useCallback((key: string, value: boolean) => {
     setActiveModels((prevState) => {
@@ -1042,7 +1035,8 @@ const BotKbEditPage: React.FC = () => {
     clearErrorMessages();
 
     // S3 URLs validation - s3://example-bucket/path/to/data-source/
-    const isS3UrlsValid = s3Urls.every((url, idx) => {
+    // A shared knowledge base does not send them.
+    const isS3UrlsValid = isSharedKnowledgeBase || s3Urls.every((url, idx) => {
       if (url && !/^s3:\/\/[a-z0-9.-]+\/.+/.test(url)) {
         setErrorMessages(`s3Urls-${idx}`, t('validation.s3Url.message'));
         return false;
@@ -1294,6 +1288,7 @@ const BotKbEditPage: React.FC = () => {
     );
   }, [
     clearErrorMessages,
+    isSharedKnowledgeBase,
     s3Urls,
     searchParams.maxResults,
     conversationQuickStarters,
@@ -1338,10 +1333,12 @@ const BotKbEditPage: React.FC = () => {
         },
       },
       knowledge: {
-        sourceUrls: urls.filter((s) => s !== ''),
+        // A shared knowledge base takes only files, so drop the URLs typed
+        // before it was selected.
+        sourceUrls: isSharedKnowledgeBase ? [] : urls.filter((s) => s !== ''),
         // Sitemap cannot be used yet.
         sitemapUrls: [],
-        s3Urls: s3Urls.filter((s) => s !== ''),
+        s3Urls: isSharedKnowledgeBase ? [] : s3Urls.filter((s) => s !== ''),
         filenames: files.map((f) => f.filename),
       },
       displayRetrievedChunks,
@@ -1412,6 +1409,7 @@ const BotKbEditPage: React.FC = () => {
     stopSequences,
     budgetTokens,
     searchParams,
+    isSharedKnowledgeBase,
     urls,
     s3Urls,
     files,
@@ -1465,10 +1463,10 @@ const BotKbEditPage: React.FC = () => {
           },
         },
         knowledge: {
-          sourceUrls: urls.filter((s) => s !== ''),
+          sourceUrls: isSharedKnowledgeBase ? [] : urls.filter((s) => s !== ''),
           // Sitemap cannot be used yet.
           sitemapUrls: [],
-          s3Urls: s3Urls.filter((s) => s !== ''),
+          s3Urls: isSharedKnowledgeBase ? [] : s3Urls.filter((s) => s !== ''),
           addedFilenames,
           deletedFilenames,
           unchangedFilenames,
@@ -1543,6 +1541,7 @@ const BotKbEditPage: React.FC = () => {
     stopSequences,
     budgetTokens,
     searchParams,
+    isSharedKnowledgeBase,
     urls,
     s3Urls,
     addedFilenames,
@@ -1580,8 +1579,12 @@ const BotKbEditPage: React.FC = () => {
   const [isOpenSamples, setIsOpenSamples] = useState(false);
 
   const disabledRegister = useMemo(() => {
-    return title === '' || files.findIndex((f) => f.status !== 'UPLOADED') > -1;
-  }, [files, title]);
+    return (
+      title === '' ||
+      files.findIndex((f) => f.status !== 'UPLOADED') > -1 ||
+      (isSyncing && !isAdmin)
+    );
+  }, [files, title, isSyncing, isAdmin]);
 
   return (
     <>
@@ -2747,22 +2750,9 @@ const BotKbEditPage: React.FC = () => {
                 </div>
               </ExpandableDrawerGroup>
 
-              {errorMessages['syncChunkError'] && (
-                <Alert
-                  className="mt-2"
-                  severity="error"
-                  title={t('embeddingSettings.alert.sync.error.title')}>
-                  <>
-                    <div className="mb-1 text-sm">
-                      {t('embeddingSettings.alert.sync.error.body')}
-                    </div>
-                  </>
-                </Alert>
-              )}
-
               {isSyncing && !isAdmin && (
                 <div className="text-right text-sm text-dark-gray dark:text-light-gray">
-                  {t('error.api.knowledge_base_syncing')}
+                  {t('bot.alert.sync.inProgress')}
                 </div>
               )}
               {files.some((f) => f.status === 'ERROR') && (

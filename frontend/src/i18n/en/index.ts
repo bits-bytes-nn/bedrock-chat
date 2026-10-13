@@ -324,6 +324,8 @@ const translation = {
             title: 'NOT Ready',
             body: 'This bot has not completed the knowledge synchronization, so the knowledge before the update is used.',
           },
+          inProgress:
+            'The knowledge base is being synchronized. You can save after it finishes.',
         },
       },
       samples: {
@@ -750,14 +752,6 @@ How would you categorize this email?`,
           'This parameter can influence how much text is examined together to determine the boundaries of each chunk, impacting the granularity and coherence of the resulting chunks. A larger buffer size might capture more context but can also introduce noise, while a smaller buffer size might miss important context but ensures more precise chunking.',
         breakpointPercentileThreshold:
           'A higher threshold requires sentences to be more distinguishable in order to be split into different chunks. A higher threshold results in fewer chunks and typically larger average chunk size.',
-      },
-      alert: {
-        sync: {
-          error: {
-            title: 'Sentence Splitte Error',
-            body: 'Try again with less chunk overlap value',
-          },
-        },
       },
     },
     generationConfig: {
