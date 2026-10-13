@@ -8,6 +8,7 @@ from app.repositories.api_publication import is_build_running
 from app.repositories.common import RecordNotFoundError, ResourceConflictError
 from app.repositories.custom_bot import (
     alias_exists,
+    count_dedicated_knowledge_bases,
     delete_alias_by_id,
     delete_bot_by_id,
     find_alias_by_bot_id,
@@ -92,6 +93,11 @@ from app.utils import (
 logger = logging.getLogger(__name__)
 
 DOCUMENT_BUCKET = os.environ.get("DOCUMENT_BUCKET", "bedrock-documents")
+# Each dedicated knowledge base has its own OpenSearch Serverless collection, which
+# is billed while it exists. 0 means no limit; admins are not limited.
+MAX_DEDICATED_KNOWLEDGE_BASES_PER_USER = int(
+    os.environ.get("MAX_DEDICATED_KNOWLEDGE_BASES_PER_USER", "0")
+)
 
 
 def _update_s3_documents_by_diff(
@@ -189,12 +195,50 @@ def validate_new_bot_id(bot_id: str) -> None:
     raise ValueError(f"Bot ID {bot_id} is already used.")
 
 
+def _uses_dedicated_knowledge_base(
+    has_sources: bool, knowledge_base: BedrockKnowledgeBaseModel | None
+) -> bool:
+    # Mirrors BotModel.validate_knowledge_base, which defaults the type to dedicated.
+    if not has_sources:
+        return False
+    if knowledge_base is None:
+        return True
+    if knowledge_base.exist_knowledge_base_id is not None:
+        return False
+    return knowledge_base.type in (None, "dedicated")
+
+
+def _check_dedicated_knowledge_base_limit(user: User, bot_id: str) -> None:
+    """Raises:
+    ValueError: If the user already has the maximum number of such bots.
+    """
+    if MAX_DEDICATED_KNOWLEDGE_BASES_PER_USER <= 0 or user.is_admin():
+        return
+    if (
+        count_dedicated_knowledge_bases(user.id, exclude_bot_id=bot_id)
+        >= MAX_DEDICATED_KNOWLEDGE_BASES_PER_USER
+    ):
+        raise ValueError(
+            f"You can have at most {MAX_DEDICATED_KNOWLEDGE_BASES_PER_USER} bots with "
+            "their own knowledge base. Delete one, or use a shared knowledge base."
+        )
+
+
 def create_new_bot(user: User, bot_input: BotInput) -> BotOutput:
     """Create a new bot.
     Bot is created as private.
     """
     validate_external_resource_references(user, bot_input, current_bot=None)
     validate_new_bot_id(bot_input.id)
+    if _uses_dedicated_knowledge_base(
+        bot_input.has_knowledge(),
+        (
+            BedrockKnowledgeBaseModel(**bot_input.bedrock_knowledge_base.model_dump())
+            if bot_input.bedrock_knowledge_base
+            else None
+        ),
+    ):
+        _check_dedicated_knowledge_base_limit(user, bot_input.id)
 
     # Create initial knowledge
     source_urls = []
@@ -260,6 +304,25 @@ def modify_owned_bot(
             "The knowledge base is being synchronized. Edit the bot after it finishes."
         )
     validate_external_resource_references(user, modify_input, current_bot=bot)
+    if modify_input.knowledge and _uses_dedicated_knowledge_base(
+        any(
+            (
+                modify_input.knowledge.source_urls,
+                modify_input.knowledge.sitemap_urls,
+                modify_input.knowledge.s3_urls,
+                modify_input.knowledge.added_filenames,
+                modify_input.knowledge.unchanged_filenames,
+            )
+        ),
+        (
+            BedrockKnowledgeBaseModel(
+                **modify_input.bedrock_knowledge_base.model_dump()
+            )
+            if modify_input.bedrock_knowledge_base
+            else bot.bedrock_knowledge_base
+        ),
+    ):
+        _check_dedicated_knowledge_base_limit(user, bot_id)
 
     source_urls = []
     sitemap_urls = []

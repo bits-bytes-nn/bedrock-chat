@@ -97,6 +97,8 @@ const chat = new BedrockChatStack(
     allowedCountries: params.allowedCountries,
     logoPath: params.logoPath,
     alarmEmail: params.alarmEmail,
+    dailyChatCostAlarmUsd: params.dailyChatCostAlarmUsd,
+    maxDedicatedKnowledgeBasesPerUser: params.maxDedicatedKnowledgeBasesPerUser,
     apiThrottle: {
       rateLimit: params.apiThrottleRateLimit,
       burstLimit: params.apiThrottleBurstLimit,

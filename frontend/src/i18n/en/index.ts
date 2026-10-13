@@ -403,7 +403,8 @@ How would you categorize this email?`,
           endpoint: 'The client can use the Bot from this endpoint.',
           usagePlan:
             'Usage plans specify the number or rate of requests that your API accepts from a client. Associate an API with a usage plan to track the requests your API receives.',
-          throttling: 'Limit the rate that users can call your API.',
+          throttling:
+            'Limit the rate that users can call your API. Without a limit, 10 requests per second with a burst of 20 apply.',
           rateLimit:
             'Enter the rate, in requests per second, that clients can call your API.',
           burstLimit:

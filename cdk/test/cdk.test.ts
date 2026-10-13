@@ -73,6 +73,8 @@ describe("Bedrock Chat Stack Test", () => {
         botStoreLanguage: "en",
         tokenValidMinutes: 60,
         alarmEmail: "",
+        dailyChatCostAlarmUsd: 100,
+        maxDedicatedKnowledgeBasesPerUser: 2,
         apiThrottle: { rateLimit: 500, burstLimit: 1000 },
       }
     );
@@ -154,6 +156,8 @@ describe("Bedrock Chat Stack Test", () => {
         botStoreLanguage: "en",
         tokenValidMinutes: 60,
         alarmEmail: "",
+        dailyChatCostAlarmUsd: 100,
+        maxDedicatedKnowledgeBasesPerUser: 2,
         apiThrottle: { rateLimit: 500, burstLimit: 1000 },
       }
     );
@@ -223,6 +227,8 @@ describe("Bedrock Chat Stack Test", () => {
       botStoreLanguage: "en",
       tokenValidMinutes: 60,
       alarmEmail: "",
+      dailyChatCostAlarmUsd: 100,
+      maxDedicatedKnowledgeBasesPerUser: 2,
       apiThrottle: { rateLimit: 500, burstLimit: 1000 },
     });
     const template = Template.fromStack(stack);
@@ -326,7 +332,25 @@ describe("Bedrock Chat Stack Test", () => {
     expect(actions).not.toContain("aoss:ListCollections");
 
     // Alarms and API throttling.
-    template.resourceCountIs("AWS::CloudWatch::Alarm", 7);
+    template.resourceCountIs("AWS::CloudWatch::Alarm", 8);
+    template.hasResourceProperties("AWS::CloudWatch::Alarm", {
+      Namespace: "BedrockChat",
+      MetricName: "ChatCost",
+      Statistic: "Sum",
+      Period: 86400,
+      Threshold: 100,
+    });
+    // Cost guards: connections need a token, and bots with their own knowledge
+    // base are limited per user.
+    template.hasResourceProperties("AWS::ApiGatewayV2::Authorizer", {
+      AuthorizerType: "REQUEST",
+      IdentitySource: ["route.request.querystring.token"],
+    });
+    template.hasResourceProperties("AWS::Lambda::Function", {
+      Environment: {
+        Variables: Match.objectLike({ MAX_DEDICATED_KNOWLEDGE_BASES_PER_USER: "2" }),
+      },
+    });
     template.hasResourceProperties("AWS::CloudWatch::Alarm", {
       Namespace: "AWS/Lambda",
       MetricName: "Errors",
@@ -438,6 +462,8 @@ describe("Bedrock Chat Stack Test", () => {
       botStoreLanguage: "en",
       tokenValidMinutes: 60,
       alarmEmail: "",
+      dailyChatCostAlarmUsd: 100,
+      maxDedicatedKnowledgeBasesPerUser: 2,
       apiThrottle: { rateLimit: 500, burstLimit: 1000 },
     });
 
@@ -522,6 +548,8 @@ describe("Bedrock Chat Stack Test", () => {
       botStoreLanguage: "en",
       tokenValidMinutes: 60,
       alarmEmail: "",
+      dailyChatCostAlarmUsd: 100,
+      maxDedicatedKnowledgeBasesPerUser: 2,
       apiThrottle: { rateLimit: 500, burstLimit: 1000 },
     });
 
@@ -581,6 +609,8 @@ describe("Bedrock Chat Stack Test", () => {
       botStoreLanguage: "en",
       tokenValidMinutes: 60,
       alarmEmail: "",
+      dailyChatCostAlarmUsd: 100,
+      maxDedicatedKnowledgeBasesPerUser: 2,
       apiThrottle: { rateLimit: 500, burstLimit: 1000 },
     });
 
@@ -634,6 +664,8 @@ describe("Bedrock Chat Stack Test", () => {
       botStoreLanguage: "en",
       tokenValidMinutes: 60,
       alarmEmail: "",
+      dailyChatCostAlarmUsd: 100,
+      maxDedicatedKnowledgeBasesPerUser: 2,
       apiThrottle: { rateLimit: 500, burstLimit: 1000 },
     });
 

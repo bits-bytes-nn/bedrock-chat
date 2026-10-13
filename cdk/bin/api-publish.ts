@@ -35,6 +35,9 @@ const largeMessageBucketName = cdk.Fn.importValue(
   `${params.envPrefix}${sepHyphen}BedrockClaudeChatLargeMessageBucketName`
 );
 
+// Applied when the publisher sets no throttling.
+const DEFAULT_PUBLISHED_API_THROTTLE = { rateLimit: 10, burstLimit: 20 };
+
 // NOTE: DO NOT change the stack id naming rule.
 new ApiPublishmentStack(app, `ApiPublishmentStack${params.publishedApiId}`, {
   env: {
@@ -54,6 +57,8 @@ new ApiPublishmentStack(app, `ApiPublishmentStack${params.publishedApiId}`, {
     TITLE_MODEL: params.titleModel,
   },
   usagePlan: {
+    // Without a limit, a leaked API key could run up model costs at the account's
+    // full API Gateway quota.
     throttle:
       params.publishedApiThrottleRateLimit !== undefined &&
       params.publishedApiThrottleBurstLimit !== undefined
@@ -61,7 +66,7 @@ new ApiPublishmentStack(app, `ApiPublishmentStack${params.publishedApiId}`, {
             rateLimit: params.publishedApiThrottleRateLimit,
             burstLimit: params.publishedApiThrottleBurstLimit,
           }
-        : undefined,
+        : DEFAULT_PUBLISHED_API_THROTTLE,
     quota:
       params.publishedApiQuotaLimit !== undefined &&
       params.publishedApiQuotaPeriod !== undefined

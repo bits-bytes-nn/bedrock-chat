@@ -479,7 +479,7 @@ By default, this sample does not restrict the domains for sign-up email addresse
 This sample supports external identity provider. Currently we support [Google](./docs/idp/SET_UP_GOOGLE.md) and [custom OIDC provider](./docs/idp/SET_UP_CUSTOM_OIDC.md).
 
 > [!Important]
-> The provider decides who can sign in: every account it authenticates gets a user, and with the default `autoJoinUserGroups` that user can create bots. Restrict the provider (for example, an internal Google OAuth app) or set [`allowedSignUpEmailDomains`](#restrict-domains-for-sign-up-email-addresses).
+> The provider decides who can sign in: every account it authenticates gets a user, which also joins the groups in `autoJoinUserGroups` if you set any. Restrict the provider (for example, an internal Google OAuth app) or set [`allowedSignUpEmailDomains`](#restrict-domains-for-sign-up-email-addresses).
 
 ### Optional Frontend WAF
 
@@ -515,7 +515,7 @@ If you want newly created users to automatically join groups, you can specify th
 "autoJoinUserGroups": ["CreatingBotAllowed"],
 ```
 
-By default, newly created users will be joined to the `CreatingBotAllowed` group.
+By default, new users join no group, because members of `CreatingBotAllowed` can create bots with dedicated knowledge bases, which cost money (see [Limit dedicated knowledge bases](#limit-dedicated-knowledge-bases)). Add users to groups in Cognito, or list the groups here.
 
 ### Configure RAG Replicas
 
@@ -598,7 +598,7 @@ bedrockChatParams.set("default", {
 
 ### Alarms and API Throttling
 
-CloudWatch alarms notify an SNS topic (output `AlarmTopicArn`) when the REST API answers with server errors or chat answers fail repeatedly, when chat requests are throttled, when a knowledge sync fails, or when the resources of a deleted bot could not be removed. Set `alarmEmail` to subscribe an email address; AWS sends a confirmation email first.
+CloudWatch alarms notify an SNS topic (output `AlarmTopicArn`) when the REST API answers with server errors or chat answers fail repeatedly, when chat requests are throttled, when a knowledge sync fails, when the resources of a deleted bot could not be removed, or when a day of chat answers costs more than `dailyChatCostAlarmUsd` (default 100 USD; 0 turns it off). The cost is computed with the model prices in the backend and does not include published APIs. Set `alarmEmail` to subscribe an email address; AWS sends a confirmation email first.
 
 The REST and WebSocket APIs are limited to `apiThrottleRateLimit` requests per second (default 500) with a burst of `apiThrottleBurstLimit` (default 1000). Raise them for large deployments.
 
@@ -612,6 +612,14 @@ bedrockChatParams.set("default", {
 
 > [!Important]
 > Defining the `default` environment in `parameter.ts` replaces every setting in `cdk.json`, including IP restrictions. To change a single setting, add it to `cdk.json` or pass it on the command line instead, for example `npx cdk deploy --all -c alarmEmail=ops@example.com`, or `./bin.sh --cdk-json-override '{"context":{"alarmEmail":"ops@example.com"}}'`.
+
+### Limit dedicated knowledge bases
+
+Each bot with its own (dedicated) knowledge base has an OpenSearch Serverless collection that is billed while the bot exists. `maxDedicatedKnowledgeBasesPerUser` (default 2) limits how many such bots a user can own; 0 removes the limit, and administrators are not limited. Bots that use a shared or an existing knowledge base do not count.
+
+```json
+"maxDedicatedKnowledgeBasesPerUser": 2
+```
 
 ### Lambda SnapStart
 
