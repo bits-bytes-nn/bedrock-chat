@@ -16,7 +16,7 @@
     "@headlessui/react": "^1.7.15",
     "@xstate/react": "^4.1.1",
     "aws-amplify": "^6.16.2",
-    "axios": "^1.18.0",
+    "axios": "^1.20.0",
     "copy-to-clipboard": "^3.3.3",
     "dayjs": "^1.11.10",
     "i18next": "^23.6.0",
