@@ -52,7 +52,7 @@ V3에서는 **공개 공유가 활성화된 모든 V2 봇이 봇 스토어에서
 git remote -v
 
 # 원격 URL 업데이트
-git remote set-url origin https://github.com/aws-samples/bedrock-chat.git
+git remote set-url origin https://github.com/aws-samples/bedrock-chat.git  # or the URL of the fork you deploy
 
 # 변경사항 확인
 git remote -v

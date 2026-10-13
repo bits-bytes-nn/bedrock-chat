@@ -49,7 +49,7 @@ To enable the Agent functionality with Tool Use for your customized chatbot, fol
 
 You can utilize a [Bedrock Agent](https://aws.amazon.com/bedrock/agents/) created in Amazon Bedrock.
 
-First, create an Agent in Bedrock (e.g., via the Management Console). Then, specify the Agent ID in the custom bot settings screen. Once set, your chatbot will leverage the Bedrock Agent to process user queries.
+First, create an Agent in Bedrock (e.g., via the Management Console). Then, an administrator specifies the Agent ID in the custom bot settings screen; other users cannot attach agents. Once set, your chatbot will leverage the Bedrock Agent to process user queries.
 
 ![](./imgs/bedrock_agent_tool.png)
 

@@ -1,5 +1,8 @@
 # 마이그레이션 가이드 (v0에서 v1로)
 
+> [!NOTE]
+> 과거 문서: upstream v0·v1 배포에만 해당하며 v3에는 필요하지 않습니다.
+
 이전 버전(~`0.4.x`)의 Bedrock Chat을 사용하고 계신 경우, 아래의 단계들을 따라 마이그레이션을 진행하셔야 합니다.
 
 ## 왜 이렇게 해야 하나요?
@@ -7,7 +10,7 @@
 이 주요 업데이트에는 중요한 보안 업데이트가 포함되어 있습니다.
 
 - 벡터 데이터베이스(즉, Aurora PostgreSQL의 pgvector)의 저장소가 이제 암호화되어, 배포 시 교체가 발생합니다. 이는 기존의 벡터 항목들이 삭제된다는 것을 의미합니다.
-- 봇을 생성할 수 있는 사용자를 제한하기 위해 `CreatingBotAllowed` Cognito 사용자 그룹을 도입했습니다. 현재 기존 사용자들은 이 그룹에 속해있지 않으므로, 봇 생성 기능을 부여하고 싶다면 수동으로 권한을 부여해야 합니다. 참고: [Bot Personalization](../../README.md#bot-personalization)
+- 봇을 생성할 수 있는 사용자를 제한하기 위해 `CreatingBotAllowed` Cognito 사용자 그룹을 도입했습니다. 현재 기존 사용자들은 이 그룹에 속해있지 않으므로, 봇 생성 기능을 부여하고 싶다면 수동으로 권한을 부여해야 합니다. 참고: [Bot Personalization](../../README.md#bot-personalization--bot-store)
 
 ## 전제 조건
 

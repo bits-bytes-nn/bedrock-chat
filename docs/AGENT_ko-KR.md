@@ -43,13 +43,13 @@ Agent 기능을 사용하는 두 가지 방법이 있습니다:
 ![](./imgs/agent1.png)
 ![](./imgs/agent2.png)
 
-5. Agent의 기능을 확장하기 위해 자체 맞춤형 도구를 개발하고 추가할 수 있습니다. 맞춤형 도구 생성 및 통합에 대한 자세한 내용은 [자체 도구 개발 방법](#how-to-develop-your-own-tools) 섹션을 참조하세요.
+5. Agent의 기능을 확장하기 위해 자체 맞춤형 도구를 개발하고 추가할 수 있습니다. 맞춤형 도구 생성 및 통합에 대한 자세한 내용은 [자체 도구 개발 방법](#자체-도구-개발-방법) 섹션을 참조하세요.
 
 ### Bedrock Agent 사용하기
 
 Amazon Bedrock에서 생성된 [Bedrock Agent](https://aws.amazon.com/bedrock/agents/)를 활용할 수 있습니다.
 
-먼저 Bedrock에서 Agent를 생성하고(예: Management Console을 통해), 맞춤형 봇 설정 화면에서 Agent ID를 지정합니다. 설정이 완료되면 챗봇은 사용자 질의를 처리하기 위해 Bedrock Agent를 활용하게 됩니다.
+먼저 Bedrock에서 Agent를 생성하고(예: Management Console을 통해), 관리자가 맞춤형 봇 설정 화면에서 Agent ID를 지정합니다. 다른 사용자는 Agent를 연결할 수 없습니다. 설정이 완료되면 챗봇은 사용자 질의를 처리하기 위해 Bedrock Agent를 활용하게 됩니다.
 
 ![](./imgs/bedrock_agent_tool.png)
 

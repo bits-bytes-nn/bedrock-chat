@@ -1,5 +1,5 @@
 > [!NOTE]
-> 이 번역은 upstream aws-samples 프로젝트 기준이며, 배포 절차와 보안 기본값만 이 포크에 맞게 고쳤습니다. 모델 목록과 그 밖의 최신 내용은 [영어 README](../README.md)를 기준으로 합니다.
+> 이 번역은 upstream aws-samples 프로젝트 기준이며, 배포 절차와 보안 기본값만 이 포크에 맞게 고쳤습니다. 모델 목록과 그 밖의 최신 내용은 [영어 README](../README.md)를 기준으로 합니다. 이 포크에서 바뀐 점은 [Changes from upstream](../README.md#changes-from-upstream), 프레젠테이션·녹음 변환은 [Presentations and recordings](../README.md#presentations-and-recordings), 지식 기반 파싱 모델은 [Knowledge base parsing](../README.md#knowledge-base-parsing), 알람과 API 요청 제한은 [Alarms and API Throttling](../README.md#alarms-and-api-throttling)을 참고하세요.
 
 <h1 align="center">Bedrock Chat (BrChat)</h1>
 
@@ -12,7 +12,7 @@
   </a>
 </p>
 
-[English](https://github.com/aws-samples/bedrock-chat/blob/v3/README.md) | [日本語](https://github.com/aws-samples/bedrock-chat/blob/v3/docs/README_ja-JP.md) | [한국어](https://github.com/aws-samples/bedrock-chat/blob/v3/docs/README_ko-KR.md) | [中文](https://github.com/aws-samples/bedrock-chat/blob/v3/docs/README_zh-CN.md) | [Français](https://github.com/aws-samples/bedrock-chat/blob/v3/docs/README_fr-FR.md) | [Deutsch](https://github.com/aws-samples/bedrock-chat/blob/v3/docs/README_de-DE.md) | [Español](https://github.com/aws-samples/bedrock-chat/blob/v3/docs/README_es-ES.md) | [Italian](https://github.com/aws-samples/bedrock-chat/blob/v3/docs/README_it-IT.md) | [Norsk](https://github.com/aws-samples/bedrock-chat/blob/v3/docs/README_nb-NO.md) | [ไทย](https://github.com/aws-samples/bedrock-chat/blob/v3/docs/README_th-TH.md) | [Bahasa Indonesia](https://github.com/aws-samples/bedrock-chat/blob/v3/docs/README_id-ID.md) | [Bahasa Melayu](https://github.com/aws-samples/bedrock-chat/blob/v3/docs/README_ms-MY.md) | [Tiếng Việt](https://github.com/aws-samples/bedrock-chat/blob/v3/docs/README_vi-VN.md) | [Polski](https://github.com/aws-samples/bedrock-chat/blob/v3/docs/README_pl-PL.md) | [Português Brasil](https://github.com/aws-samples/bedrock-chat/blob/v3/docs/README_pt-BR.md)
+[English](../README.md) | [日本語](./README_ja-JP.md) | [한국어](./README_ko-KR.md) | [中文](./README_zh-CN.md) | [Français](./README_fr-FR.md) | [Deutsch](./README_de-DE.md) | [Español](./README_es-ES.md) | [Italian](./README_it-IT.md) | [Norsk](./README_nb-NO.md) | [ไทย](./README_th-TH.md) | [Bahasa Melayu](./README_ms-MY.md) | [Tiếng Việt](./README_vi-VN.md) | [Polski](./README_pl-PL.md) | [Português Brasil](./README_pt-BR.md)
 
 
 [Amazon Bedrock](https://aws.amazon.com/bedrock/)을 기반으로 한 다국어 생성형 AI 플랫폼입니다.
@@ -89,7 +89,7 @@ API 관리, 필수 봇 표시, 봇 사용량 분석 [자세히 보기](./ADMINIS
 **bedrock-region** 파라미터의 경우 [Bedrock이 사용 가능한 리전](https://docs.aws.amazon.com/general/latest/gr/bedrock.html)을 선택해야 합니다.
 
 - 배포하고자 하는 리전에서 [CloudShell](https://console.aws.amazon.com/cloudshell/home)을 엽니다
-- 다음 명령어로 배포를 실행합니다. 배포할 버전을 지정하거나 보안 정책을 적용해야 하는 경우 [선택적 파라미터](#optional-parameters)에서 적절한 파라미터를 지정하세요.
+- 다음 명령어로 배포를 실행합니다. 배포할 버전을 지정하거나 보안 정책을 적용해야 하는 경우 [선택적 파라미터](#선택적-파라미터)에서 적절한 파라미터를 지정하세요.
 
 ```sh
 git clone https://github.com/aws-samples/bedrock-chat.git
@@ -550,7 +550,7 @@ bedrockChatParams.set("default", {
 이 샘플에는 사용자에게 권한을 부여하기 위한 다음과 같은 그룹이 있습니다:
 
 - [`Admin`](./ADMINISTRATOR_ko-KR.md)
-- [`CreatingBotAllowed`](#bot-personalization)
+- [`CreatingBotAllowed`](#봇-개인화--봇-스토어)
 - [`PublishAllowed`](./PUBLISH_API_ko-KR.md)
 
 새로 생성된 사용자를 자동으로 그룹에 가입시키려면 [cdk.json](../cdk/cdk.json)에서 지정할 수 있습니다.

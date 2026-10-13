@@ -1,5 +1,8 @@
 # Migration Guide (v0 to v1)
 
+> [!NOTE]
+> Historical: this guide applies only to upstream v0 and v1 deployments and is not needed for v3.
+
 If you already use Bedrock Chat with a previous version (~`0.4.x`), you need to follow the steps bellow to migrate.
 
 ## Why do I need to do it?
@@ -7,7 +10,7 @@ If you already use Bedrock Chat with a previous version (~`0.4.x`), you need to 
 This major update includes important security updates.
 
 - The vector database (i.e., pgvector on Aurora PostgreSQL) storage is now encrypted, which triggers a replacement when deployed. This means existing vector items will be deleted.
-- We introduced `CreatingBotAllowed` Cognito user group to limit users who can create bots. Current existing users are not in this group, so you need to attach the permission manually if you want them to have bot creation capabilities. See: [Bot Personalization](../../README.md#bot-personalization)
+- We introduced `CreatingBotAllowed` Cognito user group to limit users who can create bots. Current existing users are not in this group, so you need to attach the permission manually if you want them to have bot creation capabilities. See: [Bot Personalization](../../README.md#bot-personalization--bot-store)
 
 ## Prerequisites
 

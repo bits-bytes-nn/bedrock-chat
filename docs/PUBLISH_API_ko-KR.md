@@ -6,7 +6,7 @@
 
 ## 보안
 
-[AWS API Gateway 개발자 가이드](https://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-api-usage-plans.html)에서 설명한 바와 같이 API 키만 사용하는 것은 권장되지 않습니다. 따라서 이 샘플에서는 AWS WAF를 통한 간단한 IP 주소 제한을 구현합니다. WAF 규칙은 비용을 고려하여 애플리케이션 전체에 공통적으로 적용되며, 제한하고자 하는 소스가 모든 발행된 API에서 동일할 것이라는 가정 하에 적용됩니다. **실제 구현 시에는 조직의 보안 정책을 준수하시기 바랍니다.** 또한 [아키텍처](#architecture) 섹션을 참조하십시오.
+[AWS API Gateway 개발자 가이드](https://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-api-usage-plans.html)에서 설명한 바와 같이 API 키만 사용하는 것은 권장되지 않습니다. 따라서 이 샘플에서는 AWS WAF를 통한 간단한 IP 주소 제한을 구현합니다. WAF 규칙은 비용을 고려하여 애플리케이션 전체에 공통적으로 적용되며, 제한하고자 하는 소스가 모든 발행된 API에서 동일할 것이라는 가정 하에 적용됩니다. **실제 구현 시에는 조직의 보안 정책을 준수하시기 바랍니다.** 또한 [아키텍처](#아키텍처) 섹션을 참조하십시오.
 
 ## 맞춤형 봇 API 게시 방법
 
@@ -18,7 +18,7 @@
 
 ### API 게시 설정
 
-`PublishedAllowed` 사용자로 로그인하고 봇을 생성한 후 `API PublishSettings`를 선택합니다. 공유된 봇만 게시할 수 있다는 점에 유의하세요.
+`PublishAllowed` 사용자로 로그인하고 봇을 생성한 후 `API PublishSettings`를 선택합니다. 공유된 봇만 게시할 수 있다는 점에 유의하세요.
 ![](./imgs/bot_api_publish_screenshot.png)
 
 다음 화면에서 스로틀링과 관련된 여러 매개변수를 구성할 수 있습니다. 자세한 내용은 다음을 참조하세요: [더 나은 처리량을 위한 API 요청 스로틀링](https://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-request-throttling.html).
@@ -36,10 +36,10 @@ API는 다음 다이어그램과 같이 게시됩니다:
 
 WAF는 IP 주소 제한에 사용됩니다. 주소는 `cdk.json`의 `publishedApiAllowedIpV4AddressRanges` 및 `publishedApiAllowedIpV6AddressRanges` 매개변수를 설정하여 구성할 수 있습니다.
 
-사용자가 봇 게시를 클릭하면 [AWS CodeBuild](https://aws.amazon.com/codebuild/)가 API 스택을 프로비저닝하기 위한 CDK 배포 작업을 시작합니다 (참고: [CDK 정의](../cdk/lib/api-publishment-stack.ts)). 이 스택에는 API Gateway, Lambda 및 SQS가 포함됩니다. SQS는 출력 생성이 API Gateway 할당량 제한인 30초를 초과할 수 있기 때문에 사용자 요청과 LLM 작업을 분리하는 데 사용됩니다. 출력을 가져오려면 API에 비동기적으로 접근해야 합니다. 자세한 내용은 [API 명세](#api-specification)를 참조하세요.
+사용자가 봇 게시를 클릭하면 [AWS CodeBuild](https://aws.amazon.com/codebuild/)가 API 스택을 프로비저닝하기 위한 CDK 배포 작업을 시작합니다 (참고: [CDK 정의](../cdk/lib/api-publishment-stack.ts)). 이 스택에는 API Gateway, Lambda 및 SQS가 포함됩니다. SQS는 출력 생성이 API Gateway 할당량 제한인 30초를 초과할 수 있기 때문에 사용자 요청과 LLM 작업을 분리하는 데 사용됩니다. 출력을 가져오려면 API에 비동기적으로 접근해야 합니다. 자세한 내용은 [API 명세](#api-사양)를 참조하세요.
 
 클라이언트는 요청 헤더에 `x-api-key`를 설정해야 합니다.
 
 ## API 사양
 
-[여기](https://aws-samples.github.io/bedrock-chat)를 참조하세요.
+[공개된 명세](https://aws-samples.github.io/bedrock-chat)는 upstream 프로젝트 기준입니다. 이 포크의 명세는 백엔드를 로컬에서 실행한 뒤([backend/README.md](../backend/README.md) 참고) `/docs` 또는 `/openapi.json`에서 확인하세요.

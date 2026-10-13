@@ -52,7 +52,7 @@ The repository has been renamed from `bedrock-claude-chat` to `bedrock-chat`. Up
 git remote -v
 
 # Update the remote URL
-git remote set-url origin https://github.com/aws-samples/bedrock-chat.git
+git remote set-url origin https://github.com/aws-samples/bedrock-chat.git  # or the URL of the fork you deploy
 
 # Verify the change
 git remote -v

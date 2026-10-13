@@ -41,6 +41,8 @@ Currently provides a basic overview of chatbot and user usage, focusing on aggre
 
 - As stated in the [architecture](../README.md#architecture), the admin features will refer to the S3 bucket exported from DynamoDB. Please note that since the export is performed once every hour, the latest conversations may not be reflected immediately.
 
+- The exports contain the full text of conversations. They have no expiration and are kept until the stack is deleted, which deletes the bucket. Restrict access to the bucket and Athena accordingly.
+
 - In public bot usages, bots that have not been used at all during the specified period will not be listed.
 
 - In user usages, users who have not used the system at all during the specified period will not be listed.

@@ -11,8 +11,8 @@ Follow the procedures for the target OIDC provider, and note the values for the 
 3. Select "Other type of secrets".
 4. Input the client ID and client secret as key-value pairs.
 
-   - Key: `clientId`, Value: <YOUR_GOOGLE_CLIENT_ID>
-   - Key: `clientSecret`, Value: <YOUR_GOOGLE_CLIENT_SECRET>
+   - Key: `clientId`, Value: <YOUR_CLIENT_ID>
+   - Key: `clientSecret`, Value: <YOUR_CLIENT_SECRET>
    - Key: `issuerUrl`, Value: <ISSUER_URL_OF_THE_PROVIDER>
 
 5. Follow the prompts to name and describe the secret. Note the secret name as you will need it in your CDK code (Used in Step 3 variable name <YOUR_SECRET_NAME>).
