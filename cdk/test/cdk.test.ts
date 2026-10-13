@@ -399,20 +399,55 @@ describe("Bedrock Chat Stack Test", () => {
 
     // Alarms and API throttling.
     template.resourceCountIs("AWS::CloudWatch::Alarm", 9);
-    // Usage exports hold conversation text, so they expire.
+    // The bot store's initial table exports hold conversation text, so they expire.
     template.hasResourceProperties("AWS::S3::Bucket", {
       LifecycleConfiguration: {
-        Rules: [Match.objectLike({ ExpirationInDays: 90, Status: "Enabled" })],
+        Rules: [Match.objectLike({ ExpirationInDays: 7, Status: "Enabled" })],
       },
     });
+    // The alarms read the namespace that the handlers publish to, which is per
+    // environment (cdk/lib/utils/metrics.ts).
+    const namespace = "BedrockChat/test-";
     template.hasResourceProperties("AWS::CloudWatch::Alarm", {
-      // Per environment (cdk/lib/utils/metrics.ts).
-      Namespace: Match.stringLikeRegexp("^BedrockChat"),
+      Namespace: namespace,
       MetricName: "ChatCost",
       Statistic: "Sum",
       Period: 86400,
       Threshold: 100,
     });
+    const handlerNamespaces = Object.values(
+      template.findResources("AWS::Lambda::Function")
+    ).flatMap((fn: any) => {
+      const value = fn.Properties.Environment?.Variables?.METRICS_NAMESPACE;
+      return value === undefined ? [] : [value];
+    });
+    // The REST API and chat handlers.
+    expect(handlerNamespaces).toEqual([namespace, namespace]);
+    // Connections are authorized when they open.
+    template.hasResourceProperties("AWS::ApiGatewayV2::Route", {
+      RouteKey: "$connect",
+      AuthorizationType: "CUSTOM",
+    });
+    // The conversation list reads its index only (backend/app/repositories/conversation.py).
+    const conversationTable = Object.values(
+      template.findResources("AWS::DynamoDB::Table", {
+        Properties: { StreamSpecification: Match.anyValue() },
+      })
+    ).find((table: any) =>
+      (table.Properties.GlobalSecondaryIndexes ?? []).some(
+        (index: any) => index.IndexName === "ConversationListIndex"
+      )
+    ) as any;
+    const conversationIndexes = conversationTable.Properties.GlobalSecondaryIndexes;
+    expect(conversationIndexes.map((index: any) => index.IndexName).sort()).toEqual([
+      "ConversationListIndex",
+      "SKIndex",
+    ]);
+    expect(
+      conversationIndexes.find(
+        (index: any) => index.IndexName === "ConversationListIndex"
+      ).Projection
+    ).toEqual({ ProjectionType: "INCLUDE", NonKeyAttributes: ["Title", "BotId"] });
     // Cost guards: connections need a token, and bots with their own knowledge
     // base are limited per user.
     template.hasResourceProperties("AWS::ApiGatewayV2::Authorizer", {
@@ -647,6 +682,21 @@ describe("Bedrock Chat Stack Test", () => {
     expect(Object.keys(lockHandler.Properties.Environment.Variables).sort()).toEqual(
       ["BEDROCK_REGION", "DOCUMENT_BUCKET"]
     );
+  });
+
+  test("usage exports expire after the retention days", () => {
+    // Exports hold conversation text, including deleted conversations.
+    const template = newChatStack({ usageAnalysisRetentionDays: 30 });
+
+    const expiringBuckets = template.findResources("AWS::S3::Bucket", {
+      Properties: {
+        LifecycleConfiguration: {
+          Rules: [Match.objectLike({ ExpirationInDays: 30, Status: "Enabled" })],
+        },
+      },
+    });
+    // The table exports and the Athena query results.
+    expect(Object.keys(expiringBuckets)).toHaveLength(2);
   });
 
   test("auto-joined user groups register the Cognito triggers", () => {
