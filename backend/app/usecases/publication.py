@@ -206,9 +206,16 @@ def remove_bot_publication(user: User, bot_id: str):
 
 def _find_created_stack(bot_id: str) -> PublishedApiStackModel:
     stack = find_stack_by_bot_id(bot_id)
+    # Publishing again replaces the stack instead of updating it, so a stack that is
+    # not created is still being deployed or has failed.
     if stack.stack_status != "CREATE_COMPLETE":
         raise ResourceConflictError(
-            f"The API of bot {bot_id} is not ready (stack status: {stack.stack_status})."
+            f"The API of bot {bot_id} is not ready (stack status: {stack.stack_status}).",
+            code=(
+                "api_publishing"
+                if stack.stack_status in ("REVIEW_IN_PROGRESS", "CREATE_IN_PROGRESS")
+                else None
+            ),
         )
     return stack
 

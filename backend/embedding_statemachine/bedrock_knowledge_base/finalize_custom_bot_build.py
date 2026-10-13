@@ -6,6 +6,7 @@ from app.repositories.custom_bot import (
     update_knowledge_base_id,
     update_guardrails_params,
 )
+from app.utils import CUSTOM_BOT_STACK_PREFIX
 
 BEDROCK_REGION = os.environ.get("BEDROCK_REGION")
 
@@ -68,9 +69,7 @@ def handler(event, context):
             for data_source in data_sources_from_event
         )
 
-    # Note: stack naming rule is defined on:
-    # cdk/bin/bedrock-custom-bot.ts
-    stack_name = f"BrChatKbStack{bot_id}"
+    stack_name = f"{CUSTOM_BOT_STACK_PREFIX}{bot_id}"
 
     response = cfn.describe_stacks(StackName=stack_name)
     outputs = response["Stacks"][0].get("Outputs")

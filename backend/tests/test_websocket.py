@@ -21,7 +21,7 @@ os.environ.setdefault("WEBSOCKET_SESSION_TABLE_NAME", "test-websocket-session")
 
 from app import auth, websocket
 from app.metrics import emit_chat_cost, emit_metric
-from app.usecases.chat import ConversationTooLargeError
+from app.usecases.chat import ConversationTooLargeError, MessageTooLargeError
 from app.websocket import NotificationSender, process_chat_input
 
 
@@ -200,6 +200,10 @@ class TestProcessChatInput(unittest.TestCase):
     def test_reports_a_conversation_that_is_too_large(self):
         frame = self.error_frame(ConversationTooLargeError("too large"))
         self.assertEqual(frame["code"], "conversation_too_large")
+
+    def test_reports_a_message_that_is_too_large(self):
+        frame = self.error_frame(MessageTooLargeError("too large"))
+        self.assertEqual(frame["code"], "message_too_large")
 
     def test_logs_model_failures_for_the_alarm(self):
         with self.assertLogs(websocket.logger, "WARNING") as logs:

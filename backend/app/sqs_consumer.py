@@ -10,8 +10,10 @@ from app.repositories.conversation import (
     store_failed_message,
 )
 from app.routes.schemas.conversation import ChatInput
-from app.usecases.chat import chat
+from app.usecases.chat import ConversationTooLargeError, MessageTooLargeError, chat
 from app.user import User
+from botocore.exceptions import ClientError
+from strands.types.exceptions import ContextWindowOverflowException
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +21,12 @@ logger = logging.getLogger(__name__)
 # (cdk/lib/api-publishment-stack.ts).
 MAX_RECEIVE_COUNT = int(os.environ.get("MAX_RECEIVE_COUNT", "2"))
 # Retrying these would fail again and bill the model again.
-NON_RETRYABLE_ERRORS = (ValueError, PermissionError, RecordNotFoundError)
+NON_RETRYABLE_ERRORS = (
+    ValueError,
+    PermissionError,
+    RecordNotFoundError,
+    ContextWindowOverflowException,
+)
 # Set by cdk/lib/api-publishment-stack.ts; the failed answers alarm is per API.
 PUBLISHED_API_ID = os.environ.get("PUBLISHED_API_ID")
 QUEUE_URL = os.environ.get("QUEUE_URL", "")
@@ -36,6 +43,12 @@ def _failure_reason(error: Exception) -> str:
         return "The bot or the conversation was not found."
     if isinstance(error, PermissionError):
         return "The bot is not available."
+    if isinstance(error, MessageTooLargeError):
+        return "The message is too large."
+    if isinstance(error, ConversationTooLargeError):
+        return "The conversation is too large. Start a new conversation."
+    if isinstance(error, ContextWindowOverflowException):
+        return "The conversation is too long for the model."
     if isinstance(error, ValueError):
         return "The request is invalid, or its model is not available."
     return "The answer could not be generated."
@@ -82,13 +95,19 @@ def handler(event, context):
             )
             if not final:
                 logger.warning("Retrying message %s", message_id, exc_info=True)
-                sqs_client.change_message_visibility(
-                    QueueUrl=QUEUE_URL,
-                    ReceiptHandle=record["receiptHandle"],
-                    VisibilityTimeout=RETRY_DELAY_SECONDS,
-                )
-                batch_item_failures.append({"itemIdentifier": record["messageId"]})
-                continue
+                try:
+                    sqs_client.change_message_visibility(
+                        QueueUrl=QUEUE_URL,
+                        ReceiptHandle=record["receiptHandle"],
+                        VisibilityTimeout=RETRY_DELAY_SECONDS,
+                    )
+                except ClientError:
+                    # The retry would come only after the visibility timeout, which is
+                    # sized for the slowest answer, so it fails like the last receive.
+                    logger.exception("Failed to delay the retry of %s", message_id)
+                else:
+                    batch_item_failures.append({"itemIdentifier": record["messageId"]})
+                    continue
             logger.exception("Failed to answer message %s", message_id)
             # Clients poll for the answer; tell them that none will come.
             store_failed_message(

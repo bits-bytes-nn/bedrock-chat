@@ -77,6 +77,10 @@ class ConversationTooLargeError(ValueError):
     """The conversation would become too large to load."""
 
 
+class MessageTooLargeError(ConversationTooLargeError):
+    """The message alone is too large for any conversation."""
+
+
 def prepare_conversation(
     user: User,
     chat_input: ChatInput,
@@ -172,6 +176,11 @@ def prepare_conversation(
         new_message = MessageModel.from_message_input(chat_input.message)
         new_message.parent = parent_id
         new_message.create_time = current_time
+        # A new conversation would not help either.
+        if len(new_message.model_dump_json().encode("utf-8")) > MAX_CONVERSATION_BYTES:
+            raise MessageTooLargeError(
+                "The message is too large. Remove some attachments."
+            )
 
         if chat_input.message.message_id:
             message_id = chat_input.message.message_id

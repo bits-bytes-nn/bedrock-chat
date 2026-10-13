@@ -75,13 +75,13 @@ type Props = BaseProps & {
 // Ref: https://docs.anthropic.com/en/docs/build-with-claude/vision#evaluate-image-size
 const MAX_IMAGE_WIDTH = 1568;
 const MAX_IMAGE_HEIGHT = 1568;
-// 6 MB (Lambda response size limit is 6 MB)
-// Ref: https://docs.aws.amazon.com/lambda/latest/dg/gettingstarted-limits.html
-// Converse API can handle 4.5 MB x 5 files, but the API to fetch conversation history is based on the lambda,
-// so we limit the size to 6 MB to prevent the error.
+// The backend rejects a conversation larger than MAX_CONVERSATION_BYTES (5 MiB,
+// backend/app/usecases/chat.py), which stores the files in base64. The files of one
+// message stay well under it, and backend/tests/test_error_codes.py checks the margin.
 // Need to refactor if want to increase the limit by using s3 presigned URL.
-const MAX_FILE_SIZE_TO_SEND_MB = 6;
-const MAX_FILE_SIZE_TO_SEND_BYTES = MAX_FILE_SIZE_TO_SEND_MB * MB;
+const MAX_FILE_SIZE_TO_SEND_MB = 3;
+// The files are counted in base64, which is 4/3 of their size.
+const MAX_FILE_SIZE_TO_SEND_BYTES = (MAX_FILE_SIZE_TO_SEND_MB * MB * 4) / 3;
 
 const useInputChatContentState = create<{
   base64EncodedImages: string[];

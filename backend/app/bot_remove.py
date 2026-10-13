@@ -7,7 +7,11 @@ from app.repositories.api_publication import delete_published_api
 from app.repositories.common import compose_sk, decompose_sk
 from app.repositories.conversation import delete_conversation_by_user_id
 from app.user import User
-from app.utils import delete_api_key_from_secret_manager, delete_s3_prefix
+from app.utils import (
+    CUSTOM_BOT_STACK_PREFIX,
+    delete_api_key_from_secret_manager,
+    delete_s3_prefix,
+)
 
 DOCUMENT_BUCKET = os.environ.get("DOCUMENT_BUCKET", "bedrock-documents")
 BEDROCK_REGION = os.environ.get("BEDROCK_REGION", "us-east-1")
@@ -20,7 +24,7 @@ logger = logging.getLogger(__name__)
 def delete_custom_bot_stack_by_bot_id(bot_id: str):
     client = boto3.client("cloudformation", BEDROCK_REGION)
     # DeleteStack succeeds when the stack does not exist.
-    return client.delete_stack(StackName=f"BrChatKbStack{bot_id}")
+    return client.delete_stack(StackName=f"{CUSTOM_BOT_STACK_PREFIX}{bot_id}")
 
 
 def delete_from_s3(user_id: str, bot_id: str):

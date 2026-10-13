@@ -5,6 +5,9 @@ from unittest.mock import patch
 
 from app import sqs_consumer
 from app.repositories.common import RecordNotFoundError
+from app.usecases.chat import ConversationTooLargeError
+from botocore.exceptions import ClientError
+from strands.types.exceptions import ContextWindowOverflowException
 
 
 class TestSqsConsumer(unittest.TestCase):
@@ -13,6 +16,7 @@ class TestSqsConsumer(unittest.TestCase):
         error: Exception,
         receive_count: int,
         stored: object = RecordNotFoundError("x"),
+        visibility_error: Exception | None = None,
     ):
         record = {
             "messageId": "sqs-1",
@@ -34,6 +38,7 @@ class TestSqsConsumer(unittest.TestCase):
             patch.object(sqs_consumer, "sqs_client") as self.sqs,
             patch.object(sqs_consumer, "emit_metric") as self.emit,
         ):
+            self.sqs.change_message_visibility.side_effect = visibility_error
             self.response = sqs_consumer.handler({"Records": [record]}, None)
         return store
 
@@ -71,6 +76,35 @@ class TestSqsConsumer(unittest.TestCase):
         self.emit.assert_called_once_with("FailedAnswers", 1, {"PublishedApiId": "bot"})
         self.assertEqual(self.response, {"batchItemFailures": []})
         self.sqs.change_message_visibility.assert_not_called()
+
+    def test_records_the_failure_when_the_retry_cannot_be_delayed(self):
+        error = ClientError(
+            {"Error": {"Code": "ReceiptHandleIsInvalid", "Message": "x"}},
+            "ChangeMessageVisibility",
+        )
+        store = self.handle(
+            RuntimeError("throttled"), receive_count=1, visibility_error=error
+        )
+        store.assert_called_once_with(
+            "PUBLISHED_API#bot", "c", "m", "The answer could not be generated."
+        )
+        self.emit.assert_called_once()
+        self.assertEqual(self.response, {"batchItemFailures": []})
+
+    def test_does_not_retry_inputs_that_are_too_large(self):
+        for error, reason in (
+            (
+                ConversationTooLargeError("x"),
+                "The conversation is too large. Start a new conversation.",
+            ),
+            (
+                ContextWindowOverflowException("x"),
+                "The conversation is too long for the model.",
+            ),
+        ):
+            store = self.handle(error, receive_count=1)
+            store.assert_called_once_with("PUBLISHED_API#bot", "c", "m", reason)
+            self.sqs.change_message_visibility.assert_not_called()
 
     def test_does_not_retry_errors_that_would_fail_again(self):
         store = self.handle(ValueError("Model is not available."), receive_count=1)

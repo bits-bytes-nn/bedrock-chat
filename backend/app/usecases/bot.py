@@ -90,6 +90,7 @@ from app.utils import (
     delete_files_with_prefix_from_s3,
     UPLOAD_URL_EXPIRATION_SECONDS,
     generate_presigned_url,
+    is_embedding_running,
     move_file_in_s3,
     start_embedding_state_machine,
 )
@@ -305,7 +306,7 @@ def modify_owned_bot(
         )
     # Saving would overwrite the sync status of the running sync, which then no
     # longer protects the bot from deletion while its stack is being built.
-    if bot.sync_status in ("QUEUED", "RUNNING") and not user.is_admin():
+    if _is_knowledge_base_syncing(bot):
         raise ResourceConflictError(
             "The knowledge base is being synchronized. Edit the bot after it finishes.",
             code="knowledge_base_syncing",
@@ -457,8 +458,15 @@ def modify_owned_bot(
             added_filenames=added_filenames,
             unchanged_filenames=unchanged_filenames,
             deleted_filenames=deleted_filenames,
+            # The state machine skips unchanged shared knowledge bases, which
+            # would leave a failed sync unretried.
             sync_shared_knowledge_bases_required=(
                 modify_input.is_sync_shared_knowledge_bases_required(bot)
+                or (
+                    bot.sync_status == "FAILED"
+                    and updated_kb is not None
+                    and updated_kb.type == "shared"
+                )
             ),
         )
 
@@ -658,6 +666,12 @@ def modify_star_status(user: User, bot_id: str, starred: bool):
         return update_alias_star_status(user.id, bot_id, starred)
 
 
+def _is_knowledge_base_syncing(bot: BotModel) -> bool:
+    # The status stays QUEUED or RUNNING if the state machine failed to start or to
+    # record the result, so only a running execution blocks the bot.
+    return bot.sync_status in ("QUEUED", "RUNNING") and is_embedding_running(bot.id)
+
+
 def remove_bot_by_id(user: User, bot_id: str):
     """Remove bot by id."""
     bot = find_bot_by_id(bot_id)
@@ -670,9 +684,8 @@ def remove_bot_by_id(user: User, bot_id: str):
             f"User {user.id} is not authorized to access bot {bot_id}"
         )
     # A stack built after the removal would be left running and billing, so admins
-    # are rejected too. An admin clears a stuck sync by saving the bot, which resets
-    # its sync status.
-    if bot.sync_status in ("QUEUED", "RUNNING"):
+    # are rejected too.
+    if _is_knowledge_base_syncing(bot):
         raise ResourceConflictError(
             "The knowledge base is being synchronized. Delete the bot after it finishes.",
             code="knowledge_base_syncing",

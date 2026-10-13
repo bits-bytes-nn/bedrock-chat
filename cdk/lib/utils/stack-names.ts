@@ -1,12 +1,12 @@
 /**
  * Prefix of the stacks of published APIs, followed by the published API ID (the bot
- * ID). The backend repeats this literal.
+ * ID). backend/app/utils.py repeats this literal.
  */
 export const apiPublishmentStackPrefix = "ApiPublishmentStack";
 
 /**
  * Prefix of the stacks of bots with a dedicated knowledge base, in the Bedrock Region,
- * followed by the bot ID. The backend repeats this literal.
+ * followed by the bot ID. backend/app/utils.py repeats this literal.
  */
 export const customBotStackPrefix = "BrChatKbStack";
 

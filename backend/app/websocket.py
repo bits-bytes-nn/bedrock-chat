@@ -14,7 +14,7 @@ from app.auth import verify_token
 from app.repositories.conversation import RecordNotFoundError
 from app.routes.schemas.conversation import ChatInput
 from app.stream import OnStopInput, OnThinking
-from app.usecases.chat import ConversationTooLargeError, chat
+from app.usecases.chat import ConversationTooLargeError, MessageTooLargeError, chat
 from app.user import User
 from boto3.dynamodb.conditions import Key
 from botocore.config import Config
@@ -67,6 +67,7 @@ type_error_code = Literal[
     "invalid_request",
     "generation_failed",
     "input_too_long",
+    "message_too_large",
     "conversation_too_large",
     "unauthorized",
 ]
@@ -311,6 +312,10 @@ def process_chat_input(
             )
         else:
             return error_response(400, "Invalid request.", "invalid_request")
+
+    except MessageTooLargeError as e:
+        logger.warning("Rejected chat input: %s", e)
+        return error_response(400, str(e), "message_too_large")
 
     except ConversationTooLargeError as e:
         logger.warning("Rejected chat input: %s", e)

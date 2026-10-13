@@ -581,6 +581,14 @@ describe("Bedrock Chat Stack Test", () => {
     );
     expect(codebuildStatements).toHaveLength(1);
     expect([codebuildStatements[0].Resource].flat()).toHaveLength(1);
+    // It reads the executions of the embedding state machine only.
+    const sfnStatements = apiHandlerStatements.filter((statement: any) =>
+      [statement.Action].flat().some((action: string) => action.startsWith("states:"))
+    );
+    expect(
+      sfnStatements.map((statement: any) => [statement.Action].flat()).flat().sort()
+    ).toEqual(["states:DescribeExecution", "states:ListExecutions", "states:StartExecution"]);
+    expect(JSON.stringify(sfnStatements)).not.toContain('"*"');
     // DescribeIndex and ReadDocument are data access policy permissions, not IAM actions.
     expect(actions).not.toContain("aoss:DescribeIndex");
     expect(actions).not.toContain("aoss:ReadDocument");

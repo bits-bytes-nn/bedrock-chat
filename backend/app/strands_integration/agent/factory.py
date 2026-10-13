@@ -70,6 +70,7 @@ def create_strands_agent(
         retry_strategy=None,
         # The default manager drops the oldest messages when the context overflows,
         # which silently loses context; the error is reported as input_too_long.
+        # This also gives up its truncation of oversized tool results on overflow.
         conversation_manager=NullConversationManager(),
     )
     return agent

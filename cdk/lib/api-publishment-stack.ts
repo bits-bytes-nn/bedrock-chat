@@ -223,8 +223,9 @@ export class ApiPublishmentStack extends Stack {
       [
         "SqsConsumeHandlerErrors",
         // Messages to retry are reported as batch item failures, not errors. Errors
-        // are failures outside answering, such as timeouts, out-of-memory and init
-        // failures, which end the invocation before the failure is recorded.
+        // are failures that escape the handler (backend/app/sqs_consumer.py): timeouts,
+        // out-of-memory and init failures, unparsable messages, and failures to check
+        // or record a failed answer.
         sqsConsumeHandler.metricErrors({ period }),
         `The queue consumer of published API ${id} failed (for example a timeout or an init error).`,
       ],

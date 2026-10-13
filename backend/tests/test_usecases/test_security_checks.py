@@ -90,8 +90,18 @@ class TestPublication(unittest.TestCase):
                 lambda: publication.create_new_api_key(USER, "bot", MagicMock()),
                 lambda: publication.remove_api_key(USER, "bot", "key"),
             ):
-                with self.assertRaises(ResourceConflictError):
+                with self.assertRaises(ResourceConflictError) as e:
                     call()
+                self.assertEqual(e.exception.code, "api_publishing")
+
+    def test_api_keys_of_a_failed_stack_are_not_reported_as_publishing(self):
+        stack = MagicMock(stack_status="ROLLBACK_COMPLETE")
+        with patch.object(
+            publication, "find_bot_by_id", return_value=MagicMock()
+        ), patch.object(publication, "find_stack_by_bot_id", return_value=stack):
+            with self.assertRaises(ResourceConflictError) as e:
+                publication.fetch_api_key(USER, "bot", "key")
+        self.assertIsNone(e.exception.code)
 
     def test_rejects_publishing_while_the_previous_api_is_removed(self):
         bot = MagicMock(shared_scope="all", published_api_codebuild_id=None)
@@ -337,7 +347,7 @@ class TestChatInputValidation(unittest.TestCase):
 
 
 class TestPrepareConversation(unittest.TestCase):
-    def chat_input(self, bot_id=None, message_id=None):
+    def chat_input(self, bot_id=None, message_id=None, body="hi"):
         from app.routes.schemas.conversation import ChatInput
 
         return ChatInput.model_validate(
@@ -345,7 +355,7 @@ class TestPrepareConversation(unittest.TestCase):
                 "conversation_id": "c",
                 "message": {
                     "role": "user",
-                    "content": [{"content_type": "text", "body": "hi"}],
+                    "content": [{"content_type": "text", "body": body}],
                     "model": "claude-v5.5-haiku",
                     "parent_message_id": None,
                     "message_id": message_id,
@@ -405,8 +415,17 @@ class TestPrepareConversation(unittest.TestCase):
         with patch.object(
             chat_usecase, "find_conversation_by_id", return_value=conversation(limit)
         ):
-            with self.assertRaises(chat_usecase.ConversationTooLargeError):
+            with self.assertRaises(chat_usecase.ConversationTooLargeError) as e:
                 chat_usecase.prepare_conversation(USER, self.chat_input())
+            # A new conversation would accept the message.
+            self.assertNotIsInstance(e.exception, chat_usecase.MessageTooLargeError)
+        with patch.object(
+            chat_usecase, "find_conversation_by_id", return_value=conversation(1000)
+        ):
+            with self.assertRaises(chat_usecase.MessageTooLargeError):
+                chat_usecase.prepare_conversation(
+                    USER, self.chat_input(body="x" * limit)
+                )
 
 
 class TestFetchBot(unittest.TestCase):
