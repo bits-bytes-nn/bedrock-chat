@@ -146,6 +146,21 @@ def delete_stack_by_bot_id(bot_id: str):
     return response
 
 
+# CodeBuild statuses of builds that are no longer running.
+FINISHED_BUILD_STATUSES = frozenset(
+    {"SUCCEEDED", "FAILED", "FAULT", "STOPPED", "TIMED_OUT"}
+)
+
+
+def is_build_running(build_id: str) -> bool:
+    try:
+        status = find_build_status_by_build_id(build_id)
+    except RecordNotFoundError:
+        # CodeBuild no longer keeps the build, so it has finished.
+        return False
+    return status not in FINISHED_BUILD_STATUSES
+
+
 def find_build_status_by_build_id(build_id: str) -> str:
     client = boto3.client("codebuild")
     response = client.batch_get_builds(ids=[build_id])

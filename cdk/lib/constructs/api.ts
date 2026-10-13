@@ -18,6 +18,9 @@ import {
 import { Auth } from "./auth";
 import { Stack } from "aws-cdk-lib";
 import * as iam from "aws-cdk-lib/aws-iam";
+
+// Transcription jobs started by the API, which IAM is scoped to.
+const TRANSCRIPTION_JOB_PREFIX = "brchat-";
 import {
   botStackPolicyStatement,
   publishedApiKeyPolicyStatement,
@@ -226,9 +229,9 @@ export class Api extends Construct {
           "transcribe:GetTranscriptionJob",
         ],
         resources: [
-          `arn:aws:transcribe:${props.bedrockRegion}:${
+          `arn:${Stack.of(this).partition}:transcribe:${props.bedrockRegion}:${
             Stack.of(this).account
-          }:transcription-job/brchat-*`,
+          }:transcription-job/${TRANSCRIPTION_JOB_PREFIX}*`,
         ],
       })
     );
@@ -267,6 +270,7 @@ export class Api extends Construct {
           props.usageAnalysis?.ddbExportTable.tableName || "",
         USAGE_ANALYSIS_WORKGROUP: props.usageAnalysis?.workgroupName || "",
         USAGE_ANALYSIS_OUTPUT_LOCATION: usageAnalysisOutputLocation,
+        TRANSCRIPTION_JOB_PREFIX,
         ENABLE_BEDROCK_GLOBAL_INFERENCE:
           props.enableBedrockGlobalInference.toString(),
         ENABLE_BEDROCK_CROSS_REGION_INFERENCE:

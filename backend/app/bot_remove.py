@@ -13,7 +13,7 @@ from app.repositories.api_publication import (
 from app.repositories.common import RecordNotFoundError, decompose_sk
 from app.utils import delete_api_key_from_secret_manager
 
-DOCUMENT_BUCKET = os.environ.get("DOCUMENT_BUCKET", "documents")
+DOCUMENT_BUCKET = os.environ.get("DOCUMENT_BUCKET", "bedrock-documents")
 BEDROCK_REGION = os.environ.get("BEDROCK_REGION", "us-east-1")
 
 s3_client = boto3.client("s3", BEDROCK_REGION)
@@ -39,12 +39,10 @@ def delete_from_s3(user_id: str, bot_id: str):
 
 
 def handler(event: dict, context: Any) -> None:
-    """Bot removal handler.
-    This function is triggered by dynamodb stream when item is deleted.
-    Following resources are deleted asynchronously when bot is deleted:
-    - vector store record (postgres)
-    - s3 files
-    - cloudformation stack (if exists)
+    """Bot removal handler, triggered by the DynamoDB stream when a bot is deleted.
+
+    Deletes the knowledge base stack, the published API stack and its API keys, the
+    bot's S3 files and its Firecrawl secret.
     """
 
     # NOTE: batch size is 1

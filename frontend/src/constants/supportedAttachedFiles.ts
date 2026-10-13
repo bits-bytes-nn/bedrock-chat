@@ -87,6 +87,9 @@ export const maxConvertibleFileSizeMb = (fileName: string): number =>
     ? MAX_PRESENTATION_FILE_SIZE_MB
     : MAX_MEDIA_FILE_SIZE_MB;
 
+/** Name of the text file that the backend writes for a converted file. */
+export const convertedFileName = (fileName: string): string => `${fileName}.txt`;
+
 export const isConvertibleFile = (fileName: string): boolean =>
   CONVERTIBLE_FILE_EXTENSIONS.some((extension) =>
     fileName.toLowerCase().endsWith(extension)
@@ -102,5 +105,6 @@ export const SUPPORTED_FILE_EXTENSIONS = [
 // You can include up to five documents. Each document’s size must be no more than 4.5 MB.
 // Ref: https://awscli.amazonaws.com/v2/documentation/api/latest/reference/bedrock-runtime/converse.html
 export const MAX_FILE_SIZE_MB = 4.5;
-export const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
+export const MB = 1024 * 1024;
+export const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * MB;
 export const MAX_ATTACHED_FILES = 5;

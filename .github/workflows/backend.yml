@@ -10,6 +10,8 @@ on:
       - "frontend/src/constants/index.ts"
       - "frontend/src/hooks/useModel.ts"
       - "frontend/src/i18n/en/index.ts"
+      # tests/test_usecases/test_file_conversion.py checks the convertible files.
+      - "frontend/src/constants/supportedAttachedFiles.ts"
       - ".github/workflows/backend.yml"
   push:
     branches:
@@ -20,6 +22,8 @@ on:
       - "frontend/src/constants/index.ts"
       - "frontend/src/hooks/useModel.ts"
       - "frontend/src/i18n/en/index.ts"
+      # tests/test_usecases/test_file_conversion.py checks the convertible files.
+      - "frontend/src/constants/supportedAttachedFiles.ts"
       - ".github/workflows/backend.yml"
   workflow_dispatch: {}
 

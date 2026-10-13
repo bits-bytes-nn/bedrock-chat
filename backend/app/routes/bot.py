@@ -15,6 +15,7 @@ from app.routes.schemas.bot import (
     Tool,
 )
 from app.routes.schemas.file_conversion import FileConversionOutput
+from app.usecases.file_conversion import converted_filename
 from app.usecases.bot import (
     fetch_knowledge_file_conversion,
     start_knowledge_file_conversion,
@@ -162,7 +163,7 @@ def _conversion_output(status, filename: str) -> FileConversionOutput:
     return FileConversionOutput(
         status=status.status,
         reason=status.reason,
-        converted_filename=f"{filename}.txt",
+        converted_filename=converted_filename(filename),
     )
 
 

@@ -19,12 +19,12 @@ from botocore.exceptions import ClientError
 from pptx import Presentation
 from pptx.enum.shapes import MSO_SHAPE_TYPE
 from pydantic import BaseModel
+from app.utils import BEDROCK_REGION, compose_upload_temp_s3_path
 from ulid import ULID
 
 logger = logging.getLogger(__name__)
 
 DOCUMENT_BUCKET = os.environ.get("DOCUMENT_BUCKET", "bedrock-documents")
-BEDROCK_REGION = os.environ.get("BEDROCK_REGION", "us-east-1")
 
 PRESENTATION_EXTENSIONS = frozenset({".pptx"})
 # Media formats supported by Amazon Transcribe batch jobs.
@@ -34,20 +34,24 @@ MEDIA_EXTENSIONS = frozenset(
 CONVERTIBLE_EXTENSIONS = PRESENTATION_EXTENSIONS | MEDIA_EXTENSIONS
 # Presentations are parsed in the API Lambda, so their size is limited. Recordings
 # are limited because transcription is billed per minute.
-MAX_PRESENTATION_BYTES = 100 * 1024 * 1024
-MAX_MEDIA_BYTES = 500 * 1024 * 1024
+MB = 1024 * 1024
+MAX_PRESENTATION_BYTES = 100 * MB
+MAX_MEDIA_BYTES = 500 * MB
 # Languages that Transcribe chooses from when identifying the spoken language.
 TRANSCRIPTION_LANGUAGES = ["ko-KR", "en-US", "ja-JP", "zh-CN"]
 MAX_SPEAKERS = 10
-# Prefix of the jobs this application starts; the IAM policy is scoped to it.
-TRANSCRIPTION_JOB_PREFIX = "brchat-"
+# Prefix of the jobs this application starts. CDK sets it and scopes IAM to it.
+TRANSCRIPTION_JOB_PREFIX = os.environ.get("TRANSCRIPTION_JOB_PREFIX", "brchat-")
 
 s3_client = boto3.client("s3", BEDROCK_REGION)
 transcribe_client = boto3.client("transcribe", BEDROCK_REGION)
 
 
+ConversionState = Literal["IN_PROGRESS", "COMPLETED", "FAILED"]
+
+
 class ConversionStatus(BaseModel):
-    status: Literal["IN_PROGRESS", "COMPLETED", "FAILED"]
+    status: ConversionState
     reason: str = ""
 
 
@@ -67,11 +71,16 @@ def chat_upload_key(user_id: str, upload_id: str, filename: str) -> str:
         raise ValueError("Upload ID must be a ULID.") from None
     if not filename or "/" in filename or not is_convertible(filename):
         raise ValueError("Invalid filename.")
-    return f".temp/{user_id}/{upload_id}/{filename}"
+    return compose_upload_temp_s3_path(user_id, upload_id, filename)
+
+
+def converted_filename(filename: str) -> str:
+    """Name of the text file that a conversion writes next to the upload."""
+    return f"{filename}.txt"
 
 
 def converted_key(source_key: str) -> str:
-    return f"{source_key}.txt"
+    return converted_filename(source_key)
 
 
 def _source(source_key: str) -> dict:
@@ -189,7 +198,9 @@ def start_conversion(source_key: str) -> ConversionStatus:
 
     if suffix in PRESENTATION_EXTENSIONS:
         if source["ContentLength"] > MAX_PRESENTATION_BYTES:
-            raise ValueError("Presentations must be 100 MB or smaller.")
+            raise ValueError(
+                f"Presentations must be {MAX_PRESENTATION_BYTES // MB} MB or smaller."
+            )
         data = s3_client.get_object(Bucket=DOCUMENT_BUCKET, Key=source_key)[
             "Body"
         ].read()
@@ -205,7 +216,7 @@ def start_conversion(source_key: str) -> ConversionStatus:
         )
         return ConversionStatus(status="COMPLETED")
     if source["ContentLength"] > MAX_MEDIA_BYTES:
-        raise ValueError("Recordings must be 500 MB or smaller.")
+        raise ValueError(f"Recordings must be {MAX_MEDIA_BYTES // MB} MB or smaller.")
     job_name = _job_name(source_key, source)
     try:
         transcribe_client.start_transcription_job(

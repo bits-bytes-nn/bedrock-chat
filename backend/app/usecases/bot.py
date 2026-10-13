@@ -4,7 +4,7 @@ import re
 from typing import Literal, TypeGuard
 
 from app.config import DEFAULT_GENERATION_CONFIG
-from app.repositories.api_publication import find_build_status_by_build_id
+from app.repositories.api_publication import is_build_running
 from app.repositories.common import RecordNotFoundError, ResourceConflictError
 from app.repositories.custom_bot import (
     alias_exists,
@@ -557,17 +557,6 @@ def modify_star_status(user: User, bot_id: str, starred: bool):
         return update_alias_star_status(user.id, bot_id, starred)
 
 
-def _is_publication_building(bot: BotModel) -> bool:
-    if bot.published_api_codebuild_id is None:
-        return False
-    try:
-        status = find_build_status_by_build_id(bot.published_api_codebuild_id)
-    except RecordNotFoundError:
-        # CodeBuild no longer keeps the build, so it has finished.
-        return False
-    return status not in ("SUCCEEDED", "FAILED", "STOPPED", "FAULT", "TIMED_OUT")
-
-
 def remove_bot_by_id(user: User, bot_id: str):
     """Remove bot by id."""
     bot = find_bot_by_id(bot_id)
@@ -586,7 +575,9 @@ def remove_bot_by_id(user: User, bot_id: str):
             raise ResourceConflictError(
                 "The knowledge base is being synchronized. Delete the bot after it finishes."
             )
-        if _is_publication_building(bot):
+        if bot.published_api_codebuild_id is not None and is_build_running(
+            bot.published_api_codebuild_id
+        ):
             raise ResourceConflictError(
                 "The API is being published. Delete the bot after it finishes."
             )
