@@ -1,4 +1,9 @@
-import React, { HTMLInputTypeAttribute, KeyboardEvent, ReactNode } from 'react';
+import React, {
+  HTMLInputTypeAttribute,
+  KeyboardEvent,
+  ReactNode,
+  useId,
+} from 'react';
 import { twMerge } from 'tailwind-merge';
 
 type Props = {
@@ -16,6 +21,7 @@ type Props = {
 };
 
 const InputText = React.forwardRef<HTMLInputElement, Props>((props, ref) => {
+  const id = useId();
   return (
     <div className={twMerge('flex flex-col', props.className)}>
       {props.icon && (
@@ -24,6 +30,7 @@ const InputText = React.forwardRef<HTMLInputElement, Props>((props, ref) => {
         </div>
       )}
       <input
+        id={id}
         ref={ref}
         type={props.type ?? 'text'}
         className={twMerge(
@@ -44,15 +51,16 @@ const InputText = React.forwardRef<HTMLInputElement, Props>((props, ref) => {
       />
 
       {props.label && (
-        <div
+        <label
+          htmlFor={id}
           className={twMerge(
             'order-first text-sm peer-focus:font-semibold peer-focus:italic',
             props.errorMessage
               ? 'font-bold text-red dark:text-red-400'
-              : 'text-dark-gray peer-focus:text-aws-font-color-light dark:text-light-gray dark:peer-focus:text-aws-font-color-dark'
+              : 'text-aws-font-color-light/80 peer-focus:text-aws-font-color-light dark:text-light-gray dark:peer-focus:text-aws-font-color-dark'
           )}>
           {props.label}
-        </div>
+        </label>
       )}
       {props.hint && !props.errorMessage && (
         <div className="mt-0.5 text-xs text-aws-font-color-light/70 dark:text-aws-font-color-dark">

@@ -1976,6 +1976,7 @@ const BotKbEditPage: React.FC = () => {
                   </div>
                   <div className="flex">
                     <Toggle
+                      ariaLabel={t('bot.label.citeRetrievedContexts')}
                       value={displayRetrievedChunks}
                       onChange={setDisplayRetrievedChunks}
                     />
@@ -2692,6 +2693,7 @@ const BotKbEditPage: React.FC = () => {
                     {activeModelsOptions.map(({ key, label, description }) => (
                       <div key={key} className="flex items-start">
                         <Toggle
+                          ariaLabel={label}
                           value={
                             activeModels[
                               toCamelCase(key) as keyof ActiveModels
@@ -2718,6 +2720,7 @@ const BotKbEditPage: React.FC = () => {
               >
                 <div className="flex mt-4 items-start">
                   <Toggle
+                    ariaLabel={t('bot.promptCaching.promptCachingEnabled.title')}
                     value={promptCachingEnabled}
                     onChange={setPromptCachingEnabled}
                   />

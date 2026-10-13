@@ -4,6 +4,8 @@ import { twMerge } from 'tailwind-merge';
 type Props = {
   className?: string;
   label?: string;
+  // Names the switch when its text is rendered outside the component.
+  ariaLabel?: string;
   value: boolean;
   disabled?: boolean;
   hint?: string;
@@ -33,6 +35,7 @@ const Toggle: React.FC<Props> = (props) => {
         <input
           type="checkbox"
           className="peer sr-only"
+          aria-label={props.label ? undefined : props.ariaLabel}
           checked={props.value}
           disabled={props.disabled}
           onChange={handleChange}

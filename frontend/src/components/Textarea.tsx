@@ -1,4 +1,4 @@
-import { forwardRef, useEffect, useRef, useState } from 'react';
+import { forwardRef, useEffect, useId, useRef, useState } from 'react';
 import { BaseProps } from '../@types/common';
 import { twMerge } from 'tailwind-merge';
 
@@ -16,6 +16,7 @@ type Props = BaseProps & {
 const MAX_HEIGHT = 300;
 
 const Textarea = forwardRef<HTMLElement, Props>((props, focusInputRef) => {
+  const id = useId();
   const ref = useRef<HTMLTextAreaElement | null>(null);
   const [isMax, setIsMax] = useState(false);
 
@@ -38,6 +39,9 @@ const Textarea = forwardRef<HTMLElement, Props>((props, focusInputRef) => {
   return (
     <div className={`${props.className ?? ''} flex w-full flex-col`}>
       <textarea
+        id={id}
+        // Without a visible label, the placeholder describes the field.
+        aria-label={props.label ? undefined : props.placeholder}
         ref={element => {
           ref.current = element;
           if (focusInputRef) {
@@ -63,9 +67,11 @@ const Textarea = forwardRef<HTMLElement, Props>((props, focusInputRef) => {
         }}
       />
       {props.label && (
-        <div className="order-first text-sm text-dark-gray dark:text-light-gray peer-focus:font-semibold peer-focus:italic peer-focus:text-aws-font-color-light dark:peer-focus:text-aws-font-color-dark">
+        <label
+          htmlFor={id}
+          className="order-first text-sm text-aws-font-color-light/80 dark:text-light-gray peer-focus:font-semibold peer-focus:italic peer-focus:text-aws-font-color-light dark:peer-focus:text-aws-font-color-dark">
           {props.label}
-        </div>
+        </label>
       )}
       {props.hint && (
         <div className="mt-0.5 text-xs text-aws-font-color-light/70 dark:text-aws-font-color-dark">{props.hint}</div>

@@ -720,6 +720,7 @@ const translation: typeof en = {
       SaveAndSubmit: '저장 후 전송',
       resend: '다시 보내기',
       regenerate: '다시 생성',
+      send: '보내기',
       delete: '삭제',
       deleteAll: '모두 삭제',
       done: '완료',
