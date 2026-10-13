@@ -108,7 +108,7 @@ class TestNotificationSender(unittest.TestCase):
                 "price": 0.0,
             }
         )
-        self.sender.on_error("failed after the response")
+        self.sender.on_error("failed after the response", "generation_failed")
 
         gatewayapi = FakeGatewayApi()
         run_sender(self.sender, gatewayapi)
@@ -142,15 +142,21 @@ class TestProcessChatInput(unittest.TestCase):
         self.assertEqual(response["statusCode"], 500)
         self.assertEqual(
             gatewayapi.sent,
-            [{"status": "ERROR", "reason": "Failed to generate the answer."}],
+            [
+                {
+                    "status": "ERROR",
+                    "reason": "Failed to generate the answer.",
+                    "code": "generation_failed",
+                }
+            ],
         )
 
-    def bedrock_error_reason(self, code: str, message: str) -> str:
-        return self.error_reason(
+    def bedrock_error(self, code: str, message: str) -> dict:
+        return self.error_frame(
             ClientError({"Error": {"Code": code, "Message": message}}, "ConverseStream")
         )
 
-    def error_reason(self, error: Exception) -> str:
+    def error_frame(self, error: Exception) -> dict:
         sender = NotificationSender(
             endpoint_url="https://example.com/dev", connection_id="connection"
         )
@@ -169,24 +175,25 @@ class TestProcessChatInput(unittest.TestCase):
 
         gatewayapi = FakeGatewayApi()
         run_sender(sender, gatewayapi)
-        return gatewayapi.sent[0]["reason"]
+        return gatewayapi.sent[0]
 
     def test_passes_through_bedrock_model_errors(self):
-        self.assertEqual(
-            self.bedrock_error_reason("ValidationException", "Input is too long"),
-            "Input is too long",
-        )
+        frame = self.bedrock_error("ValidationException", "Input is too long")
+        self.assertEqual(frame["reason"], "Input is too long")
+        self.assertEqual(frame["code"], "model_error")
 
     def test_reports_throttling(self):
-        reason = self.error_reason(ModelThrottledException("Too many requests"))
-        self.assertIn("busy", reason)
+        frame = self.error_frame(ModelThrottledException("Too many requests"))
+        self.assertIn("busy", frame["reason"])
+        self.assertEqual(frame["code"], "throttled")
 
     def test_hides_access_denied_details(self):
-        reason = self.bedrock_error_reason(
+        frame = self.bedrock_error(
             "AccessDeniedException",
             "User: arn:aws:sts::123456789012:assumed-role/x is not authorized",
         )
-        self.assertNotIn("arn:aws", reason)
+        self.assertNotIn("arn:aws", frame["reason"])
+        self.assertEqual(frame["code"], "model_unavailable")
 
 
 @pytest.fixture
