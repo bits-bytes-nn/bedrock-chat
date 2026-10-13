@@ -916,20 +916,86 @@ describe("Api Publishment Stack", () => {
       MetricName: "ApproximateNumberOfMessagesVisible",
       AlarmActions: ["arn:aws:sns:us-east-1:123456789012:alarms"],
     });
-    // Failures recorded for the client end the message normally, so they are
-    // counted from the consumer's log as well.
-    template.resourceCountIs("AWS::CloudWatch::Alarm", 2);
-    template.hasResourceProperties("AWS::Logs::MetricFilter", {
-      FilterPattern: '"Failed to answer message"',
+    // Failures recorded for the client end the message normally, so the consumer
+    // publishes them as a metric of this API. Both handlers alarm on Lambda errors.
+    template.resourceCountIs("AWS::CloudWatch::Alarm", 4);
+    template.resourceCountIs("AWS::Logs::MetricFilter", 0);
+    template.hasResourceProperties("AWS::CloudWatch::Alarm", {
+      Namespace: "BedrockChat",
+      MetricName: "FailedAnswers",
+      Dimensions: [{ Name: "PublishedApiId", Value: "Test" }],
+      Statistic: "Sum",
+      AlarmActions: ["arn:aws:sns:us-east-1:123456789012:alarms"],
     });
-    template.hasResourceProperties("AWS::Lambda::Function", {
-      Environment: {
-        Variables: Match.objectLike({
-          MAX_RECEIVE_COUNT: "2",
-          METRICS_NAMESPACE: "BedrockChat",
-        }),
-      },
+    const errorAlarms = template.findResources("AWS::CloudWatch::Alarm", {
+      Properties: { Namespace: "AWS/Lambda", MetricName: "Errors" },
     });
+    expect(Object.keys(errorAlarms)).toHaveLength(2);
+    for (const alarm of Object.values(errorAlarms) as any[]) {
+      expect(alarm.Properties.AlarmActions).toEqual([
+        "arn:aws:sns:us-east-1:123456789012:alarms",
+      ]);
+    }
+
+    const functions = template.findResources("AWS::Lambda::Function");
+    const consumer = Object.values(functions).find(
+      (fn: any) => fn.Properties.Environment?.Variables?.MAX_RECEIVE_COUNT
+    ) as any;
+    const apiHandler = Object.values(functions).find(
+      (fn: any) => fn.Properties.Environment?.Variables?.QUEUE_URL
+    ) as any;
+    // The consumer reads the API ID for the metric dimension, not the queue or CORS.
+    expect(consumer.Properties.Environment.Variables).toMatchObject({
+      MAX_RECEIVE_COUNT: "2",
+      METRICS_NAMESPACE: "BedrockChat",
+      PUBLISHED_API_ID: "Test",
+    });
+    expect(consumer.Properties.Environment.Variables).not.toHaveProperty(
+      "QUEUE_URL"
+    );
+    expect(consumer.Properties.Environment.Variables).not.toHaveProperty(
+      "CORS_ALLOW_ORIGINS"
+    );
+
+    // The API handler only queues messages and reads conversations, so its role
+    // cannot call models.
+    const roleActions = (fn: any): string[] => {
+      const roleId = fn.Properties.Role["Fn::GetAtt"][0];
+      return Object.values(template.findResources("AWS::IAM::Policy"))
+        .filter((policy: any) =>
+          policy.Properties.Roles.some((role: any) => role.Ref === roleId)
+        )
+        .flatMap((policy: any) =>
+          policy.Properties.PolicyDocument.Statement.flatMap((statement: any) =>
+            [statement.Action].flat()
+          )
+        );
+    };
+    expect(apiHandler.Properties.Role).not.toEqual(consumer.Properties.Role);
+    const apiActions = roleActions(apiHandler);
+    expect(apiActions).toContain("sqs:SendMessage");
+    expect(apiActions).toContain("sts:AssumeRole");
+    expect(apiActions.some((action) => action.startsWith("bedrock:"))).toBe(false);
+    expect(apiActions).not.toContain("s3:PutObject");
+    expect(roleActions(consumer)).toContain("bedrock:InvokeModelWithResponseStream");
+
+    // Concurrent answers are bounded, and a message stays invisible for six times
+    // the consumer timeout.
+    template.hasResourceProperties("AWS::Lambda::EventSourceMapping", {
+      BatchSize: 1,
+      ScalingConfig: { MaximumConcurrency: 10 },
+    });
+    expect(consumer.Properties.Timeout).toBe(900);
+    template.hasResourceProperties("AWS::SQS::Queue", {
+      VisibilityTimeout: 900 * 6,
+    });
+
+    // The WAF association names the stage, so it waits for the stage.
+    const stageId = Object.keys(template.findResources("AWS::ApiGateway::Stage"))[0];
+    const association = Object.values(
+      template.findResources("AWS::WAFv2::WebACLAssociation")
+    )[0] as any;
+    expect(association.DependsOn).toContain(stageId);
 
     template.resourceCountIs("AWS::SQS::Queue", 2);
     const queuePolicies = Object.values(

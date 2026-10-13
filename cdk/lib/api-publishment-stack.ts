@@ -40,13 +40,22 @@ interface ApiPublishmentStackProps extends StackProps {
   readonly alarmTopicArn: string;
 }
 
+// The consumer runs for up to 15 minutes per message. SQS needs a visibility timeout of
+// at least six times the function timeout, so that a message is not received again
+// while the event source mapping still retries a throttled invocation.
+const CONSUMER_TIMEOUT = cdk.Duration.minutes(15);
+// Concurrent answers per published API. Each answer calls the model, so this bounds
+// the model cost and quota that one API key can use at a time, and keeps one API from
+// taking the account's Lambda concurrency.
+const CONSUMER_MAX_CONCURRENCY = 10;
+
 export class ApiPublishmentStack extends Stack {
-  public readonly chatQueue: sqs.Queue;
   constructor(scope: Construct, id: string, props: ApiPublishmentStackProps) {
     super(scope, id, props);
 
-
     const deploymentStage = props.deploymentStage ?? "dev";
+    // Read by the backend as PUBLISHED_API_ID.
+    const publishedApiId = id.replace("ApiPublishmentStack", "");
 
     const chatQueueDLQ = new sqs.Queue(this, "ChatQueueDlq", {
       retentionPeriod: cdk.Duration.days(14),
@@ -55,7 +64,7 @@ export class ApiPublishmentStack extends Stack {
     // One retry; the consumer records a failure for the client on the last receive.
     const maxReceiveCount = 2;
     const chatQueue = new sqs.Queue(this, "ChatQueue", {
-      visibilityTimeout: cdk.Duration.minutes(30),
+      visibilityTimeout: cdk.Duration.seconds(CONSUMER_TIMEOUT.toSeconds() * 6),
       enforceSSL: true,
       deadLetterQueue: {
         maxReceiveCount,
@@ -77,31 +86,40 @@ export class ApiPublishmentStack extends Stack {
       alarmDescription: `Published API ${id} could not answer messages.`,
     }).addAlarmAction(alarmAction);
 
-    const handlerRole = new iam.Role(this, "HandlerRole", {
-      assumedBy: new iam.ServicePrincipal("lambda.amazonaws.com"),
-    });
-    handlerRole.addManagedPolicy(
-      iam.ManagedPolicy.fromAwsManagedPolicyName(
-        "service-role/AWSLambdaBasicExecutionRole"
-      )
-    );
-    handlerRole.addToPolicy(
-      // Assume the table access role for row-level access control.
-      new iam.PolicyStatement({
-        actions: ["sts:AssumeRole"],
-        resources: [props.tableAccessRoleArn],
-      })
-    );
-    handlerRole.addToPolicy(bedrockChatPolicyStatement());
-    handlerRole.addToPolicy(
-      // Bots with the internet search tool keep their Firecrawl API key here.
-      firecrawlSecretPolicyStatement(this, ["secretsmanager:GetSecretValue"])
-    );
+    // Both handlers read bots and conversations through the table access role. Loading
+    // a bot with the internet search tool reads its Firecrawl API key.
+    const newHandlerRole = (roleId: string): iam.Role => {
+      const role = new iam.Role(this, roleId, {
+        assumedBy: new iam.ServicePrincipal("lambda.amazonaws.com"),
+      });
+      role.addManagedPolicy(
+        iam.ManagedPolicy.fromAwsManagedPolicyName(
+          "service-role/AWSLambdaBasicExecutionRole"
+        )
+      );
+      role.addToPolicy(
+        // Assume the table access role for row-level access control.
+        new iam.PolicyStatement({
+          actions: ["sts:AssumeRole"],
+          resources: [props.tableAccessRoleArn],
+        })
+      );
+      role.addToPolicy(
+        firecrawlSecretPolicyStatement(this, ["secretsmanager:GetSecretValue"])
+      );
+      return role;
+    };
     const largeMessageBucket = s3.Bucket.fromBucketName(
       this,
       "LargeMessageBucket",
       props.largeMessageBucketName
     );
+    // The API handler queues messages and reads conversations. It does not call models.
+    const apiHandlerRole = newHandlerRole("ApiHandlerRole");
+    largeMessageBucket.grantRead(apiHandlerRole);
+    // The consumer generates the answers.
+    const handlerRole = newHandlerRole("HandlerRole");
+    handlerRole.addToPolicy(bedrockChatPolicyStatement());
     largeMessageBucket.grantReadWrite(handlerRole);
 
     // Handler for FastAPI
@@ -118,7 +136,7 @@ export class ApiPublishmentStack extends Stack {
       // API Gateway ends the request after 29 seconds, so a longer run is wasted.
       timeout: cdk.Duration.seconds(30),
       environment: {
-        PUBLISHED_API_ID: id.replace("ApiPublishmentStack", ""),
+        PUBLISHED_API_ID: publishedApiId,
         QUEUE_URL: chatQueue.queueUrl,
         CONVERSATION_TABLE_NAME: props.conversationTableName,
         BOT_TABLE_NAME: props.botTableName,
@@ -132,7 +150,7 @@ export class ApiPublishmentStack extends Stack {
         ...props.modelEnvironment,
         TABLE_ACCESS_ROLE_ARN: props.tableAccessRoleArn,
       },
-      role: handlerRole,
+      role: apiHandlerRole,
       logRetention: logs.RetentionDays.THREE_MONTHS,
     });
 
@@ -151,15 +169,12 @@ export class ApiPublishmentStack extends Stack {
           }
         ),
         memorySize: 1024,
-        timeout: cdk.Duration.minutes(15),
+        timeout: CONSUMER_TIMEOUT,
         environment: {
-          PUBLISHED_API_ID: id.replace("ApiPublishmentStack", ""),
-          QUEUE_URL: chatQueue.queueUrl,
+          // Dimension of the FailedAnswers metric.
+          PUBLISHED_API_ID: publishedApiId,
           CONVERSATION_TABLE_NAME: props.conversationTableName,
           BOT_TABLE_NAME: props.botTableName,
-          CORS_ALLOW_ORIGINS: (props.corsOptions?.allowOrigins ?? ["*"]).join(
-            ","
-          ),
           ACCOUNT: Stack.of(this).account,
           REGION: Stack.of(this).region,
           ENABLE_BEDROCK_GLOBAL_INFERENCE:
@@ -180,27 +195,52 @@ export class ApiPublishmentStack extends Stack {
     );
     // Failures that the consumer records for the client end the message normally,
     // so they never reach the dead-letter queue.
-    new cloudwatch.Alarm(this, "FailedAnswers", {
-      metric: new logs.MetricFilter(this, "FailedAnswerCount", {
-        logGroup: sqsConsumeHandler.logGroup,
-        // Logged by backend/app/sqs_consumer.py.
-        filterPattern: logs.FilterPattern.literal('"Failed to answer message"'),
-        metricNamespace: props.metricsNamespace,
-        metricName: `${id}FailedAnswers`,
-        metricValue: "1",
-      }).metric({ period: cdk.Duration.minutes(5), statistic: "Sum" }),
-      threshold: 1,
-      evaluationPeriods: 1,
-      comparisonOperator:
-        cloudwatch.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
-      treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
-      alarmDescription: `Published API ${id} could not answer a message.`,
-    }).addAlarmAction(alarmAction);
+    const period = cdk.Duration.minutes(5);
+    const alarms: [string, cloudwatch.IMetric, string][] = [
+      [
+        "FailedAnswers",
+        new cloudwatch.Metric({
+          // Published by backend/app/sqs_consumer.py.
+          namespace: props.metricsNamespace,
+          metricName: "FailedAnswers",
+          dimensionsMap: { PublishedApiId: publishedApiId },
+          statistic: "Sum",
+          period,
+        }),
+        `Published API ${id} could not answer a message.`,
+      ],
+      [
+        "ApiHandlerErrors",
+        apiHandler.metricErrors({ period }),
+        `The API handler of published API ${id} failed (for example a timeout or an init error).`,
+      ],
+      [
+        "SqsConsumeHandlerErrors",
+        // Timeouts, out-of-memory and init failures end the invocation before the
+        // consumer can record the failure for the client.
+        sqsConsumeHandler.metricErrors({ period }),
+        `The queue consumer of published API ${id} failed (for example a timeout or an init error).`,
+      ],
+    ];
+    for (const [alarmId, metric, description] of alarms) {
+      new cloudwatch.Alarm(this, alarmId, {
+        metric,
+        threshold: 1,
+        evaluationPeriods: 1,
+        comparisonOperator:
+          cloudwatch.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
+        treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
+        alarmDescription: description,
+      }).addAlarmAction(alarmAction);
+    }
 
     sqsConsumeHandler.addEventSource(
       // One message per invocation so that a failure does not re-run, and re-bill,
       // the other messages of the batch.
-      new lambdaEventSources.SqsEventSource(chatQueue, { batchSize: 1 })
+      new lambdaEventSources.SqsEventSource(chatQueue, {
+        batchSize: 1,
+        maxConcurrency: CONSUMER_MAX_CONCURRENCY,
+      })
     );
     chatQueue.grantSendMessages(apiHandler);
     chatQueue.grantConsumeMessages(sqsConsumeHandler);
@@ -233,9 +273,8 @@ export class ApiPublishmentStack extends Stack {
         webAclArn: props.webAclArn,
       }
     );
-    association.addDependency(api.node.defaultChild as cdk.CfnResource);
-
-    this.chatQueue = chatQueue;
+    // The ARN names the stage without referencing it, so wait for the stage.
+    association.node.addDependency(api.deploymentStage);
 
     new CfnOutput(this, "ApiId", {
       value: api.restApiId,

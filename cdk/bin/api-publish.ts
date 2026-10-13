@@ -13,9 +13,7 @@ const params = resolveApiPublishParameters();
 const sepHyphen = params.envPrefix ? "-" : "";
 
 // Parse allowed origins
-const publishedApiAllowedOrigins = JSON.parse(
-  params.publishedApiAllowedOrigins || '["*"]'
-);
+const publishedApiAllowedOrigins = JSON.parse(params.publishedApiAllowedOrigins);
 
 // Log all parameters at once for debugging
 
@@ -88,7 +86,8 @@ new ApiPublishmentStack(app, `ApiPublishmentStack${params.publishedApiId}`, {
     allowOrigins: publishedApiAllowedOrigins,
     allowMethods: apigateway.Cors.ALL_METHODS,
     allowHeaders: apigateway.Cors.DEFAULT_HEADERS,
-    allowCredentials: true,
+    // Clients authenticate with the API key header, not with cookies.
+    allowCredentials: false,
   },
 });
 
