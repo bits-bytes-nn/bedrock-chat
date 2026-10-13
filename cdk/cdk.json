@@ -85,7 +85,6 @@
     "tokenValidMinutes": 30,
     "alternateDomainName": "",
     "hostedZoneId": "",
-    "alarmEmail": "",
     "dailyChatCostAlarmUsd": 100,
     "maxDedicatedKnowledgeBasesPerUser": 2,
     "usageAnalysisRetentionDays": 90,

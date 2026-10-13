@@ -864,8 +864,13 @@ describe("cdk.json", () => {
     fs.readFileSync(path.join(__dirname, "../../cdk.json"), "utf8")
   ).context;
 
+  // alarmEmail is left out on purpose: a key in cdk.json takes precedence over
+  // cdk.context.json, where a deployment keeps its own address.
+  test("leaves alarmEmail to the deployment", () => {
+    expect(context).not.toHaveProperty("alarmEmail");
+  });
+
   test.each([
-    ["alarmEmail", ""],
     ["dailyChatCostAlarmUsd", 100],
     ["maxDedicatedKnowledgeBasesPerUser", 2],
     ["usageAnalysisRetentionDays", 90],
