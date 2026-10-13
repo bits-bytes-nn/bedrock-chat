@@ -1,5 +1,5 @@
 > [!NOTE]
-> 이 번역은 upstream aws-samples 프로젝트 기준이며, 배포 절차와 보안 기본값만 이 포크에 맞게 고쳤습니다. 모델 목록과 그 밖의 최신 내용은 [영어 README](../README.md)를 기준으로 합니다. 이 포크에서 바뀐 점은 [Changes from upstream](../README.md#changes-from-upstream), 프레젠테이션·녹음 변환은 [Presentations and recordings](../README.md#presentations-and-recordings), 지식 기반 파싱 모델은 [Knowledge base parsing](../README.md#knowledge-base-parsing), 알람과 API 요청 제한은 [Alarms and API Throttling](../README.md#alarms-and-api-throttling)을 참고하세요.
+> 이 번역은 upstream aws-samples 프로젝트 기준이며, 배포 절차와 보안 기본값만 이 포크에 맞게 고쳤습니다. 모델 목록과 그 밖의 최신 내용은 [영어 README](../README.md)를 기준으로 합니다. 이 포크에서 바뀐 점은 [Changes from upstream](../README.md#changes-from-upstream), 프레젠테이션·녹음 변환은 [Presentations and recordings](../README.md#presentations-and-recordings), 지식 기반 파싱 모델은 [Knowledge base parsing](../README.md#knowledge-base-parsing), 알람과 API 요청 제한은 [Alarms and API Throttling](../README.md#alarms-and-api-throttling), 사용자별 전용 지식 기반 수 제한은 [Limit dedicated knowledge bases](../README.md#limit-dedicated-knowledge-bases)를 참고하세요. 업그레이드 시 주의 사항은 [업그레이드](./ADMINISTRATOR_ko-KR.md#업그레이드), 사용자 데이터 삭제 방법은 [사용자 데이터 삭제](./ADMINISTRATOR_ko-KR.md#사용자-데이터-삭제)에 정리되어 있습니다.
 
 <h1 align="center">Bedrock Chat (BrChat)</h1>
 
@@ -55,7 +55,7 @@ API 관리, 필수 봇 표시, 봇 사용량 분석 [자세히 보기](./ADMINIS
 ![](./imgs/admin_bot_menue.png)
 ![](./imgs/bot_store.png)
 ![](./imgs/admn_api_management.png)
-![](./imgs/admin_bot_analytics.png))
+![](./imgs/admin_bot_analytics.png)
 
 </details>
 
@@ -84,7 +84,7 @@ API 관리, 필수 봇 표시, 봇 사용량 분석 [자세히 보기](./ADMINIS
 
 ### 지원되는 리전
 
-봇과 지식 베이스를 사용하려면(OpenSearch Serverless가 기본 선택임) Bedrock Chat을 [OpenSearch Serverless와 Ingestion API를 사용할 수 있는 리전](https://docs.aws.amazon.com/general/latest/gr/opensearch-service.html)에 배포해야 합니다. 2025년 8월 기준으로 다음 리전들이 지원됩니다: us-east-1, us-east-2, us-west-1, us-west-2, ap-south-1, ap-northeast-1, ap-northeast-2, ap-southeast-1, ap-southeast-2, ca-central-1, eu-central-1, eu-west-1, eu-west-2, eu-south-2, eu-north-1, sa-east-1
+봇과 지식 베이스를 사용하려면(OpenSearch Serverless가 기본 선택임) Bedrock Chat을 [OpenSearch Serverless와 Ingestion API를 사용할 수 있는 리전](https://docs.aws.amazon.com/general/latest/gr/opensearch-service.html)에 배포해야 합니다. 지원되는 리전은 다음과 같습니다: us-east-1, us-east-2, us-west-1, us-west-2, ap-south-1, ap-northeast-1, ap-northeast-2, ap-southeast-1, ap-southeast-2, ca-central-1, eu-central-1, eu-west-1, eu-west-2, eu-south-2, eu-north-1, sa-east-1
 
 **bedrock-region** 파라미터의 경우 [Bedrock이 사용 가능한 리전](https://docs.aws.amazon.com/general/latest/gr/bedrock.html)을 선택해야 합니다.
 
@@ -256,7 +256,7 @@ npx cdk deploy --require-approval never --all
 ```
 
 > [!NOTE]
-> 배포 환경별 값은 `-c`로 넘기세요(예: `npx cdk deploy --all -c bedrockRegion=ap-northeast-2`). 명령행 컨텍스트는 `cdk.json`보다 우선하지만, `cdk.context.json`의 값은 `cdk.json`에 같은 키가 있으면 적용되지 않습니다.
+> 배포 환경별 값은 `-c`로 넘기세요(예: `npx cdk deploy --all -c bedrockRegion=ap-northeast-2`). 명령행 컨텍스트는 `cdk.json`보다 우선하지만, `cdk.context.json`의 값은 `cdk.json`에 같은 키가 있으면 적용되지 않습니다. 숫자와 `true`/`false` 값은 `-c`로 넘길 수 있지만, 목록과 객체(예: `allowedIpV4AddressRanges`)는 `cdk.json`이나 `--cdk-json-override`로 지정해야 합니다.
 
 - 다음과 같은 출력이 표시됩니다. 웹 앱의 URL은 `BedrockChatStack.FrontendURL`에 출력되므로 브라우저에서 접속하시기 바랍니다.
 
@@ -293,7 +293,7 @@ BedrockChatStack.FrontendURL = https://xxxxx.cloudfront.net
       "amazon-nova-pro",
       "amazon-nova-lite",
       "llama3-3-70b-instruct"
-    ],
+    ]
   }
 }
 ```
@@ -370,6 +370,7 @@ npx cdk deploy --all
 1. **스택 이름 지정**:
 
    - 각 환경의 메인 스택은 환경 이름으로 접두사가 붙습니다(예: `dev-BedrockChatStack`, `prod-BedrockChatStack`)
+   - 공유 지식 기반 스택에도 접두사가 붙습니다(예: `dev-BrChatSharedKbStack`). 기본 환경에서는 `BrChatSharedKbStack` 그대로입니다
    - 하지만 커스텀 봇 스택(`BrChatKbStack*`)과 API 게시 스택(`ApiPublishmentStack*`)은 런타임에 동적으로 생성되므로 환경 접두사를 받지 않습니다
 
 2. **리소스 이름 지정**:
@@ -391,110 +392,9 @@ npx cdk deploy --all
 
 ## 기타
 
-배포에 대한 매개변수를 정의하는 방법에는 두 가지가 있습니다: `cdk.json`을 사용하거나 타입 안전성이 보장되는 `parameter.ts` 파일을 사용하는 것입니다.
-
-#### cdk.json 사용 (전통적인 방법)
-
-매개변수를 구성하는 전통적인 방법은 `cdk.json` 파일을 편집하는 것입니다. 이 방법은 간단하지만 타입 검사가 없습니다:
-
-```json
-{
-  "app": "npx ts-node --prefer-ts-exts bin/bedrock-chat.ts",
-  "context": {
-    "bedrockRegion": "us-east-1",
-    "allowedIpV4AddressRanges": ["0.0.0.0/1", "128.0.0.0/1"],
-    "selfSignUpEnabled": false
-  }
-}
-```
-
-#### parameter.ts 사용 (권장되는 타입 안전 방법)
-
-더 나은 타입 안전성과 개발자 경험을 위해 `parameter.ts` 파일을 사용하여 매개변수를 정의할 수 있습니다:
-
-```typescript
-// 기본 환경에 대한 매개변수 정의
-bedrockChatParams.set("default", {
-  bedrockRegion: "us-east-1",
-  allowedIpV4AddressRanges: ["192.168.0.0/16"],
-  selfSignUpEnabled: false,
-});
-
-// 추가 환경에 대한 매개변수 정의
-bedrockChatParams.set("dev", {
-  bedrockRegion: "us-west-2",
-  allowedIpV4AddressRanges: ["10.0.0.0/8"],
-  enableRagReplicas: false, // 개발 환경을 위한 비용 절감
-});
-
-bedrockChatParams.set("prod", {
-  bedrockRegion: "us-east-1",
-  allowedIpV4AddressRanges: ["172.16.0.0/12"],
-  enableLambdaSnapStart: true,
-  enableRagReplicas: true, // 프로덕션을 위한 향상된 가용성
-});
-```
-
-> [!Note]
-> 기존 사용자는 변경 없이 `cdk.json`을 계속 사용할 수 있습니다. `parameter.ts` 방식은 새로운 배포나 여러 환경을 관리해야 할 때 권장됩니다.
-
-### 다중 환경 배포
-
-`parameter.ts` 파일과 `-c envName` 옵션을 사용하여 동일한 코드베이스에서 여러 환경을 배포할 수 있습니다.
-
-#### 전제 조건
-
-1. 위에서 보여진 대로 `parameter.ts`에 환경을 정의
-2. 각 환경은 환경별 접두사가 있는 자체 리소스 세트를 가짐
-
-#### 배포 명령어
-
-특정 환경을 배포하려면:
-
-```bash
-# 개발 환경 배포
-npx cdk deploy --all -c envName=dev
-
-# 프로덕션 환경 배포
-npx cdk deploy --all -c envName=prod
-```
-
-환경이 지정되지 않은 경우 "default" 환경이 사용됩니다:
-
-```bash
-# 기본 환경 배포
-npx cdk deploy --all
-```
-
-#### 중요 사항
-
-1. **스택 이름 지정**:
-
-   - 각 환경의 주요 스택은 환경 이름으로 접두사가 붙습니다(예: `dev-BedrockChatStack`, `prod-BedrockChatStack`)
-   - 단, 커스텀 봇 스택(`BrChatKbStack*`)과 API 게시 스택(`ApiPublishmentStack*`)은 런타임에 동적으로 생성되므로 환경 접두사를 받지 않습니다
-
-2. **리소스 이름 지정**:
-
-   - 일부 리소스만 이름에 환경 접두사를 받습니다(예: `dev_ddb_export` 테이블, `dev-FrontendWebAcl`)
-   - 대부분의 리소스는 원래 이름을 유지하지만 다른 스택에 있어 격리됩니다
-
-3. **환경 식별**:
-
-   - 모든 리소스에는 환경 이름이 포함된 `CDKEnvironment` 태그가 지정됩니다
-   - 이 태그를 사용하여 리소스가 어느 환경에 속하는지 식별할 수 있습니다
-   - 예: `CDKEnvironment: dev` 또는 `CDKEnvironment: prod`
-
-4. **기본 환경 재정의**: `parameter.ts`에서 "default" 환경을 정의하면 `cdk.json`의 설정을 재정의합니다. `cdk.json`을 계속 사용하려면 `parameter.ts`에서 "default" 환경을 정의하지 마세요.
-
-5. **환경 요구사항**: "default" 이외의 환경을 만들려면 반드시 `parameter.ts`를 사용해야 합니다. 해당 환경 정의 없이 `-c envName` 옵션만으로는 충분하지 않습니다.
-
-6. **리소스 격리**: 각 환경은 자체 리소스 세트를 생성하므로 동일한 AWS 계정에서 충돌 없이 개발, 테스트 및 프로덕션 환경을 가질 수 있습니다.
-
-## 기타
-
 ### 리소스 제거
 
-애플리케이션이 실행 중에 만든 리소스를 먼저 삭제하세요. 비용이 계속 발생하고 `cdk destroy`로는 삭제되지 않습니다. 앱에서 지식 기반이 있는 봇과 게시한 API를 모두 삭제하거나, [CloudFormation](https://console.aws.amazon.com/cloudformation/home)에서 Bedrock 리전의 `BrChatKbStack*`, `BrChatSharedKbStack` 스택과 배포 리전의 `ApiPublishmentStack*` 스택을 삭제합니다.
+애플리케이션이 실행 중에 만든 리소스를 먼저 삭제하세요. 비용이 계속 발생하고 `cdk destroy`로는 삭제되지 않습니다. 앱에서 지식 기반이 있는 봇과 게시한 API를 모두 삭제하거나, [CloudFormation](https://console.aws.amazon.com/cloudformation/home)에서 Bedrock 리전의 `BrChatKbStack*`, `BrChatSharedKbStack`(이름 있는 환경에서는 `<envPrefix>-BrChatSharedKbStack`) 스택과 배포 리전의 `ApiPublishmentStack*` 스택을 삭제합니다.
 
 그다음 `cdk`에서 `npx cdk destroy --all`을 실행하세요. CDK를 사용하지 않는 경우 CloudFormation에서 `BedrockChatStack`, `BedrockRegionResourcesStack`, `FrontendWafStack`을 삭제하세요. `FrontendWafStack`은 `us-east-1` 리전에 있다는 점에 유의하세요.
 
@@ -588,17 +488,20 @@ bedrockChatParams.set("default", {
 }
 ```
 
-- **enableBotStore**: 봇 스토어 기능의 활성화 여부를 제어합니다(기본값: `true`)
+- **enableBotStore**: 봇 스토어 기능의 활성화 여부를 제어합니다(기본값: `true`). 봇 스토어는 OpenSearch Ingestion 파이프라인 2개와 OpenSearch Serverless 컬렉션 1개를 상시 실행하므로 사용하지 않을 때도 기본 비용이 발생합니다.
 - **botStoreLanguage**: 봇 검색 및 발견을 위한 기본 언어를 설정합니다(기본값: `"en"`). 이는 봇이 인덱싱되고 검색되는 방식에 영향을 미치며, 지정된 언어에 맞게 텍스트 분석을 최적화합니다.
 - **enableBotStoreReplicas**: 봇 스토어가 사용하는 OpenSearch Serverless 컬렉션의 대기 복제본 활성화 여부를 제어합니다(기본값: `false`). `true`로 설정하면 가용성이 향상되지만 비용이 증가하며, `false`로 설정하면 비용이 감소하지만 가용성에 영향을 미칠 수 있습니다.
   > **중요**: 컬렉션이 이미 생성된 후에는 이 속성을 업데이트할 수 없습니다. 이 속성을 수정하려고 시도해도 컬렉션은 원래 값을 계속 사용합니다.
 
-### 교차 리전 추론
+### 교차 리전 추론과 글로벌 추론
 
-[교차 리전 추론](https://docs.aws.amazon.com/bedrock/latest/userguide/inference-profiles-support.html)을 통해 Amazon Bedrock은 피크 수요 기간 동안 처리량과 복원력을 향상시키기 위해 여러 AWS 리전에 걸쳐 모델 추론 요청을 동적으로 라우팅할 수 있습니다. 구성하려면 `cdk.json`을 편집하세요.
+[교차 리전 추론과 글로벌 추론](https://docs.aws.amazon.com/bedrock/latest/userguide/inference-profiles-support.html)을 사용하면 Amazon Bedrock이 모델 추론 요청을 여러 AWS 리전으로 동적으로 라우팅해 수요가 몰릴 때의 처리량과 복원력을 높입니다. 글로벌 추론은 전 세계 리전 중 지연 시간과 가용성이 가장 좋은 곳으로, 교차 리전 추론은 미국 안처럼 같은 지역 안의 리전으로 요청을 보냅니다. SCP가 둘 중 하나나 둘 다를 막을 수 있으므로 각각 따로 설정할 수 있으며, 기본값은 둘 다 사용입니다.
+
+끄려면 `cdk.json`이나 `parameter.ts`에서 다음 값을 설정하세요.
 
 ```json
-"enableBedrockCrossRegionInference": true
+"enableBedrockGlobalInference": false,
+"enableBedrockCrossRegionInference": false,
 ```
 
 ### Lambda SnapStart
@@ -674,7 +577,12 @@ bedrockChatParams.set("default", {
 
 이 리포지토리에 기여하는 것을 고려해 주셔서 감사합니다! 버그 수정, 언어 번역(i18n), 기능 개선, [에이전트 도구](./AGENT_ko-KR.md#자체-도구-개발-방법) 및 기타 개선 사항을 환영합니다.
 
-기능 개선 및 기타 개선 사항의 경우, **풀 리퀘스트를 생성하기 전에 구현 접근 방식과 세부 사항을 논의하
+기능 개선 및 기타 개선 사항의 경우, **풀 리퀘스트를 만들기 전에 기능 요청 이슈를 만들어 구현 방식과 세부 사항을 먼저 논의해 주시면 감사하겠습니다. 버그 수정과 언어 번역(i18n)은 바로 풀 리퀘스트를 만들어 주세요.**
+
+기여하기 전에 다음 가이드도 확인해 주세요.
+
+- [로컬 개발](./LOCAL_DEVELOPMENT_ko-KR.md)
+- [CONTRIBUTING](../CONTRIBUTING.md)
 
 ## 연락처
 
