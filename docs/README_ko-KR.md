@@ -129,8 +129,8 @@ chmod +x bin.sh
     "allowedCountries": ["US", "CA"],
     "allowedSignUpEmailDomains": ["example.com"],
     "globalAvailableModels": [
-      "claude-v3.7-sonnet",
-      "claude-v3.5-sonnet",
+      "claude-v5.5-sonnet",
+      "claude-v5.5-haiku",
       "amazon-nova-pro",
       "amazon-nova-lite",
       "llama3-3-70b-instruct"
@@ -171,7 +171,13 @@ Frontend URL: https://xxxxxxxxx.cloudfront.net
 
 ![](./imgs/signin.png)
 
-위와 같은 로그인 화면이 표시됩니다. 자체 가입이 꺼져 있으므로 관리자가 Cognito 사용자 풀에서 사용자를 만든 뒤 로그인합니다.
+위와 같은 로그인 화면이 표시됩니다. 자체 가입이 꺼져 있으므로 첫 사용자를 만들고 관리자로 지정하세요. 사용자 풀 ID는 Bedrock 리전의 `BedrockChatStack` 출력 중 `AuthUserPoolId...` 값이며, 임시 비밀번호는 Cognito가 이메일로 보냅니다.
+
+```sh
+aws cognito-idp admin-create-user --user-pool-id <user-pool-id> --username user@example.com \
+  --user-attributes Name=email,Value=user@example.com Name=email_verified,Value=true
+aws cognito-idp admin-add-user-to-group --user-pool-id <user-pool-id> --username user@example.com --group-name Admin
+```
 
 > [!Important]
 > 자체 가입은 기본적으로 꺼져 있습니다. `--enable-self-register`로 켜면 URL을 아는 누구나 가입할 수 있으므로 IP 주소 제한(`--ipv4-ranges`, `--ipv6-ranges`)과 이메일 도메인 제한(`--allowed-signup-email-domains`)을 함께 설정하세요.
@@ -220,7 +226,7 @@ cd cdk
 npm ci
 ```
 
-- 필요한 경우 [cdk.json](./cdk/cdk.json)의 다음 항목을 수정합니다.
+- 필요한 경우 [cdk.json](../cdk/cdk.json)의 다음 항목을 수정합니다.
 
   - `bedrockRegion`: Bedrock이 사용 가능한 리전. **참고: Bedrock은 현재 모든 리전을 지원하지 않습니다.**
   - `allowedIpV4AddressRanges`, `allowedIpV6AddressRanges`: 허용된 IP 주소 범위.
@@ -228,13 +234,14 @@ npm ci
   - `globalAvailableModels`: 기본값은 모두입니다. 설정된 경우(모델 ID 목록), Bedrock Chat 애플리케이션의 모든 사용자의 채팅과 봇 생성 시 드롭다운 메뉴에 나타나는 모델을 전역적으로 제어할 수 있습니다.
   - `logoPath`: 애플리케이션 드로어 상단에 표시되는 이미지를 가리키는 `frontend/public` 아래의 상대 경로.
 다음 모델 ID가 지원됩니다(배포 리전의 Bedrock 콘솔의 Model access에서 활성화되어 있는지 확인하세요):
-- **Claude 모델:** `claude-v4-opus`, `claude-v4.1-opus`, `claude-v4-sonnet`, `claude-v3.5-sonnet`, `claude-v3.5-sonnet-v2`, `claude-v3.7-sonnet`, `claude-v3.5-haiku`, `claude-v3-haiku`, `claude-v3-opus`
-- **Amazon Nova 모델:** `amazon-nova-pro`, `amazon-nova-lite`, `amazon-nova-micro`
-- **Mistral 모델:** `mistral-7b-instruct`, `mixtral-8x7b-instruct`, `mistral-large`, `mistral-large-2`
+- **Claude 모델:** `claude-v4.5-opus`, `claude-v4.6-opus`, `claude-v4.7-opus`, `claude-v4.8-opus`, `claude-v5-opus`, `claude-v5.5-opus`, `claude-v4.5-sonnet`, `claude-v4.6-sonnet`, `claude-v5-sonnet`, `claude-v5.5-sonnet`, `claude-v4.5-haiku`, `claude-v5.5-haiku`
+- **OpenAI 모델:** `gpt-5.5`, `gpt-5.6-luna`, `gpt-5.6-sol`, `gpt-5.6-terra`, `gpt-6-astra`, `gpt-6-luna`, `gpt-6-sol`, `gpt-6.1-sol`, `gpt-oss-20b`, `gpt-oss-120b`
+- **Amazon Nova 모델:** `amazon-nova-pro`, `amazon-nova-lite`, `amazon-nova-micro`, `amazon-nova-2-lite`
+- **Mistral 모델:** `mistral-large`, `mistral-large-2`
 - **DeepSeek 모델:** `deepseek-r1`
-- **Meta Llama 모델:** `llama3-3-70b-instruct`, `llama3-2-1b-instruct`, `llama3-2-3b-instruct`, `llama3-2-11b-instruct`, `llama3-2-90b-instruct`
+- **Meta Llama 모델:** `llama3-3-70b-instruct`
 
-전체 목록은 [index.ts](./frontend/src/constants/index.ts)에서 확인할 수 있습니다.
+리전마다 사용할 수 있는 모델이 다릅니다. Amazon Bedrock이 더 이상 제공하지 않는 모델(Claude 3.x, Claude Opus 4·Opus 4.1·Sonnet 4, Llama 3.2, Mistral 7B, Mixtral 8x7B)은 기존 대화를 읽기 위해서만 남아 있으며 선택할 수 없습니다. 모델별 파라미터는 [model_registry.py](../backend/app/model_registry.py)에 정의되어 있습니다.
 
 - CDK를 배포하기 전에 배포하려는 리전에 대해 한 번 Bootstrap 작업을 수행해야 합니다.
 
@@ -279,10 +286,10 @@ BedrockChatStack.FrontendURL = https://xxxxx.cloudfront.net
   "context": {
     "bedrockRegion": "us-east-1",
     "allowedIpV4AddressRanges": ["0.0.0.0/1", "128.0.0.0/1"],
-    "selfSignUpEnabled": true,
+    "selfSignUpEnabled": false,
     "globalAvailableModels": [
-      "claude-v3.7-sonnet",
-      "claude-v3.5-sonnet",
+      "claude-v5.5-sonnet",
+      "claude-v5.5-haiku",
       "amazon-nova-pro",
       "amazon-nova-lite",
       "llama3-3-70b-instruct"
@@ -300,10 +307,10 @@ BedrockChatStack.FrontendURL = https://xxxxx.cloudfront.net
 bedrockChatParams.set("default", {
   bedrockRegion: "us-east-1",
   allowedIpV4AddressRanges: ["192.168.0.0/16"],
-  selfSignUpEnabled: true,
+  selfSignUpEnabled: false,
   globalAvailableModels: [
-      "claude-v3.7-sonnet",
-      "claude-v3.5-sonnet",
+      "claude-v5.5-sonnet",
+      "claude-v5.5-haiku",
       "amazon-nova-pro",
       "amazon-nova-lite",
       "llama3-3-70b-instruct"
@@ -396,7 +403,7 @@ npx cdk deploy --all
   "context": {
     "bedrockRegion": "us-east-1",
     "allowedIpV4AddressRanges": ["0.0.0.0/1", "128.0.0.0/1"],
-    "selfSignUpEnabled": true
+    "selfSignUpEnabled": false
   }
 }
 ```
@@ -410,7 +417,7 @@ npx cdk deploy --all
 bedrockChatParams.set("default", {
   bedrockRegion: "us-east-1",
   allowedIpV4AddressRanges: ["192.168.0.0/16"],
-  selfSignUpEnabled: true,
+  selfSignUpEnabled: false,
 });
 
 // 추가 환경에 대한 매개변수 정의
@@ -487,7 +494,11 @@ npx cdk deploy --all
 
 ### 리소스 제거
 
-cli와 CDK를 사용하는 경우 `npx cdk destroy`를 실행하세요. 그렇지 않은 경우 [CloudFormation](https://console.aws.amazon.com/cloudformation/home)에 접속하여 `BedrockChatStack`과 `FrontendWafStack`을 수동으로 삭제하세요. `FrontendWafStack`은 `us-east-1` 리전에 있다는 점에 유의하세요.
+애플리케이션이 실행 중에 만든 리소스를 먼저 삭제하세요. 비용이 계속 발생하고 `cdk destroy`로는 삭제되지 않습니다. 앱에서 지식 기반이 있는 봇과 게시한 API를 모두 삭제하거나, Bedrock 리전의 [CloudFormation](https://console.aws.amazon.com/cloudformation/home)에서 `BrChatKbStack*`, `BrChatSharedKbStack`, `ApiPublishmentStack*` 스택을 삭제합니다.
+
+그다음 `cdk`에서 `npx cdk destroy --all`을 실행하세요. CDK를 사용하지 않는 경우 CloudFormation에서 `BedrockChatStack`, `BedrockRegionResourcesStack`, `FrontendWafStack`을 삭제하세요. `FrontendWafStack`은 `us-east-1` 리전에 있다는 점에 유의하세요.
+
+대화·봇 테이블, Cognito 사용자 풀, 문서 버킷과 대용량 메시지 버킷은 사용자 데이터를 보호하기 위해 남겨 둡니다. 함께 삭제하려면 테이블과 사용자 풀의 삭제 보호를 끄고 버킷을 비운 뒤 콘솔이나 AWS CLI로 삭제하세요.
 
 ### 언어 설정
 
@@ -497,7 +508,7 @@ cli와 CDK를 사용하는 경우 `npx cdk destroy`를 실행하세요. 그렇�
 
 ### 자체 회원가입 비활성화
 
-자체 회원가입은 기본적으로 비활성화되어 있습니다(`selfSignUpEnabled: false`). 켜려면 [cdk.json](../cdk/cdk.json)에서 `selfSignUpEnabled`를 `true`로 바꾸세요. [외부 ID 공급자](#external-identity-provider)를 구성하는 경우, 이 값은 무시되고 자동으로 비활성화됩니다.
+자체 회원가입은 기본적으로 비활성화되어 있습니다(`selfSignUpEnabled: false`). 켜려면 [cdk.json](../cdk/cdk.json)에서 `selfSignUpEnabled`를 `true`로 바꾸세요. [외부 ID 공급자](#외부-id-공급자)를 구성하는 경우 이 값은 무시되지만, 공급자가 인증한 계정은 누구나 로그인할 수 있습니다. 해당 절을 참고하세요.
 
 ### 회원가입 이메일 주소의 도메인 제한
 
@@ -510,6 +521,9 @@ cli와 CDK를 사용하는 경우 `npx cdk destroy`를 실행하세요. 그렇�
 ### 외부 ID 공급자
 
 이 샘플은 외부 ID 공급자를 지원합니다. 현재 [Google](./idp/SET_UP_GOOGLE_ko-KR.md)과 [사용자 지정 OIDC 공급자](./idp/SET_UP_CUSTOM_OIDC_ko-KR.md)를 지원합니다.
+
+> [!Important]
+> 로그인할 수 있는 사람은 공급자가 정합니다. 공급자가 인증한 계정마다 사용자가 생기고, 기본 `autoJoinUserGroups` 설정에서는 그 사용자가 봇을 만들 수 있습니다. 공급자 쪽에서 대상을 제한하거나(예: 조직 내부용 Google OAuth 앱) `allowedSignUpEmailDomains`를 설정하세요.
 
 ### 선택적 프론트엔드 WAF
 
@@ -539,7 +553,7 @@ bedrockChatParams.set("default", {
 - [`CreatingBotAllowed`](#bot-personalization)
 - [`PublishAllowed`](./PUBLISH_API_ko-KR.md)
 
-새로 생성된 사용자를 자동으로 그룹에 가입시키려면 [cdk.json](./cdk/cdk.json)에서 지정할 수 있습니다.
+새로 생성된 사용자를 자동으로 그룹에 가입시키려면 [cdk.json](../cdk/cdk.json)에서 지정할 수 있습니다.
 
 ```json
 "autoJoinUserGroups": ["CreatingBotAllowed"],
@@ -549,7 +563,7 @@ bedrockChatParams.set("default", {
 
 ### RAG 복제본 구성
 
-`enableRagReplicas`는 [cdk.json](./cdk/cdk.json)의 옵션으로, Amazon OpenSearch Serverless를 사용하는 지식 베이스의 RAG 데이터베이스 복제본 설정을 제어합니다.
+`enableRagReplicas`는 [cdk.json](../cdk/cdk.json)의 옵션으로, Amazon OpenSearch Serverless를 사용하는 지식 베이스의 RAG 데이터베이스 복제본 설정을 제어합니다.
 
 - **기본값**: true
 - **true**: 추가 복제본을 활성화하여 가용성을 향상시키며, 프로덕션 환경에 적합하지만 비용이 증가합니다.
@@ -562,7 +576,7 @@ bedrockChatParams.set("default", {
 
 ### 봇 스토어 구성
 
-봇 스토어 기능을 통해 사용자는 사용자 정의 봇을 공유하고 검색할 수 있습니다. [cdk.json](./cdk/cdk.json)에서 다음 설정을 통해 봇 스토어를 구성할 수 있습니다:
+봇 스토어 기능을 통해 사용자는 사용자 정의 봇을 공유하고 검색할 수 있습니다. [cdk.json](../cdk/cdk.json)에서 다음 설정을 통해 봇 스토어를 구성할 수 있습니다:
 
 ```json
 {
@@ -597,7 +611,7 @@ bedrockChatParams.set("default", {
 
 ### 사용자 정의 도메인 구성
 
-[cdk.json](./cdk/cdk.json)에서 다음 매개변수를 설정하여 CloudFront 배포에 대한 사용자 정의 도메인을 구성할 수 있습니다:
+[cdk.json](../cdk/cdk.json)에서 다음 매개변수를 설정하여 CloudFront 배포에 대한 사용자 정의 도메인을 구성할 수 있습니다:
 
 ```json
 {
@@ -621,9 +635,9 @@ bedrockChatParams.set("default", {
 ### 허용된 국가 구성(지역 제한)
 
 클라이언트가 접근하는 국가를 기반으로 Bedrock-Chat에 대한 접근을 제한할 수 있습니다.
-[cdk.json](./cdk/cdk.json)의 `allowedCountries` 매개변수를 사용하여 [ISO-3166 국가 코드](https://en.wikipedia.org/wiki/List_of_ISO_3166_country_codes) 목록을 지정하세요.
+[cdk.json](../cdk/cdk.json)의 `allowedCountries` 매개변수를 사용하여 [ISO-3166 국가 코드](https://en.wikipedia.org/wiki/List_of_ISO_3166_country_codes) 목록을 지정하세요.
 예를 들어, 뉴질랜드 기반 비즈니스는 뉴질랜드(NZ)와 호주(AU)의 IP 주소만 포털에 접근할 수 있도록 하고 다른 모든 사용자의 접근을 거부하도록 결정할 수 있습니다.
-이 동작을 구성하려면 [cdk.json](./cdk/cdk.json)에서 다음 설정을 사용하세요:
+이 동작을 구성하려면 [cdk.json](../cdk/cdk.json)에서 다음 설정을 사용하세요:
 
 ```json
 {
@@ -644,7 +658,7 @@ bedrockChatParams.set("default", {
 
 프론트엔드는 기본적으로 IP와 IPv6 주소를 모두 가져옵니다. 드문 경우지만
 명시적으로 IPv6 지원을 비활성화해야 할 수 있습니다. 이를 위해
-[parameter.ts](./cdk/parameter.ts) 또는 유사하게 [cdk.json](./cdk/cdk.json)에서 다음 매개변수를 설정하세요:
+[parameter.ts](../cdk/parameter.ts) 또는 유사하게 [cdk.json](../cdk/cdk.json)에서 다음 매개변수를 설정하세요:
 
 ```ts
 "enableFrontendIpv6": false
@@ -658,7 +672,7 @@ bedrockChatParams.set("default", {
 
 ### 기여
 
-이 리포지토리에 기여하는 것을 고려해 주셔서 감사합니다! 버그 수정, 언어 번역(i18n), 기능 개선, [에이전트 도구](./docs/AGENT.md#how-to-develop-your-own-tools) 및 기타 개선 사항을 환영합니다.
+이 리포지토리에 기여하는 것을 고려해 주셔서 감사합니다! 버그 수정, 언어 번역(i18n), 기능 개선, [에이전트 도구](./AGENT_ko-KR.md#how-to-develop-your-own-tools) 및 기타 개선 사항을 환영합니다.
 
 기능 개선 및 기타 개선 사항의 경우, **풀 리퀘스트를 생성하기 전에 구현 접근 방식과 세부 사항을 논의하
 
@@ -679,4 +693,4 @@ bedrockChatParams.set("default", {
 
 ## 라이선스
 
-이 라이브러리는 MIT-0 라이선스를 따릅니다. [라이선스 파일](./LICENSE)을 참조하세요.
+이 라이브러리는 MIT-0 라이선스를 따릅니다. [라이선스 파일](../LICENSE)을 참조하세요.

@@ -11,7 +11,7 @@ Migrasjonsprosessen innebærer skanning av alle boter og oppstart av innleggings
 
 ## Migreringstrinn
 
-- Etter [npx cdk deploy](../README.md#deploy-using-cdk) med Aurora-erstatning, åpne [migrate_v0_v1.py](./migrate_v0_v1.py) skriptet og oppdater følgende variabler med passende verdier. Verdiene kan finnes under `CloudFormation` > `BedrockChatStack` > `Outputs`-fanen.
+- Etter [npx cdk deploy](../../README.md#deploy-using-cdk) med Aurora-erstatning, åpne [migrate_v0_v1.py](./migrate_v0_v1.py) skriptet og oppdater følgende variabler med passende verdier. Verdiene kan finnes under `CloudFormation` > `BedrockChatStack` > `Outputs`-fanen.
 
 ```py
 # Åpne CloudFormation-stacken i AWS Management Console og kopier verdiene fra Outputs-fanen.

@@ -11,7 +11,7 @@ Der Migrationsprozess umfasst das Scannen aller Bots und das Starten von Embeddi
 
 ## Migrationsschritte
 
-- Nach [npx cdk deploy](../README.md#deploy-using-cdk) mit Aurora-Ersetzung, öffnen Sie das Skript [migrate_v0_v1.py](./migrate_v0_v1.py) und aktualisieren Sie die folgenden Variablen mit den entsprechenden Werten. Die Werte können unter `CloudFormation` > `BedrockChatStack` > Tab `Outputs` eingesehen werden.
+- Nach [npx cdk deploy](../../README.md#deploy-using-cdk) mit Aurora-Ersetzung, öffnen Sie das Skript [migrate_v0_v1.py](./migrate_v0_v1.py) und aktualisieren Sie die folgenden Variablen mit den entsprechenden Werten. Die Werte können unter `CloudFormation` > `BedrockChatStack` > Tab `Outputs` eingesehen werden.
 
 ```py
 # Open the CloudFormation stack in the AWS Management Console and copy the values from the Outputs tab.

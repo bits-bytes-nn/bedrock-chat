@@ -11,7 +11,7 @@
 
 ## ขั้นตอนการย้ายข้อมูล
 
-- หลังจาก [npx cdk deploy](../README.md#deploy-using-cdk) พร้อมการเปลี่ยน Aurora แล้ว ให้เปิดสคริปต์ [migrate_v0_v1.py](./migrate_v0_v1.py) และอัปเดตตัวแปรต่อไปนี้ด้วยค่าที่เหมาะสม สามารถดูค่าได้จากแท็บ `Outputs` ใน `CloudFormation` > `BedrockChatStack`
+- หลังจาก [npx cdk deploy](../../README.md#deploy-using-cdk) พร้อมการเปลี่ยน Aurora แล้ว ให้เปิดสคริปต์ [migrate_v0_v1.py](./migrate_v0_v1.py) และอัปเดตตัวแปรต่อไปนี้ด้วยค่าที่เหมาะสม สามารถดูค่าได้จากแท็บ `Outputs` ใน `CloudFormation` > `BedrockChatStack`
 
 ```py
 # เปิดสแตค CloudFormation ในคอนโซล AWS Management และคัดลอกค่าจากแท็บ Outputs

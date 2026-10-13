@@ -28,7 +28,7 @@ git pull origin v1
 
 - Jika anda ingin memulihkan item dengan DMS, JANGAN LUPA untuk menyahaktifkan putaran kata laluan dan catat kata laluan untuk mengakses pangkalan data. Jika memulihkan dengan skrip migrasi ([migrate_v0_v1.py](./migrate_v0_v1.py)), anda tidak perlu mencatat kata laluan.
 - Buang semua [API yang diterbitkan](../PUBLISH_API_ms-MY.md) supaya CloudFormation boleh membuang kluster Aurora yang sedia ada.
-- Jalankan [npx cdk deploy](../README.md#deploy-using-cdk) untuk mencetuskan penggantian kluster Aurora dan MEMADAM SEMUA ITEM VEKTOR.
+- Jalankan [npx cdk deploy](../../README.md#deploy-using-cdk) untuk mencetuskan penggantian kluster Aurora dan MEMADAM SEMUA ITEM VEKTOR.
 - Ikuti [Panduan Migrasi Pangkalan Data](./DATABASE_MIGRATION_ms-MY.md) untuk memulihkan item vektor.
 - Sahkan bahawa pengguna boleh menggunakan bot sedia ada yang mempunyai pengetahuan iaitu bot RAG.
 

@@ -28,7 +28,7 @@ git pull origin v1
 
 - Hvis du ønsker å gjenopprette elementer med DMS, IKKE GLEM å deaktivere passordrotasjon og noter passordet for å få tilgang til databasen. Hvis du gjenoppretter med migreringsscriptet ([migrate_v0_v1.py](./migrate_v0_v1.py)), trenger du ikke å notere passordet.
 - Fjern alle [publiserte API-er](../PUBLISH_API_nb-NO.md) slik at CloudFormation kan fjerne eksisterende Aurora-cluster.
-- Kjør [npx cdk deploy](../README.md#deploy-using-cdk) som utløser Aurora-cluster erstatning og SLETTER ALLE VEKTORELEMENTER.
+- Kjør [npx cdk deploy](../../README.md#deploy-using-cdk) som utløser Aurora-cluster erstatning og SLETTER ALLE VEKTORELEMENTER.
 - Følg [Database Migreringsveiledning](./DATABASE_MIGRATION_nb-NO.md) for å gjenopprette vektorelementer.
 - Bekreft at brukeren kan benytte eksisterende boter som har kunnskap, dvs. RAG-boter.
 

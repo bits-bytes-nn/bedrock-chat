@@ -28,7 +28,7 @@ git pull origin v1
 
 - Nếu bạn muốn khôi phục các mục bằng DMS, ĐỪNG QUÊN tắt tính năng xoay vòng mật khẩu và ghi lại mật khẩu để truy cập cơ sở dữ liệu. Nếu khôi phục bằng script di chuyển ([migrate_v0_v1.py](./migrate_v0_v1.py)), bạn không cần ghi nhớ mật khẩu.
 - Xóa tất cả [API đã xuất bản](../PUBLISH_API_vi-VN.md) để CloudFormation có thể xóa cụm Aurora hiện có.
-- Chạy [npx cdk deploy](../README.md#deploy-using-cdk) để kích hoạt thay thế cụm Aurora và XÓA TẤT CẢ CÁC MỤC VECTOR.
+- Chạy [npx cdk deploy](../../README.md#deploy-using-cdk) để kích hoạt thay thế cụm Aurora và XÓA TẤT CẢ CÁC MỤC VECTOR.
 - Làm theo [Hướng dẫn Di chuyển Cơ sở dữ liệu](./DATABASE_MIGRATION_vi-VN.md) để khôi phục các mục vector.
 - Xác minh rằng người dùng có thể sử dụng các bot hiện có có kiến thức, ví dụ như các bot RAG.
 

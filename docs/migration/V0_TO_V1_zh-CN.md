@@ -28,7 +28,7 @@ git pull origin v1
 
 - 如果你想通过 DMS 恢复项目，请务必禁用密码轮换并记下访问数据库的密码。如果使用迁移脚本([migrate_v0_v1.py](./migrate_v0_v1.py))恢复，则无需记录密码。
 - 移除所有[已发布的 API](../PUBLISH_API_zh-CN.md)，以便 CloudFormation 可以移除现有的 Aurora 集群。
-- 运行 [npx cdk deploy](../README.md#deploy-using-cdk) 会触发 Aurora 集群替换并删除所有向量项。
+- 运行 [npx cdk deploy](../../README.md#deploy-using-cdk) 会触发 Aurora 集群替换并删除所有向量项。
 - 按照[数据库迁移指南](./DATABASE_MIGRATION_zh-CN.md)恢复向量项。
 - 验证用户是否可以使用现有的具有知识库的机器人，即 RAG 机器人。
 

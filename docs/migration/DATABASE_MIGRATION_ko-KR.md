@@ -11,7 +11,7 @@
 
 ## 마이그레이션 단계
 
-- Aurora 교체와 함께 [npx cdk deploy](../README.md#deploy-using-cdk)를 실행한 후, [migrate_v0_v1.py](./migrate_v0_v1.py) 스크립트를 열어 다음 변수들을 적절한 값으로 업데이트하세요. 이 값들은 `CloudFormation` > `BedrockChatStack` > `Outputs` 탭에서 확인할 수 있습니다.
+- Aurora 교체와 함께 [npx cdk deploy](../../README.md#deploy-using-cdk)를 실행한 후, [migrate_v0_v1.py](./migrate_v0_v1.py) 스크립트를 열어 다음 변수들을 적절한 값으로 업데이트하세요. 이 값들은 `CloudFormation` > `BedrockChatStack` > `Outputs` 탭에서 확인할 수 있습니다.
 
 ```py
 # AWS Management Console에서 CloudFormation 스택을 열고 Outputs 탭에서 값들을 복사하세요.

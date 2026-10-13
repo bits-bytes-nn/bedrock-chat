@@ -28,7 +28,7 @@ git pull origin v1
 
 - Se você deseja restaurar itens com DMS, NÃO SE ESQUEÇA de desabilitar a rotação de senha e anotar a senha para acessar o banco de dados. Se estiver restaurando com o script de migração ([migrate_v0_v1.py](./migrate_v0_v1.py)), você não precisa anotar a senha.
 - Remova todas as [APIs publicadas](../PUBLISH_API_pt-BR.md) para que o CloudFormation possa remover o cluster Aurora existente.
-- Execute [npx cdk deploy](../README.md#deploy-using-cdk) para acionar a substituição do cluster Aurora e DELETAR TODOS OS ITENS VETORIAIS.
+- Execute [npx cdk deploy](../../README.md#deploy-using-cdk) para acionar a substituição do cluster Aurora e DELETAR TODOS OS ITENS VETORIAIS.
 - Siga o [Guia de Migração de Banco de Dados](./DATABASE_MIGRATION_pt-BR.md) para restaurar os itens vetoriais.
 - Verifique se o usuário pode utilizar os bots existentes que possuem conhecimento, ou seja, bots RAG.
 

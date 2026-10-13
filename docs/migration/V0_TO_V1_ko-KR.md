@@ -28,7 +28,7 @@ git pull origin v1
 
 - DMS를 사용하여 항목을 복원하려는 경우, 비밀번호 순환을 비활성화하고 데이터베이스 접근 비밀번호를 기록하는 것을 잊지 마세요. 마이그레이션 스크립트([migrate_v0_v1.py](./migrate_v0_v1.py))로 복원하는 경우에는 비밀번호를 기록할 필요가 없습니다.
 - CloudFormation이 기존 Aurora 클러스터를 제거할 수 있도록 모든 [게시된 API](../PUBLISH_API_ko-KR.md)를 제거하세요.
-- [npx cdk deploy](../README.md#deploy-using-cdk)를 실행하면 Aurora 클러스터 교체가 트리거되고 모든 벡터 항목이 삭제됩니다.
+- [npx cdk deploy](../../README.md#deploy-using-cdk)를 실행하면 Aurora 클러스터 교체가 트리거되고 모든 벡터 항목이 삭제됩니다.
 - 벡터 항목을 복원하려면 [데이터베이스 마이그레이션 가이드](./DATABASE_MIGRATION_ko-KR.md)를 따르세요.
 - 사용자가 지식을 보유한 기존 봇(예: RAG 봇)을 사용할 수 있는지 확인하세요.
 

@@ -28,7 +28,7 @@ git pull origin v1
 
 - Si deseas restaurar elementos con DMS, NO OLVIDES deshabilitar la rotación de contraseñas y anotar la contraseña para acceder a la base de datos. Si realizas la restauración con el script de migración ([migrate_v0_v1.py](./migrate_v0_v1.py)), no necesitas anotar la contraseña.
 - Elimina todas las [APIs publicadas](../PUBLISH_API_es-ES.md) para que CloudFormation pueda eliminar el clúster Aurora existente.
-- Ejecuta [npx cdk deploy](../README.md#deploy-using-cdk) para activar el reemplazo del clúster Aurora y ELIMINAR TODOS LOS ELEMENTOS VECTORIALES.
+- Ejecuta [npx cdk deploy](../../README.md#deploy-using-cdk) para activar el reemplazo del clúster Aurora y ELIMINAR TODOS LOS ELEMENTOS VECTORIALES.
 - Sigue la [Guía de Migración de Base de Datos](./DATABASE_MIGRATION_es-ES.md) para restaurar los elementos vectoriales.
 - Verifica que los usuarios puedan utilizar los bots existentes que tienen conocimiento, es decir, los bots RAG.
 

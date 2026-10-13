@@ -11,7 +11,7 @@ Quá trình di chuyển bao gồm việc quét tất cả các bot và khởi ch
 
 ## Các bước di chuyển dữ liệu
 
-- Sau khi [npx cdk deploy](../README.md#deploy-using-cdk) với việc thay thế Aurora, mở tập tin [migrate_v0_v1.py](./migrate_v0_v1.py) và cập nhật các biến sau với giá trị thích hợp. Các giá trị có thể được tham chiếu trong tab `Outputs` tại `CloudFormation` > `BedrockChatStack`.
+- Sau khi [npx cdk deploy](../../README.md#deploy-using-cdk) với việc thay thế Aurora, mở tập tin [migrate_v0_v1.py](./migrate_v0_v1.py) và cập nhật các biến sau với giá trị thích hợp. Các giá trị có thể được tham chiếu trong tab `Outputs` tại `CloudFormation` > `BedrockChatStack`.
 
 ```py
 # Mở stack CloudFormation trong AWS Management Console và sao chép các giá trị từ tab Outputs.

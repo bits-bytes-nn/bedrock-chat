@@ -11,7 +11,7 @@ The migration process involves scanning all bots and launching embedding ECS tas
 
 ## Migration Steps
 
-- After [npx cdk deploy](../README.md#deploy-using-cdk) with Aurora replacement, open the [migrate_v0_v1.py](./migrate_v0_v1.py) script and update the following variables with the appropriate values. The values can be referred on `CloudFormation` > `BedrockChatStack` > `Outputs` tab.
+- After [npx cdk deploy](../../README.md#deploy-using-cdk) with Aurora replacement, open the [migrate_v0_v1.py](./migrate_v0_v1.py) script and update the following variables with the appropriate values. The values can be referred on `CloudFormation` > `BedrockChatStack` > `Outputs` tab.
 
 ```py
 # Open the CloudFormation stack in the AWS Management Console and copy the values from the Outputs tab.
