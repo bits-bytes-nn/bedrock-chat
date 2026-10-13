@@ -1,5 +1,7 @@
 import { AxiosError, AxiosHeaders } from 'axios';
+import i18next from 'i18next';
 import { describe, expect, it } from 'vitest';
+import ko from '../../i18n/ko';
 import { getApiErrorMessage, getApiErrorStatus } from '../ErrorUtils';
 
 const apiError = (data: unknown) =>
@@ -19,6 +21,22 @@ describe('getApiErrorMessage', () => {
     expect(getApiErrorMessage(apiError({ detail: 'User is not allowed to create bot.' }))).toBe(
       'User is not allowed to create bot.'
     );
+  });
+
+  it('translates errors with a known code', async () => {
+    await i18next.init({ lng: 'ko', resources: { ko } });
+    expect(
+      getApiErrorMessage(
+        apiError({
+          errors: ['You can have at most 2 bots'],
+          code: 'dedicated_knowledge_base_limit',
+          params: { limit: 2 },
+        })
+      )
+    ).toContain('최대 2개');
+    expect(
+      getApiErrorMessage(apiError({ errors: ['English'], code: 'unknown_code' }))
+    ).toBe('English');
   });
 
   it('ignores validation details and other errors', () => {

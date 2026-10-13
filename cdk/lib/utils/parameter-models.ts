@@ -137,7 +137,7 @@ const BedrockChatParametersSchema = BaseParametersSchema.extend({
   // Email address subscribed to alarm notifications. Leave empty to only create the topic.
   alarmEmail: z.string().default(""),
   // Alarm when the chat answers of a day cost more than this, in USD (0 turns it off).
-  // Computed with the model prices in the backend; published APIs are not included.
+  // Computed with the model prices in the backend, including published APIs.
   dailyChatCostAlarmUsd: z.number().min(0).default(100),
   // Bots with their own knowledge base per user; each has an OpenSearch Serverless
   // collection billed while it exists. 0 means no limit. Admins are not limited.

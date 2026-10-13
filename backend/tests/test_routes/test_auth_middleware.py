@@ -56,5 +56,25 @@ class TestUnhandledErrors(unittest.TestCase):
         self.assertEqual(self.client.get("/health").status_code, 200)
 
 
+class TestErrorCodes(unittest.TestCase):
+    def test_coded_errors_carry_their_code_and_params(self):
+        from app.repositories.common import LimitExceededError
+
+        handler = main.error_handler_factory(400)
+        response = handler(None, LimitExceededError("too many", "a_limit", limit=2))  # type: ignore[arg-type]
+        import json
+
+        self.assertEqual(
+            json.loads(response.body),
+            {"errors": ["too many"], "code": "a_limit", "params": {"limit": 2}},
+        )
+
+    def test_other_errors_keep_the_plain_body(self):
+        import json
+
+        response = main.error_handler_factory(400)(None, ValueError("bad"))  # type: ignore[arg-type]
+        self.assertEqual(json.loads(response.body), {"errors": ["bad"]})
+
+
 if __name__ == "__main__":
     unittest.main()

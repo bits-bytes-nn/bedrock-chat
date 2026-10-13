@@ -73,7 +73,12 @@ def error_handler_factory(status_code: int) -> Callable[[Request, Exception], Re
     def error_handler(_: Request, exc: Exception) -> JSONResponse:
         # Client errors only; unexpected errors are handled in add_log_requests.
         logger.warning("%s: %s", type(exc).__name__, exc)
-        return JSONResponse({"errors": [str(exc)]}, status_code=status_code)
+        body: dict = {"errors": [str(exc)]}
+        if code := getattr(exc, "code", None):
+            # Lets the frontend translate the message (error.api.<code>).
+            body["code"] = code
+            body["params"] = getattr(exc, "params", {})
+        return JSONResponse(body, status_code=status_code)
 
     return error_handler  # type: ignore
 

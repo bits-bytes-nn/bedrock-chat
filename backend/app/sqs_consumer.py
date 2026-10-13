@@ -1,6 +1,7 @@
 import json
 import logging
 
+from app.metrics import emit_chat_cost
 from app.routes.schemas.conversation import ChatInput
 from app.usecases.chat import chat
 from app.user import User
@@ -20,7 +21,11 @@ def handler(event, context):
 
         user = User.from_published_api_id(chat_input.bot_id)
 
-        conversation, message = chat(user=user, chat_input=chat_input)
+        conversation, message = chat(
+            user=user,
+            chat_input=chat_input,
+            on_stop=lambda result: emit_chat_cost(result["price"]),
+        )
         logger.info(
             "Processed message: conversation_id=%s, message_id=%s",
             conversation.id,

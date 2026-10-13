@@ -46,7 +46,23 @@ class RecordAccessNotAllowedError(Exception):
 
 
 class ResourceConflictError(Exception):
-    pass
+    """A request that conflicts with the current state (409).
+
+    `code` lets clients show a translated message instead of the English one.
+    """
+
+    def __init__(self, message: str = "", code: str | None = None):
+        super().__init__(message)
+        self.code = code
+
+
+class LimitExceededError(ValueError):
+    """A request that would exceed a configured limit (400)."""
+
+    def __init__(self, message: str, code: str, **params: int | str):
+        super().__init__(message)
+        self.code = code
+        self.params = params
 
 
 def compose_conv_id(user_id: str, conversation_id: str):

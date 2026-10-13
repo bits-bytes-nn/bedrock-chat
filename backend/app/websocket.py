@@ -12,6 +12,7 @@ from app.stream import ToolRunResult
 from app.auth import verify_token
 from app.repositories.conversation import RecordNotFoundError
 from app.routes.schemas.conversation import ChatInput
+from app.metrics import emit_chat_cost
 from app.stream import OnStopInput, OnThinking
 from app.usecases.chat import chat
 from app.user import User
@@ -48,9 +49,6 @@ USER_FACING_MODEL_ERRORS = frozenset(
     }
 )
 
-# Shared with cdk/lib/constructs/monitoring.ts.
-CHAT_METRICS_NAMESPACE = "BedrockChat"
-
 dynamodb_client = boto3.resource("dynamodb")
 table = dynamodb_client.Table(WEBSOCKET_SESSION_TABLE_NAME)
 
@@ -66,32 +64,6 @@ type_error_code = Literal[
     "invalid_request",
     "generation_failed",
 ]
-
-
-def emit_chat_cost(price: float) -> None:
-    """Publish the price of an answer, counted by the ChatCost alarm.
-
-    Lambda turns embedded metric format lines on stdout into CloudWatch metrics
-    without an API call, so this goes to stdout rather than the logger.
-    """
-    print(
-        json.dumps(
-            {
-                "_aws": {
-                    "Timestamp": int(datetime.now().timestamp() * 1000),
-                    "CloudWatchMetrics": [
-                        {
-                            "Namespace": CHAT_METRICS_NAMESPACE,
-                            "Dimensions": [[]],
-                            "Metrics": [{"Name": "ChatCost", "Unit": "None"}],
-                        }
-                    ],
-                },
-                "ChatCost": price,
-            }
-        ),
-        flush=True,
-    )
 
 
 class _NotifyCommand(TypedDict):

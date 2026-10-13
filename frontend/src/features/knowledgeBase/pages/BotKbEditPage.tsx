@@ -24,6 +24,7 @@ import { ulid } from 'ulid';
 import {
   EDGE_GENERATION_PARAMS,
   DEFAULT_GENERATION_CONFIG,
+  SyncStatus,
   TooltipDirection,
 } from '../../../constants';
 import { Slider } from '../../../components/Slider';
@@ -96,6 +97,8 @@ const BotKbEditPage: React.FC = () => {
   const { data: globalConfig } = getGlobalConfig();
 
   const [isLoading, setIsLoading] = useState(false);
+  // The backend rejects saving while the knowledge base is synchronized.
+  const [isSyncing, setIsSyncing] = useState(false);
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -555,6 +558,10 @@ const BotKbEditPage: React.FC = () => {
           setUnchangedFilenames([...bot.knowledge.filenames]);
           setDisplayRetrievedChunks(bot.displayRetrievedChunks);
           setPromptCachingEnabled(bot.promptCachingEnabled);
+          setIsSyncing(
+            bot.syncStatus === SyncStatus.QUEUED ||
+              bot.syncStatus === SyncStatus.RUNNING
+          );
           if (bot.syncStatus === 'FAILED') {
             setErrorMessages(
               isSyncChunkError(bot.syncStatusReason)
@@ -1572,8 +1579,12 @@ const BotKbEditPage: React.FC = () => {
   const [isOpenSamples, setIsOpenSamples] = useState(false);
 
   const disabledRegister = useMemo(() => {
-    return title === '' || files.findIndex((f) => f.status !== 'UPLOADED') > -1;
-  }, [files, title]);
+    return (
+      title === '' ||
+      files.findIndex((f) => f.status !== 'UPLOADED') > -1 ||
+      (isSyncing && !isAdmin)
+    );
+  }, [files, title, isSyncing, isAdmin]);
 
   return (
     <>
@@ -2752,6 +2763,11 @@ const BotKbEditPage: React.FC = () => {
                 </Alert>
               )}
 
+              {isSyncing && !isAdmin && (
+                <div className="text-right text-sm text-dark-gray dark:text-light-gray">
+                  {t('error.api.knowledge_base_syncing')}
+                </div>
+              )}
               {files.some((f) => f.status === 'ERROR') && (
                 <div className="text-right text-sm text-red dark:text-red-400">
                   {t('bot.error.removeFailedFiles')}
