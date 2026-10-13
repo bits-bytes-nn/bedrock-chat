@@ -4,10 +4,11 @@ import useAdminApi from './useAdminApi';
 const usePublicBotsForAdmin = (params: ListPublicBotsRequest) => {
   const { listPublicBots } = useAdminApi();
 
-  const { data, isLoading, mutate } = listPublicBots(params);
+  const { data, error, isLoading, mutate } = listPublicBots(params);
 
   return {
     publicBots: data,
+    error,
     isLoading,
     mutate,
   };

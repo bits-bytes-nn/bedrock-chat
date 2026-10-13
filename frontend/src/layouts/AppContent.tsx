@@ -25,6 +25,7 @@ import DialogConfirmClearConversations from '../components/DialogConfirmClearCon
 import DialogSelectLanguage from '../components/DialogSelectLanguage';
 import useLocalStorage from '../hooks/useLocalStorage';
 import DialogDrawerOptions from '../components/DialogDrawerOptions';
+import useSnackbar from '../hooks/useSnackbar';
 
 type Props = BaseProps & {
   signOut?: () => void;
@@ -49,6 +50,7 @@ const AppContent: React.FC<Props> = (props) => {
   const isGeneratedTitle = useIsGeneratedTitle();
   const { isConversationOrNewChat, pathPattern } = usePageTitlePathPattern();
   const { isAdmin } = useLoginUser();
+  const { open: openSnackbar } = useSnackbar();
   const [theme] = useLocalStorage('theme', 'light');
   useEffect(() => {
     document.documentElement.className = theme;
@@ -64,30 +66,46 @@ const AppContent: React.FC<Props> = (props) => {
     ConversationMeta | undefined
   >();
 
+  // Disables the dialog buttons so that a double click does not delete twice.
+  const [isDeleting, setIsDeleting] = useState(false);
   const deleteChat = useCallback(
     (conversationId: string) => {
-      deleteConversation(conversationId).then(() => {
-        newChat();
-        navigate('');
-        setIsOpenDeleteChat(false);
-        setDeleteTarget(undefined);
-      });
+      setIsDeleting(true);
+      deleteConversation(conversationId)
+        .then(() => {
+          newChat();
+          navigate('');
+          setIsOpenDeleteChat(false);
+          setDeleteTarget(undefined);
+        })
+        .catch(() => {
+          openSnackbar(t('error.deleteConversation'));
+        })
+        .finally(() => {
+          setIsDeleting(false);
+        });
     },
-    [deleteConversation, newChat, navigate]
+    [deleteConversation, newChat, navigate, openSnackbar, t]
   );
 
   const [isOpenClearConversations, setIsOpenClearConversations] =
     useState(false);
 
-  const clearConversations = useCallback(
-    () => {
-      clear().then(() => {
+  const clearConversations = useCallback(() => {
+    setIsDeleting(true);
+    clear()
+      .then(() => {
         navigate('');
         setIsOpenClearConversations(false);
+      })
+      .catch((e) => {
+        console.error(e);
+        openSnackbar(t('error.clearConversations'));
+      })
+      .finally(() => {
+        setIsDeleting(false);
       });
-    },
-    [clear, navigate]
-  );
+  }, [clear, navigate, openSnackbar, t]);
 
   const [isOpenSelectLanguage, setIsOpenSelectLanguage] = useState(false);
   const [isOpenDrawerOptions, setIsOpenDrawerOptions] = useState(false);
@@ -102,6 +120,10 @@ const AppContent: React.FC<Props> = (props) => {
         starredBots={starredBots}
         recentlyUsedUnstarredBots={recentlyUsedUnstarredBots}
         updateConversationTitle={async (conversationId, title) => {
+          // A blank title leaves the edit mode without renaming.
+          if (!title.trim()) {
+            return;
+          }
           await updateTitle(conversationId, title);
         }}
         onSignOut={() => {
@@ -125,11 +147,13 @@ const AppContent: React.FC<Props> = (props) => {
       <DialogConfirmDeleteChat
         isOpen={isOpenDeleteChat}
         target={deleteTarget}
+        loading={isDeleting}
         onDelete={deleteChat}
         onClose={() => setIsOpenDeleteChat(false)}
       />
       <DialogConfirmClearConversations
         isOpen={isOpenClearConversations}
+        loading={isDeleting}
         onClose={() => {
           setIsOpenClearConversations(false);
         }}

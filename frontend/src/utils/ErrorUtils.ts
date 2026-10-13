@@ -10,3 +10,7 @@ export const getApiErrorMessage = (error: unknown): string | undefined => {
   const message = data?.errors?.[0] ?? data?.detail;
   return typeof message === 'string' ? message : undefined;
 };
+
+/** Return the HTTP status of a failed API request, if it has one. */
+export const getApiErrorStatus = (error: unknown): number | undefined =>
+  isAxiosError(error) ? error.response?.status : undefined;

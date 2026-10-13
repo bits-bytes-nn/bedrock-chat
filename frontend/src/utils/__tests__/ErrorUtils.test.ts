@@ -1,6 +1,6 @@
 import { AxiosError, AxiosHeaders } from 'axios';
 import { describe, expect, it } from 'vitest';
-import { getApiErrorMessage } from '../ErrorUtils';
+import { getApiErrorMessage, getApiErrorStatus } from '../ErrorUtils';
 
 const apiError = (data: unknown) =>
   new AxiosError('Request failed', '403', undefined, undefined, {
@@ -24,5 +24,12 @@ describe('getApiErrorMessage', () => {
   it('ignores validation details and other errors', () => {
     expect(getApiErrorMessage(apiError({ detail: [{ msg: 'invalid' }] }))).toBeUndefined();
     expect(getApiErrorMessage(new Error('network'))).toBeUndefined();
+  });
+});
+
+describe('getApiErrorStatus', () => {
+  it('returns the status of an API error only', () => {
+    expect(getApiErrorStatus(apiError({}))).toBe(403);
+    expect(getApiErrorStatus(new Error('network'))).toBeUndefined();
   });
 });

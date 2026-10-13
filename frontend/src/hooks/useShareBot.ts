@@ -3,6 +3,9 @@ import useBotApi from './useBotApi';
 import { BotListItem, SharedScope } from '../@types/bot';
 import { produce } from 'immer';
 import { useRef } from 'react';
+import { useTranslation } from 'react-i18next';
+import useSnackbar from './useSnackbar';
+import { getApiErrorMessage } from '../utils/ErrorUtils';
 
 const useShareBot = (
   params: {
@@ -21,6 +24,13 @@ const useShareBot = (
   const { botId, myBots, mutateMyBots } = params;
   const { getMyBot, updateBotSharedScope } = useBotApi();
   const requestIdRef = useRef<number>(0);
+  const { t } = useTranslation();
+  const { open: openSnackbar } = useSnackbar();
+  // The optimistic update is reverted by the refetch after the request.
+  const onError = (e: unknown) => {
+    console.error(e);
+    openSnackbar(getApiErrorMessage(e) ?? t('bot.error.failShare'));
+  };
 
   const { data, isLoading, mutate } = getMyBot(botId);
 
@@ -76,13 +86,15 @@ const useShareBot = (
           : {
               targetSharedScope: sharedScope,
             }
-      ).finally(() => {
-        // Only execute mutate for the latest request
-        if (currentRequestId === requestIdRef.current) {
-          mutateMyBots?.();
-          mutate();
-        }
-      });
+      )
+        .catch(onError)
+        .finally(() => {
+          // Only execute mutate for the latest request
+          if (currentRequestId === requestIdRef.current) {
+            mutateMyBots?.();
+            mutate();
+          }
+        });
     },
     updateSharedUsersAndGroups: (userIds: string[], groupIds: string[]) => {
       if (!botId) {
@@ -109,12 +121,14 @@ const useShareBot = (
         targetSharedScope: 'partial',
         targetAllowedGroupIds: groupIds,
         targetAllowedUserIds: userIds,
-      }).finally(() => {
-        // Only execute mutate for the latest request
-        if (currentRequestId === requestIdRef.current) {
-          mutate();
-        }
-      });
+      })
+        .catch(onError)
+        .finally(() => {
+          // Only execute mutate for the latest request
+          if (currentRequestId === requestIdRef.current) {
+            mutate();
+          }
+        });
     },
   };
 };

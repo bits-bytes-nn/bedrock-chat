@@ -119,6 +119,7 @@ export const SkeletonConversation: React.FC = () => {
 type ConversationSearchResultsProps = {
   results: ConversationSearchMeta[];
   isSearching: boolean;
+  isSearchError: boolean;
   hasSearched: boolean;
   searchQuery: string;
   onbackToConversationHistory: () => void;
@@ -128,6 +129,7 @@ type ConversationSearchResultsProps = {
 const ConversationSearchResults: React.FC<ConversationSearchResultsProps> = ({
   results,
   isSearching,
+  isSearchError,
   hasSearched,
   searchQuery,
   onbackToConversationHistory,
@@ -167,18 +169,22 @@ const ConversationSearchResults: React.FC<ConversationSearchResultsProps> = ({
     );
   }
 
-  if (hasSearched && results.length === 0) {
+  if (isSearchError || results.length === 0) {
     return (
       <div className="mt-6">
         <div className="mt-6">
           <div className="text-lg font-bold">
-            {t('conversationHistory.searchConversation.noResults', {
-              query: searchQuery,
-            })}
+            {isSearchError
+              ? t('error.searchFailed')
+              : t('conversationHistory.searchConversation.noResults', {
+                  query: searchQuery,
+                })}
           </div>
-          <div className="mt-1 text-sm text-aws-font-color-light/70 dark:text-gray">
-            {t('conversationHistory.searchConversation.tryDifferentKeywords')}
-          </div>
+          {!isSearchError && (
+            <div className="mt-1 text-sm text-aws-font-color-light/70 dark:text-gray">
+              {t('conversationHistory.searchConversation.tryDifferentKeywords')}
+            </div>
+          )}
         </div>
         <Button
           className="mt-4"
@@ -215,7 +221,7 @@ const ConversationSearchResults: React.FC<ConversationSearchResultsProps> = ({
         outlined
         icon={<PiArrowLeft />}
         onClick={onbackToConversationHistory}>
-        {t('button.backToHistory', 'Back to History')}
+        {t('button.backToConversationHistory')}
       </Button>
     </div>
   );

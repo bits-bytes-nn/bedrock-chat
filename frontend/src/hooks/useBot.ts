@@ -28,7 +28,11 @@ const useBot = (shouldAutoRefreshMyBots?: boolean) => {
       : undefined
   );
 
-  const { data: starredBots, mutate: mutateStarredBots } = api.bots({
+  const {
+    data: starredBots,
+    error: starredBotsError,
+    mutate: mutateStarredBots,
+  } = api.bots({
     kind: 'mixed',
     starred: true,
   });
@@ -54,6 +58,7 @@ const useBot = (shouldAutoRefreshMyBots?: boolean) => {
     pinnedBots: pinnedBots?.filter((bot) => bot.available),
     mutatePinnedBots,
     starredBots: starredBots?.filter((bot) => bot.available),
+    starredBotsError,
     mutateStarredBots,
     recentlyUsedBots,
     isLoadingRecentlyUsedBots,
@@ -148,7 +153,7 @@ const useBot = (shouldAutoRefreshMyBots?: boolean) => {
               });
             })
           );
-        } else if (idxRecentlyUsed && recentlyUsedBots) {
+        } else if (idxRecentlyUsed > -1 && recentlyUsedBots) {
           mutateStarredBots(
             produce(starredBots, (draft) => {
               draft?.unshift({
@@ -206,8 +211,23 @@ const useBot = (shouldAutoRefreshMyBots?: boolean) => {
           }
         );
       }
+      const starredIdx =
+        starredBots?.findIndex((bot) => bot.id === botId) ?? -1;
+      if (starredIdx > -1) {
+        mutateStarredBots(
+          produce(starredBots, (draft) => {
+            draft?.splice(starredIdx, 1);
+          }),
+          {
+            revalidate: false,
+          }
+        );
+      }
+      // Revalidate all lists, so that a failed deletion restores the bot.
       return api.deleteBot(botId).finally(() => {
         mutateMyBots();
+        mutateStarredBots();
+        mutateRecentlyUsedBots();
       });
     },
     removeFromRecentlyUsed: (botId: string) => {

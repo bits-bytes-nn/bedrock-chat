@@ -20,10 +20,12 @@ import Button from '../components/Button';
 import ListPageLayout from '../layouts/ListPageLayout';
 import ConversationSearchResults from '../components/ConversationSearchResults';
 import { isSubmitEnter } from '../utils/KeyboardUtils';
+import useSnackbar from '../hooks/useSnackbar';
 
 const ConversationHistoryPage: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const { open: openSnackbar } = useSnackbar();
   const [isOpenDeleteDialog, setIsOpenDeleteDialog] = useState(false);
   const [targetConversation, setTargetConversation] =
     useState<ConversationMeta>();
@@ -47,6 +49,7 @@ const ConversationHistoryPage: React.FC = () => {
   const {
     searchResults,
     isSearching,
+    isSearchError,
     hasSearched,
     displayQuery,
     handleSearch,
@@ -91,21 +94,31 @@ const ConversationHistoryPage: React.FC = () => {
     []
   );
 
+  const [isDeleting, setIsDeleting] = useState(false);
   const onDeleteConversation = useCallback(() => {
     if (targetConversation) {
-      setIsOpenDeleteDialog(false);
-
+      setIsDeleting(true);
       // Deletion process including optimistic update is handled in useConversation
-      deleteConversation(targetConversation.id).catch(() => {
-        setIsOpenDeleteDialog(true);
-      });
+      deleteConversation(targetConversation.id)
+        .then(() => {
+          setIsOpenDeleteDialog(false);
+        })
+        .catch(() => {
+          openSnackbar(t('error.deleteConversation'));
+        })
+        .finally(() => {
+          setIsDeleting(false);
+        });
     }
-  }, [deleteConversation, targetConversation]);
+  }, [deleteConversation, targetConversation, openSnackbar, t]);
 
   const onUpdateTitle = useCallback(
     (conversationId: string, title: string) => {
       // Exit edit mode
       setEditingConversationId(null);
+      if (!title.trim()) {
+        return;
+      }
 
       // Update process including optimistic update is handled in useConversation
       updateTitle(conversationId, title);
@@ -159,6 +172,7 @@ const ConversationHistoryPage: React.FC = () => {
       <DialogConfirmDeleteChat
         isOpen={isOpenDeleteDialog}
         target={targetConversation}
+        loading={isDeleting}
         onDelete={onDeleteConversation}
         onClose={() => {
           setIsOpenDeleteDialog(false);
@@ -181,8 +195,7 @@ const ConversationHistoryPage: React.FC = () => {
             <InputText
               icon={<PiMagnifyingGlass />}
               placeholder={t(
-                'conversationHistory.search.placeholder',
-                'Search conversations...'
+                'conversationHistory.searchConversation.placeholder'
               )}
               value={inputValue}
               onChange={handleInputChange}
@@ -203,6 +216,7 @@ const ConversationHistoryPage: React.FC = () => {
         <ConversationSearchResults
           results={searchResults}
           isSearching={isSearching}
+          isSearchError={isSearchError}
           hasSearched={hasSearched}
           searchQuery={displayQuery}
           onbackToConversationHistory={handleClearSearch}

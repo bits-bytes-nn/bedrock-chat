@@ -14,6 +14,7 @@ export function useConversationSearch() {
 
   const {
     data: searchResults,
+    error: searchError,
     isLoading: isSearching,
     mutate: mutateSearchResults,
   } = conversationSearchApi.searchConversations(hasSearched && debouncedQuery ? debouncedQuery : null);
@@ -46,6 +47,7 @@ export function useConversationSearch() {
   return {
     searchResults: searchResults ?? [],
     isSearching,
+    isSearchError: !!searchError,
     hasSearched,
     displayQuery,
     handleSearch,

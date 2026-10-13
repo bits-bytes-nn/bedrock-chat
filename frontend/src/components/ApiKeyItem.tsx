@@ -11,6 +11,8 @@ import ButtonCopy from './ButtonCopy';
 import useBotApiSettings from '../hooks/useBotApiSettings';
 import DialogConfirmDeleteApiKey from './DialogConfirmDeleteApiKey';
 import { produce } from 'immer';
+import useSnackbar from '../hooks/useSnackbar';
+import { getApiErrorMessage } from '../utils/ErrorUtils';
 
 type Props = BaseProps & {
   botId: string;
@@ -27,6 +29,7 @@ const ApiKeyItem: React.FC<Props> = (props) => {
     props.botId
   );
 
+  const { open } = useSnackbar();
   const [isHideKey, setIsHideKey] = useState(true);
 
   const [isOpenDialog, setIsOpenDialog] = useState(false);
@@ -49,11 +52,13 @@ const ApiKeyItem: React.FC<Props> = (props) => {
               }
             }),
           });
-          Promise.all([deleteBotApiKey(), mutateBotPublication()]).finally(
-            () => {
+          deleteBotApiKey()
+            .catch((e) => {
+              open(getApiErrorMessage(e) ?? t('bot.error.failDeleteApiKey'));
+            })
+            .finally(() => {
               mutateBotPublication();
-            }
-          );
+            });
         }}
         onClose={() => {
           setIsOpenDialog(false);

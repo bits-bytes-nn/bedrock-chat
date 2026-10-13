@@ -257,12 +257,15 @@ const BotApiSettingsPage: React.FC = () => {
         .then(() => {
           setIsOpenAddApiKeyDialog(false);
         })
+        .catch((e) => {
+          open(getApiErrorMessage(e) ?? t('bot.error.failAddApiKey'));
+        })
         .finally(() => {
           mutateBotPublication();
           setIsAddingApiKey(false);
         });
     },
-    [createApiKey, mutateBotPublication]
+    [createApiKey, mutateBotPublication, open, t]
   );
 
   const [isOpenDeleteApiDialog, setIsOpenDeleteApiDialog] = useState(false);
@@ -324,7 +327,7 @@ const BotApiSettingsPage: React.FC = () => {
         }}
       />
       <div className="mb-20 flex justify-center">
-        <div className="w-2/3">
+        <div className="w-full px-4 md:w-2/3">
           <div className="mt-5 w-full">
             <div className="flex items-center gap-1">
               <div className="text-xl font-bold">

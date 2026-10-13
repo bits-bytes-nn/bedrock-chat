@@ -1,6 +1,6 @@
 import React, { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { getApiErrorMessage } from '../utils/ErrorUtils';
+import { getApiErrorMessage, getApiErrorStatus } from '../utils/ErrorUtils';
 import useSnackbar from '../hooks/useSnackbar';
 import { PiLink } from 'react-icons/pi';
 import { useNavigate } from 'react-router-dom';
@@ -35,8 +35,13 @@ const BotStarredPage: React.FC = () => {
   const { pinBot, unpinBot } = useBotPinning();
 
   const newChat = useNewChat();
-  const { starredBots, deleteMyBot, updateStarred, mutateStarredBots } =
-    useBot(true);
+  const {
+    starredBots,
+    starredBotsError,
+    deleteMyBot,
+    updateStarred,
+    mutateStarredBots,
+  } = useBot(true);
 
   const {
     isPublication,
@@ -69,8 +74,12 @@ const BotStarredPage: React.FC = () => {
     if (targetDelete) {
       setIsOpenDeleteDialog(false);
       deleteMyBot(targetDelete.id).catch((e) => {
-        // For example, the knowledge base is still being synchronized.
-        openSnackbar(getApiErrorMessage(e) ?? t('bot.error.failDelete'));
+        // The knowledge base is being synchronized or the API published.
+        openSnackbar(
+          getApiErrorStatus(e) === 409
+            ? t('bot.error.failDeleteInProgress')
+            : (getApiErrorMessage(e) ?? t('bot.error.failDelete'))
+        );
       });
     }
   }, [deleteMyBot, targetDelete, openSnackbar, t]);
@@ -157,9 +166,10 @@ const BotStarredPage: React.FC = () => {
       />
       <ListPageLayout
         pageTitle={t('app.starredBots')}
-        isLoading={!starredBots}
+        isLoading={!starredBots && !starredBotsError}
         isEmpty={starredBots?.length === 0}
-        emptyMessage={t('bot.label.noStarredBots')}>
+        emptyMessage={t('bot.label.noStarredBots')}
+        errorMessage={starredBotsError ? t('error.loadFailed') : undefined}>
         {starredBots?.map((bot) => (
           <ListItemBot key={bot.id} bot={bot} onClick={onClickBot}>
             <div className="flex items-center">
