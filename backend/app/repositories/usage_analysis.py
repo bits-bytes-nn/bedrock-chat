@@ -60,7 +60,7 @@ async def _find_cognito_users_by_ids(user_ids: list[str]) -> list[dict]:
     return [result for result in results if result is not None]
 
 
-async def _query_bot_by_id(bot_id: str) -> list[dict]:
+def _query_bot_by_id(bot_id: str) -> list[dict]:
     """Query DynamoDB to find a public bot by bot_id."""
     table = get_bot_table_client()
     response = table.query(
@@ -74,15 +74,14 @@ async def _find_bots_by_ids(bot_ids: list[str]) -> dict[str, BotMetaWithStackInf
     """Find bot metadata by a list of bot ids and return a dict keyed by bot_id."""
     loop = asyncio.get_running_loop()
 
-    tasks = []
-    for bot_id in bot_ids:
-        tasks.append(loop.run_in_executor(None, _query_bot_by_id, bot_id))
+    # Each query runs in a thread; an async function here would only create a
+    # coroutine in the thread and then run the queries one by one.
+    tasks = [loop.run_in_executor(None, _query_bot_by_id, bot_id) for bot_id in bot_ids]
 
     results = await asyncio.gather(*tasks)
 
     bots_dict = {}
-    for items_result in results:
-        items = await items_result  # Await the coroutine to get the actual items
+    for items in results:
         for item in items:
             bot_obj = BotMetaWithStackInfo(
                 id=item["BotId"],

@@ -51,6 +51,20 @@ class TestAssumedRoleResourceCache(unittest.TestCase):
         self.assertIn('"dynamodb:LeadingKeys": ["user*"]', policy)
         self.assertIn("arn:aws:dynamodb:", policy)
 
+    def test_does_not_share_resources_between_threads(self):
+        import threading
+
+        mine = common._get_aws_resource("dynamodb", "table", "user")
+        other = []
+        thread = threading.Thread(
+            target=lambda: other.append(
+                common._get_aws_resource("dynamodb", "table", "user")
+            )
+        )
+        thread.start()
+        thread.join()
+        self.assertIsNot(mine, other[0])
+
     def test_bounds_the_cache(self):
         for i in range(common.RESOURCE_CACHE_SIZE + 3):
             common._get_aws_resource("dynamodb", "table", f"user{i}")

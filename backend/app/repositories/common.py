@@ -26,7 +26,8 @@ TRANSACTION_BATCH_WRITE_SIZE = 25
 TRANSACTION_BATCH_READ_SIZE = 100
 
 # Resources with assumed-role credentials, reused until shortly before they expire.
-# Bounded, because each user of the conversation table has its own entry.
+# Bounded, because each user of the conversation table and each thread has its own
+# entry.
 _RESOURCE_CACHE: "OrderedDict[tuple, tuple[Any, datetime]]" = OrderedDict()
 _RESOURCE_CACHE_LOCK = threading.Lock()
 RESOURCE_CACHE_SIZE = 32
@@ -105,7 +106,8 @@ def _get_aws_resource(service_name, table_name: str, user_id: str | None = None)
         else:
             return boto3.resource(service_name, region_name=REGION)  # type: ignore[call-overload]
 
-    key = (service_name, table_name, user_id)
+    # boto3 resources must not be shared between threads.
+    key = (service_name, table_name, user_id, threading.get_ident())
     with _RESOURCE_CACHE_LOCK:
         cached = _RESOURCE_CACHE.get(key)
         if cached and cached[1] - CREDENTIALS_REFRESH_MARGIN > datetime.now(
