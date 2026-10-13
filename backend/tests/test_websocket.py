@@ -324,26 +324,15 @@ class TestHandler:
     ]
 
     @pytest.mark.parametrize("parts", MALFORMED_MESSAGES)
-    def test_malformed_message_is_not_processed(self, parts):
+    def test_malformed_message_is_rejected(self, parts):
         self.start()
         self.send_parts(parts)
 
         response, process = self.end()
 
-        # Current behavior: the parse error falls into the generic handler.
-        assert response["statusCode"] == 500
+        assert response["statusCode"] == 400
         assert json.loads(response["body"])["status"] == "ERROR"
         process.assert_not_called()
-
-    @pytest.mark.xfail(strict=True, reason="should be 400")
-    @pytest.mark.parametrize("parts", MALFORMED_MESSAGES)
-    def test_malformed_message_returns_400(self, parts):
-        self.start()
-        self.send_parts(parts)
-
-        response, _ = self.end()
-
-        assert response["statusCode"] == 400
 
 
 if __name__ == "__main__":

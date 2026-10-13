@@ -9,3 +9,6 @@ AmazonQ.md
 memory-bank
 .clinerules
 .serena
+
+# Swift Package Manager cache created by local tools
+.build/

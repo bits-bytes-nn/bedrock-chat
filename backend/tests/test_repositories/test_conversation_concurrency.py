@@ -126,10 +126,6 @@ class TestMergeConversations(unittest.TestCase):
 
         self.assertEqual(merged.message_map["old"].content[0].body, "edited")
 
-    @pytest.mark.xfail(
-        strict=True,
-        reason="the restored message is not linked from its parent's children",
-    )
     def test_restored_message_is_linked_from_its_parent(self):
         base = conversation()
         add_reply(base, "old", 0)
@@ -156,11 +152,6 @@ class TestMergeConversations(unittest.TestCase):
         self.assertNotIn("old", merged.message_map)
         self.assertEqual(merged.message_map["a"].children, [])
 
-    @pytest.mark.xfail(
-        strict=True,
-        reason="a child that theirs added under a message mine removed is left "
-        "with a missing parent",
-    )
     def test_no_message_is_left_without_its_parent(self):
         base = conversation()
         add_reply(base, "old", 0)
