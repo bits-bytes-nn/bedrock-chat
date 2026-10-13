@@ -27,7 +27,6 @@ export const TEXT_FILE_EXTENSIONS = [
   '.tsx',
   '.m',
   '.scala',
-  '.rs',
   '.dart',
   '.lua',
   '.pl',
@@ -45,7 +44,6 @@ export const TEXT_FILE_EXTENSIONS = [
   '.yaml',
   '.yml',
   '.toml',
-  '.lua',
   '.sql',
   '.bat',
   '.md',
@@ -56,7 +54,7 @@ export const TEXT_FILE_EXTENSIONS = [
 
 // Supported non-text file extensions which can be handled on Converse API.
 // Ref: https://docs.aws.amazon.com/bedrock/latest/APIReference/API_runtime_DocumentBlock.html
-export const NON_TEXT_FILE_EXTENSIONS = [
+const NON_TEXT_FILE_EXTENSIONS = [
   '.pdf',
   '.doc',
   '.docx',

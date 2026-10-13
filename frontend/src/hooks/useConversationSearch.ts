@@ -5,7 +5,7 @@ import useConversationSearchApi from './useConversationSearchApi';
 // Debounce delay in milliseconds
 const DEBOUNCE_DELAY = 300;
 
-export function useConversationSearch() {
+function useConversationSearch() {
   const conversationSearchApi = useConversationSearchApi();
   const [searchQuery, setSearchQuery] = useState('');
   const [displayQuery, setDisplayQuery] = useState('');

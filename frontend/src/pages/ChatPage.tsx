@@ -38,7 +38,7 @@ import { AgentToolsProps } from '../features/agent/types';
 import { getRelatedDocumentsOfToolUse } from '../features/agent/utils/AgentUtils';
 import { SyncStatus } from '../constants';
 import { BottomHelper } from '../features/helper/components/BottomHelper';
-import { useIsWindows } from '../hooks/useIsWindows';
+import { isWindows } from 'react-device-detect';
 import {
   DisplayMessageContent,
   Model,
@@ -209,8 +209,6 @@ const ChatPage: React.FC = () => {
       }
     }
   }, [conversationError, navigate, newChat, openSnackbar, t]);
-
-  const { isWindows } = useIsWindows();
 
   const { getBotId } = useConversation();
 

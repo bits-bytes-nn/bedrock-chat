@@ -42,7 +42,7 @@ const highlightSearchTerms = (text: string, searchQuery: string) => {
   return renderEmphasizedText(a);
 };
 
-export const ConversationItem: React.FC<ConversationItemProps> = ({
+const ConversationItem: React.FC<ConversationItemProps> = ({
   conversation,
   onClick,
   searchQuery,
@@ -112,7 +112,7 @@ export const ConversationItem: React.FC<ConversationItemProps> = ({
   );
 };
 
-export const SkeletonConversation: React.FC = () => {
+const SkeletonConversation: React.FC = () => {
   return <Skeleton className="h-16 w-full rounded" />;
 };
 

@@ -9,7 +9,6 @@ export default {
     extend: {
       transitionProperty: {
         width: 'width',
-        height: 'height',
       },
       animation: {
         fastPulse: 'pulse 0.5s cubic-bezier(0.4, 0, 0.6, 1) infinite',
@@ -28,8 +27,6 @@ export default {
           dark: '#5b5b5b',
         },
         'aws-aqua': '#007faa',
-        'aws-lab': '#38ef7d',
-        'aws-mist': '#9ffcea',
         'aws-font-color': {
           light: '#232F3E',
           dark: '#cacaca',
@@ -51,7 +48,6 @@ export default {
         red: { DEFAULT: '#dc2626', 400: '#f87171' },
         // Links in dark mode; aws-sea-blue-dark is only 3.5:1 there.
         'aws-link-dark': '#8ab4f8',
-        'light-red': '#fee2e2',
         yellow: '#f59e0b',
         'light-yellow': '#fef9c3',
         // Readable as small text on the light paper background (WCAG AA).
