@@ -11,8 +11,8 @@
 3. "다른 유형의 보안 암호"를 선택합니다.
 4. 클라이언트 ID와 클라이언트 시크릿을 키-값 쌍으로 입력합니다.
 
-   - Key: `clientId`, Value: <YOUR_GOOGLE_CLIENT_ID>
-   - Key: `clientSecret`, Value: <YOUR_GOOGLE_CLIENT_SECRET>
+   - Key: `clientId`, Value: <YOUR_CLIENT_ID>
+   - Key: `clientSecret`, Value: <YOUR_CLIENT_SECRET>
    - Key: `issuerUrl`, Value: <ISSUER_URL_OF_THE_PROVIDER>
 
 5. 안내에 따라 보안 암호의 이름과 설명을 입력합니다. CDK 코드에서 필요하므로 보안 암호 이름을 기억해 두세요(Step 3의 변수명 <YOUR_SECRET_NAME>에서 사용됨).

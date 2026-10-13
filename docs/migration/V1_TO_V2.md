@@ -1,5 +1,8 @@
 # Migration Guide (v1 to v2)
 
+> [!NOTE]
+> Historical: this guide applies only to upstream v0 and v1 deployments and is not needed for v3.
+
 ## TL;DR
 
 - **For users of v1.2 or earlier**: Upgrade to v1.4 and recreate your bots using Knowledge Base (KB). After a transition period, once you confirm everything works as expected with KB, proceed with upgrading to v2.

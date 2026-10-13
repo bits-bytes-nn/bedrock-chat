@@ -18,7 +18,7 @@ For governance reasons, only limited users are able to publish bots. Before publ
 
 ### API Publish Settings
 
-After logging in as a `PublishedAllowed` user and create a bot, choose `API PublishSettings`. Note that only a shared bot can be published.
+After logging in as a `PublishAllowed` user and create a bot, choose `API PublishSettings`. Note that only a shared bot can be published.
 ![](./imgs/bot_api_publish_screenshot.png)
 
 On the following screen, we can configure several parameters regarding throttling. For the detail, please also see: [Throttle API requests for better throughput](https://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-request-throttling.html).
@@ -42,4 +42,4 @@ Client needs to set `x-api-key` on the request header.
 
 ## API specification
 
-See [here](https://aws-samples.github.io/bedrock-chat).
+The [published specification](https://aws-samples.github.io/bedrock-chat) is the upstream project's. For this fork, run the backend locally (see [backend/README.md](../backend/README.md)) and open `/docs` or `/openapi.json`.

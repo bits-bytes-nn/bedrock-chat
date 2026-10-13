@@ -1,5 +1,8 @@
 # Database Migration Guide
 
+> [!NOTE]
+> Historical: this guide applies only to upstream v0 and v1 deployments and is not needed for v3.
+
 > [!Warning]
 > This guide is for v0 to v1.
 

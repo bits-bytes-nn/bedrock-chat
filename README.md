@@ -9,10 +9,22 @@
   </a>
 </p>
 
-[English](https://github.com/aws-samples/bedrock-chat/blob/v3/README.md) | [日本語](https://github.com/aws-samples/bedrock-chat/blob/v3/docs/README_ja-JP.md) | [한국어](https://github.com/aws-samples/bedrock-chat/blob/v3/docs/README_ko-KR.md) | [中文](https://github.com/aws-samples/bedrock-chat/blob/v3/docs/README_zh-CN.md) | [Français](https://github.com/aws-samples/bedrock-chat/blob/v3/docs/README_fr-FR.md) | [Deutsch](https://github.com/aws-samples/bedrock-chat/blob/v3/docs/README_de-DE.md) | [Español](https://github.com/aws-samples/bedrock-chat/blob/v3/docs/README_es-ES.md) | [Italian](https://github.com/aws-samples/bedrock-chat/blob/v3/docs/README_it-IT.md) | [Norsk](https://github.com/aws-samples/bedrock-chat/blob/v3/docs/README_nb-NO.md) | [ไทย](https://github.com/aws-samples/bedrock-chat/blob/v3/docs/README_th-TH.md) | [Bahasa Melayu](https://github.com/aws-samples/bedrock-chat/blob/v3/docs/README_ms-MY.md) | [Tiếng Việt](https://github.com/aws-samples/bedrock-chat/blob/v3/docs/README_vi-VN.md) | [Polski](https://github.com/aws-samples/bedrock-chat/blob/v3/docs/README_pl-PL.md) | [Português Brasil](https://github.com/aws-samples/bedrock-chat/blob/v3/docs/README_pt-BR.md)
+[English](./README.md) | [日本語](./docs/README_ja-JP.md) | [한국어](./docs/README_ko-KR.md) | [中文](./docs/README_zh-CN.md) | [Français](./docs/README_fr-FR.md) | [Deutsch](./docs/README_de-DE.md) | [Español](./docs/README_es-ES.md) | [Italian](./docs/README_it-IT.md) | [Norsk](./docs/README_nb-NO.md) | [ไทย](./docs/README_th-TH.md) | [Bahasa Melayu](./docs/README_ms-MY.md) | [Tiếng Việt](./docs/README_vi-VN.md) | [Polski](./docs/README_pl-PL.md) | [Português Brasil](./docs/README_pt-BR.md)
 
 > [!NOTE]
 > The translations describe the upstream aws-samples project and are not updated with this fork. The English README is the reference for models, defaults and deployment options.
+
+### Changes from upstream
+
+This fork of [aws-samples/bedrock-chat](https://github.com/aws-samples/bedrock-chat) differs in these ways:
+
+- Current Claude and OpenAI models on Bedrock; retired models stay readable but cannot be selected ([models](#deploy-using-cdk)).
+- PowerPoint parsing and audio/video transcription for chat attachments and knowledge files ([presentations and recordings](#presentations-and-recordings)).
+- Claude Haiku 4.5 as the knowledge base parsing model ([parsing](#knowledge-base-parsing)).
+- Self sign-up off by default, and user data (tables, user pool, buckets) retained when the stack is deleted ([remove resources](#remove-resources)).
+- Only administrators can attach existing knowledge bases, S3 sources and Bedrock agents to bots.
+- CloudWatch alarms and API throttling ([alarms](#alarms-and-api-throttling)).
+- Conversation writes that merge concurrent updates instead of overwriting them.
 
 A multilingual generative AI platform powered by [Amazon Bedrock](https://aws.amazon.com/bedrock/).
 Supports chat, custom bots with knowledge (RAG), bot sharing via a bot store, and task automation using agents.
@@ -35,7 +47,7 @@ Add your own instruction and knowledge (a.k.a [RAG](https://aws.amazon.com/what-
 ![](./docs/imgs/bot_store.png)
 ![](./docs/imgs/bot_api_publish_screenshot3.png)
 
-You can also import existing [Amazon Bedrock's KnowledgeBase](https://aws.amazon.com/bedrock/knowledge-bases/).
+Administrators can also import existing [Amazon Bedrock's KnowledgeBase](https://aws.amazon.com/bedrock/knowledge-bases/).
 
 ![](./docs/imgs/import_existing_kb.png)
 
@@ -93,6 +105,10 @@ Chat attachments and bot knowledge files can also be PowerPoint presentations (`
 - Recordings are transcribed with Amazon Transcribe (up to 500 MB). The spoken language is identified among Korean, English, Japanese and Chinese, and speakers are labeled.
 
 A knowledge file is registered as `<filename>.txt`. A chat attachment is sent as text. Transcription runs in the Bedrock Region and is billed per minute of audio; see [Amazon Transcribe pricing](https://aws.amazon.com/transcribe/pricing/).
+
+### Knowledge base parsing
+
+The bot's knowledge settings offer an advanced parsing model that reads figures, charts and tables in PDF files and images. Claude Haiku 4.5 is called through a global cross-Region inference profile, so documents may be processed in other Regions. Claude 3 Haiku is kept as a legacy option and is not available in every Region. Bots saved with Claude 3 or 3.5 Sonnet, which Bedrock no longer offers, use the default parser.
 
 > [!NOTE]
 > After a knowledge base sync succeeds, OpenSearch Serverless can take up to a minute before the new documents are returned by searches.
@@ -244,12 +260,12 @@ It's an architecture built on AWS managed services, eliminating the need for inf
 
 Super-easy Deployment uses [AWS CodeBuild](https://aws.amazon.com/codebuild/) to perform deployment by CDK internally. This section describes the procedure for deploying directly with CDK.
 
-- Please have UNIX, Docker and a Node.js runtime environment.
+- Please have UNIX, Docker and a Node.js 22 runtime environment.
 
 > [!Important]
 > If there is insufficient storage space in the local environment during deployment, CDK bootstrapping may result in an error. We recommend expanding the volume size of the instance before deploying.
 
-- Clone this repository
+- Clone this repository. The URL below is the upstream project; use this fork's URL to deploy this fork.
 
 ```
 git clone https://github.com/aws-samples/bedrock-chat
@@ -490,7 +506,7 @@ Or if using the legacy `cdk/cdk.json` set the following:
 This sample has the following groups to give permissions to users:
 
 - [`Admin`](./docs/ADMINISTRATOR.md)
-- [`CreatingBotAllowed`](#bot-personalization)
+- [`CreatingBotAllowed`](#bot-personalization--bot-store)
 - [`PublishAllowed`](./docs/PUBLISH_API.md)
 
 If you want newly created users to automatically join groups, you can specify them in [cdk.json](./cdk/cdk.json).
@@ -582,7 +598,7 @@ bedrockChatParams.set("default", {
 
 ### Alarms and API Throttling
 
-CloudWatch alarms notify an SNS topic (output `AlarmTopicArn`) when the REST API or chat streaming handler fails repeatedly, when chat requests are throttled, or when a bot knowledge sync fails. Set `alarmEmail` to subscribe an email address; AWS sends a confirmation email first.
+CloudWatch alarms notify an SNS topic (output `AlarmTopicArn`) when the REST API answers with server errors or chat answers fail repeatedly, when chat requests are throttled, when a knowledge sync fails, or when the resources of a deleted bot could not be removed. Set `alarmEmail` to subscribe an email address; AWS sends a confirmation email first.
 
 The REST and WebSocket APIs are limited to `apiThrottleRateLimit` requests per second (default 500) with a burst of `apiThrottleBurstLimit` (default 1000). Raise them for large deployments.
 

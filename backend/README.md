@@ -8,6 +8,7 @@ Written in Python with [FastAPI](https://fastapi.tiangolo.com/).
 - Create [poetry](https://python-poetry.org/) environment on your local machine
 
 ```sh
+# Python 3.13 or later
 cd backend
 python3 -m venv .venv  # Optional (If you don't want to install poetry on your env)
 source .venv/bin/activate  # Optional (If you don't want to install poetry on your env)
@@ -18,8 +19,8 @@ poetry install
 - Configure environment variables
 
 ```sh
-export CONVERSATION_TABLE_NAME=BedrockChatStack-DatabaseConversationTablexxxx
-export BOT_TABLE_NAME=BedrockChatStack-DatabaseBotTablexxxx
+export CONVERSATION_TABLE_NAME=BedrockChatStack-DatabaseConversationTableV3xxxx
+export BOT_TABLE_NAME=BedrockChatStack-DatabaseBotTableV3xxxx
 export ACCOUNT=yyyy
 export REGION=ap-northeast-1
 export BEDROCK_REGION=us-east-1
@@ -36,6 +37,7 @@ export OPENSEARCH_DOMAIN_ENDPOINT=https://abcdefghijklmnopqrst.aa-region-1.aoss.
   - `ENABLE_BEDROCK_GLOBAL_INFERENCE`, `ENABLE_BEDROCK_CROSS_REGION_INFERENCE`: `true` to use inference profiles.
   - `GLOBAL_AVAILABLE_MODELS`: JSON array of model names users may choose. Empty means all models.
   - `DEFAULT_MODEL`, `TITLE_MODEL`: model names for new conversations and title generation.
+  - `EMBEDDING_STATE_MACHINE_ARN`: the embedding state machine, needed to sync bot knowledge.
 
 - Configure CDK configration.
 Local development requires OpenSearch data access permissions for the IAM role to be used. You can set this parameter in either `cdk/cdk.json` or `cdk/parameter.ts`.

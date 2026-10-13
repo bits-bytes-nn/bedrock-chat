@@ -7,7 +7,7 @@
 3. "Credentials(자격 증명)"으로 이동한 다음 "Create Credentials(자격 증명 만들기)"를 클릭하고 "OAuth client ID"를 선택합니다.
 4. 메시지가 표시되면 동의 화면을 구성합니다.
 5. 애플리케이션 유형으로 "Web application(웹 애플리케이션)"을 선택합니다.
-6. 리디렉션 URI는 나중에 설정할 수 있도록 지금은 비워두고 임시로 저장합니다.[Step 5 참조](#step-5-update-google-oauth-client-with-cognito-redirect-uris)
+6. 리디렉션 URI는 나중에 설정할 수 있도록 지금은 비워두고 임시로 저장합니다.[Step 5 참조](#5단계-cognito-리다이렉트-uri로-google-oauth-클라이언트-업데이트)
 7. 생성이 완료되면 클라이언트 ID와 클라이언트 시크릿을 메모해 둡니다.
 
 자세한 내용은 [Google 공식 문서](https://support.google.com/cloud/answer/6158849?hl=en)를 참조하세요.
