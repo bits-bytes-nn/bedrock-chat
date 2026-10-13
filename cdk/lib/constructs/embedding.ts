@@ -26,8 +26,10 @@ import {
   bedrockIngestionPolicyStatement,
   firecrawlSecretPolicyStatement,
 } from "../utils/bedrock-policies";
+import { sharedKnowledgeBasesStackName } from "../utils/stack-names";
 
 export interface EmbeddingProps {
+  readonly envPrefix: string;
   readonly database: Database;
   readonly bedrockRegion: string;
   readonly documentBucket: IBucket;
@@ -69,6 +71,7 @@ export class Embedding extends Construct {
   }
 
   private setupStateMachineHandlers(props: EmbeddingProps) {
+    const sharedStackName = sharedKnowledgeBasesStackName(props.envPrefix);
     const handlerRole = new iam.Role(this, "HandlerRole", {
       assumedBy: new iam.ServicePrincipal("lambda.amazonaws.com"),
     });
@@ -91,7 +94,7 @@ export class Embedding extends Construct {
       // are named in cdk/bin/bedrock-custom-bot.ts and bedrock-shared-knowledge-bases.ts.
       new iam.PolicyStatement({
         actions: ["cloudformation:DescribeStacks"],
-        resources: ["BrChatKbStack*", "BrChatSharedKbStack"].map(
+        resources: ["BrChatKbStack*", sharedStackName].map(
           (stackName) =>
             `arn:${Stack.of(this).partition}:cloudformation:${props.bedrockRegion}:${
               Stack.of(this).account
@@ -215,6 +218,7 @@ export class Embedding extends Construct {
         timeout: Duration.minutes(1),
         role: handlerRole,
         environment: {
+          SHARED_KNOWLEDGE_BASES_STACK_NAME: sharedStackName,
           ACCOUNT: Stack.of(this).account,
           REGION: Stack.of(this).region,
           BEDROCK_REGION: props.bedrockRegion,
@@ -356,7 +360,7 @@ export class Embedding extends Construct {
       resultPath: "$.Error",
     })
 
-    // Obtain the ID of the shared Knowledge Bases built by `BrChatSharedKbStack`, and update `knowledge_base_id` of the referring bots.
+    // Obtain the ID of the shared Knowledge Bases built by the shared knowledge bases stack, and update `knowledge_base_id` of the referring bots.
     const finalizeSharedKnowledgeBasesBuild = new tasks.LambdaInvoke(this, "FinalizeSharedKnowledgeBasesBuild", {
       lambdaFunction: this._finalizeSharedKnowledgeBasesBuildHandler,
       resultSelector: {

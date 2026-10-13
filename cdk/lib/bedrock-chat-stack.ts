@@ -233,6 +233,7 @@ export class BedrockChatStack extends cdk.Stack {
     });
 
     const embedding = new Embedding(this, "Embedding", {
+      envPrefix: props.envPrefix,
       bedrockRegion: props.bedrockRegion,
       database,
       documentBucket: props.documentBucket,

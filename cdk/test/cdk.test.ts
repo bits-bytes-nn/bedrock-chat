@@ -425,6 +425,30 @@ describe("Bedrock Chat Stack Test", () => {
     expect(apiOrigins).not.toContain("*");
     expect(apiOrigins).toContain("http://localhost:5173");
     expect(JSON.stringify(apiOrigins)).toContain("DomainName");
+
+    // The shared knowledge bases stack is named per environment, and the build that
+    // deploys it, the handler that reads it and the policy that allows it agree.
+    const sharedStackName = "test--BrChatSharedKbStack";
+    template.hasResourceProperties("AWS::Lambda::Function", {
+      Environment: {
+        Variables: Match.objectLike({
+          SHARED_KNOWLEDGE_BASES_STACK_NAME: sharedStackName,
+        }),
+      },
+    });
+    template.hasResourceProperties("AWS::CodeBuild::Project", {
+      Source: Match.objectLike({
+        BuildSpec: Match.stringLikeRegexp(
+          `deploy --require-approval never ${sharedStackName}"`
+        ),
+      }),
+    });
+    const describeStackResources = statements
+      .filter((statement: any) => statement.Action === "cloudformation:DescribeStacks")
+      .flatMap((statement: any) => [statement.Resource].flat());
+    expect(JSON.stringify(describeStackResources)).toContain(
+      `:stack/${sharedStackName}/*`
+    );
   });
 
   test("custom domain configuration", () => {
