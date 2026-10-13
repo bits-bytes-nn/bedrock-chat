@@ -19,6 +19,18 @@ const testAppProps: cdk.AppProps = {
   context: { "aws:cdk:bundling-stacks": [] },
 };
 
+/** Policy statements attached to the role of a Lambda function in the template. */
+const roleStatementsOf = (template: Template, fn: any): any[] => {
+  const roleId = fn.Properties.Role["Fn::GetAtt"][0];
+  return Object.values(template.findResources("AWS::IAM::Policy"))
+    .filter((policy: any) =>
+      policy.Properties.Roles.some((role: any) => role.Ref === roleId)
+    )
+    .flatMap((policy: any) => policy.Properties.PolicyDocument.Statement);
+};
+const actionsOf = (statements: any[]): string[] =>
+  statements.flatMap((statement: any) => [statement.Action].flat());
+
 describe("Bedrock Chat Stack Test", () => {
   test("Identity Provider Generation", () => {
     const app = new cdk.App(testAppProps);
@@ -449,6 +461,69 @@ describe("Bedrock Chat Stack Test", () => {
     expect(JSON.stringify(describeStackResources)).toContain(
       `:stack/${sharedStackName}/*`
     );
+
+    // The API handler starts the API publication build only. Knowledge base builds
+    // are started by the state machine.
+    const functions = template.findResources("AWS::Lambda::Function");
+    const apiHandler = Object.values(functions).find(
+      (fn: any) =>
+        fn.Properties.Environment?.Variables?.PUBLISH_API_CODEBUILD_PROJECT_NAME
+    );
+    const apiHandlerStatements = roleStatementsOf(template, apiHandler);
+    const codebuildStatements = apiHandlerStatements.filter((statement: any) =>
+      [statement.Action].flat().includes("codebuild:StartBuild")
+    );
+    expect(codebuildStatements).toHaveLength(1);
+    expect([codebuildStatements[0].Resource].flat()).toHaveLength(1);
+    // DescribeIndex and ReadDocument are data access policy permissions, not IAM actions.
+    expect(actions).not.toContain("aoss:DescribeIndex");
+    expect(actions).not.toContain("aoss:ReadDocument");
+
+    // The ingestion pipelines write to the bot store collection only, and do not
+    // need OpenSearch Service domain actions.
+    expect(actions.some((action) => action.startsWith("es:"))).toBe(false);
+    const collectionId = Object.keys(
+      template.findResources("AWS::OpenSearchServerless::Collection")
+    )[0];
+    const apiAccessStatements = statements.filter((statement: any) =>
+      [statement.Action].flat().includes("aoss:APIAccessAll")
+    );
+    // The API handler and the pipelines.
+    expect(apiAccessStatements).toHaveLength(2);
+    for (const statement of apiAccessStatements) {
+      expect(statement.Resource).toEqual({ "Fn::GetAtt": [collectionId, "Arn"] });
+    }
+
+    // Bot stacks are looked up in the Region that they are deployed to.
+    const stackArns = JSON.stringify(
+      statements
+        .filter((statement: any) =>
+          [statement.Action].flat().includes("cloudformation:DeleteStack")
+        )
+        .map((statement: any) => statement.Resource)
+    );
+    expect(stackArns).not.toContain(":cloudformation:*:");
+    expect(stackArns).toContain(":cloudformation:us-east-1:");
+    expect(stackArns).toContain("stack/ApiPublishmentStack*/*");
+    expect(stackArns).toContain("stack/BrChatKbStack*/*");
+    expect(JSON.stringify(statements)).not.toContain(":logs:*:*:*");
+
+    // Only the Lambda roles of this stack and of published API stacks can assume
+    // the table access role. CloudFormation names roles after their stack.
+    for (const role of Object.values(
+      template.findResources("AWS::IAM::Role")
+    ) as any[]) {
+      expect(role.Properties.RoleName).toBeUndefined();
+    }
+    const tableAccessRole = Object.entries(
+      template.findResources("AWS::IAM::Role")
+    ).find(([id]) => id.startsWith("DatabaseTableAccessRole"))![1] as any;
+    const trust = JSON.stringify(
+      tableAccessRole.Properties.AssumeRolePolicyDocument
+    );
+    expect(trust).toContain('"ArnLike":{"aws:PrincipalArn"');
+    expect(trust).toContain(":role/MyTestStack-*");
+    expect(trust).toContain(":role/ApiPublishmentStack*");
   });
 
   test("custom domain configuration", () => {
@@ -983,18 +1058,7 @@ describe("Api Publishment Stack", () => {
 
     // The API handler only queues messages and reads conversations, so its role
     // cannot call models.
-    const roleActions = (fn: any): string[] => {
-      const roleId = fn.Properties.Role["Fn::GetAtt"][0];
-      return Object.values(template.findResources("AWS::IAM::Policy"))
-        .filter((policy: any) =>
-          policy.Properties.Roles.some((role: any) => role.Ref === roleId)
-        )
-        .flatMap((policy: any) =>
-          policy.Properties.PolicyDocument.Statement.flatMap((statement: any) =>
-            [statement.Action].flat()
-          )
-        );
-    };
+    const roleActions = (fn: any) => actionsOf(roleStatementsOf(template, fn));
     expect(apiHandler.Properties.Role).not.toEqual(consumer.Properties.Role);
     const apiActions = roleActions(apiHandler);
     expect(apiActions).toContain("sqs:SendMessage");

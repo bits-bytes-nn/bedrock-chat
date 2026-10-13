@@ -262,8 +262,6 @@ export class BedrockChatStack extends cdk.Stack {
       bedrockRegion: props.bedrockRegion,
       documentBucket: props.documentBucket,
       apiPublishProject: apiPublishCodebuild.project,
-      bedrockCustomBotProject: bedrockCustomBotCodebuild.project,
-      bedrockSharedKnowledgeBasesProject: bedrockSharedKnowledgeBasesCodebuild.project,
       embeddingStateMachine: embedding.stateMachine,
       usageAnalysis,
       largeMessageBucket,

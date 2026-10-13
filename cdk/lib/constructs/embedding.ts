@@ -28,6 +28,19 @@ import {
 } from "../utils/bedrock-policies";
 import { sharedKnowledgeBasesStackName } from "../utils/stack-names";
 
+/** Lets the handlers write their logs, in this account and Region only. */
+const lambdaLogsPolicyStatement = (stack: Stack): iam.PolicyStatement =>
+  new iam.PolicyStatement({
+    actions: [
+      "logs:CreateLogGroup",
+      "logs:CreateLogStream",
+      "logs:PutLogEvents",
+    ],
+    resources: [
+      `arn:${stack.partition}:logs:${stack.region}:${stack.account}:log-group:/aws/lambda/*`,
+    ],
+  });
+
 export interface EmbeddingProps {
   readonly envPrefix: string;
   readonly database: Database;
@@ -102,16 +115,7 @@ export class Embedding extends Construct {
         ),
       })
     );
-    handlerRole.addToPolicy(
-      new iam.PolicyStatement({
-        actions: [
-          "logs:CreateLogGroup",
-          "logs:CreateLogStream",
-          "logs:PutLogEvents",
-        ],
-        resources: [`arn:${Stack.of(this).partition}:logs:*:*:*`],
-      })
-    );
+    handlerRole.addToPolicy(lambdaLogsPolicyStatement(Stack.of(this)));
     props.documentBucket.grantReadWrite(handlerRole);
 
     this._updateSyncStatusHandler = new DockerImageFunction(
@@ -639,19 +643,13 @@ export class Embedding extends Construct {
       })
     );
     removeHandlerRole.addToPolicy(
-      botStackPolicyStatement(Stack.of(this), ["ApiPublishmentStack", "BrChatKbStack"])
+      botStackPolicyStatement(Stack.of(this), [
+        { stackNamePrefix: "ApiPublishmentStack", region: Stack.of(this).region },
+        { stackNamePrefix: "BrChatKbStack", region: props.bedrockRegion },
+      ])
     );
     removeHandlerRole.addToPolicy(publishedApiKeyPolicyStatement(Stack.of(this)));
-    removeHandlerRole.addToPolicy(
-      new iam.PolicyStatement({
-        actions: [
-          "logs:CreateLogGroup",
-          "logs:CreateLogStream",
-          "logs:PutLogEvents",
-        ],
-        resources: [`arn:${Stack.of(this).partition}:logs:*:*:*`],
-      })
-    );
+    removeHandlerRole.addToPolicy(lambdaLogsPolicyStatement(Stack.of(this)));
     removeHandlerRole.addToPolicy(
       firecrawlSecretPolicyStatement(Stack.of(this), [
         "secretsmanager:DeleteSecret",
