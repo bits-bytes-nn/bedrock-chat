@@ -208,11 +208,11 @@ Frontend URL: https://xxxxxxxxx.cloudfront.net
 
 ![](./docs/imgs/signin.png)
 
-The sign-in screen will appear as shown above. Self sign-up is off, so create the first user and make them an administrator. The user pool ID is the `AuthUserPoolId...` output of `BedrockChatStack` in the Bedrock region; Cognito emails a temporary password.
+The sign-in screen will appear as shown above. Self sign-up is off, so create the first user and make them an administrator. The user pool ID is the `AuthUserPoolId...` output of `BedrockChatStack` in the deployment region; Cognito emails a temporary password.
 
 ```sh
 aws cognito-idp admin-create-user --user-pool-id <user-pool-id> --username user@example.com \
-  --user-attributes Name=email,Value=user@example.com Name=email_verified,Value=true
+  --desired-delivery-mediums EMAIL --user-attributes Name=email,Value=user@example.com Name=email_verified,Value=true
 aws cognito-idp admin-add-user-to-group --user-pool-id <user-pool-id> --username user@example.com --group-name Admin
 ```
 
@@ -434,7 +434,7 @@ npx cdk deploy --all
 
 ### Remove resources
 
-Delete the resources that the application created at runtime first, because they keep billing and `cdk destroy` does not know about them: delete every bot with a knowledge base and every published API in the app, or delete the `BrChatKbStack*`, `BrChatSharedKbStack` and `ApiPublishmentStack*` stacks in [CloudFormation](https://console.aws.amazon.com/cloudformation/home) in the Bedrock region.
+Delete the resources that the application created at runtime first, because they keep billing and `cdk destroy` does not know about them: delete every bot with a knowledge base and every published API in the app, or delete the stacks in [CloudFormation](https://console.aws.amazon.com/cloudformation/home): `BrChatKbStack*` and `BrChatSharedKbStack` in the Bedrock region, and `ApiPublishmentStack*` in the deployment region.
 
 Then run `npx cdk destroy --all` in `cdk`. Without the CDK, delete `BedrockChatStack`, `BedrockRegionResourcesStack` and `FrontendWafStack` in CloudFormation. Please note that `FrontendWafStack` is in `us-east-1` region.
 

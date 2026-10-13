@@ -171,11 +171,11 @@ Frontend URL: https://xxxxxxxxx.cloudfront.net
 
 ![](./imgs/signin.png)
 
-위와 같은 로그인 화면이 표시됩니다. 자체 가입이 꺼져 있으므로 첫 사용자를 만들고 관리자로 지정하세요. 사용자 풀 ID는 Bedrock 리전의 `BedrockChatStack` 출력 중 `AuthUserPoolId...` 값이며, 임시 비밀번호는 Cognito가 이메일로 보냅니다.
+위와 같은 로그인 화면이 표시됩니다. 자체 가입이 꺼져 있으므로 첫 사용자를 만들고 관리자로 지정하세요. 사용자 풀 ID는 배포 리전의 `BedrockChatStack` 출력 중 `AuthUserPoolId...` 값이며, 임시 비밀번호는 Cognito가 이메일로 보냅니다.
 
 ```sh
 aws cognito-idp admin-create-user --user-pool-id <user-pool-id> --username user@example.com \
-  --user-attributes Name=email,Value=user@example.com Name=email_verified,Value=true
+  --desired-delivery-mediums EMAIL --user-attributes Name=email,Value=user@example.com Name=email_verified,Value=true
 aws cognito-idp admin-add-user-to-group --user-pool-id <user-pool-id> --username user@example.com --group-name Admin
 ```
 
@@ -494,7 +494,7 @@ npx cdk deploy --all
 
 ### 리소스 제거
 
-애플리케이션이 실행 중에 만든 리소스를 먼저 삭제하세요. 비용이 계속 발생하고 `cdk destroy`로는 삭제되지 않습니다. 앱에서 지식 기반이 있는 봇과 게시한 API를 모두 삭제하거나, Bedrock 리전의 [CloudFormation](https://console.aws.amazon.com/cloudformation/home)에서 `BrChatKbStack*`, `BrChatSharedKbStack`, `ApiPublishmentStack*` 스택을 삭제합니다.
+애플리케이션이 실행 중에 만든 리소스를 먼저 삭제하세요. 비용이 계속 발생하고 `cdk destroy`로는 삭제되지 않습니다. 앱에서 지식 기반이 있는 봇과 게시한 API를 모두 삭제하거나, [CloudFormation](https://console.aws.amazon.com/cloudformation/home)에서 Bedrock 리전의 `BrChatKbStack*`, `BrChatSharedKbStack` 스택과 배포 리전의 `ApiPublishmentStack*` 스택을 삭제합니다.
 
 그다음 `cdk`에서 `npx cdk destroy --all`을 실행하세요. CDK를 사용하지 않는 경우 CloudFormation에서 `BedrockChatStack`, `BedrockRegionResourcesStack`, `FrontendWafStack`을 삭제하세요. `FrontendWafStack`은 `us-east-1` 리전에 있다는 점에 유의하세요.
 
@@ -672,7 +672,7 @@ bedrockChatParams.set("default", {
 
 ### 기여
 
-이 리포지토리에 기여하는 것을 고려해 주셔서 감사합니다! 버그 수정, 언어 번역(i18n), 기능 개선, [에이전트 도구](./AGENT_ko-KR.md#how-to-develop-your-own-tools) 및 기타 개선 사항을 환영합니다.
+이 리포지토리에 기여하는 것을 고려해 주셔서 감사합니다! 버그 수정, 언어 번역(i18n), 기능 개선, [에이전트 도구](./AGENT_ko-KR.md#자체-도구-개발-방법) 및 기타 개선 사항을 환영합니다.
 
 기능 개선 및 기타 개선 사항의 경우, **풀 리퀘스트를 생성하기 전에 구현 접근 방식과 세부 사항을 논의하
 
