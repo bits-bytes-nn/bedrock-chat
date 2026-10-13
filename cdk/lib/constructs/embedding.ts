@@ -55,7 +55,6 @@ export interface EmbeddingProps {
 
 export class Embedding extends Construct {
   readonly stateMachine: sfn.StateMachine;
-  readonly removalHandler: IFunction;
   /** Bot removals that failed after the retries, which may leave stacks behind. */
   readonly removalDeadLetterQueue: sqs.Queue;
 
@@ -75,7 +74,7 @@ export class Embedding extends Construct {
       retentionPeriod: Duration.days(14),
       enforceSSL: true,
     });
-    this.removalHandler = this.setupRemovalHandler(props);
+    this.setupRemovalHandler(props);
   }
 
   /** Log group of the handler that logs `Knowledge sync failed` for failed bots. */
@@ -267,8 +266,6 @@ export class Embedding extends Construct {
       memorySize: 512,
       timeout: Duration.minutes(1),
       environment: {
-        ACCOUNT: Stack.of(this).account,
-        REGION: Stack.of(this).region,
         BEDROCK_REGION: props.bedrockRegion,
         DOCUMENT_BUCKET: props.documentBucket.bucketName,
       },
@@ -557,7 +554,8 @@ export class Embedding extends Construct {
       }),
       resultPath: sfn.JsonPath.DISCARD,
     });
-    updateSyncStatusSucceeded.addCatch(syncCustomBotFinished, {
+    // Otherwise the bot would stay RUNNING.
+    updateSyncStatusSucceeded.addCatch(updateSyncStatusFailedForCustomBot, {
       resultPath: "$.Error",
     });
 
@@ -622,6 +620,10 @@ export class Embedding extends Construct {
 
     return new sfn.StateMachine(this, "StateMachine", {
       definitionBody: sfn.DefinitionBody.fromChainable(definition),
+      // The lock files expire after a day (cdk/lib/bedrock-region-resources.ts), so a
+      // longer execution may already run alongside another one holding its lock. The
+      // default timeout is a year, which would leave a stuck execution unnoticed.
+      timeout: Duration.hours(24),
       logs: {
         destination: new logs.LogGroup(this, "StateMachineLogs", {
           retention: logs.RetentionDays.THREE_MONTHS,
@@ -670,6 +672,8 @@ export class Embedding extends Construct {
           exclude: [...excludeDockerImage],
         }
       ),
+      // As the other handlers that load the backend app; the default is 128 MB.
+      memorySize: 512,
       // Deleting the conversations of a busy published API takes long.
       timeout: Duration.minutes(15),
       environment: {
@@ -690,6 +694,10 @@ export class Embedding extends Construct {
         startingPosition: lambda.StartingPosition.TRIM_HORIZON,
         batchSize: 1,
         retryAttempts: 5,
+        // The stream keeps records for 24 hours. A record that is still retried after
+        // 12 hours goes to the dead-letter queue before the stream drops it, and no
+        // longer blocks the removals behind it.
+        maxRecordAge: Duration.hours(12),
         // Keep the record of a failed removal instead of dropping it.
         onFailure: new SqsDlq(this.removalDeadLetterQueue),
         filters: [
@@ -699,8 +707,6 @@ export class Embedding extends Construct {
         ],
       })
     );
-
-    return removalHandler;
   }
 
   private createIngestionTask(idSuffix: string, {

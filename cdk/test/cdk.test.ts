@@ -347,7 +347,7 @@ describe("Bedrock Chat Stack Test", () => {
     expect(actions).not.toContain("aoss:ListCollections");
 
     // Alarms and API throttling.
-    template.resourceCountIs("AWS::CloudWatch::Alarm", 8);
+    template.resourceCountIs("AWS::CloudWatch::Alarm", 9);
     // Usage exports hold conversation text, so they expire.
     template.hasResourceProperties("AWS::S3::Bucket", {
       LifecycleConfiguration: {
@@ -524,6 +524,71 @@ describe("Bedrock Chat Stack Test", () => {
     expect(trust).toContain('"ArnLike":{"aws:PrincipalArn"');
     expect(trust).toContain(":role/MyTestStack-*");
     expect(trust).toContain(":role/ApiPublishmentStack*");
+
+    // Knowledge syncs end within a day and alarm when they fail, time out or are
+    // aborted. A bot is marked ready a minute after its ingestion, and a failed
+    // update of that status marks it failed instead of leaving it RUNNING.
+    const stateMachine = Object.values(
+      template.findResources("AWS::StepFunctions::StateMachine")
+    )[0] as any;
+    const definition = JSON.parse(
+      stateMachine.Properties.DefinitionString["Fn::Join"][1]
+        .map((part: any) => (typeof part === "string" ? part : "TOKEN"))
+        .join("")
+    );
+    expect(definition.TimeoutSeconds).toBe(86400);
+    const mapQueuedBots = definition.States.MapQueuedBots.ItemProcessor.States;
+    expect(mapQueuedBots.WaitForSearchIndex).toMatchObject({
+      Type: "Wait",
+      Seconds: 60,
+      Next: "UpdateSyncStatusSuccess",
+    });
+    expect(mapQueuedBots.UpdateSyncStatusSuccess.Catch).toEqual([
+      expect.objectContaining({ Next: "UpdateSyncStatusFailedForCustomBot" }),
+    ]);
+    const syncAlarm = Object.values(
+      template.findResources("AWS::CloudWatch::Alarm", {
+        Properties: { AlarmDescription: Match.stringLikeRegexp("timed out") },
+      })
+    )[0] as any;
+    expect(
+      syncAlarm.Properties.Metrics.flatMap((metric: any) =>
+        metric.MetricStat ? [metric.MetricStat.Metric.MetricName] : []
+      )
+    ).toEqual(["ExecutionsFailed", "ExecutionsTimedOut", "ExecutionsAborted"]);
+    expect(syncAlarm.Properties.Metrics).toContainEqual(
+      expect.objectContaining({ Expression: "failed + timedOut + aborted" })
+    );
+
+    // The usage export runs from a schedule, so its failures alarm on Lambda errors.
+    const exportHandlerId = Object.entries(functions).find(
+      ([, fn]: [string, any]) =>
+        fn.Properties.Environment?.Variables?.BUCKET_NAME &&
+        fn.Properties.Environment?.Variables?.TABLE_ARN
+    )![0];
+    template.hasResourceProperties("AWS::CloudWatch::Alarm", {
+      Namespace: "AWS/Lambda",
+      MetricName: "Errors",
+      Dimensions: [{ Name: "FunctionName", Value: { Ref: exportHandlerId } }],
+    });
+
+    // Bot removals have the memory of the other backend handlers, and a stuck
+    // record goes to the dead-letter queue before the stream drops it.
+    const removalHandler = Object.values(functions).find((fn: any) =>
+      JSON.stringify(fn.Properties.ImageConfig ?? {}).includes("app.bot_remove")
+    ) as any;
+    expect(removalHandler.Properties.MemorySize).toBe(512);
+    template.hasResourceProperties("AWS::Lambda::EventSourceMapping", {
+      MaximumRecordAgeInSeconds: 12 * 3600,
+      DestinationConfig: Match.objectLike({ OnFailure: Match.anyValue() }),
+    });
+    // The lock handler reads the bucket and the Bedrock Region only.
+    const lockHandler = Object.values(functions).find((fn: any) =>
+      JSON.stringify(fn.Properties.ImageConfig ?? {}).includes(".lock.handler")
+    ) as any;
+    expect(Object.keys(lockHandler.Properties.Environment.Variables).sort()).toEqual(
+      ["BEDROCK_REGION", "DOCUMENT_BUCKET"]
+    );
   });
 
   test("custom domain configuration", () => {

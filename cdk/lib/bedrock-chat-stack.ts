@@ -344,6 +344,7 @@ export class BedrockChatStack extends cdk.Stack {
       embeddingStateMachine: embedding.stateMachine,
       syncStatusLogGroup: embedding.syncStatusLogGroup,
       botRemovalDeadLetterQueue: embedding.removalDeadLetterQueue,
+      usageExportHandler: usageAnalysis.exportHandler,
     });
 
     frontend.buildViteApp({
