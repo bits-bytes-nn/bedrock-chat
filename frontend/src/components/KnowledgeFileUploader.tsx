@@ -6,7 +6,7 @@ import { produce } from 'immer';
 import { useTranslation } from 'react-i18next';
 import { PiFile, PiTrash, PiWarningCircleFill } from 'react-icons/pi';
 import ButtonIcon from './ButtonIcon';
-import { AxiosError } from 'axios';
+import { AxiosError, isAxiosError } from 'axios';
 import Progress from './Progress';
 import useBot from '../hooks/useBot';
 import { create } from 'zustand';
@@ -164,7 +164,7 @@ const KnowledgeFileUploader: React.FC<Props> = (props) => {
                   (f.status !== 'CONVERTING'
                     ? t('bot.error.failUpload')
                     : // The conversion reason comes from the backend in English.
-                      isEnglishLanguage()
+                      isEnglishLanguage() && !isAxiosError(e)
                       ? e.message
                       : t('error.attachment.conversionFailed', {
                           fileName: file.name,

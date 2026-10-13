@@ -88,6 +88,7 @@ def prepare_conversation(
     current_time = get_current_time()
     bot = None
 
+    is_new_conversation = False
     try:
         # Fetch existing conversation
         conversation = find_conversation_by_id(user.id, chat_input.conversation_id)
@@ -106,6 +107,7 @@ def prepare_conversation(
             owned, bot = fetch_bot(user, chat_input.bot_id)
     except RecordNotFoundError:
         # The case for new conversation. Note that editing first user message is not considered as new conversation.
+        is_new_conversation = True
         logger.info(
             f"No conversation found with id: {chat_input.conversation_id}. Creating new conversation."
         )
@@ -207,6 +209,11 @@ def prepare_conversation(
     # The stored model serializes about like the conversation response (attachments
     # in base64), plus the instruction and the price, so it is a close upper estimate.
     if len(conversation.model_dump_json().encode("utf-8")) > MAX_CONVERSATION_BYTES:
+        if is_new_conversation:
+            # With the instruction, the message does not fit any conversation.
+            raise MessageTooLargeError(
+                "The message is too large. Remove some attachments."
+            )
         raise ConversationTooLargeError(
             "The conversation is too large. Start a new conversation."
         )

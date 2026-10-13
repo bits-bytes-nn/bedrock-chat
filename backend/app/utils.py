@@ -325,29 +325,3 @@ def start_embedding_state_machine(
             }
         ),
     )
-
-
-def is_embedding_running(bot_id: str) -> bool:
-    """Check whether a running execution of the Embedding state machine may process the bot.
-
-    Args:
-        bot_id (str): Bot ID.
-
-    Returns:
-        bool: Whether an execution processes the bot, or every queued bot because it
-            was started without the bots to process.
-    """
-    client = boto3.client("stepfunctions")
-    paginator = client.get_paginator("list_executions")
-    for page in paginator.paginate(
-        stateMachineArn=EMBEDDING_STATE_MACHINE_ARN, statusFilter="RUNNING"
-    ):
-        for execution in page["executions"]:
-            response = client.describe_execution(executionArn=execution["executionArn"])
-            queued_bots = json.loads(response.get("input") or "{}").get("QueuedBots")
-            if queued_bots is None or any(
-                queued_bot.get("BotId") == bot_id for queued_bot in queued_bots
-            ):
-                return True
-
-    return False

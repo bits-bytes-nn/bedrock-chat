@@ -31,7 +31,7 @@ def test_rest_codes_have_translations():
     raised = {
         code
         for path in (BACKEND / "app").rglob("*.py")
-        for code in re.findall(r'\bcode="([a-z_]+)"', path.read_text())
+        for code in re.findall(r'\bcode=\(?\s*"([a-z_]+)"', path.read_text())
     }
     assert raised
 

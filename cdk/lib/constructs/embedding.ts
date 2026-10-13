@@ -119,6 +119,18 @@ export class Embedding extends Construct {
         ),
       })
     );
+    handlerRole.addToPolicy(
+      // The status handler deletes the knowledge base stack of a bot deleted during
+      // its sync. The stack's own role deletes its resources.
+      new iam.PolicyStatement({
+        actions: ["cloudformation:DeleteStack"],
+        resources: [
+          `arn:${Stack.of(this).partition}:cloudformation:${props.bedrockRegion}:${
+            Stack.of(this).account
+          }:stack/${customBotStackPrefix}*/*`,
+        ],
+      })
+    );
     handlerRole.addToPolicy(lambdaLogsPolicyStatement(Stack.of(this)));
     props.documentBucket.grantReadWrite(handlerRole);
 
@@ -145,6 +157,7 @@ export class Embedding extends Construct {
           CONVERSATION_TABLE_NAME: props.database.conversationTable.tableName,
           BOT_TABLE_NAME: props.database.botTable.tableName,
           TABLE_ACCESS_ROLE_ARN: props.database.tableAccessRole.roleArn,
+          BEDROCK_REGION: props.bedrockRegion,
         },
         role: handlerRole,
         logRetention: logs.RetentionDays.THREE_MONTHS,

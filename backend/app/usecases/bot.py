@@ -90,7 +90,6 @@ from app.utils import (
     delete_files_with_prefix_from_s3,
     UPLOAD_URL_EXPIRATION_SECONDS,
     generate_presigned_url,
-    is_embedding_running,
     move_file_in_s3,
     start_embedding_state_machine,
 )
@@ -304,9 +303,8 @@ def modify_owned_bot(
         raise PermissionError(
             f"User {user.id} is not authorized to modify bot {bot_id}"
         )
-    # Saving would overwrite the sync status of the running sync, which then no
-    # longer protects the bot from deletion while its stack is being built.
-    if _is_knowledge_base_syncing(bot):
+    # Admins can save a bot whose status is stuck, which queues a new sync.
+    if bot.sync_status in ("QUEUED", "RUNNING") and not user.is_admin():
         raise ResourceConflictError(
             "The knowledge base is being synchronized. Edit the bot after it finishes.",
             code="knowledge_base_syncing",
@@ -381,10 +379,12 @@ def modify_owned_bot(
     # if knowledge is not updated, skip embeding process.
     # 'sync_status = "QUEUED"' will execute embeding process and update dynamodb record.
     # 'sync_status= "SUCCEEDED"' will update only dynamodb record.
-    # A failed sync is retried even if nothing changed, or saving would hide it.
+    # A failed or stuck sync is retried even if nothing changed, or saving would
+    # hide it. Only admins can save a bot whose sync is queued or running.
+    is_retry = bot.sync_status != "SUCCEEDED"
     sync_status: type_sync_status = (
         "QUEUED"
-        if bot.sync_status == "FAILED"
+        if is_retry
         or modify_input.is_embedding_required(bot)
         or modify_input.is_guardrails_update_required(bot)
         else "SUCCEEDED"
@@ -458,12 +458,16 @@ def modify_owned_bot(
             added_filenames=added_filenames,
             unchanged_filenames=unchanged_filenames,
             deleted_filenames=deleted_filenames,
-            # As for a new bot: a bot on a shared knowledge base gets its data
-            # sources only from the shared flow, so file changes and retries of a
-            # failed sync need it even when the knowledge base itself is unchanged.
+            # A bot on a shared knowledge base gets its data sources only from the
+            # shared flow, so file changes and retries need it even when the
+            # knowledge base itself is unchanged.
             sync_shared_knowledge_bases_required=(
                 modify_input.is_sync_shared_knowledge_bases_required(bot)
-                or (updated_kb is not None and updated_kb.type == "shared")
+                or (
+                    updated_kb is not None
+                    and updated_kb.type == "shared"
+                    and bool(added_filenames or deleted_filenames or is_retry)
+                )
             ),
         )
 
@@ -663,12 +667,6 @@ def modify_star_status(user: User, bot_id: str, starred: bool):
         return update_alias_star_status(user.id, bot_id, starred)
 
 
-def _is_knowledge_base_syncing(bot: BotModel) -> bool:
-    # The status stays QUEUED or RUNNING if the state machine failed to start or to
-    # record the result, so only a running execution blocks the bot.
-    return bot.sync_status in ("QUEUED", "RUNNING") and is_embedding_running(bot.id)
-
-
 def remove_bot_by_id(user: User, bot_id: str):
     """Remove bot by id."""
     bot = find_bot_by_id(bot_id)
@@ -680,13 +678,8 @@ def remove_bot_by_id(user: User, bot_id: str):
         raise PermissionError(
             f"User {user.id} is not authorized to access bot {bot_id}"
         )
-    # A stack built after the removal would be left running and billing, so admins
-    # are rejected too.
-    if _is_knowledge_base_syncing(bot):
-        raise ResourceConflictError(
-            "The knowledge base is being synchronized. Delete the bot after it finishes.",
-            code="knowledge_base_syncing",
-        )
+    # A running sync may still build the knowledge base stack; the sync deletes it
+    # when it ends and finds the bot gone (update_bot_status).
     if bot.published_api_codebuild_id is not None and is_build_running(
         bot.published_api_codebuild_id
     ):

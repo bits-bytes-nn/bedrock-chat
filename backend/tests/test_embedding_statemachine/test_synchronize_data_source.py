@@ -70,7 +70,12 @@ class TestHandleIngest(unittest.TestCase):
 
     def test_reingests_unchanged_documents_that_failed(self):
         # Retrying a failed sync without changes must not skip the failed files.
-        statuses = {"a": "INDEXED", "b": "FAILED", "c": "NOT_FOUND"}
+        statuses = {
+            "a": "INDEXED",
+            "b": "FAILED",
+            "c": "NOT_FOUND",
+            "d": "PARTIALLY_INDEXED",
+        }
         uri = synchronize_data_source.compose_upload_document_s3_uri
         with patch.object(synchronize_data_source, "bedrock_agent") as agent:
             agent.get_data_source.return_value = {
@@ -101,7 +106,7 @@ class TestHandleIngest(unittest.TestCase):
         documents = agent.ingest_knowledge_base_documents.call_args.kwargs["documents"]
         self.assertEqual(
             [d["content"]["s3"]["s3Location"]["uri"] for d in documents],
-            [uri("u", "b", "b"), uri("u", "b", "c")],
+            [uri("u", "b", "b"), uri("u", "b", "c"), uri("u", "b", "d")],
         )
 
     def test_retries_of_a_task_reuse_the_job(self):

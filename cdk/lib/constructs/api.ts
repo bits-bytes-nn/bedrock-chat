@@ -108,9 +108,6 @@ export class Api extends Construct {
       })
     );
     props.embeddingStateMachine.grantStartExecution(handlerRole);
-    // Checks whether a knowledge base sync of a bot is running before it is deleted.
-    props.embeddingStateMachine.grant(handlerRole, "states:ListExecutions");
-    props.embeddingStateMachine.grantExecution(handlerRole, "states:DescribeExecution");
     handlerRole.addToPolicy(
       botStackPolicyStatement(Stack.of(this), [
         { stackNamePrefix: apiPublishmentStackPrefix, region: Stack.of(this).region },
