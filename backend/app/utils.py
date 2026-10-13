@@ -61,6 +61,10 @@ def get_current_time():
     return int(datetime.now().timestamp() * 1000)
 
 
+# S3 checks the expiration when a request starts, so long uploads still finish.
+UPLOAD_URL_EXPIRATION_SECONDS = 15 * 60
+
+
 def generate_presigned_url(
     bucket: str,
     key: str,

@@ -11,7 +11,7 @@ from app.usecases.file_conversion import (
     start_conversion,
 )
 from app.user import User
-from app.utils import generate_presigned_url
+from app.utils import UPLOAD_URL_EXPIRATION_SECONDS, generate_presigned_url
 from fastapi import APIRouter, Request
 from ulid import ULID
 
@@ -36,7 +36,7 @@ def get_attachment_upload_url(request: Request, filename: str, contentType: str)
         DOCUMENT_BUCKET,
         chat_upload_key(current_user.id, upload_id, filename),
         content_type=contentType,
-        expiration=3600,
+        expiration=UPLOAD_URL_EXPIRATION_SECONDS,
         client_method="put_object",
     )
     return AttachmentUploadOutput(upload_id=upload_id, url=url)
