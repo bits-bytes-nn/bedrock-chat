@@ -306,6 +306,34 @@ class TestHandler:
         assert response["statusCode"] == 403
         process.assert_not_called()
 
+    def send_parts(self, parts: dict[int, str]) -> None:
+        for index, part in parts.items():
+            response = websocket.handler(
+                frame({"step": "BODY", "index": index, "part": part}), None
+            )
+            assert response["statusCode"] == 200
+
+    MALFORMED_MESSAGES = [
+        pytest.param(
+            {0: json.dumps(CHAT_INPUT)[:20], 2: json.dumps(CHAT_INPUT)[40:]},
+            id="gap-in-part-indexes",
+        ),
+        pytest.param({}, id="no-parts"),
+        pytest.param({0: "{not json"}, id="invalid-json"),
+        pytest.param({0: json.dumps({"message": "hi"})}, id="not-a-chat-input"),
+    ]
+
+    @pytest.mark.parametrize("parts", MALFORMED_MESSAGES)
+    def test_malformed_message_is_rejected(self, parts):
+        self.start()
+        self.send_parts(parts)
+
+        response, process = self.end()
+
+        assert response["statusCode"] == 400
+        assert json.loads(response["body"])["status"] == "ERROR"
+        process.assert_not_called()
+
 
 if __name__ == "__main__":
     unittest.main()

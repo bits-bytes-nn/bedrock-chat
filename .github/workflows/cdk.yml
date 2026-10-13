@@ -33,6 +33,7 @@ defaults:
 jobs:
   synth-and-test:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v6
       - name: Use Node.js

@@ -417,16 +417,14 @@ class TestSharing(unittest.TestCase):
 
 
 class TestFetchAvailableAgentTools(unittest.TestCase):
-    def test_fetch_available_agent_tools_basic(self):
-        """Test basic functionality of fetch_available_agent_tools"""
-        tools = fetch_available_agent_tools()
-
-        self.assertIsInstance(tools, list)
-        self.assertGreater(len(tools), 0)  # At least one tool should be available
-
     def test_fetch_available_agent_tools_types(self):
-        """Test tool type conversion"""
+        """Every tool has a description, and types are converted to their schema."""
         tools = fetch_available_agent_tools()
+
+        self.assertGreater(len(tools), 0)
+        for tool in tools:
+            self.assertIsInstance(tool.description, str)
+            self.assertNotEqual(tool.description, "", tool.name)
 
         # bedrock_agent -> BedrockAgentTool
         bedrock_tools = [t for t in tools if t.name == "bedrock_agent"]
@@ -440,21 +438,6 @@ class TestFetchAvailableAgentTools(unittest.TestCase):
         self.assertIsInstance(internet_tools[0], InternetTool)
         self.assertEqual(internet_tools[0].tool_type, "internet")
         self.assertEqual(internet_tools[0].search_engine, "duckduckgo")
-
-    def test_fetch_available_agent_tools_descriptions(self):
-        """Test tool descriptions are properly extracted and print them"""
-        tools = fetch_available_agent_tools()
-
-        print("\n=== Available Agent Tools ===")
-        for tool in tools:
-            print(f"Tool: {tool.name}")
-            print(f"Type: {tool.tool_type}")
-            print(f"Description: {tool.description}")
-            print("-" * 50)
-
-            self.assertIsNotNone(tool.description)
-            self.assertNotEqual(tool.description, "")
-            self.assertIsInstance(tool.description, str)
 
 
 if __name__ == "__main__":

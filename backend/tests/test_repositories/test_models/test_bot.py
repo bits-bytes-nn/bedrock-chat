@@ -4,7 +4,6 @@ import unittest
 
 sys.path.insert(0, ".")
 
-import time
 
 from app.config import DEFAULT_GENERATION_CONFIG
 from app.config import GenerationParams as GenerationParamsConfig
@@ -33,46 +32,21 @@ from app.routes.schemas.bot import (
     Knowledge,
     ReasoningParams,
 )
+from tests.test_repositories.utils.bot_factory import create_test_private_bot
 from tests.test_usecases.utils.user_factory import (
+    create_test_admin_user,
     create_test_user,
-    delete_cognito_group,
-    delete_cognito_user,
-    store_group_in_cognito,
-    store_user_in_cognito,
 )
 
+OWNER = create_test_user("test_owner")
+OTHER_USER = create_test_user("test_user")
+USER_IN_GROUP = create_test_user("test_user_in_group", groups=["test_group"])
+ADMIN = create_test_admin_user("test_admin")
 
-@pytest.mark.aws
+
 class TestBotModel(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls) -> None:
-        cls.group_name = "test_group"
-        store_group_in_cognito(cls.group_name)
-
-        # Wait for reflecting the changes in the user pool
-        time.sleep(3)
-
-        cls.owner = create_test_user("test_owner")
-        store_user_in_cognito(cls.owner)
-        cls.user = create_test_user("test_user")
-        store_user_in_cognito(cls.user)
-        cls.user_in_group = create_test_user(
-            "test_user_in_group", groups=[cls.group_name]
-        )
-        store_user_in_cognito(cls.user_in_group)
-
-        # Wait for reflecting the changes in the user pool
-        time.sleep(3)
-
-    @classmethod
-    def tearDownClass(cls) -> None:
-        delete_cognito_user(cls.owner)
-        delete_cognito_user(cls.user)
-        delete_cognito_user(cls.user_in_group)
-        delete_cognito_group(cls.group_name)
-
     def setUp(self) -> None:
-        # Setup fully configured BotModel
+        # Fully configured BotModel shared with "test_group".
         self.bot = BotModel(
             id="test",
             title="test",
@@ -85,7 +59,7 @@ class TestBotModel(unittest.TestCase):
             allowed_cognito_users=[],
             allowed_cognito_groups=["test_group"],
             is_starred=False,
-            owner_user_id=self.owner.id,
+            owner_user_id=OWNER.id,
             generation_params=GenerationParamsModel(
                 max_tokens=2000,
                 top_k=250,
@@ -159,29 +133,70 @@ class TestBotModel(unittest.TestCase):
                 guardrail_version="guardrail_version",
             ),
             active_models=ActiveModelsModel(
-                claude_v3_sonnet_v2=True,
+                claude_v4_5_sonnet=False,
             ),
             usage_stats=UsageStatsModel(usage_count=0),
         )
 
     def test_to_output(self):
-        # Test to ensure 422 not raised
         output = self.bot.to_output()
 
-    def test_is_accessible_by_user(self):
-        self.assertTrue(self.bot.is_accessible_by_user(self.owner))
-        self.assertFalse(self.bot.is_accessible_by_user(self.user))
-        self.assertTrue(self.bot.is_accessible_by_user(self.user_in_group))
-
-    def test_is_editable_by_user(self):
-        self.assertTrue(self.bot.is_editable_by_user(self.owner))
-        self.assertFalse(self.bot.is_editable_by_user(self.user))
-        self.assertFalse(self.bot.is_editable_by_user(self.user_in_group))
+        self.assertEqual(output.id, "test")
+        self.assertEqual(output.allowed_cognito_groups, ["test_group"])
+        self.assertFalse(output.active_models.claude_v4_5_sonnet)
+        self.assertTrue(output.active_models.claude_v5_sonnet)
 
     def test_is_owned_by_user(self):
-        self.assertTrue(self.bot.is_owned_by_user(self.owner))
-        self.assertFalse(self.bot.is_owned_by_user(self.user))
-        self.assertFalse(self.bot.is_owned_by_user(self.user_in_group))
+        self.assertTrue(self.bot.is_owned_by_user(OWNER))
+        self.assertFalse(self.bot.is_owned_by_user(OTHER_USER))
+        self.assertFalse(self.bot.is_owned_by_user(ADMIN))
+
+
+def _bot(shared_scope: str, users: list[str] = [], groups: list[str] = []):
+    return BotModel.model_validate(
+        create_test_private_bot("bot", False, OWNER.id).model_dump()
+        | {
+            "shared_scope": shared_scope,
+            "shared_status": "unshared" if shared_scope == "private" else "shared",
+            "allowed_cognito_users": users,
+            "allowed_cognito_groups": groups,
+        }
+    )
+
+
+@pytest.mark.parametrize(
+    "bot, user, accessible, editable",
+    [
+        pytest.param(_bot("private"), OWNER, True, True, id="owner"),
+        pytest.param(_bot("private"), ADMIN, True, True, id="admin"),
+        pytest.param(_bot("private"), OTHER_USER, False, False, id="private-other"),
+        pytest.param(_bot("all"), OTHER_USER, True, False, id="shared-all"),
+        pytest.param(
+            _bot("partial", users=[OTHER_USER.id]),
+            OTHER_USER,
+            True,
+            False,
+            id="partial-by-user",
+        ),
+        pytest.param(
+            _bot("partial", groups=["test_group"]),
+            USER_IN_GROUP,
+            True,
+            False,
+            id="partial-by-group",
+        ),
+        pytest.param(
+            _bot("partial", users=["someone"], groups=["other_group"]),
+            USER_IN_GROUP,
+            False,
+            False,
+            id="partial-not-listed",
+        ),
+    ],
+)
+def test_bot_access(bot, user, accessible, editable):
+    assert bot.is_accessible_by_user(user) is accessible
+    assert bot.is_editable_by_user(user) is editable
 
 
 class TestBotModelFromInput(unittest.TestCase):

@@ -1,5 +1,8 @@
 min_version: 1.3.0
 
+# Fixes and checks staged files on commit. Prettier is not run because CI does not
+# check it and many files on v3 are not formatted with it, so formatting a staged
+# file would mix unrelated changes into the commit.
 pre-commit:
   parallel: true
   commands:
@@ -7,16 +10,39 @@ pre-commit:
       root: "backend/"
       glob: "**/*.py"
       run: poetry run black {staged_files}
+      stage_fixed: true
     mypy:
       root: "backend/"
       glob: "**/*.py"
       run: poetry run mypy --config-file mypy.ini {staged_files}
-    prettier:
-      root: "frontend/"
-      glob: "**/*.{js,jsx,ts,tsx,vue,json,md,yml,yaml}"
-      run: npx prettier --write {staged_files}
     eslint:
       root: "frontend/"
-      glob: "**/*.{js,jsx,ts,tsx,vue}"
+      # Same files as `npm run lint` in CI.
+      glob: "**/*.{ts,tsx}"
       run: npx eslint --fix --max-warnings=0 {staged_files}
+      stage_fixed: true
 
+# Same checks as CI (.github/workflows). Run with `lefthook run check`.
+check:
+  commands:
+    backend-black:
+      root: "backend/"
+      run: poetry run black --check .
+    backend-mypy:
+      root: "backend/"
+      run: poetry run mypy --config-file mypy.ini .
+    backend-pytest:
+      root: "backend/"
+      run: poetry run pytest
+    frontend-lint:
+      root: "frontend/"
+      run: npm run lint
+    frontend-vitest:
+      root: "frontend/"
+      run: npx vitest run
+    frontend-build:
+      root: "frontend/"
+      run: npm run build
+    cdk-jest:
+      root: "cdk/"
+      run: npm test
