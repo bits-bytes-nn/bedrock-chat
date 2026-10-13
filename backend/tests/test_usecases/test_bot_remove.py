@@ -192,9 +192,12 @@ class TestDeleteDuringBuild(unittest.TestCase):
             update.assert_not_called()
 
     def save_unchanged(
-        self, current_status: str, knowledge_base_type: str = "dedicated"
+        self,
+        current_status: str,
+        knowledge_base_type: str = "dedicated",
+        files_changed: bool = False,
     ) -> tuple[str, MagicMock]:
-        """Save the bot without changing its knowledge.
+        """Save the bot without changing its knowledge base settings.
 
         Returns the new sync status and the mock of the state machine start.
         """
@@ -208,7 +211,7 @@ class TestDeleteDuringBuild(unittest.TestCase):
             bedrock_guardrails=None,
             conversation_quick_starters=None,
         )
-        modify_input.is_embedding_required.return_value = False
+        modify_input.is_embedding_required.return_value = files_changed
         modify_input.is_guardrails_update_required.return_value = False
         modify_input.is_sync_shared_knowledge_bases_required.return_value = False
         with patch.multiple(
@@ -236,10 +239,13 @@ class TestDeleteDuringBuild(unittest.TestCase):
         self.assertEqual(status, "SUCCEEDED")
         start.assert_not_called()
 
-    def test_retrying_a_failed_sync_resyncs_a_shared_knowledge_base(self):
+    def test_syncs_an_unchanged_shared_knowledge_base(self):
         # Otherwise the state machine skips the unchanged shared knowledge base.
-        _, start = self.save_unchanged("FAILED", "shared")
-        self.assertTrue(start.call_args.kwargs["sync_shared_knowledge_bases_required"])
+        for status, files_changed in (("FAILED", False), ("SUCCEEDED", True)):
+            _, start = self.save_unchanged(status, "shared", files_changed)
+            self.assertTrue(
+                start.call_args.kwargs["sync_shared_knowledge_bases_required"]
+            )
         _, start = self.save_unchanged("FAILED", "dedicated")
         self.assertFalse(start.call_args.kwargs["sync_shared_knowledge_bases_required"])
 

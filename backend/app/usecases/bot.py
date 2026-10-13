@@ -458,15 +458,12 @@ def modify_owned_bot(
             added_filenames=added_filenames,
             unchanged_filenames=unchanged_filenames,
             deleted_filenames=deleted_filenames,
-            # The state machine skips unchanged shared knowledge bases, which
-            # would leave a failed sync unretried.
+            # As for a new bot: a bot on a shared knowledge base gets its data
+            # sources only from the shared flow, so file changes and retries of a
+            # failed sync need it even when the knowledge base itself is unchanged.
             sync_shared_knowledge_bases_required=(
                 modify_input.is_sync_shared_knowledge_bases_required(bot)
-                or (
-                    bot.sync_status == "FAILED"
-                    and updated_kb is not None
-                    and updated_kb.type == "shared"
-                )
+                or (updated_kb is not None and updated_kb.type == "shared")
             ),
         )
 
@@ -481,7 +478,7 @@ def modify_owned_bot(
         agent=(
             Agent.model_validate(modify_input.agent.model_dump())
             if modify_input.agent
-            else Agent.model_validate({"tool": []})
+            else Agent(tools=[])
         ),
         knowledge=Knowledge(
             source_urls=source_urls,
