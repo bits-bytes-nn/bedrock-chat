@@ -83,6 +83,7 @@ export class BedrockChatStack extends cdk.Stack {
       removalPolicy: RemovalPolicy.DESTROY,
       objectOwnership: ObjectOwnership.OBJECT_WRITER,
       autoDeleteObjects: true,
+      lifecycleRules: [{ expiration: Duration.days(90) }],
     });
 
     // Bucket for source code

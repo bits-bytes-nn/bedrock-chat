@@ -10,6 +10,7 @@ import {
 import { BedrockCustomBotStack } from "../lib/bedrock-custom-bot-stack";
 import { BedrockRegionResourcesStack } from "../lib/bedrock-region-resources";
 import { ApiPublishmentStack } from "../lib/api-publishment-stack";
+import { BedrockSharedKnowledgeBasesStack } from "../lib/bedrock-shared-knowledge-bases-stack";
 import { Analyzer } from "@cdklabs/generative-ai-cdk-constructs/lib/cdk-lib/opensearch-vectorindex";
 import { Match } from "aws-cdk-lib/assertions";
 
@@ -277,6 +278,33 @@ describe("Bedrock Chat Stack Test", () => {
         expect([statement.Resource].flat()).not.toContain("*");
       }
     }
+
+    // Access logs expire, and the projects that deploy bot and API stacks log to a
+    // group with retention.
+    for (const accessLogTemplate of [template, regionTemplate]) {
+      accessLogTemplate.hasResourceProperties("AWS::S3::Bucket", {
+        LifecycleConfiguration: {
+          Rules: [{ ExpirationInDays: 90, Status: "Enabled" }],
+        },
+      });
+    }
+    const deployProjects = Object.values(
+      template.findResources("AWS::CodeBuild::Project", {
+        Properties: { Source: Match.objectLike({ Type: "S3" }) },
+      })
+    );
+    expect(deployProjects).toHaveLength(3);
+    for (const project of deployProjects as any[]) {
+      expect(
+        project.Properties.LogsConfig.CloudWatchLogs.GroupName
+      ).toBeDefined();
+    }
+    template.resourcePropertiesCountIs(
+      "AWS::Logs::LogGroup",
+      { RetentionInDays: 90 },
+      // The three deploy projects, the API access logs and the state machine logs.
+      5
+    );
 
     // Secrets, bot store search and stack lookups are scoped to the resources that
     // the backend calls.
@@ -786,6 +814,37 @@ describe("Bedrock Knowledge Base Stack", () => {
       }`,
     });
     expect(template).toBeDefined();
+  });
+});
+
+describe("Bedrock Shared Knowledge Bases Stack", () => {
+  test("temporary files and logs expire", () => {
+    const app = new cdk.App(testAppProps);
+    const stack = new BedrockSharedKnowledgeBasesStack(
+      app,
+      "BrChatSharedKbStack",
+      {
+        env: { region: "us-east-1" },
+        documentBucketName: "test-document-bucket-name",
+        knowledgeBases: [
+          {
+            knowledgeBaseHash: "hash",
+            embeddingsModel: getEmbeddingModel("titan_v2"),
+            chunkingStrategy: getChunkingStrategy("default"),
+          },
+        ],
+      }
+    );
+    const template = Template.fromStack(stack);
+
+    template.hasResourceProperties("AWS::S3::Bucket", {
+      LifecycleConfiguration: {
+        Rules: [{ ExpirationInDays: 7, Status: "Enabled" }],
+      },
+    });
+    template.hasResourceProperties("Custom::LogRetention", {
+      RetentionInDays: 90,
+    });
   });
 });
 

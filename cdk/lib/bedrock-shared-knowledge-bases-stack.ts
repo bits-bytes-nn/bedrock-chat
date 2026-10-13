@@ -8,6 +8,7 @@ import {
 } from "@cdklabs/generative-ai-cdk-constructs/lib/cdk-lib/opensearch-vectorindex";
 import { VectorCollectionStandbyReplicas } from "@cdklabs/generative-ai-cdk-constructs/lib/cdk-lib/opensearchserverless";
 import * as s3 from "aws-cdk-lib/aws-s3";
+import * as logs from "aws-cdk-lib/aws-logs";
 import {
   BedrockFoundationModel,
   CustomTransformation,
@@ -123,12 +124,15 @@ class SharedKnowledgeBase extends Construct {
       enforceSSL: true,
       autoDeleteObjects: true,
       removalPolicy: RemovalPolicy.DESTROY,
+      // Holds intermediate files of the custom transformation during ingestion only.
+      lifecycleRules: [{ expiration: Duration.days(7) }],
     });
     const transformationFunction = new lambdaNodeJs.NodejsFunction(this, 'TransformationFunction', {
       entry: path.resolve(__dirname, '../lambda/knowledge-base-custom-transformation/index.ts'),
       depsLockFilePath: path.resolve(__dirname, '../lambda/knowledge-base-custom-transformation/package-lock.json'),
 
       timeout: Duration.minutes(15),
+      logRetention: logs.RetentionDays.THREE_MONTHS,
     });
     props.documentBucket.grantReadWrite(transformationFunction);
     tempBucket.grantReadWrite(transformationFunction);
