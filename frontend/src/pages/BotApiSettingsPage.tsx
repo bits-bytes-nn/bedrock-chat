@@ -151,10 +151,11 @@ const BotApiSettingsPage: React.FC = () => {
     if (!botPublication) {
       return;
     }
-    if (botPublication.cfnStatus === 'CREATE_COMPLETE') {
-      fillApiSettings();
-    } else if (hasDeployFailed(botPublication)) {
+    // A stopped build can leave a complete stack without an endpoint.
+    if (hasDeployFailed(botPublication)) {
       setHasFailedDeploy(true);
+    } else if (botPublication.cfnStatus === 'CREATE_COMPLETE') {
+      fillApiSettings();
     }
   }, [botPublication, fillApiSettings]);
 

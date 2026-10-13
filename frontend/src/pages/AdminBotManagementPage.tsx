@@ -116,12 +116,14 @@ const AdminBotManagementPage: React.FC = () => {
           // from the admin lists.
           mutateCache(
             (key) =>
-              Array.isArray(key) &&
-              ['bot', '/admin/public-bots', '/admin/published-bots'].includes(
-                key[0]
-              )
+              key === 'bot/pinned' ||
+              (Array.isArray(key) &&
+                ['bot', '/admin/public-bots', '/admin/published-bots'].includes(
+                  key[0]
+                ))
           );
-          navigate('/admin/shared-bot-analytics');
+          // Replace the page, so that going back does not open the deleted bot.
+          navigate('/admin/shared-bot-analytics', { replace: true });
         })
         .catch((e) => {
           open(getApiErrorMessage(e) ?? t('bot.error.failDelete'));

@@ -30,8 +30,8 @@ const LazyOutputText: React.FC<Props> = (props) => {
   }, [props.text]);
 
   return (
-    <div className={`${props.className ?? ''} flex items-center`}>
-      {displayText}
+    <div className={`${props.className ?? ''} flex min-w-0 items-center`}>
+      <span className="truncate">{displayText}</span>
       {props.text !== displayText && (
         <PiRectangleFill className="rotate-90 -scale-y-75 animate-fastPulse text-xl" />
       )}

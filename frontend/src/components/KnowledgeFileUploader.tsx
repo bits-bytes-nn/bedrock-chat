@@ -19,7 +19,7 @@ import {
   isConvertibleFile,
   maxConvertibleFileSizeMb,
 } from '../constants/supportedAttachedFiles';
-import { getApiErrorMessage } from '../utils/ErrorUtils';
+import { getApiErrorMessage, isEnglishLanguage } from '../utils/ErrorUtils';
 import { removeBotFile } from '../utils/BotUtils';
 
 type Props = BaseProps & {
@@ -161,11 +161,14 @@ const KnowledgeFileUploader: React.FC<Props> = (props) => {
               updateFile(uid, (f) => {
                 f.errorMessage =
                   getApiErrorMessage(e) ??
-                  (f.status === 'CONVERTING'
-                    ? t('error.attachment.conversionFailed', {
-                        fileName: file.name,
-                      })
-                    : t('bot.error.failUpload'));
+                  (f.status !== 'CONVERTING'
+                    ? t('bot.error.failUpload')
+                    : // The conversion reason comes from the backend in English.
+                      isEnglishLanguage()
+                      ? e.message
+                      : t('error.attachment.conversionFailed', {
+                          fileName: file.name,
+                        }));
                 f.status = 'ERROR';
               });
             });

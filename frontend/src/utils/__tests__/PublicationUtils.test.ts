@@ -19,8 +19,13 @@ describe('hasDeployFailed', () => {
     'ROLLBACK_FAILED',
     'ROLLBACK_COMPLETE',
     'UPDATE_ROLLBACK_COMPLETE',
+    'DELETE_FAILED',
   ])('is true when the stack is %s', (cfnStatus) => {
     expect(hasDeployFailed(status('SUCCEEDED', cfnStatus))).toBe(true);
+  });
+
+  it('is true when the build stopped after the stack was created', () => {
+    expect(hasDeployFailed(status('STOPPED', 'CREATE_COMPLETE'))).toBe(true);
   });
 
   it.each([
