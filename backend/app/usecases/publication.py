@@ -26,7 +26,6 @@ from app.routes.schemas.api_publication import (
     PublishedApiQuota,
     PublishedApiThrottle,
 )
-from app.repositories.conversation import delete_conversation_by_user_id
 from app.user import User
 from app.utils import start_codebuild_project
 
@@ -184,8 +183,8 @@ def remove_bot_publication(user: User, bot_id: str):
             )
 
     delete_published_api(bot_id)
-    # Nobody can read the conversations of the API's clients any more.
-    delete_conversation_by_user_id(User.from_published_api_id(bot_id).id)
+    # The conversations of the API's clients are deleted with the bot; deleting
+    # many of them here would exceed the API's timeout.
     delete_bot_publication(bot.owner_user_id, bot_id)
 
 

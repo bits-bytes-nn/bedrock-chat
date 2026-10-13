@@ -668,7 +668,8 @@ export class Embedding extends Construct {
           exclude: [...excludeDockerImage],
         }
       ),
-      timeout: Duration.minutes(1),
+      // Deleting the conversations of a busy published API takes long.
+      timeout: Duration.minutes(15),
       environment: {
         ACCOUNT: Stack.of(this).account,
         REGION: Stack.of(this).region,

@@ -3,7 +3,7 @@
 Deletes the user's conversations (with large messages and related documents) and
 every bot-table item of the user. Deleting a bot item triggers the removal stream,
 which deletes the bot's knowledge base stack, documents, secrets, published API and
-its conversations. Bots of other users that this user shared are not affected.
+its conversations. Other users who use this user's shared bots lose access to them.
 
 Run from `backend` with credentials for the deployment account:
 

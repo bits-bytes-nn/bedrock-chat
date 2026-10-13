@@ -123,4 +123,4 @@ ORDER BY
 
 ## Deleting a user's data
 
-Deleting a user in Cognito does not delete their conversations or bots. To delete them, run [delete_user_data.py](../backend/scripts/delete_user_data.py) with the user's id (the Cognito `sub`), the table names and the large message bucket from the `BedrockChatStack` outputs. It lists what it would delete unless you pass `--yes`. Deleting the bots also removes their knowledge base stacks, documents and published APIs. The usage analysis exports expire after `usageAnalysisRetentionDays`.
+Deleting a user in Cognito does not delete their conversations or bots. To delete them, run [delete_user_data.py](../backend/scripts/delete_user_data.py) with the user's id (the Cognito `sub`), the table names and the large message bucket from the `BedrockChatStack` outputs. It lists what it would delete unless you pass `--yes`. Deleting the bots also removes their knowledge base stacks, documents and published APIs, and other users lose access to the bots this user shared. The usage analysis exports expire after `usageAnalysisRetentionDays`.
