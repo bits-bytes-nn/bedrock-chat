@@ -874,14 +874,14 @@ def on_reasoning(x: str):
 class TestAgentChat(unittest.TestCase):
     user = create_test_user("user1")
     bot_id = "bot1"
-    model: type_model_name = "claude-v4.5-sonnet"
+    model: type_model_name = "claude-v4.6-sonnet"
 
     def setUp(self) -> None:
         private_bot = create_test_private_bot(
             self.bot_id,
             True,
             self.user.id,
-            include_calculator_tool=True,
+            include_internet_tool=True,
         )
         store_bot(private_bot)
 
@@ -898,7 +898,7 @@ class TestAgentChat(unittest.TestCase):
                 content=[
                     TextContent(
                         content_type="text",
-                        body="5432/64526234??",
+                        body="Search the internet for the latest Amazon Bedrock news.",
                     )
                 ],
                 model=self.model,

@@ -49,8 +49,6 @@ def _create_test_bot_model(
     published_api_codebuild_id=None,
     bedrock_knowledge_base=None,
     include_internet_tool=False,
-    include_calculator_tool=False,
-    include_simple_list_tool=False,
     set_dummy_knowledge=False,
     usage_count=0,
     **kwargs
@@ -70,22 +68,6 @@ def _create_test_bot_model(
                 name="internet_search",
                 description="Search the internet for information.",
                 search_engine="duckduckgo",
-            )
-        )
-    if include_calculator_tool:
-        tools.append(
-            PlainToolModel(
-                tool_type="plain",
-                name="calculator",
-                description="Perform mathematical calculations like addition, subtraction, multiplication, and division",
-            )
-        )
-    if include_simple_list_tool:
-        tools.append(
-            PlainToolModel(
-                tool_type="plain",
-                name="simple_list",
-                description="Create and manage simple lists",
             )
         )
 
@@ -166,13 +148,7 @@ def _create_test_bot_model(
 
 
 def create_test_private_bot(
-    id,
-    is_starred,
-    owner_user_id,
-    include_internet_tool=False,
-    include_calculator_tool=False,
-    include_simple_list_tool=False,
-    **kwargs
+    id, is_starred, owner_user_id, include_internet_tool=False, **kwargs
 ):
     return _create_test_bot_model(
         id=id,
@@ -183,8 +159,6 @@ def create_test_private_bot(
         is_starred=is_starred,
         owner_user_id=owner_user_id,
         include_internet_tool=include_internet_tool,
-        include_calculator_tool=include_calculator_tool,
-        include_simple_list_tool=include_simple_list_tool,
         **kwargs,
     )
 

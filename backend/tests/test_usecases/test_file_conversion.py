@@ -236,10 +236,15 @@ class TestConversion(unittest.TestCase):
 class TestFrontendContract(unittest.TestCase):
     """The frontend decides which files to send for conversion and their limits."""
 
-    source = (
-        Path(__file__).resolve().parents[3]
-        / "frontend/src/constants/supportedAttachedFiles.ts"
-    ).read_text()
+    source: str
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        # Read when the tests run, so that a missing file fails these tests only.
+        cls.source = (
+            Path(__file__).resolve().parents[3]
+            / "frontend/src/constants/supportedAttachedFiles.ts"
+        ).read_text()
 
     def test_offers_the_convertible_extensions(self):
         block = re.search(r"CONVERTIBLE_FILE_EXTENSIONS = \[(.*?)\]", self.source, re.S)
