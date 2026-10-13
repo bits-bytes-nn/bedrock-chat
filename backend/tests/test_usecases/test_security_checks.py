@@ -69,10 +69,10 @@ class TestPublication(unittest.TestCase):
     def test_passes_allowed_origins_as_json(self):
         origins = ["https://a.example.com", "https://b.example.com:8443"]
         bot = MagicMock(shared_scope="all", published_api_codebuild_id=None)
-        with (
-            patch.object(publication, "find_bot_by_id", return_value=bot),
-            patch.object(publication, "start_codebuild_project") as start,
-            patch.object(publication, "update_bot_publication"),
+        with patch.object(
+            publication, "find_bot_by_id", return_value=bot
+        ), patch.object(publication, "start_codebuild_project") as start, patch.object(
+            publication, "update_bot_publication"
         ):
             publication.create_bot_publication(
                 USER,
@@ -186,10 +186,9 @@ class TestVerifyToken(unittest.TestCase):
         )
 
     def verify(self, token: str) -> dict:
-        with (
-            patch.object(auth, "_get_signing_keys", return_value=self.jwks),
-            patch.object(auth, "CLIENT_ID", "client"),
-        ):
+        with patch.object(
+            auth, "_get_signing_keys", return_value=self.jwks
+        ), patch.object(auth, "CLIENT_ID", "client"):
             return auth.verify_token(token)
 
     def test_accepts_id_tokens(self):
@@ -326,10 +325,9 @@ class TestPrepareConversation(unittest.TestCase):
 
 class TestAdminEditsAnotherUsersBot(unittest.TestCase):
     def test_moves_uploads_into_the_owner_path(self):
-        with (
-            patch.object(bot_usecase, "move_file_in_s3") as move,
-            patch.object(bot_usecase, "delete_file_from_s3") as delete,
-        ):
+        with patch.object(bot_usecase, "move_file_in_s3") as move, patch.object(
+            bot_usecase, "delete_file_from_s3"
+        ) as delete:
             bot_usecase._update_s3_documents_by_diff(
                 "admin", "owner", "bot", ["new.pdf"], ["old.pdf"]
             )
@@ -340,10 +338,9 @@ class TestAdminEditsAnotherUsersBot(unittest.TestCase):
         self.assertIn("owner/bot", delete.call_args.args[1])
 
     def test_keeps_a_replaced_file_with_the_same_name(self):
-        with (
-            patch.object(bot_usecase, "move_file_in_s3"),
-            patch.object(bot_usecase, "delete_file_from_s3") as delete,
-        ):
+        with patch.object(bot_usecase, "move_file_in_s3"), patch.object(
+            bot_usecase, "delete_file_from_s3"
+        ) as delete:
             bot_usecase._update_s3_documents_by_diff(
                 "owner", "owner", "bot", ["deck.pptx.txt"], ["deck.pptx.txt"]
             )

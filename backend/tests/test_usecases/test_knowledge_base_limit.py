@@ -78,11 +78,11 @@ class TestDedicatedKnowledgeBaseLimit(unittest.TestCase):
     def test_create_is_rejected_before_files_are_moved(self):
         bot_input = MagicMock(id="new", bedrock_knowledge_base=None)
         bot_input.has_knowledge.return_value = True
-        with (
-            patch.object(bot_usecase, "validate_external_resource_references"),
-            patch.object(bot_usecase, "validate_new_bot_id"),
-            patch.object(bot_usecase, "_update_s3_documents_by_diff") as move_files,
-        ):
+        with patch.object(
+            bot_usecase, "validate_external_resource_references"
+        ), patch.object(bot_usecase, "validate_new_bot_id"), patch.object(
+            bot_usecase, "_update_s3_documents_by_diff"
+        ) as move_files:
             with self.assertRaises(ValueError):
                 bot_usecase.create_new_bot(self.user, bot_input)
         move_files.assert_not_called()
@@ -135,11 +135,12 @@ class TestModifyOwnedBotLimit(unittest.TestCase):
             new_type
         ).model_dump()
         self.move_files = MagicMock(side_effect=_FilesMoved)
-        with (
-            patch.object(bot_usecase, "MAX_DEDICATED_KNOWLEDGE_BASES_PER_USER", 2),
-            patch.object(bot_usecase, "find_bot_by_id", return_value=bot),
-            patch.object(bot_usecase, "validate_external_resource_references"),
-            patch.object(bot_usecase, "_update_s3_documents_by_diff", self.move_files),
+        with patch.multiple(
+            bot_usecase,
+            MAX_DEDICATED_KNOWLEDGE_BASES_PER_USER=2,
+            find_bot_by_id=MagicMock(return_value=bot),
+            validate_external_resource_references=MagicMock(),
+            _update_s3_documents_by_diff=self.move_files,
         ):
             try:
                 bot_usecase.modify_owned_bot(self.user, bot_id, modify_input)

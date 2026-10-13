@@ -23,26 +23,13 @@ class TestBotRemoval(unittest.TestCase):
         # One parent records the order of the calls to every step.
         steps = MagicMock()
         steps.delete_custom_bot_stack_by_bot_id.side_effect = RuntimeError("throttled")
-        with (
-            patch.object(
-                bot_remove,
-                "delete_custom_bot_stack_by_bot_id",
-                steps.delete_custom_bot_stack_by_bot_id,
-            ),
-            patch.object(
-                bot_remove, "delete_published_api", steps.delete_published_api
-            ),
-            patch.object(bot_remove, "delete_from_s3", steps.delete_from_s3),
-            patch.object(
-                bot_remove,
-                "delete_api_key_from_secret_manager",
-                steps.delete_api_key_from_secret_manager,
-            ),
-            patch.object(
-                bot_remove,
-                "delete_conversation_by_user_id",
-                steps.delete_conversation_by_user_id,
-            ),
+        with patch.multiple(
+            bot_remove,
+            delete_custom_bot_stack_by_bot_id=steps.delete_custom_bot_stack_by_bot_id,
+            delete_published_api=steps.delete_published_api,
+            delete_from_s3=steps.delete_from_s3,
+            delete_api_key_from_secret_manager=steps.delete_api_key_from_secret_manager,
+            delete_conversation_by_user_id=steps.delete_conversation_by_user_id,
         ):
             with self.assertRaises(RuntimeError):
                 bot_remove.handler(EVENT, None)
@@ -87,11 +74,14 @@ class TestUnpublish(unittest.TestCase):
             ),
         )
         bot = MagicMock(published_api_codebuild_id="build", owner_user_id="owner")
-        with (
-            patch.object(publication, "find_bot_by_id", return_value=bot),
-            patch.object(publication, "is_build_running", return_value=False),
-            patch.object(publication, "delete_published_api") as delete_api,
-            patch.object(publication, "delete_bot_publication"),
+        with patch.object(
+            publication, "find_bot_by_id", return_value=bot
+        ), patch.object(
+            publication, "is_build_running", return_value=False
+        ), patch.object(
+            publication, "delete_published_api"
+        ) as delete_api, patch.object(
+            publication, "delete_bot_publication"
         ):
             publication.remove_bot_publication(MagicMock(), "bot")
 
@@ -110,26 +100,21 @@ class TestDeleteDuringBuild(unittest.TestCase):
         return bot
 
     def test_rejects_deleting_while_the_knowledge_base_is_built(self):
-        with (
-            patch.object(
-                bot_usecase, "find_bot_by_id", return_value=self.bot("RUNNING")
-            ),
-            patch.object(bot_usecase, "delete_bot_by_id") as delete,
-        ):
+        with patch.object(
+            bot_usecase, "find_bot_by_id", return_value=self.bot("RUNNING")
+        ), patch.object(bot_usecase, "delete_bot_by_id") as delete:
             with self.assertRaises(ResourceConflictError):
                 bot_usecase.remove_bot_by_id(self.user, "bot")
         delete.assert_not_called()
 
     def test_rejects_deleting_while_the_api_is_published(self):
-        with (
-            patch.object(
-                bot_usecase,
-                "find_bot_by_id",
-                return_value=self.bot("SUCCEEDED", "build"),
-            ),
-            patch.object(bot_usecase, "is_build_running", return_value=True),
-            patch.object(bot_usecase, "delete_bot_by_id") as delete,
-        ):
+        with patch.object(
+            bot_usecase, "find_bot_by_id", return_value=self.bot("SUCCEEDED", "build")
+        ), patch.object(
+            bot_usecase, "is_build_running", return_value=True
+        ), patch.object(
+            bot_usecase, "delete_bot_by_id"
+        ) as delete:
             with self.assertRaises(ResourceConflictError):
                 bot_usecase.remove_bot_by_id(self.user, "bot")
         delete.assert_not_called()
@@ -137,31 +122,27 @@ class TestDeleteDuringBuild(unittest.TestCase):
     def test_lets_admins_delete_a_stuck_bot(self):
         bot = self.bot("RUNNING")
         self.user.is_admin.return_value = True
-        with (
-            patch.object(bot_usecase, "find_bot_by_id", return_value=bot),
-            patch.object(bot_usecase, "delete_bot_by_id") as delete,
-        ):
+        with patch.object(
+            bot_usecase, "find_bot_by_id", return_value=bot
+        ), patch.object(bot_usecase, "delete_bot_by_id") as delete:
             bot_usecase.remove_bot_by_id(self.user, "bot")
         delete.assert_called_once()
 
     def test_allows_deleting_when_the_build_has_finished(self):
-        with (
-            patch.object(
-                bot_usecase, "find_bot_by_id", return_value=self.bot("SUCCEEDED", "old")
-            ),
-            patch.object(bot_usecase, "is_build_running", return_value=False),
-            patch.object(bot_usecase, "delete_bot_by_id") as delete,
-        ):
+        with patch.object(
+            bot_usecase, "find_bot_by_id", return_value=self.bot("SUCCEEDED", "old")
+        ), patch.object(
+            bot_usecase, "is_build_running", return_value=False
+        ), patch.object(
+            bot_usecase, "delete_bot_by_id"
+        ) as delete:
             bot_usecase.remove_bot_by_id(self.user, "bot")
         delete.assert_called_once()
 
     def test_rejects_editing_while_the_knowledge_base_is_built(self):
-        with (
-            patch.object(
-                bot_usecase, "find_bot_by_id", return_value=self.bot("QUEUED")
-            ),
-            patch.object(bot_usecase, "update_bot") as update,
-        ):
+        with patch.object(
+            bot_usecase, "find_bot_by_id", return_value=self.bot("QUEUED")
+        ), patch.object(bot_usecase, "update_bot") as update:
             with self.assertRaises(ResourceConflictError):
                 bot_usecase.modify_owned_bot(self.user, "bot", MagicMock())
         update.assert_not_called()
