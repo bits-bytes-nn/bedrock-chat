@@ -1,4 +1,3 @@
-import { unmarshall } from "@aws-sdk/util-dynamodb";
 import { Aws } from "aws-cdk-lib";
 import { Grant, IGrantable } from "aws-cdk-lib/aws-iam";
 import {

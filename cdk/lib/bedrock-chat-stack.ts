@@ -120,8 +120,6 @@ export class BedrockChatStack extends cdk.Stack {
             "**/.gitignore",
             "**/test/**",
             "**/tests/**",
-            "**/backend/embedding_statemachine/pdf_ai_ocr/**",
-            "**/backend/guardrails/**",
           ],
         }),
       ],
@@ -209,10 +207,7 @@ export class BedrockChatStack extends cdk.Stack {
       serverAccessLogsPrefix: "LargeMessageBucket",
     });
 
-    const database = new Database(this, "Database", {
-      // Enable PITR to export data to s3
-      pointInTimeRecovery: true,
-    });
+    const database = new Database(this, "Database");
 
     // Custom Bot Store
     let botStore = undefined;
@@ -315,7 +310,6 @@ export class BedrockChatStack extends cdk.Stack {
 
     // For streaming response
     const websocket = new WebSocket(this, "WebSocket", {
-      accessLogBucket,
       database,
       auth,
       bedrockRegion: props.bedrockRegion,

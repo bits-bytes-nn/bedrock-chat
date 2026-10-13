@@ -5,7 +5,6 @@ import { BedrockChatStack } from "../lib/bedrock-chat-stack";
 import { BedrockRegionResourcesStack } from "../lib/bedrock-region-resources";
 import { FrontendWafStack } from "../lib/frontend-waf-stack";
 import { LogRetentionChecker } from "../rules/log-retention-checker";
-import { Language } from "../lib/constructs/bot-store";
 import { getBedrockChatParameters } from "../lib/utils/parameter-models";
 import { bedrockChatParams } from "../parameter";
 
@@ -20,25 +19,18 @@ const params = getBedrockChatParameters(
   bedrockChatParams
 );
 
-// // Another way, you can iterate over params map to declare multiple environments in single App.
-// for (const [k] of bedrockChatParams) {
-//   const params = getBedrockChatParameters(app, k, bedrockChatParams);
-//   // Include stack declaration this scope...
-// }
-
 const sepHyphen = params.envPrefix ? "-" : "";
 
 let waf: FrontendWafStack | undefined;
 if (params.enableFrontendWaf) {
   // WAF for frontend
-  // 2023/9: Currently, the WAF for CloudFront needs to be created in the North America region (us-east-1), so the stacks are separated
+  // A WAF for CloudFront must be created in us-east-1, so it has its own stack.
   // https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-wafv2-webacl.html
   waf = new FrontendWafStack(
     app,
     `${params.envPrefix}${sepHyphen}FrontendWafStack`,
     {
       env: {
-        // account: process.env.CDK_DEFAULT_ACCOUNT,
         region: "us-east-1",
       },
       envPrefix: params.envPrefix,
@@ -57,7 +49,6 @@ const bedrockRegionResources = new BedrockRegionResourcesStack(
   `${params.envPrefix}${sepHyphen}BedrockRegionResourcesStack`,
   {
     env: {
-      // account: process.env.CDK_DEFAULT_ACCOUNT,
       region: params.bedrockRegion,
     },
     crossRegionReferences: true,
@@ -69,7 +60,6 @@ const chat = new BedrockChatStack(
   `${params.envPrefix}${sepHyphen}BedrockChatStack`,
   {
     env: {
-      // account: process.env.CDK_DEFAULT_ACCOUNT,
       region: process.env.CDK_DEFAULT_REGION,
     },
     envName: params.envName,

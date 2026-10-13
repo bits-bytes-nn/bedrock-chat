@@ -5,9 +5,8 @@ import { WebSocketLambdaIntegration } from "aws-cdk-lib/aws-apigatewayv2-integra
 import { IFunction, Runtime, SnapStartConf } from "aws-cdk-lib/aws-lambda";
 import * as path from "path";
 import * as iam from "aws-cdk-lib/aws-iam";
-import { CfnOutput, Duration, RemovalPolicy, Stack } from "aws-cdk-lib";
+import { CfnOutput, Duration, Stack } from "aws-cdk-lib";
 import { Auth } from "./auth";
-import { ITable } from "aws-cdk-lib/aws-dynamodb";
 import { CfnRouteResponse } from "aws-cdk-lib/aws-apigatewayv2";
 import * as logs from "aws-cdk-lib/aws-logs";
 import * as s3 from "aws-cdk-lib/aws-s3";
@@ -25,7 +24,6 @@ export interface WebSocketProps {
   readonly bedrockRegion: string;
   readonly documentBucket: s3.IBucket;
   readonly largeMessageBucket: s3.IBucket;
-  readonly accessLogBucket?: s3.Bucket;
   readonly enableBedrockGlobalInference: boolean;
   readonly enableBedrockCrossRegionInference: boolean;
   readonly enableLambdaSnapStart: boolean;
@@ -46,23 +44,6 @@ export class WebSocket extends Construct {
 
     const { database } = props;
     const { tableAccessRole } = database;
-
-    // Bucket for SNS large payload support
-    // See: https://docs.aws.amazon.com/sns/latest/dg/extended-client-library-python.html
-    const largePayloadSupportBucket = new s3.Bucket(
-      this,
-      "LargePayloadSupportBucket",
-      {
-        encryption: s3.BucketEncryption.S3_MANAGED,
-        blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
-        enforceSSL: true,
-        removalPolicy: RemovalPolicy.DESTROY,
-        objectOwnership: s3.ObjectOwnership.OBJECT_WRITER,
-        autoDeleteObjects: true,
-        serverAccessLogsBucket: props.accessLogBucket,
-        serverAccessLogsPrefix: "LargePayloadSupportBucket",
-      }
-    );
 
     const handlerRole = new iam.Role(this, "HandlerRole", {
       assumedBy: new iam.ServicePrincipal("lambda.amazonaws.com"),
@@ -88,7 +69,6 @@ export class WebSocket extends Construct {
       ])
     );
 
-    largePayloadSupportBucket.grantRead(handlerRole);
     database.websocketSessionTable.grantReadWriteData(handlerRole);
     props.largeMessageBucket.grantReadWrite(handlerRole);
     props.documentBucket.grantRead(handlerRole);
@@ -113,7 +93,6 @@ export class WebSocket extends Construct {
         BOT_TABLE_NAME: database.botTable.tableName,
         TABLE_ACCESS_ROLE_ARN: tableAccessRole.roleArn,
         LARGE_MESSAGE_BUCKET: props.largeMessageBucket.bucketName,
-        LARGE_PAYLOAD_SUPPORT_BUCKET: largePayloadSupportBucket.bucketName,
         WEBSOCKET_SESSION_TABLE_NAME: database.websocketSessionTable.tableName,
         ENABLE_BEDROCK_GLOBAL_INFERENCE:
           props.enableBedrockGlobalInference.toString(),

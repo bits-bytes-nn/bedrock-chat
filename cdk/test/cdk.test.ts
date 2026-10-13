@@ -4,6 +4,7 @@ import { Template } from "aws-cdk-lib/assertions";
 import {
   getEmbeddingModel,
   getChunkingStrategy,
+  getChunkingOptions,
   getAnalyzer,
   getKnowledgeBaseType,
 } from "../lib/utils/bedrock-knowledge-base-args";
@@ -11,7 +12,6 @@ import { BedrockCustomBotStack } from "../lib/bedrock-custom-bot-stack";
 import { BedrockRegionResourcesStack } from "../lib/bedrock-region-resources";
 import { ApiPublishmentStack } from "../lib/api-publishment-stack";
 import { BedrockSharedKnowledgeBasesStack } from "../lib/bedrock-shared-knowledge-bases-stack";
-import { Analyzer } from "@cdklabs/generative-ai-cdk-constructs/lib/cdk-lib/opensearch-vectorindex";
 import { Match } from "aws-cdk-lib/assertions";
 
 // Skip asset bundling. It runs Docker for every synth and the tests do not inspect assets.
@@ -701,14 +701,13 @@ describe("Bedrock Knowledge Base Stack", () => {
     const embeddingsModel = getEmbeddingModel(knowledgeBase.embeddings_model);
     const chunkingStrategy = getChunkingStrategy(
       knowledgeBase.chunking_strategy,
-      knowledgeBase.embeddings_model
+      knowledgeBase.embeddings_model,
+      getChunkingOptions(knowledgeBase)
     );
-    const maxTokens: number | undefined = knowledgeBase.max_tokens;
     const instruction: string | undefined = knowledgeBase.instruction;
     const analyzer = knowledgeBase.open_search.analyzer
       ? getAnalyzer(knowledgeBase.open_search.analyzer)
       : undefined;
-    const overlapPercentage: number | undefined = knowledgeBase.overlap_percentage;
 
     const stack = new BedrockCustomBotStack(app, "BedrockCustomBotStackStack", {
       ownerUserId,
@@ -719,10 +718,8 @@ describe("Bedrock Knowledge Base Stack", () => {
       knowledgeBaseType,
       chunkingStrategy,
       existingS3Urls,
-      maxTokens,
       instruction,
       analyzer,
-      overlapPercentage,
       filenames: knowledge.filenames,
       sourceUrls: knowledge.source_urls,
       existKnowledgeBaseId: undefined,

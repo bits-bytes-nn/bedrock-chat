@@ -141,8 +141,6 @@ new BedrockSharedKnowledgeBasesStack(app, "BrChatSharedKbStack", {
 
     // Chunking configuration
     chunkingStrategy: knowledgeBase.chunkingConfig.chunkingStrategy,
-    maxTokens: knowledgeBase.chunkingConfig.maxTokens,
-    overlapPercentage: knowledgeBase.chunkingConfig.overlapPercentage,
   })),
 });
 

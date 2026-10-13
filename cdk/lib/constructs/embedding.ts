@@ -1,6 +1,6 @@
 import { Construct } from "constructs";
 import * as path from "path";
-import { Duration, RemovalPolicy, Stack } from "aws-cdk-lib";
+import { Duration, Stack } from "aws-cdk-lib";
 import * as iam from "aws-cdk-lib/aws-iam";
 import {
   botStackPolicyStatement,

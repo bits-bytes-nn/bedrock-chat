@@ -78,8 +78,6 @@ interface BedrockKnowledgeBaseProps {
 
   // Chunking configuration
   readonly chunkingStrategy: ChunkingStrategy;
-  readonly maxTokens?: number;
-  readonly overlapPercentage?: number;
 }
 
 class SharedKnowledgeBase extends Construct {

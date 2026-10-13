@@ -230,8 +230,6 @@ new BedrockCustomBotStack(app, `BrChatKbStack${baseConfig.botId}`, {
 
   // Chunking configuration
   chunkingStrategy: chunkingConfig.chunkingStrategy,
-  maxTokens: chunkingConfig.maxTokens,
-  overlapPercentage: chunkingConfig.overlapPercentage,
 
   // Crawling configuration
   crawlingScope: crawlingConfig.crawlingScope,
