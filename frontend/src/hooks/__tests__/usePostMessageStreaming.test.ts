@@ -5,7 +5,9 @@ vi.mock('aws-amplify/auth', () => ({
 }));
 
 import i18next from 'i18next';
-import usePostMessageStreaming from '../usePostMessageStreaming';
+import usePostMessageStreaming, {
+  getPredictErrorMessage,
+} from '../usePostMessageStreaming';
 import { PostMessageRequest } from '../../@types/conversation';
 
 class FakeWebSocket {
@@ -52,16 +54,28 @@ const startPost = async () => {
   return { promise, ws, events };
 };
 
-describe('usePostMessageStreaming', () => {
-  beforeEach(async () => {
-    await i18next.init({
-      lng: 'en',
-      resources: {
-        en: {
-          translation: { error: { predict: { connectionClosed: 'closed' } } },
+const initI18n = () =>
+  i18next.init({
+    lng: 'en',
+    resources: {
+      en: {
+        translation: {
+          error: {
+            predict: {
+              connectionClosed: 'closed',
+              invalidResponse: 'invalid',
+              throttled: 'throttled',
+              model_error: 'model error: {{reason}}',
+            },
+          },
         },
       },
-    });
+    },
+  });
+
+describe('usePostMessageStreaming', () => {
+  beforeEach(async () => {
+    await initI18n();
     vi.stubGlobal('WebSocket', FakeWebSocket);
   });
   afterEach(() => {
@@ -89,6 +103,13 @@ describe('usePostMessageStreaming', () => {
     const state = usePostMessageStreaming.getState();
     expect(state.errorDetail).toBe('No access');
     expect(state.errorConversationId).toBe('conversation');
+  });
+
+  test('shows a localized message for a known error code', async () => {
+    const { promise, ws } = await startPost();
+    ws.receive({ status: 'ERROR', reason: 'Rate exceeded', code: 'throttled' });
+
+    await expect(promise).rejects.toBe('throttled');
   });
 
   test('rejects when the connection closes before the end of the stream', async () => {
@@ -135,5 +156,23 @@ describe('usePostMessageStreaming', () => {
     ws.receive({ status: 'STREAMING_END', stop_reason: 'end_turn' });
 
     await expect(promise).resolves.toBeUndefined();
+  });
+});
+
+describe('getPredictErrorMessage', () => {
+  beforeEach(initI18n);
+
+  test('includes the reason for model errors', () => {
+    expect(
+      getPredictErrorMessage({ code: 'model_error', reason: 'Bad input' })
+    ).toBe('model error: Bad input');
+  });
+
+  test('falls back to the reason for unknown or missing codes', () => {
+    expect(getPredictErrorMessage({ code: 'other', reason: 'No access' })).toBe(
+      'No access'
+    );
+    expect(getPredictErrorMessage({ reason: 'No access' })).toBe('No access');
+    expect(getPredictErrorMessage({})).toBe('invalid');
   });
 });

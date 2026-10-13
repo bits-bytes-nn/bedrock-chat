@@ -34,6 +34,33 @@ export const chunkPayload = (payload: string, chunkSize: number): string[] => {
   return chunks;
 };
 
+// Error codes of ERROR frames that have a localized message.
+const PREDICT_ERROR_CODES = [
+  'throttled',
+  'model_unavailable',
+  'model_error',
+  'bot_not_found',
+  'invalid_request',
+  'generation_failed',
+] as const;
+type PredictErrorCode = (typeof PREDICT_ERROR_CODES)[number];
+const isPredictErrorCode = (code: unknown): code is PredictErrorCode =>
+  PREDICT_ERROR_CODES.includes(code as PredictErrorCode);
+
+/** Return the message to show for an ERROR frame. */
+export const getPredictErrorMessage = ({
+  code,
+  reason,
+}: {
+  code?: unknown;
+  reason?: string;
+}): string => {
+  if (isPredictErrorCode(code)) {
+    return i18next.t(`error.predict.${code}`, { reason });
+  }
+  return reason || i18next.t('error.predict.invalidResponse');
+};
+
 const usePostMessageStreaming = create<{
   post: (params: {
     input: PostMessageRequest;
@@ -193,9 +220,7 @@ const usePostMessageStreaming = create<{
                   break;
                 case PostStreamingStatus.ERROR:
                   console.error(data);
-                  fail(
-                    data.reason || i18next.t('error.predict.invalidResponse')
-                  );
+                  fail(getPredictErrorMessage(data));
                   break;
                 default:
                   console.warn('[FRONTEND_WS] Ignored status:', data.status);

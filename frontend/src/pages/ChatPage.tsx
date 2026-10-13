@@ -58,6 +58,7 @@ import MenuBot from '../components/MenuBot.tsx';
 type ChatMessageWithRelatedDocumentsProps = {
   chatContent: DisplayMessageContent;
   isStreaming: boolean;
+  disabled: boolean;
   streamingReasoning: string;
   streamingTools: AgentToolsProps[];
   streamingRelatedDocuments: RelatedDocument[];
@@ -138,6 +139,7 @@ const ChatMessageWithRelatedDocuments: React.FC<ChatMessageWithRelatedDocumentsP
       reasoning={reasoning}
       chatContent={message}
       isStreaming={props.isStreaming}
+      disabled={props.disabled}
       relatedDocuments={relatedDocumentsForCitation}
       onChangeMessageId={props.onChangeMessageId}
       onSubmit={props.onSubmit}
@@ -422,6 +424,16 @@ const ChatPage: React.FC = () => {
     e.preventDefault();
   }, []);
 
+  // dragleave also fires when the pointer moves onto a child element.
+  const onDragLeave: React.DragEventHandler<HTMLDivElement> = useCallback(
+    (e) => {
+      if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
+        setDndMode(false);
+      }
+    },
+    []
+  );
+
   const focusInputRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
@@ -498,6 +510,7 @@ const ChatPage: React.FC = () => {
     <div
       className="relative flex h-full flex-1 flex-col"
       onDragOver={onDragOver}
+      onDragLeave={onDragLeave}
       onDrop={endDnd}
       onDragEnd={endDnd}>
       <div className="flex-1 overflow-hidden">
@@ -575,7 +588,7 @@ const ChatPage: React.FC = () => {
           </div>
           {getPostedModel() && (
             <div className="absolute right-2 top-10 text-xs text-dark-gray dark:text-light-gray">
-              model: {getPostedModel()}
+              {t('app.currentModel', { model: getPostedModel() })}
             </div>
           )}
         </div>
@@ -635,6 +648,7 @@ const ChatPage: React.FC = () => {
                       <ChatMessageWithRelatedDocuments
                         chatContent={message}
                         isStreaming={isStreamingHere && isLast}
+                        disabled={postingMessage}
                         streamingReasoning={isLast ? streamingState.context.reasoning : ''}
                         streamingTools={isLast ? streamingState.context.tools : NO_TOOLS}
                         streamingRelatedDocuments={
@@ -674,6 +688,7 @@ const ChatPage: React.FC = () => {
                     className="mt-2 shadow "
                     icon={<PiArrowsCounterClockwise />}
                     outlined
+                    disabled={postingMessage}
                     onClick={() => {
                       retryPostChat({
                         enableReasoning: reasoningEnabled,

@@ -11,6 +11,8 @@ import {
   PutFeedbackRequest,
   TextContent,
   Content,
+  ImageContent,
+  AttachmentContent,
 } from '../@types/conversation';
 import useConversation from './useConversation';
 import { create } from 'zustand';
@@ -22,6 +24,8 @@ import useFeedbackApi from './useFeedbackApi';
 import { useActorRef, useSelector } from '@xstate/react';
 import { streamingStateMachine } from './xstates/streaming';
 import { Actor } from 'xstate';
+import i18next from 'i18next';
+import useSnackbar from './useSnackbar';
 
 /**
  * Apply streamed text at most once per animation frame. Rendering on every token
@@ -305,6 +309,7 @@ export const useNewChat = () => {
 };
 
 const useChat = () => {
+  const { open: openSnackbar } = useSnackbar();
   const streamingActor = useActorRef(streamingStateMachine);
   const streamingSend = streamingActor.send;
   // Select only what the page renders. Streamed text is applied through
@@ -650,6 +655,12 @@ const useChat = () => {
       })
       .catch((e) => {
         console.error(e);
+        // The streaming hook rejects with the message to show.
+        openSnackbar(
+          typeof e === 'string' ? e : i18next.t('error.answerResponse')
+        );
+        // Drop the partial text and show the saved answer.
+        mutate();
       })
       .finally(() => {
         unsubscribe();
@@ -806,8 +817,24 @@ const useChat = () => {
         removeMessage(conversationId, latestMessage.id);
 
         const latestMessageBody = getTextContentBody(latestMessage.content);
+        // Send the images and attachments of the removed message again.
+        const base64EncodedImages = latestMessage.content
+          .filter((c): c is ImageContent => c.contentType === 'image')
+          .map((c) => `data:${c.mediaType};base64,${c.body}`);
+        const attachments = latestMessage.content
+          .filter(
+            (c): c is AttachmentContent => c.contentType === 'attachment'
+          )
+          .map((c) => ({
+            fileName: c.fileName ?? '',
+            // The backend does not read the media type of attachments.
+            fileType: '',
+            extractedContent: c.body,
+          }));
         postChat({
           content: params.content ?? latestMessageBody,
+          base64EncodedImages,
+          attachments,
           enableReasoning: params.enableReasoning,
           bot: params.bot
             ? {
