@@ -40,11 +40,13 @@ Once a user click publish the bot, [AWS CodeBuild](https://aws.amazon.com/codebu
 
 Client needs to set `x-api-key` on the request header.
 
-Published APIs keep the backend version they were published with. After upgrading Bedrock Chat, publish each API again to update it.
+Published APIs keep the backend version and stack settings they were published with. After upgrading Bedrock Chat, publish each API again to update it.
 
-`GET /conversation/{conversationId}/{messageId}` returns 404 while the answer is not ready, and 500 with the reason when it could not be generated; such failures also raise the alarm of the chat stack.
+`GET /conversation/{conversationId}/{messageId}` returns 404 while the answer is not ready, and 500 with the reason when it could not be generated. The API stack has a `FailedAnswers` alarm for such failures and alarms for errors of its Lambda functions; they notify the chat stack's `AlarmTopicArn` topic. Requests with `continueGenerate` are rejected with 400. Answers are generated with limited concurrency, so a burst of requests waits in the queue.
 
-Without throttling settings, a published API allows 10 requests per second with a burst of 20, so that a leaked key cannot run up model costs unchecked.
+Without throttling settings, a published API allows 10 requests per second with a burst of 20, so that a leaked key cannot run up model costs unchecked. Throttling (rate and burst) and quota (limit and period) must each be set completely or not at all; otherwise the deployment fails.
+
+While a bot is not published, its API settings (`GET /bot/{bot_id}/publication`) return the error code `bot_not_published`. Unpublishing an API keeps its clients' conversations; they are deleted when the bot is deleted.
 
 ## API specification
 

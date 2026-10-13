@@ -5,13 +5,16 @@ every bot-table item of the user. Deleting a bot item triggers the removal strea
 which deletes the bot's knowledge base stack, documents, secrets, published API and
 its conversations. Other users who use this user's shared bots lose access to them.
 
-Run from `backend` with credentials for the deployment account:
+Run from `backend` with credentials for the deployment account. `PYTHONPATH=.` is
+needed because the backend is not installed as a package (`package-mode = false`):
 
-    CONVERSATION_TABLE_NAME=... BOT_TABLE_NAME=... LARGE_MESSAGE_BUCKET=... \\
-    REGION=... poetry run python scripts/delete_user_data.py <user-id> [--yes]
+    PYTHONPATH=. CONVERSATION_TABLE_NAME=... BOT_TABLE_NAME=... \\
+    LARGE_MESSAGE_BUCKET=... REGION=... \\
+    poetry run python scripts/delete_user_data.py <user-id> [--yes]
 
-The user id is the Cognito `sub` (the Username in the user pool). Without `--yes`,
-the script only lists what it would delete.
+The user id is the user's `sub` attribute in Cognito, which differs from the
+Username for users of an external identity provider. Without `--yes`, the script
+only lists what it would delete.
 """
 
 import argparse

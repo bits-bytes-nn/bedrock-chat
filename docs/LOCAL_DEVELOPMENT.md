@@ -17,6 +17,8 @@ In this sample, you can locally modify and launch the frontend using AWS resourc
 cd frontend && npm ci && npm run dev
 ```
 
+The dev server must run on port 5173 (the Vite default): `http://localhost:5173` is the only local origin that the deployed API allows for CORS.
+
 Streaming responses are served by the WebSocket API Lambda, which cannot run locally. Set `VITE_APP_WS_ENDPOINT` to the deployed WebSocket endpoint (`BedrockChatStack.WebSocketWebSocketEndpoint...` in the stack outputs), or set `VITE_APP_USE_STREAMING` to `false` to use the REST API without streaming.
 
 ## Tests
@@ -29,28 +31,6 @@ cd cdk && npm test                       # infrastructure tests
 
 Backend tests that call AWS are marked with `aws` and excluded by default. See [backend/README](../backend/README.md#tests).
 
-## (Optional, recommended) Setup pre-commit hook
+## Pre-commit hook
 
-We have introduced a GitHub workflows for type-checking and linting. These are executed when a Pull Request is created, but waiting for the linting to complete before proceeding is not a good development experience. Therefore, these linting tasks should be performed automatically at the commit stage. We have introduced [Lefthook](https://github.com/evilmartians/lefthook?tab=readme-ov-file#install) as a mechanism to achieve this. It's not mandatory, but we recommend adopting it for an efficient development experience. Additionally, while we don't enforce TypeScript formatting with [Prettier](https://prettier.io/), we would appreciate it if you could adopt it when contributing, as it helps prevent unnecessary diffs during code reviews.
-
-### Install lefthook
-
-Refer [here](https://github.com/evilmartians/lefthook#install). If you are a mac and homebrew user, just run `brew install lefthook`.
-
-### Install poetry
-
-This is required because python code linting depends on `mypy` and `black`.
-
-```sh
-cd backend
-python3 -m venv .venv  # Optional (If you don't want to install poetry on your env)
-source .venv/bin/activate  # Optional (If you don't want to install poetry on your env)
-pip install poetry
-poetry install
-```
-
-For more detail, please check [backend README](../backend/README.md).
-
-### Create a pre-commit hook
-
-Just run `lefthook install` on the root directory of this project.
+Run `lefthook install` in the repository root to check staged files on commit. See [CONTRIBUTING](../CONTRIBUTING.md#contributing-via-pull-requests) for `lefthook run check`, which runs the main CI checks.
