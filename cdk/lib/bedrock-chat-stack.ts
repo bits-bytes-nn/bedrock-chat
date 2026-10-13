@@ -321,9 +321,11 @@ export class BedrockChatStack extends cdk.Stack {
 
     new Monitoring(this, "Monitoring", {
       alarmEmail: props.alarmEmail,
-      apiHandler: backendApi.handler,
+      api: backendApi.api,
       webSocketHandler: websocket.handler,
+      webSocketLogGroup: websocket.handlerLogGroup,
       embeddingStateMachine: embedding.stateMachine,
+      syncStatusLogGroup: embedding.syncStatusLogGroup,
       botRemovalDeadLetterQueue: embedding.removalDeadLetterQueue,
     });
 

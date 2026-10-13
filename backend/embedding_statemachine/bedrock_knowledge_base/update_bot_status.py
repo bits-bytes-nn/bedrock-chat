@@ -112,4 +112,9 @@ def handler(event, context):
         )
 
     for sync_status_update in sync_status_updates:
+        if sync_status_update["status"] == "FAILED":
+            # Counted by the BotKnowledgeSyncFailures alarm (cdk/lib/constructs/monitoring.ts).
+            logger.error(
+                "Knowledge sync failed for bot %s", sync_status_update["bot_id"]
+            )
         update_sync_status(sync_status_update)

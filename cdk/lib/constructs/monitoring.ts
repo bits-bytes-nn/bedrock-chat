@@ -1,7 +1,9 @@
 import { CfnOutput, Duration } from "aws-cdk-lib";
+import { IHttpApi } from "aws-cdk-lib/aws-apigatewayv2";
 import * as cloudwatch from "aws-cdk-lib/aws-cloudwatch";
 import { SnsAction } from "aws-cdk-lib/aws-cloudwatch-actions";
 import { IFunction } from "aws-cdk-lib/aws-lambda";
+import * as logs from "aws-cdk-lib/aws-logs";
 import * as sns from "aws-cdk-lib/aws-sns";
 import { EmailSubscription } from "aws-cdk-lib/aws-sns-subscriptions";
 import * as sfn from "aws-cdk-lib/aws-stepfunctions";
@@ -11,9 +13,12 @@ import { Construct } from "constructs";
 export interface MonitoringProps {
   /** Email address subscribed to the alarm topic. Empty to skip the subscription. */
   readonly alarmEmail: string;
-  readonly apiHandler: IFunction;
+  readonly api: IHttpApi;
   readonly webSocketHandler: IFunction;
+  readonly webSocketLogGroup: logs.ILogGroup;
   readonly embeddingStateMachine: sfn.IStateMachine;
+  /** Log group of the function that records sync results. */
+  readonly syncStatusLogGroup: logs.ILogGroup;
   readonly botRemovalDeadLetterQueue: sqs.IQueue;
 }
 
@@ -33,18 +38,37 @@ export class Monitoring extends Construct {
     const period = Duration.minutes(5);
     const minutes = period.toMinutes();
     const errorThreshold = 5;
+    // The handlers catch errors and answer with an error, so the Lambda error metric
+    // misses them. Count the errors they log instead.
+    const loggedErrors = (
+      id: string,
+      logGroup: logs.ILogGroup,
+      terms: string[]
+    ): cloudwatch.IMetric =>
+      new logs.MetricFilter(this, id, {
+        logGroup,
+        filterPattern: logs.FilterPattern.anyTerm(...terms),
+        metricNamespace: "BedrockChat",
+        metricName: id,
+        metricValue: "1",
+      }).metric({ period, statistic: "Sum" });
     const alarms: [string, cloudwatch.IMetric, number, string][] = [
       [
-        "ApiHandlerErrors",
-        props.apiHandler.metricErrors({ period }),
+        "ApiServerErrors",
+        props.api.metricServerError({ period, statistic: "Sum" }),
         errorThreshold,
-        `The REST API handler failed at least ${errorThreshold} times in ${minutes} minutes.`,
+        `The REST API answered with a server error at least ${errorThreshold} times in ${minutes} minutes.`,
       ],
       [
-        "WebSocketHandlerErrors",
-        props.webSocketHandler.metricErrors({ period }),
+        "ChatErrors",
+        loggedErrors("ChatErrorCount", props.webSocketLogGroup, [
+          // Logged by backend/app/websocket.py.
+          "Failed to run stream handler",
+          "Bedrock request failed",
+          "Bedrock throttled the request",
+        ]),
         errorThreshold,
-        `The chat streaming handler failed at least ${errorThreshold} times in ${minutes} minutes.`,
+        `Generating chat answers failed at least ${errorThreshold} times in ${minutes} minutes.`,
       ],
       [
         "WebSocketHandlerThrottles",
@@ -56,7 +80,17 @@ export class Monitoring extends Construct {
         "KnowledgeSyncFailures",
         props.embeddingStateMachine.metricFailed({ period }),
         1,
-        "A bot knowledge sync (embedding state machine) failed.",
+        "The shared knowledge base sync (embedding state machine) failed.",
+      ],
+      [
+        "BotKnowledgeSyncFailures",
+        // A failed bot sync ends the execution successfully, so that the other
+        // queued bots are still processed.
+        loggedErrors("BotKnowledgeSyncFailureCount", props.syncStatusLogGroup, [
+          "Knowledge sync failed",
+        ]),
+        1,
+        "A bot knowledge sync failed. The bot shows the reason on its edit page.",
       ],
       [
         "BotRemovalFailures",
