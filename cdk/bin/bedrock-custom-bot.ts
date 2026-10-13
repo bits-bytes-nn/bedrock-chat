@@ -5,6 +5,7 @@ import {
   getKnowledgeBaseType,
   getEmbeddingModel,
   getChunkingStrategy,
+  getChunkingOptions,
   getAnalyzer,
   getParsingModel,
   getCrowlingScope,
@@ -110,29 +111,9 @@ const knowledgeConfig: KnowledgeConfig = {
 };
 
 // Extract chunking configuration
-const chunkingParams = {
-  maxTokens: knowledgeBaseJson.chunking_configuration?.max_tokens
-    ? knowledgeBaseJson.chunking_configuration.max_tokens
-    : undefined,
-  overlapPercentage: knowledgeBaseJson.chunking_configuration?.overlap_percentage
-    ? knowledgeBaseJson.chunking_configuration.overlap_percentage
-    : undefined,
-  overlapTokens: knowledgeBaseJson.chunking_configuration?.overlap_tokens
-    ? knowledgeBaseJson.chunking_configuration.overlap_tokens
-    : undefined,
-  maxParentTokenSize: knowledgeBaseJson.chunking_configuration?.max_parent_token_size
-    ? knowledgeBaseJson.chunking_configuration.max_parent_token_size
-    : undefined,
-  maxChildTokenSize: knowledgeBaseJson.chunking_configuration?.max_child_token_size
-    ? knowledgeBaseJson.chunking_configuration.max_child_token_size
-    : undefined,
-  bufferSize: knowledgeBaseJson.chunking_configuration?.buffer_size
-    ? knowledgeBaseJson.chunking_configuration.buffer_size
-    : undefined,
-  breakpointPercentileThreshold: knowledgeBaseJson.chunking_configuration?.breakpoint_percentile_threshold
-    ? knowledgeBaseJson.chunking_configuration.breakpoint_percentile_threshold
-    : undefined,
-};
+const chunkingParams = getChunkingOptions(
+  knowledgeBaseJson.chunking_configuration
+);
 
 const chunkingConfig: ChunkingConfig = {
   ...chunkingParams,

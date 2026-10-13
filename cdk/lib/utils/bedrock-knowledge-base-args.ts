@@ -149,10 +149,29 @@ export const getCrawlingFilters =(
   }
 }
 
+export type ChunkingOptions = Partial<
+  FixedSizeOptions & HierarchicalChunkingProps & SemanticOptions
+>;
+
+/**
+ * Reads the chunking parameters from the stored `chunking_configuration`.
+ * Uses `??` so that a value of 0 (for example the default `buffer_size`) is kept.
+ */
+export const getChunkingOptions = (chunkingConfiguration?: any): ChunkingOptions => ({
+  maxTokens: chunkingConfiguration?.max_tokens ?? undefined,
+  overlapPercentage: chunkingConfiguration?.overlap_percentage ?? undefined,
+  overlapTokens: chunkingConfiguration?.overlap_tokens ?? undefined,
+  maxParentTokenSize: chunkingConfiguration?.max_parent_token_size ?? undefined,
+  maxChildTokenSize: chunkingConfiguration?.max_child_token_size ?? undefined,
+  bufferSize: chunkingConfiguration?.buffer_size ?? undefined,
+  breakpointPercentileThreshold:
+    chunkingConfiguration?.breakpoint_percentile_threshold ?? undefined,
+});
+
 export const getChunkingStrategy = (
   chunkingStrategy?: string,
   embeddingsModel?: string,
-  options?: Partial<FixedSizeOptions & HierarchicalChunkingProps & SemanticOptions>
+  options?: ChunkingOptions
 ): ChunkingStrategy => {
   if (chunkingStrategy == undefined) {
     return ChunkingStrategy.DEFAULT;
