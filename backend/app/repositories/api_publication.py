@@ -98,7 +98,9 @@ def find_stack_by_bot_id(bot_id: str) -> PublishedApiStackModel:
         if error.get("Code") == "ValidationError" and "does not exist" in error.get(
             "Message", ""
         ):
-            raise RecordNotFoundError() from e
+            raise RecordNotFoundError(
+                f"Bot {bot_id} is not published.", code="bot_not_published"
+            ) from e
         raise
 
     stack = response["Stacks"][0]

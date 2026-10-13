@@ -964,6 +964,8 @@ How would you categorize this email?`,
         generation_failed: 'Failed to generate the answer. Try again.',
         input_too_long:
           'The conversation or attachments are too long for this model. Remove attachments or start a new conversation.',
+        conversation_too_large:
+          'The conversation is too large to save more messages. Start a new conversation.',
         unauthorized: 'Your session has expired. Sign in again.',
         invalidResponse:
           'Unexpected response received. The response format does not match the expected format.',

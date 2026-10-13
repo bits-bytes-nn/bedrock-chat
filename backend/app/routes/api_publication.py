@@ -67,7 +67,7 @@ def delete_bot_publication(
     This can be used by both owner and admin.
     NOTE:
     - Can't delete if the bot is not published.
-    - If codebuild not completed, raise 400. Before delete, please ensure `codebuild_status` is either `SUCCEEDED` or `FAILED`.
+    - If codebuild not completed, raise 409. Before delete, please ensure `codebuild_status` is either `SUCCEEDED` or `FAILED`.
     """
     current_user: User = request.state.current_user
     remove_bot_publication(current_user, bot_id)

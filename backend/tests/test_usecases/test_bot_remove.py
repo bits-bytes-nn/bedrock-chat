@@ -119,14 +119,22 @@ class TestDeleteDuringBuild(unittest.TestCase):
                 bot_usecase.remove_bot_by_id(self.user, "bot")
         delete.assert_not_called()
 
-    def test_lets_admins_delete_a_stuck_bot(self):
-        bot = self.bot("RUNNING")
-        self.user.is_admin.return_value = True
-        with patch.object(
-            bot_usecase, "find_bot_by_id", return_value=bot
-        ), patch.object(bot_usecase, "delete_bot_by_id") as delete:
-            bot_usecase.remove_bot_by_id(self.user, "bot")
-        delete.assert_called_once()
+    def test_rejects_admins_deleting_during_a_build(self):
+        for bot, build_running in (
+            (self.bot("RUNNING"), False),
+            (self.bot("SUCCEEDED", "build"), True),
+        ):
+            self.user.is_admin.return_value = True
+            with patch.object(
+                bot_usecase, "find_bot_by_id", return_value=bot
+            ), patch.object(
+                bot_usecase, "is_build_running", return_value=build_running
+            ), patch.object(
+                bot_usecase, "delete_bot_by_id"
+            ) as delete:
+                with self.assertRaises(ResourceConflictError):
+                    bot_usecase.remove_bot_by_id(self.user, "bot")
+            delete.assert_not_called()
 
     def test_allows_deleting_when_the_build_has_finished(self):
         with patch.object(
@@ -187,8 +195,10 @@ class TestFindPublishedStack(unittest.TestCase):
             "Stack with id ApiPublishmentStackbot does not exist"
         )
         with patch.object(api_publication.boto3, "client", return_value=client):
-            with self.assertRaises(RecordNotFoundError):
+            with self.assertRaises(RecordNotFoundError) as e:
                 api_publication.find_stack_by_bot_id("bot")
+        self.assertEqual(e.exception.code, "bot_not_published")
+        self.assertIn("bot", str(e.exception))
 
     def test_raises_other_errors(self):
         client = MagicMock()
@@ -211,3 +221,30 @@ class TestFindPublishedStack(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+    def sync_status_after_saving(self, current_status: str) -> str:
+        """Save the bot without changing its knowledge and return the new status."""
+        modify_input = MagicMock(
+            knowledge=None,
+            generation_params=None,
+            bedrock_knowledge_base=None,
+            bedrock_guardrails=None,
+            conversation_quick_starters=None,
+        )
+        modify_input.is_embedding_required.return_value = False
+        modify_input.is_guardrails_update_required.return_value = False
+        with patch.multiple(
+            bot_usecase,
+            find_bot_by_id=MagicMock(return_value=self.bot(current_status)),
+            validate_external_resource_references=MagicMock(),
+            AgentModel=MagicMock(),
+            ActiveModelsOutput=MagicMock(),
+            update_bot=MagicMock(),
+            start_embedding_state_machine=MagicMock(),
+        ):
+            bot_usecase.modify_owned_bot(self.user, "bot", modify_input)
+            return bot_usecase.update_bot.call_args.kwargs["sync_status"]
+
+    def test_saving_retries_a_failed_sync(self):
+        self.assertEqual(self.sync_status_after_saving("FAILED"), "QUEUED")
+        self.assertEqual(self.sync_status_after_saving("SUCCEEDED"), "SUCCEEDED")
