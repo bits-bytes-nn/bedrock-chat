@@ -7,6 +7,7 @@ from app.repositories import conversation as conversation_repository
 from app.repositories.conversation import (
     change_conversation_title,
     find_conversation_by_id,
+    find_conversation_by_user_id,
     store_conversation,
 )
 from app.repositories.models.conversation import (
@@ -135,6 +136,69 @@ class TestStoreConversationConcurrently(unittest.TestCase):
         self.assertEqual(stored.message_map["a"].children, ["first", "second"])
         # Only the object of the latest write is kept.
         self.assertEqual(len(objects), 1)
+
+    def test_keeps_the_object_when_a_retried_write_finds_itself(self):
+        bucket = "test-large-message-bucket"
+        s3 = boto3.client("s3", region_name="us-east-1")
+        s3.create_bucket(Bucket=bucket)
+        get_table = conversation_repository.get_conversation_table_client
+
+        class LostResponseTable:
+            """Applies each write, then retries it as if the response was lost."""
+
+            def __init__(self, table):
+                self.table = table
+
+            def put_item(self, **kwargs):
+                self.table.put_item(**kwargs)
+                return self.table.put_item(**kwargs)
+
+            def __getattr__(self, name):
+                return getattr(self.table, name)
+
+        with patch.object(conversation_repository, "LARGE_MESSAGE_BUCKET", bucket):
+            store_conversation("user", conversation(), threshold=1)
+            answering = find_conversation_by_id("user", "c")
+            add_reply(answering, "answer", 0.5)
+            with patch.object(
+                conversation_repository,
+                "get_conversation_table_client",
+                lambda user_id: LostResponseTable(get_table(user_id)),
+            ):
+                store_conversation("user", answering, threshold=1)
+
+            stored = find_conversation_by_id("user", "c")
+
+        self.assertIn("answer", stored.message_map)
+        self.assertEqual(stored.version, answering.version)
+
+    def test_lists_every_conversation_across_pages(self):
+        models = ["claude-v5.5-haiku", "claude-v5.5-sonnet"]
+        for i in range(7):
+            conv = conversation()
+            conv.id = f"c{i}"
+            conv.message_map["system"].model = models[i % 2]
+            store_conversation("user", conv)
+        get_table = conversation_repository.get_conversation_table_client
+
+        class OneItemPages:
+            def __init__(self, table):
+                self.table = table
+
+            def query(self, **kwargs):
+                return self.table.query(Limit=1, **kwargs)
+
+        with patch.object(
+            conversation_repository,
+            "get_conversation_table_client",
+            lambda user_id: OneItemPages(get_table(user_id)),
+        ):
+            listed = find_conversation_by_user_id("user")
+
+        self.assertEqual(
+            {(c.id, c.model) for c in listed},
+            {(f"c{i}", models[i % 2]) for i in range(7)},
+        )
 
     def test_upgrades_items_without_a_version(self):
         legacy = conversation()

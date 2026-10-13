@@ -15,6 +15,21 @@ os.environ.setdefault("CONVERSATION_TABLE_NAME", "test-conversation-table")
 os.environ.setdefault("BOT_TABLE_NAME", "test-bot-table")
 
 
+def pytest_configure(config):
+    # Clients created at import time keep the credentials they found, and moto does
+    # not replace them. Without fake credentials, a local profile would be used and
+    # its errors printed. Only the `aws` tests need real credentials.
+    if "not aws" not in config.option.markexpr:
+        return
+    for name in ("AWS_PROFILE", "AWS_DEFAULT_PROFILE"):
+        os.environ.pop(name, None)
+    os.environ["AWS_ACCESS_KEY_ID"] = "testing"
+    os.environ["AWS_SECRET_ACCESS_KEY"] = "testing"
+    os.environ.pop("AWS_SESSION_TOKEN", None)
+    os.environ["AWS_CONFIG_FILE"] = os.devnull
+    os.environ["AWS_SHARED_CREDENTIALS_FILE"] = os.devnull
+
+
 def _string_key(name: str) -> dict:
     return {"AttributeName": name, "AttributeType": "S"}
 

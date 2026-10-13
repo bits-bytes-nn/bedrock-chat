@@ -23,7 +23,7 @@ def _search_with_duckduckgo_standalone(
         BACKEND = "api"
 
         logger.info(
-            f"Executing DuckDuckGo search: query={query}, region={REGION}, time_limit={time_limit}"
+            f"Executing DuckDuckGo search: query_chars={len(query)}, region={REGION}, time_limit={time_limit}"
         )
 
         with DDGS() as ddgs:
@@ -69,7 +69,7 @@ def _search_with_firecrawl_standalone(
         from firecrawl import FirecrawlApp, ScrapeOptions
 
         logger.info(
-            f"Searching with Firecrawl: query={query}, max_results={max_results} locale={locale}"
+            f"Searching with Firecrawl: query_chars={len(query)}, max_results={max_results} locale={locale}"
         )
 
         app = FirecrawlApp(api_key=api_key)

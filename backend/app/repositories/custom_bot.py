@@ -1,6 +1,8 @@
 import base64
 import json
 import logging
+import random
+import time
 from decimal import Decimal as decimal
 
 from app.repositories.common import (
@@ -30,6 +32,8 @@ from boto3.dynamodb.conditions import Attr, Key
 from botocore.exceptions import ClientError
 
 logger = logging.getLogger(__name__)
+
+BATCH_GET_MAX_ATTEMPTS = 5
 
 
 def store_bot(custom_bot: BotModel):
@@ -523,6 +527,25 @@ def find_owned_bots_by_user_id(user_id: str, limit: int | None = None) -> list[B
     return bots
 
 
+def _batch_get_items(client, request_items: dict) -> list[dict]:
+    """Read every requested item, requesting the unprocessed keys again.
+
+    Raises:
+        RuntimeError: If DynamoDB keeps returning unprocessed keys.
+    """
+    items: list[dict] = []
+    for attempt in range(BATCH_GET_MAX_ATTEMPTS):
+        response = client.batch_get_item(RequestItems=request_items)
+        for table_items in response.get("Responses", {}).values():
+            items.extend(table_items)
+        request_items = response.get("UnprocessedKeys") or {}
+        if not request_items:
+            return items
+        # Unprocessed keys mean throttling, so back off before asking again.
+        time.sleep(min(2**attempt * 0.1, 2) * random.uniform(0.5, 1))
+    raise RuntimeError("DynamoDB did not return every requested bot.")
+
+
 def __find_bots_with_condition(
     query_params: dict,
     max_query_count: int = 5,
@@ -579,16 +602,10 @@ def __find_bots_with_condition(
                         ]
                     }
                 }
-                original_bots_response = client.batch_get_item(
-                    RequestItems=request_items
-                )
-
                 # Create a map of original bot details
                 original_bot_map = {
                     item.get("BotId"): item
-                    for item in original_bots_response.get("Responses", {}).get(
-                        table.table_name, []
-                    )
+                    for item in _batch_get_items(client, request_items)
                 }
 
                 # Create BotMeta objects for aliases
@@ -737,15 +754,11 @@ def alias_exists(user_id: str, bot_id: str) -> bool:
     table = get_bot_table_client()
     logger.info(f"Checking if alias bot exists with id: {bot_id} for user: {user_id}")
 
-    try:
-        response = table.query(
-            KeyConditionExpression=Key("PK").eq(user_id)
-            & Key("SK").eq(compose_sk(bot_id, "alias"))
-        )
-        return len(response.get("Items", [])) > 0
-    except ClientError as e:
-        logger.error(f"Error while checking alias existence: {e}")
-        return False
+    response = table.query(
+        KeyConditionExpression=Key("PK").eq(user_id)
+        & Key("SK").eq(compose_sk(bot_id, "alias"))
+    )
+    return len(response.get("Items", [])) > 0
 
 
 def update_bot_publication(
