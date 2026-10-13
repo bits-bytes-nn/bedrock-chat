@@ -1,3 +1,4 @@
+import json
 import sys
 import time
 import unittest
@@ -13,7 +14,8 @@ from app.usecases import chat as chat_usecase
 from app.usecases import publication
 from app.usecases.chat import trace_to_root, validate_model_is_available
 from app.user import User
-from jose import JWTError
+import jwt as pyjwt
+from jwt import PyJWTError as JWTError
 
 USER = User(id="user", name="user", email="user@example.com", groups=[])
 
@@ -104,20 +106,66 @@ class TestSigningKeys(unittest.TestCase):
 
 
 class TestVerifyToken(unittest.TestCase):
-    def decode(self, claims: dict) -> dict:
-        with patch.object(auth, "_find_signing_key"), patch.object(
-            auth.jwt, "get_unverified_header", return_value={}
-        ), patch.object(auth.jwt, "decode", return_value=claims) as decode:
-            result = auth.verify_token("token")
-        self.assertEqual(decode.call_args.kwargs["issuer"], auth.ISSUER)
-        return result
+    """Signs real tokens with a test key served as the user pool JWKS."""
+
+    @classmethod
+    def setUpClass(cls):
+        from cryptography.hazmat.primitives.asymmetric import rsa
+
+        cls.private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+        jwk = json.loads(
+            pyjwt.algorithms.RSAAlgorithm.to_jwk(cls.private_key.public_key())
+        )
+        cls.jwks = [{**jwk, "kid": "k1", "alg": "RS256", "use": "sig"}]
+
+    def token(self, **claims) -> str:
+        payload = {
+            "sub": "user",
+            "aud": "client",
+            "iss": auth.ISSUER,
+            "exp": int(time.time()) + 300,
+            "token_use": "id",
+            **claims,
+        }
+        return pyjwt.encode(
+            payload, self.private_key, algorithm="RS256", headers={"kid": "k1"}
+        )
+
+    def verify(self, token: str) -> dict:
+        with patch.object(
+            auth, "_get_signing_keys", return_value=self.jwks
+        ), patch.object(auth, "CLIENT_ID", "client"):
+            return auth.verify_token(token)
 
     def test_accepts_id_tokens(self):
-        self.assertEqual(self.decode({"token_use": "id"}), {"token_use": "id"})
+        self.assertEqual(self.verify(self.token())["sub"], "user")
+
+    def test_tolerates_small_clock_skew(self):
+        issued = int(time.time()) + 2
+        self.assertEqual(self.verify(self.token(iat=issued))["sub"], "user")
 
     def test_rejects_access_tokens(self):
         with self.assertRaises(JWTError):
-            self.decode({"token_use": "access"})
+            self.verify(self.token(token_use="access"))
+
+    def test_rejects_other_issuers_audiences_and_expired_tokens(self):
+        for claims in (
+            {"iss": "https://example.com"},
+            {"aud": "other-client"},
+            {"exp": int(time.time()) - 60},
+        ):
+            with self.assertRaises(JWTError):
+                self.verify(self.token(**claims))
+
+    def test_rejects_unsigned_tokens(self):
+        unsigned = pyjwt.encode(
+            {"sub": "user", "token_use": "id"},
+            key=None,
+            algorithm="none",
+            headers={"kid": "k1"},
+        )
+        with self.assertRaises(JWTError):
+            self.verify(unsigned)
 
 
 class TestPartialSharing(unittest.TestCase):

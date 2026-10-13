@@ -2,7 +2,7 @@ from app.auth import verify_token
 from app.user import User
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from jose import JWTError
+from jwt import PyJWTError
 
 security = HTTPBearer()
 
@@ -10,7 +10,7 @@ security = HTTPBearer()
 def get_current_user(token: HTTPAuthorizationCredentials = Depends(security)):
     try:
         return User.from_decoded_token(verify_token(token.credentials))
-    except (KeyError, JWTError):
+    except (KeyError, PyJWTError):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Could not validate credentials",
