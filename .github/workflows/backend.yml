@@ -19,6 +19,7 @@ on:
       # tests/test_cognito_trigger_resource.py runs this handler.
       - "cdk/custom-resources/cognito-trigger/**"
       - ".github/workflows/backend.yml"
+      - ".github/scripts/docker-build.sh"
   push:
     branches:
       - v3
@@ -37,6 +38,7 @@ on:
       # tests/test_cognito_trigger_resource.py runs this handler.
       - "cdk/custom-resources/cognito-trigger/**"
       - ".github/workflows/backend.yml"
+      - ".github/scripts/docker-build.sh"
   workflow_dispatch: {}
 
 permissions:
@@ -90,6 +92,6 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - name: Build backend/Dockerfile
-        run: docker build -t backend .
+        run: ../.github/scripts/docker-build.sh -t backend .
       - name: Build backend/lambda.Dockerfile
-        run: docker build -f lambda.Dockerfile -t backend-lambda .
+        run: ../.github/scripts/docker-build.sh -f lambda.Dockerfile -t backend-lambda .
