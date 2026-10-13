@@ -720,3 +720,16 @@ class TestBatchGetItems(unittest.TestCase):
         }
         with patch.object(custom_bot.time, "sleep"), self.assertRaises(RuntimeError):
             custom_bot._batch_get_items(client, {"bots": {"Keys": []}})
+
+
+@pytest.mark.usefixtures("dynamodb_tables")
+class TestStarStatusOfMissingItems(unittest.TestCase):
+    def test_raises_not_found(self):
+        from app.repositories.custom_bot import (
+            update_alias_star_status,
+            update_bot_star_status,
+        )
+
+        for update in (update_bot_star_status, update_alias_star_status):
+            with self.assertRaises(RecordNotFoundError):
+                update("user", "missing", True)

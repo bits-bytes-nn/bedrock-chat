@@ -113,11 +113,8 @@ def find_conversations_by_query(
         },
     }
 
-    logger.debug(f"Search body: {search_body}")
-
     try:
         response = client.search(index=INDEX_NAME, body=search_body)
-        logger.debug(f"Search response: {response}")
 
         conversations = []
         for hit in response["hits"]["hits"]:
