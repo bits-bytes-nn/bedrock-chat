@@ -47,7 +47,6 @@ from app.usecases.chat import (
     chat,
     chat_output_from_message,
     fetch_conversation,
-    propose_conversation_title,
     trace_to_root,
 )
 from app.vector_search import SearchResult
@@ -653,43 +652,6 @@ class TestRegenerateChat(unittest.TestCase):
 
     def tearDown(self) -> None:
         delete_conversation_by_id(self.user.id, self.conversation_id)
-
-
-@pytest.mark.aws
-class TestProposeTitle(unittest.TestCase):
-    user = create_test_user("user1")
-
-    def setUp(self) -> None:
-        chat_input = ChatInput(
-            conversation_id="test_conversation_id",
-            message=MessageInput(
-                role="user",
-                content=[
-                    TextContent(
-                        content_type="text",
-                        # body="Australian famous site seeing place",
-                        body="日本の有名な料理を3つ教えて",
-                    )
-                ],
-                model=MODEL,
-                parent_message_id=None,
-                message_id=None,
-            ),
-            bot_id=None,
-            continue_generate=False,
-            enable_reasoning=False,
-        )
-        conversation, message = chat(self.user, chat_input=chat_input)
-        output = chat_output_from_message(conversation=conversation, message=message)
-        print(output)
-        self.output = output
-
-    def test_propose_title(self):
-        title = propose_conversation_title(self.user.id, self.output.conversation_id)
-        print(f"[title]: {title}")
-
-    def tearDown(self) -> None:
-        delete_conversation_by_id(self.user.id, self.output.conversation_id)
 
 
 @pytest.mark.aws
