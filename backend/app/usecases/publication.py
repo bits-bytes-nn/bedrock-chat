@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 
@@ -90,8 +91,8 @@ def create_bot_publication(user: User, bot_id: str, bot_publish_input: BotPublis
             bot_publish_input.stage
         )
     if bot_publish_input.allowed_origins is not None:
-        environment_variables["PUBLISHED_API_ALLOWED_ORIGINS"] = (
-            str(bot_publish_input.allowed_origins).replace(" ", "").replace("'", '"')
+        environment_variables["PUBLISHED_API_ALLOWED_ORIGINS"] = json.dumps(
+            bot_publish_input.allowed_origins
         )
 
     # The published API enforces the same model settings as the main API.
@@ -113,7 +114,9 @@ def fetch_bot_publication(user: User, bot_id: str) -> BotPublishOutput:
     """Get published bot by id."""
     bot = _fetch_bot_with_permission_check(user, bot_id)
     if bot.published_api_codebuild_id is None:
-        raise ValueError(f"Bot {bot_id} is not published.")
+        raise RecordNotFoundError(
+            f"Bot {bot_id} is not published.", code="bot_not_published"
+        )
 
     codebuild_status = find_build_status_by_build_id(bot.published_api_codebuild_id)
     try:
@@ -173,7 +176,9 @@ def remove_bot_publication(user: User, bot_id: str):
     bot = _fetch_bot_with_permission_check(user, bot_id)
 
     if bot.published_api_codebuild_id is None:
-        raise ValueError(f"Bot {bot_id} is not published.")
+        raise RecordNotFoundError(
+            f"Bot {bot_id} is not published.", code="bot_not_published"
+        )
 
     # If Codebuild is not succeeded, just delete bot attribute from DDB and return
     if bot.published_api_codebuild_id is not None:

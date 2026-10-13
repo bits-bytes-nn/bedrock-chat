@@ -128,9 +128,11 @@ class TestIsBuildRunning(unittest.TestCase):
 
 
 class TestFindPublishedStack(unittest.TestCase):
-    def describe_error(self, message: str) -> ClientError:
+    def describe_error(
+        self, message: str, code: str = "ValidationError"
+    ) -> ClientError:
         return ClientError(
-            {"Error": {"Code": "ValidationError", "Message": message}},
+            {"Error": {"Code": code, "Message": message}},
             "DescribeStacks",
         )
 
@@ -148,6 +150,16 @@ class TestFindPublishedStack(unittest.TestCase):
         client = MagicMock()
         client.exceptions.ClientError = ClientError
         client.describe_stacks.side_effect = self.describe_error("Rate exceeded")
+        with patch.object(api_publication.boto3, "client", return_value=client):
+            with self.assertRaises(ClientError):
+                api_publication.find_stack_by_bot_id("bot")
+
+    def test_does_not_trust_the_message_alone(self):
+        client = MagicMock()
+        client.exceptions.ClientError = ClientError
+        client.describe_stacks.side_effect = self.describe_error(
+            "Role does not exist", code="AccessDenied"
+        )
         with patch.object(api_publication.boto3, "client", return_value=client):
             with self.assertRaises(ClientError):
                 api_publication.find_stack_by_bot_id("bot")

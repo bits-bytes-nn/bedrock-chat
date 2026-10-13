@@ -20,9 +20,8 @@ OPENSEARCH_DOMAIN_ENDPOINT = os.environ.get(
     "OPENSEARCH_DOMAIN_ENDPOINT",
 )
 
-# DynamoDB batch operation limits
+# DynamoDB batch read limit
 # Ref: https://docs.aws.amazon.com/en_en/amazondynamodb/latest/developerguide/read-write-operations.html
-TRANSACTION_BATCH_WRITE_SIZE = 25
 TRANSACTION_BATCH_READ_SIZE = 100
 
 # Resources with assumed-role credentials, reused until shortly before they expire.
@@ -38,7 +37,14 @@ _table_name_map = {"conversation": CONVERSATION_TABLE_NAME, "bot": BOT_TABLE_NAM
 
 
 class RecordNotFoundError(Exception):
-    pass
+    """A record that does not exist (404).
+
+    `code` lets clients show a translated message instead of the English one.
+    """
+
+    def __init__(self, message: str = "", code: str | None = None):
+        super().__init__(message)
+        self.code = code
 
 
 class RecordAccessNotAllowedError(Exception):

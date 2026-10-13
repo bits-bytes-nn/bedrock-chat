@@ -286,6 +286,29 @@ class TestConversationRepository(unittest.TestCase):
         conversations = find_conversation_by_user_id(user_id="user")
         self.assertEqual(len(conversations), 0)
 
+    def test_deletes_more_conversations_than_one_batch(self):
+        def conversation(i: int) -> ConversationModel:
+            return ConversationModel(
+                id=f"c{i}",
+                create_time=float(i),
+                title="t",
+                total_price=0,
+                message_map={},
+                last_message_id="",
+                bot_id=None,
+                should_continue=False,
+            )
+
+        # DynamoDB writes at most 25 items per batch.
+        for i in range(30):
+            store_conversation("user", conversation(i))
+        store_conversation("other", conversation(0))
+
+        delete_conversation_by_user_id(user_id="user")
+
+        self.assertEqual(find_conversation_by_user_id(user_id="user"), [])
+        self.assertEqual(len(find_conversation_by_user_id(user_id="other")), 1)
+
 
 if __name__ == "__main__":
     unittest.main()

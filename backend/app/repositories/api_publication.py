@@ -94,7 +94,10 @@ def find_stack_by_bot_id(bot_id: str) -> PublishedApiStackModel:
         response = client.describe_stacks(StackName=stack_name)
     except client.exceptions.ClientError as e:
         # Other errors, such as throttling, must not look like a missing stack.
-        if "does not exist" in e.response["Error"].get("Message", ""):
+        error = e.response["Error"]
+        if error.get("Code") == "ValidationError" and "does not exist" in error.get(
+            "Message", ""
+        ):
             raise RecordNotFoundError() from e
         raise
 

@@ -113,22 +113,16 @@ def find_conversations_by_query(
         },
     }
 
-    try:
-        response = client.search(index=INDEX_NAME, body=search_body)
+    response = client.search(index=INDEX_NAME, body=search_body)
 
-        conversations = []
-        for hit in response["hits"]["hits"]:
-            try:
-                conversation_meta = ConversationSearchModel.from_opensearch_response(
-                    hit
-                )
-                conversations.append(conversation_meta)
-            except Exception as e:
-                # The hit holds conversation text, so only its ID is logged.
-                logger.error(f"Error processing hit {hit.get('_id')}: {e}")
-                continue
-        logger.info("Found %d conversations", len(conversations))
-        return conversations
-    except Exception as e:
-        logger.error(f"Error searching conversations: {e}")
-        raise
+    conversations = []
+    for hit in response["hits"]["hits"]:
+        try:
+            conversation_meta = ConversationSearchModel.from_opensearch_response(hit)
+            conversations.append(conversation_meta)
+        except Exception as e:
+            # The hit holds conversation text, so only its ID is logged.
+            logger.error(f"Error processing hit {hit.get('_id')}: {e}")
+            continue
+    logger.info("Found %d conversations", len(conversations))
+    return conversations
