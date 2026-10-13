@@ -13,7 +13,11 @@ import { useNavigate, useParams } from 'react-router-dom';
 import useDrawer from '../hooks/useDrawer';
 import useConversation from '../hooks/useConversation';
 import useBot from '../hooks/useBot';
-import { useNewChat, useIsGeneratedTitle } from '../hooks/useChat';
+import {
+  clearChats,
+  useIsGeneratedTitle,
+  useNewChat,
+} from '../hooks/useChat';
 import { usePageLabel, usePageTitlePathPattern } from '../routes';
 import useLoginUser from '../hooks/useLoginUser';
 import DialogConfirmDeleteChat from '../components/DialogConfirmDeleteChat';
@@ -104,6 +108,7 @@ const AppContent: React.FC<Props> = (props) => {
           // Drop the cached data of this user, so that the next user to sign in
           // does not see it before it is refetched.
           clearCache(() => true, undefined, { revalidate: false });
+          clearChats();
           newChat();
           props.signOut?.();
         }}

@@ -292,6 +292,8 @@ export const useIsGeneratedTitle = () =>
   useChatState((state) => state.isGeneratedTitle);
 export const useNewChatCount = () =>
   useChatState((state) => state.newChatCount);
+/** Drop the messages of every conversation, for example when the user signs out. */
+export const clearChats = () => useChatState.setState({ chats: {} });
 export const useNewChat = () => {
   const setConversationId = useChatState((state) => state.setConversationId);
   const setMessages = useChatState((state) => state.setMessages);

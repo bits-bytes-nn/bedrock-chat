@@ -169,7 +169,9 @@ const ToolCard: React.FC<ToolCardProps> = ({
         {document.sourceLink && (
           <span
             className="italic break-all line-clamp-1 cursor-pointer underline"
-            onClick={() => window.open(document.sourceLink, '_blank')}
+            onClick={() =>
+              window.open(document.sourceLink, '_blank', 'noopener,noreferrer')
+            }
           >
             {document.sourceLink}
           </span>

@@ -147,7 +147,11 @@ const AdminBotManagementPage: React.FC = () => {
                     <div
                       className="flex cursor-pointer items-center text-aws-sea-blue-light underline hover:text-aws-sea-blue-hover-light dark:text-aws-link-dark dark:hover:text-aws-sea-blue-hover-dark"
                       onClick={() => {
-                        window.open(getBotUrl(bot?.id ?? ''), '_blank');
+                        window.open(
+                          getBotUrl(bot?.id ?? ''),
+                          '_blank',
+                          'noopener,noreferrer'
+                        );
                       }}>
                       <div className="mx-1">{getBotUrl(bot?.id ?? '')} </div>
                       <PiArrowSquareOut />
@@ -223,7 +227,11 @@ const AdminBotManagementPage: React.FC = () => {
                             <ButtonIcon
                               className="text-aws-sea-blue-light dark:text-aws-link-dark"
                               onClick={() => {
-                                window.open(url, '_blank');
+                                window.open(
+                                  url,
+                                  '_blank',
+                                  'noopener,noreferrer'
+                                );
                               }}>
                               <PiArrowSquareOut />
                             </ButtonIcon>
@@ -461,7 +469,11 @@ const AdminBotManagementPage: React.FC = () => {
                             <ButtonIcon
                               className="text-aws-sea-blue-light dark:text-aws-link-dark"
                               onClick={() => {
-                                window.open(url, '_blank');
+                                window.open(
+                                  url,
+                                  '_blank',
+                                  'noopener,noreferrer'
+                                );
                               }}>
                               <PiArrowSquareOut />
                             </ButtonIcon>

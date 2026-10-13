@@ -59,7 +59,7 @@ const RelatedDocumentViewer: React.FC<{
               <span
                 className="ml-1 cursor-pointer underline"
                 onClick={() => {
-                  window.open(sourceLink, '_blank');
+                  window.open(sourceLink, '_blank', 'noopener,noreferrer');
                 }}>
                 {sourceName ? getAgentName(sourceName, t) : sourceLink}
               </span>
