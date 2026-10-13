@@ -6,7 +6,10 @@ const APP_TO_BCP47: Record<string, string> = {
   ptbr: 'pt-BR',
 };
 
-/** Map a language detected from the browser, such as zh-TW, to the app's key. */
+/**
+ * Map a language detected from the browser, such as zh-TW or ko-KR, to the
+ * app's key. Other languages are reduced to their base code.
+ */
 export const toAppLanguage = (detected: string): string => {
   const [language, region] = detected.toLowerCase().split(/[-_]/);
   if (language === 'zh') {
@@ -15,7 +18,7 @@ export const toAppLanguage = (detected: string): string => {
   if (language === 'pt') {
     return 'ptbr';
   }
-  return detected;
+  return language;
 };
 
 /** Map the app's language key to a BCP 47 tag for the lang attribute. */

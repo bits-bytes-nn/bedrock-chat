@@ -399,18 +399,12 @@ Como você categorizaria este e-mail?`,
           memberManagement: 'Editar Membros',
           sharing: {
             not_shared: 'Não compartilhado com nenhum grupo ou usuário',
-            shared_only_users: 'Compartilhado com {{count}} usuário',
-            shared_only_users_plural: 'Compartilhado com {{count}} usuários',
-            shared_only_groups: 'Compartilhado com {{count}} grupo',
-            shared_only_groups_plural: 'Compartilhado com {{count}} grupos',
-            shared_both:
-              'Compartilhado com {{groupCount}} grupo e {{userCount}} usuário',
-            shared_both_user_plural:
-              'Compartilhado com {{groupCount}} grupo e {{userCount}} usuários',
-            shared_both_group_plural:
-              'Compartilhado com {{groupCount}} grupos e {{userCount}} usuário',
-            shared_both_plural:
-              'Compartilhado com {{groupCount}} grupos e {{userCount}} usuários',
+            shared_with: 'Compartilhado com {{target}}',
+            shared_both: 'Compartilhado com {{groups}} e {{users}}',
+            user_count_one: '{{count}} usuário',
+            user_count_other: '{{count}} usuários',
+            group_count_one: '{{count}} grupo',
+            group_count_other: '{{count}} grupos',
           },
           user: 'Usuário',
           group: 'Grupo',

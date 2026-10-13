@@ -1,44 +1,18 @@
 import i18n from 'i18next';
 
+const PREFIX = 'bot.shareDialog.label.sharing';
+
 export const getShareText = (userCount: number, groupCount: number): string => {
-  // both zero
   if (userCount === 0 && groupCount === 0) {
-    return i18n.t('bot.shareDialog.label.sharing.not_shared');
+    return i18n.t(`${PREFIX}.not_shared`);
   }
 
-  // both
+  const users = i18n.t(`${PREFIX}.user_count`, { count: userCount });
+  const groups = i18n.t(`${PREFIX}.group_count`, { count: groupCount });
   if (userCount > 0 && groupCount > 0) {
-    if (userCount > 1 && groupCount > 1) {
-      return i18n.t('bot.shareDialog.label.sharing.shared_both', {
-        userCount,
-        groupCount,
-      });
-    } else if (userCount > 1) {
-      return i18n.t('bot.shareDialog.label.sharing.shared_both_user_plural', {
-        userCount,
-        groupCount,
-      });
-    } else if (groupCount > 1) {
-      return i18n.t('bot.shareDialog.label.sharing.shared_both_group_plural', {
-        userCount,
-        groupCount,
-      });
-    } else {
-      return i18n.t('bot.shareDialog.label.sharing.shared_both', {
-        userCount,
-        groupCount,
-      });
-    }
+    return i18n.t(`${PREFIX}.shared_both`, { users, groups });
   }
-  // only users
-  if (userCount > 0) {
-    return i18n.t('bot.shareDialog.label.sharing.shared_only_users', {
-      count: userCount,
-    });
-  }
-
-  // only groups
-  return i18n.t('bot.shareDialog.label.sharing.shared_only_groups', {
-    count: groupCount,
+  return i18n.t(`${PREFIX}.shared_with`, {
+    target: userCount > 0 ? users : groups,
   });
 };

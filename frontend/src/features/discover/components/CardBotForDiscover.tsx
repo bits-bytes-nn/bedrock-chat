@@ -65,7 +65,7 @@ const CardBotForDiscover: React.FC<Props> = (props) => {
             className="mt-6 h-10 w-full"
             icon={<PiChat />}
             onClick={gotoNewChat}>
-            Start Chat
+            {t('button.startChat')}
           </Button>
         </div>
       </ModalDialog>

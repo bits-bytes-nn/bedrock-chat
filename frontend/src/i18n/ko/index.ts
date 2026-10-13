@@ -20,6 +20,8 @@ const translation: typeof en = {
       adminConsoles: '관리자 패널',
       backChat: '채팅으로 돌아가기',
       userGroups: '사용자 그룹',
+      loading: '불러오는 중...',
+      currentModel: '모델: {{model}}',
     },
     model: {
       'claude-v4.8-opus': {
@@ -497,18 +499,12 @@ const translation: typeof en = {
           memberManagement: '구성원 편집',
           sharing: {
             not_shared: '공유된 그룹이나 사용자가 없습니다',
-            shared_only_users: '사용자 {{count}}명과 공유됨',
-            shared_only_users_plural: '사용자 {{count}}명과 공유됨',
-            shared_only_groups: '그룹 {{count}}개와 공유됨',
-            shared_only_groups_plural: '그룹 {{count}}개와 공유됨',
-            shared_both:
-              '그룹 {{groupCount}}개, 사용자 {{userCount}}명과 공유됨',
-            shared_both_user_plural:
-              '그룹 {{groupCount}}개, 사용자 {{userCount}}명과 공유됨',
-            shared_both_group_plural:
-              '그룹 {{groupCount}}개, 사용자 {{userCount}}명과 공유됨',
-            shared_both_plural:
-              '그룹 {{groupCount}}개, 사용자 {{userCount}}명과 공유됨',
+            shared_with: '공유 대상: {{target}}',
+            shared_both: '공유 대상: {{groups}}, {{users}}',
+            user_count_one: '사용자 {{count}}명',
+            user_count_other: '사용자 {{count}}명',
+            group_count_one: '그룹 {{count}}개',
+            group_count_other: '그룹 {{count}}개',
           },
           user: '사용자',
           group: '그룹',
@@ -535,6 +531,12 @@ const translation: typeof en = {
         failDelete: '봇을 삭제하지 못했습니다.',
         failPublish: 'API를 게시하지 못했습니다.',
         failSave: '봇을 저장하지 못했습니다.',
+        failDeleteInProgress:
+          '지식을 동기화하거나 API를 게시하는 동안에는 봇을 삭제할 수 없습니다. 작업이 끝난 뒤 다시 시도하세요.',
+        failShare: '공유 설정을 변경하지 못했습니다.',
+        failAddApiKey: 'API 키를 추가하지 못했습니다.',
+        failDeleteApiKey: 'API 키를 삭제하지 못했습니다.',
+        removeFailedFiles: '봇을 저장하려면 업로드에 실패한 파일을 삭제하세요.',
       },
       activeModels: {
         title: '모델 활성화',
@@ -737,6 +739,7 @@ const translation: typeof en = {
       botManagement: '봇 관리',
       mode: '모드',
       drawerOption: '사이드 메뉴 옵션',
+      startChat: '채팅 시작',
     },
     input: {
       hint: {
@@ -998,7 +1001,14 @@ const translation: typeof en = {
         restore: '첫 페이지로 이동',
       },
       predict: {
-        general: '예측 중 오류가 발생했습니다.',
+        general: '답변을 생성하는 중 오류가 발생했습니다.',
+        throttled: '모델에 요청이 너무 많습니다. 잠시 후 다시 시도하세요.',
+        model_unavailable:
+          '선택한 모델을 사용할 수 없습니다. 다른 모델을 선택하세요.',
+        model_error: '모델이 요청을 처리하지 못했습니다: {{reason}}',
+        bot_not_found: '봇을 찾을 수 없습니다. 삭제되었을 수 있습니다.',
+        invalid_request: '요청이 올바르지 않습니다: {{reason}}',
+        generation_failed: '답변을 생성하지 못했습니다. 다시 시도하세요.',
         invalidResponse:
           '예상치 못한 응답을 받았습니다. 응답 형식이 예상 형식과 일치하지 않습니다.',
         connectionClosed:
@@ -1031,8 +1041,16 @@ const translation: typeof en = {
         },
       },
       invalidMermaidFormat: '다이어그램을 그리는 중 오류가 발생했습니다',
+      deleteConversation: '대화를 삭제하지 못했습니다.',
+      clearConversations: '대화를 모두 삭제하지 못했습니다.',
+      loadFailed:
+        '데이터를 불러오지 못했습니다. 페이지를 새로 고친 뒤 다시 시도하세요.',
+      searchFailed: '검색하지 못했습니다. 다시 시도하세요.',
     },
     validation: {
+      s3Url: {
+        message: 's3://bucket-name/prefix/ 형식의 S3 URI를 입력하세요.',
+      },
       title: '유효성 검사 오류',
       maxRange: {
         message: '설정할 수 있는 최댓값은 {{size}}입니다',

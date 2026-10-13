@@ -18,6 +18,8 @@ const translation = {
       adminConsoles: 'Admin Panel',
       backChat: 'Back to Chat',
       userGroups: 'User Groups',
+      loading: 'Loading...',
+      currentModel: 'model: {{model}}',
     },
     model: {
       'claude-v4.8-opus': {
@@ -496,18 +498,12 @@ How would you categorize this email?`,
           memberManagement: 'Edit Members',
           sharing: {
             not_shared: 'Not shared with any groups or users',
-            shared_only_users: 'Shared with {{count}} user',
-            shared_only_users_plural: 'Shared with {{count}} users',
-            shared_only_groups: 'Shared with {{count}} group',
-            shared_only_groups_plural: 'Shared with {{count}} groups',
-            shared_both:
-              'Shared with {{groupCount}} group and {{userCount}} user ',
-            shared_both_user_plural:
-              'Shared with {{groupCount}} group and {{userCount}} users',
-            shared_both_group_plural:
-              'Shared with {{groupCount}} groups and {{userCount}} user',
-            shared_both_plural:
-              'Shared with {{groupCount}} groups and {{userCount}} users ',
+            shared_with: 'Shared with {{target}}',
+            shared_both: 'Shared with {{groups}} and {{users}}',
+            user_count_one: '{{count}} user',
+            user_count_other: '{{count}} users',
+            group_count_one: '{{count}} group',
+            group_count_other: '{{count}} groups',
           },
           user: 'User',
           group: 'Group',
@@ -535,6 +531,13 @@ How would you categorize this email?`,
         failDelete: 'Failed to delete the bot.',
         failPublish: 'Failed to publish the API.',
         failSave: 'Failed to save the bot.',
+        failDeleteInProgress:
+          'The bot cannot be deleted while its knowledge is syncing or its API is being published. Try again after it finishes.',
+        failShare: 'Failed to change the sharing settings.',
+        failAddApiKey: 'Failed to add the API key.',
+        failDeleteApiKey: 'Failed to delete the API key.',
+        removeFailedFiles:
+          'Remove the files that failed to upload to save the bot.',
       },
       activeModels: {
         title: 'Model Activation',
@@ -737,6 +740,7 @@ How would you categorize this email?`,
       botManagement: 'Bot Management',
       mode: 'Mode',
       drawerOption: 'Side Menu Options',
+      startChat: 'Start Chat',
     },
     input: {
       hint: {
@@ -1002,6 +1006,14 @@ How would you categorize this email?`,
       },
       predict: {
         general: 'An error occurred while predicting.',
+        throttled:
+          'Too many requests are being sent to the model. Wait a moment and try again.',
+        model_unavailable:
+          'The selected model is not available. Select another model.',
+        model_error: 'The model could not process the request: {{reason}}',
+        bot_not_found: 'The bot was not found. It may have been deleted.',
+        invalid_request: 'The request is invalid: {{reason}}',
+        generation_failed: 'Failed to generate the answer. Try again.',
         invalidResponse:
           'Unexpected response received. The response format does not match the expected format.',
         connectionClosed:
@@ -1034,8 +1046,15 @@ How would you categorize this email?`,
         },
       },
       invalidMermaidFormat: 'Error in diagram drawing',
+      deleteConversation: 'Failed to delete the chat.',
+      clearConversations: 'Failed to delete the chats.',
+      loadFailed: 'Failed to load the data. Reload the page and try again.',
+      searchFailed: 'Failed to search. Try again.',
     },
     validation: {
+      s3Url: {
+        message: 'Enter an S3 URI such as s3://bucket-name/prefix/.',
+      },
       title: 'Validation Error',
       maxRange: {
         message: 'The maximum value that can be set is {{size}}',

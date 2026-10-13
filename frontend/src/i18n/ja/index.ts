@@ -20,6 +20,8 @@ const translation: typeof en = {
       chatWaitingSymbol: '▍',
       adminConsoles: '管理者用機能',
       userGroups: 'ユーザーグループ',
+      loading: '読み込み中...',
+      currentModel: 'モデル: {{model}}',
       backChat: 'チャットに戻る',
     },
     model: {
@@ -500,19 +502,12 @@ const translation: typeof en = {
           user: 'ユーザー',
           sharing: {
             not_shared: 'どのグループとグループにも共有されていません。',
-            shared_only_users: '{{count}}人のユーザに共有されています。',
-            shared_only_users_plural: '{{count}}人のユーザに共有されています。',
-            shared_only_groups: '{{count}}つのグループに共有されています。',
-            shared_only_groups_plural:
-              '{{count}}つのグループに共有されています。',
-            shared_both:
-              '{{groupCount}}つのグループと{{userCount}}人のユーザーに共有されています。',
-            shared_both_user_plural:
-              '{{groupCount}}つのグループと{{userCount}}人のユーザーに共有されています。',
-            shared_both_group_plural:
-              '{{groupCount}}つのグループと{{userCount}}人のユーザーに共有されています。',
-            shared_both_plural:
-              '{{groupCount}}つのグループと{{userCount}}人のユーザーに共有されています。',
+            shared_with: '{{target}}に共有されています。',
+            shared_both: '{{groups}}と{{users}}に共有されています。',
+            user_count_one: '{{count}}人のユーザー',
+            user_count_other: '{{count}}人のユーザー',
+            group_count_one: '{{count}}つのグループ',
+            group_count_other: '{{count}}つのグループ',
           },
         },
 
@@ -541,6 +536,13 @@ const translation: typeof en = {
         failDelete: 'ボットを削除できませんでした。',
         failPublish: 'APIを公開できませんでした。',
         failSave: 'ボットを保存できませんでした。',
+        failDeleteInProgress:
+          'ナレッジの同期中または API の公開中はボットを削除できません。完了後にもう一度お試しください。',
+        failShare: '共有設定を変更できませんでした。',
+        failAddApiKey: 'API キーを追加できませんでした。',
+        failDeleteApiKey: 'API キーを削除できませんでした。',
+        removeFailedFiles:
+          'ボットを保存するには、アップロードに失敗したファイルを削除してください。',
       },
       activeModels: {
         title: '利用可能なモデル設定',
@@ -742,6 +744,7 @@ const translation: typeof en = {
       continue: '生成を続ける',
       botManagement: 'ボットの管理',
       drawerOption: 'サイドメニューオプション',
+      startChat: 'チャットを開始',
       mode: 'モード',
     },
     input: {
@@ -1006,6 +1009,15 @@ const translation: typeof en = {
       },
       predict: {
         general: '推論中にエラーが発生しました。',
+        throttled:
+          'モデルへのリクエストが多すぎます。しばらくしてからもう一度お試しください。',
+        model_unavailable:
+          '選択したモデルは利用できません。別のモデルを選択してください。',
+        model_error: 'モデルがリクエストを処理できませんでした: {{reason}}',
+        bot_not_found: 'ボットが見つかりません。削除された可能性があります。',
+        invalid_request: 'リクエストが正しくありません: {{reason}}',
+        generation_failed:
+          '回答を生成できませんでした。もう一度お試しください。',
         invalidResponse: '想定外のResponseが返ってきました。',
         connectionClosed:
           '回答が完了する前に接続が切断されました。ページを再読み込みすると保存された回答を確認できます。',
@@ -1038,8 +1050,17 @@ const translation: typeof en = {
         },
       },
       invalidMermaidFormat: 'ダイアグラム描画時にエラーが発生しました',
+      deleteConversation: '会話を削除できませんでした。',
+      clearConversations: '会話をすべて削除できませんでした。',
+      loadFailed:
+        'データを読み込めませんでした。ページを再読み込みしてもう一度お試しください。',
+      searchFailed: '検索できませんでした。もう一度お試しください。',
     },
     validation: {
+      s3Url: {
+        message:
+          's3://bucket-name/prefix/ の形式で S3 URI を入力してください。',
+      },
       title: 'バリデーションエラー',
       maxRange: {
         message: '設定できる最大値は{{size}}です',
