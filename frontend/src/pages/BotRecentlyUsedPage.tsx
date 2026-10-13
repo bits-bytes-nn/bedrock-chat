@@ -1,6 +1,6 @@
 import React, { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { getApiErrorMessage, getApiErrorStatus } from '../utils/ErrorUtils';
+import { getApiErrorMessage } from '../utils/ErrorUtils';
 import useSnackbar from '../hooks/useSnackbar';
 import { PiLink } from 'react-icons/pi';
 import { useNavigate } from 'react-router-dom';
@@ -38,6 +38,7 @@ const BotRecentlyUsedPage: React.FC = () => {
   const {
     recentlyUsedBots,
     isLoadingRecentlyUsedBots,
+    recentlyUsedBotsError,
     deleteMyBot,
     updateStarred,
     mutateRecentlyUsedBots,
@@ -75,12 +76,7 @@ const BotRecentlyUsedPage: React.FC = () => {
     if (targetDelete) {
       setIsOpenDeleteDialog(false);
       deleteMyBot(targetDelete.id).catch((e) => {
-        // The knowledge base is being synchronized or the API published.
-        openSnackbar(
-          getApiErrorStatus(e) === 409
-            ? t('bot.error.failDeleteInProgress')
-            : (getApiErrorMessage(e) ?? t('bot.error.failDelete'))
-        );
+        openSnackbar(getApiErrorMessage(e) ?? t('bot.error.failDelete'));
       });
     }
   }, [deleteMyBot, targetDelete, openSnackbar, t]);
@@ -169,6 +165,11 @@ const BotRecentlyUsedPage: React.FC = () => {
         pageTitle={t('bot.label.recentlyUsedBots')}
         isLoading={isLoadingRecentlyUsedBots}
         isEmpty={recentlyUsedBots?.length === 0}
+        errorMessage={
+          recentlyUsedBotsError && !recentlyUsedBots
+            ? t('error.loadFailed')
+            : undefined
+        }
         emptyMessage={t('bot.label.noBotsRecentlyUsed')}>
         {recentlyUsedBots?.map((bot) => (
           <ListItemBot key={bot.id} bot={bot} onClick={onClickBot}>

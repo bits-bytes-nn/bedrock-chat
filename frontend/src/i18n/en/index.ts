@@ -182,28 +182,6 @@ const translation = {
         toolOutput: 'Output: ',
       },
       tools: {
-        get_weather: {
-          name: 'Current Weather',
-          description: 'Retrieve the current weather forecast.',
-        },
-        sql_db_query: {
-          name: 'Database Query',
-          description:
-            'Execute a detailed and correct SQL query to retrieve results from the database.',
-        },
-        sql_db_schema: {
-          name: 'Database Schema',
-          description:
-            'Retrieve the schema and sample rows for a list of tables.',
-        },
-        sql_db_list_tables: {
-          name: 'List Database Tables',
-          description: 'List all tables available in the database.',
-        },
-        sql_db_query_checker: {
-          name: 'Query Checker',
-          description: 'Check if your SQL query is correct before execution.',
-        },
         internet_search: {
           name: 'Internet Search',
           description: 'Search the internet for information.',
@@ -324,6 +302,8 @@ const translation = {
             title: 'NOT Ready',
             body: 'This bot has not completed the knowledge synchronization, so the knowledge before the update is used.',
           },
+          inProgress:
+            'The knowledge base is being synchronized. You can save after it finishes.',
         },
       },
       samples: {
@@ -521,8 +501,6 @@ How would you categorize this email?`,
         failDelete: 'Failed to delete the bot.',
         failPublish: 'Failed to publish the API.',
         failSave: 'Failed to save the bot.',
-        failDeleteInProgress:
-          'The bot cannot be deleted while its knowledge is syncing or its API is being published. Try again after it finishes.',
         failShare: 'Failed to change the sharing settings.',
         failAddApiKey: 'Failed to add the API key.',
         failDeleteApiKey: 'Failed to delete the API key.',
@@ -599,6 +577,7 @@ How would you categorize this email?`,
         },
         button: {
           deleteApi: 'Delete API',
+          deleteBot: 'Delete Bot',
         },
       },
       validationError: {
@@ -752,14 +731,6 @@ How would you categorize this email?`,
           'This parameter can influence how much text is examined together to determine the boundaries of each chunk, impacting the granularity and coherence of the resulting chunks. A larger buffer size might capture more context but can also introduce noise, while a smaller buffer size might miss important context but ensures more precise chunking.',
         breakpointPercentileThreshold:
           'A higher threshold requires sentences to be more distinguishable in order to be split into different chunks. A higher threshold results in fewer chunks and typically larger average chunk size.',
-      },
-      alert: {
-        sync: {
-          error: {
-            title: 'Sentence Splitte Error',
-            body: 'Try again with less chunk overlap value',
-          },
-        },
       },
     },
     generationConfig: {
@@ -968,6 +939,7 @@ How would you categorize this email?`,
           'The API is being published. Try again after it finishes.',
         dedicated_knowledge_base_limit:
           'You can have at most {{limit}} bots with their own knowledge base. Delete one, or use a shared knowledge base.',
+        bot_not_published: 'This bot is not published.',
       },
       answerResponse: 'An error occurred while responding.',
       notFoundConversation:
@@ -988,6 +960,9 @@ How would you categorize this email?`,
         bot_not_found: 'The bot was not found. It may have been deleted.',
         invalid_request: 'The request is invalid: {{reason}}',
         generation_failed: 'Failed to generate the answer. Try again.',
+        input_too_long:
+          'The conversation or attachments are too long for this model. Remove attachments or start a new conversation.',
+        unauthorized: 'Your session has expired. Sign in again.',
         invalidResponse:
           'Unexpected response received. The response format does not match the expected format.',
         connectionClosed:
@@ -995,6 +970,8 @@ How would you categorize this email?`,
       },
       maxTokensReached:
         'The answer was cut off because it reached the maximum output length. Increase Max Tokens in the bot generation settings.',
+      maxTokensReachedWithoutSettings:
+        'The answer was cut off because it reached the maximum output length. Ask for the rest in a new message.',
       notSupportedImage: 'The selected model does not support images.',
       unsupportedFileFormat: 'The selected file format is not supported.',
       emptyAnswer:
@@ -1024,6 +1001,7 @@ How would you categorize this email?`,
       clearConversations: 'Failed to delete the chats.',
       loadFailed: 'Failed to load the data. Reload the page and try again.',
       searchFailed: 'Failed to search. Try again.',
+      feedbackFailed: 'Failed to send the feedback. Try again.',
     },
     validation: {
       s3Url: {

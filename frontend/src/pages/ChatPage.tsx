@@ -21,14 +21,17 @@ import Button from '../components/Button';
 import { useTranslation } from 'react-i18next';
 import SwitchBedrockModel from '../components/SwitchBedrockModel';
 import useSnackbar from '../hooks/useSnackbar';
-import useBot from '../hooks/useBot';
+import useBotApi from '../hooks/useBotApi';
 import useConversation from '../hooks/useConversation';
 import { ActiveModels, BotSummary } from '../@types/bot';
 import IconPinnedBot from '../components/IconPinnedBot.tsx';
 
 import { copyBotUrl, isPinnedBot, canBePinned } from '../utils/BotUtils';
+import { getApiErrorMessage } from '../utils/ErrorUtils';
+import { isTemporaryMessageId } from '../utils/MessageUtils';
 import { toCamelCase } from '../utils/StringUtils';
 import { produce } from 'immer';
+import { useSWRConfig } from 'swr';
 import StatusSyncBot from '../components/StatusSyncBot';
 import Alert from '../components/Alert';
 import useBotSummary from '../hooks/useBotSummary';
@@ -44,7 +47,7 @@ import {
   Model,
   PutFeedbackRequest,
   RelatedDocument,
-} from '../@types/conversation.ts';
+} from '../@types/conversation';
 import { AVAILABLE_MODEL_KEYS } from '../constants/index';
 import usePostMessageStreaming from '../hooks/usePostMessageStreaming.ts';
 import useLoginUser from '../hooks/useLoginUser';
@@ -63,6 +66,7 @@ type ChatMessageWithRelatedDocumentsProps = {
   streamingTools: AgentToolsProps[];
   streamingRelatedDocuments: RelatedDocument[];
   streamingStateValue: string;
+  disabledEdit: boolean;
   botHasAgent: boolean;
   botHasKnowledge: boolean;
   relatedDocuments: RelatedDocument[];
@@ -140,6 +144,7 @@ const ChatMessageWithRelatedDocuments: React.FC<ChatMessageWithRelatedDocumentsP
       chatContent={message}
       isStreaming={props.isStreaming}
       disabled={props.disabled}
+      disabledEdit={props.disabledEdit}
       relatedDocuments={relatedDocumentsForCitation}
       onChangeMessageId={props.onChangeMessageId}
       onSubmit={props.onSubmit}
@@ -205,7 +210,9 @@ const ChatPage: React.FC = () => {
         newChat();
         navigate('/');
       } else {
-        openSnackbar(conversationError.message ?? '');
+        openSnackbar(
+          getApiErrorMessage(conversationError) ?? t('error.loadFailed')
+        );
       }
     }
   }, [conversationError, navigate, newChat, openSnackbar, t]);
@@ -321,6 +328,7 @@ const ChatPage: React.FC = () => {
     (messageId: string, content: string) => {
       const { hasError, inputBotParams, regenerate, retryPostChat, reasoningEnabled } =
         editHandlers.current;
+      // While the last turn failed, only its message can be edited and sent again.
       if (hasError) {
         retryPostChat({
           content,
@@ -341,11 +349,15 @@ const ChatPage: React.FC = () => {
 
   const onSubmitFeedback = useCallback(
     (messageId: string, feedback: PutFeedbackRequest) => {
-      if (conversationId) {
-        giveFeedback(messageId, feedback);
+      // The backend has not saved a temporary message yet.
+      if (conversationId && !isTemporaryMessageId(messageId)) {
+        giveFeedback(messageId, feedback).catch((e) => {
+          console.error(e);
+          openSnackbar(getApiErrorMessage(e) ?? t('error.feedbackFailed'));
+        });
       }
     },
-    [conversationId, giveFeedback]
+    [conversationId, giveFeedback, openSnackbar, t]
   );
 
   const onRegenerate = useCallback(
@@ -370,7 +382,8 @@ const ChatPage: React.FC = () => {
     }
   }, [messages, scrollToBottom, scrollToTop]);
 
-  const { updateStarred } = useBot();
+  const { updateBotStarred } = useBotApi();
+  const { mutate: mutateCache } = useSWRConfig();
   const onClickBotEdit = useCallback(
     (botId: string) => {
       navigate(`/bot/edit/${botId}`);
@@ -392,10 +405,12 @@ const ChatPage: React.FC = () => {
       }
     );
 
-    updateStarred(bot.id, isStarred).finally(() => {
+    updateBotStarred(bot.id, { starred: isStarred }).finally(() => {
       mutateBot();
+      // Refresh the bot lists, such as the starred bots in the drawer.
+      mutateCache((key) => Array.isArray(key) && key[0] === 'bot');
     });
-  }, [bot, mutateBot, updateStarred]);
+  }, [bot, mutateBot, mutateCache, updateBotStarred]);
 
   const onClickCopyUrl = useCallback((botId: string) => {
     copyBotUrl(botId);
@@ -647,6 +662,8 @@ const ChatPage: React.FC = () => {
                         chatContent={message}
                         isStreaming={isStreamingHere && isLast}
                         disabled={postingMessage}
+                        // Editing an earlier message would branch off the unsaved failed one.
+                        disabledEdit={hasError && !isLast}
                         streamingReasoning={isLast ? streamingState.context.reasoning : ''}
                         streamingTools={isLast ? streamingState.context.tools : NO_TOOLS}
                         streamingRelatedDocuments={
@@ -672,7 +689,9 @@ const ChatPage: React.FC = () => {
                 truncatedConversationId === conversationId && (
                   <div className="mb-12 mt-2 flex items-center justify-center px-4 text-sm text-aws-font-color-light/80 dark:text-aws-font-color-dark/80">
                     <PiWarningCircleFill className="mr-1 shrink-0 text-xl text-yellow" />
-                    {t('error.maxTokensReached')}
+                    {bot?.owned
+                      ? t('error.maxTokensReached')
+                      : t('error.maxTokensReachedWithoutSettings')}
                   </div>
                 )}
               {hasError && (
@@ -716,13 +735,15 @@ const ChatPage: React.FC = () => {
             </Alert>
           </div>
         )}
-        {messages.length === 0 && (
+        {/* Posting needs the loaded messages of an existing conversation. */}
+        {conversationId === '' && messages.length === 0 && !loadingConversation && (
           <div className="mb-3 flex w-11/12 flex-wrap-reverse justify-start gap-2 md:w-10/12 lg:w-4/6 xl:w-3/6">
             {bot?.conversationQuickStarters?.map((qs, idx) => (
               <button
                 type="button"
                 key={idx}
-                className="w-full rounded-2xl border border-aws-squid-ink-light/20 bg-white p-2 text-left text-sm text-dark-gray hover:shadow-lg hover:shadow-gray dark:border-aws-squid-ink-dark/20 dark:bg-aws-ui-color-dark dark:text-light-gray sm:w-[calc(50%-0.5rem)] lg:w-[calc(33.333%-0.5rem)]"
+                disabled={postingMessage}
+                className="w-full rounded-2xl border border-aws-squid-ink-light/20 bg-white p-2 text-left text-sm text-dark-gray hover:shadow-lg hover:shadow-gray disabled:opacity-30 disabled:hover:shadow-none dark:border-aws-squid-ink-dark/20 dark:bg-aws-ui-color-dark dark:text-light-gray sm:w-[calc(50%-0.5rem)] lg:w-[calc(33.333%-0.5rem)]"
                 onClick={() => {
                   onSend(qs.example, reasoningEnabled);
                 }}>

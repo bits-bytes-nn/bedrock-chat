@@ -2,6 +2,7 @@ import {
   BotPublicationQuota,
   BotPublicationThrottle,
 } from '../@types/api-publication';
+import { isBotNotPublishedError } from '../utils/ErrorUtils';
 import useBotApi from './useBotApi';
 import useBotPublication from './useBotPublication';
 import useBotPublicationApi from './useBotPublicationApi';
@@ -25,9 +26,7 @@ const useBotApiSettings = (botId: string) => {
     botPublication,
     isLoadingBotPublication,
     mutateBotPublication,
-    isUnpublishedBot: (
-      (error?.response?.data?.errors?.[0] as string | undefined) ?? ''
-    ).includes('is not published'),
+    isUnpublishedBot: isBotNotPublishedError(error),
     publishBot: (params: {
       quota?: BotPublicationQuota;
       throttle?: BotPublicationThrottle;

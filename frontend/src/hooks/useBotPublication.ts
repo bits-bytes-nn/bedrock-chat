@@ -7,6 +7,8 @@ const useBotPublication = (botId: string) => {
     botId,
     undefined,
     {
+      // An unpublished bot answers 404, which retrying does not change.
+      shouldRetryOnError: false,
       // Follow the deployment, which runs in CodeBuild and CloudFormation.
       refreshInterval: (publication) =>
         publication &&

@@ -1,5 +1,21 @@
 import { DisplayMessageContent, MessageMap, RelatedDocument, UsedChunk } from '../@types/conversation';
 
+// IDs of the messages that are shown before the backend saves them.
+export const NEW_MESSAGE_ID = {
+  USER: 'new-message',
+  ASSISTANT: 'new-message-assistant',
+};
+
+/** Whether the message is shown before the backend saves it. */
+export const isTemporaryMessageId = (messageId: string): boolean =>
+  messageId.startsWith(NEW_MESSAGE_ID.USER);
+
+/** Whether an edited message has text and differs from the original. */
+export const canSubmitEditedContent = (
+  original: string,
+  edited: string
+): boolean => edited.trim() !== '' && edited.trim() !== original.trim();
+
 export const convertMessageMapToArray = (
   messageMap: MessageMap,
   currentMessageId: string

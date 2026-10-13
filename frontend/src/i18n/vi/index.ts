@@ -67,28 +67,6 @@ const translation = {
         toolOutput: 'Đầu ra: ',
       },
       tools: {
-        get_weather: {
-          name: 'Thời tiết hiện tại',
-          description: 'Lấy dự báo thời tiết hiện tại.',
-        },
-        sql_db_query: {
-          name: 'Truy vấn CSDL',
-          description:
-            'Thực thi một truy vấn SQL chi tiết và chính xác để lấy kết quả từ cơ sở dữ liệu.',
-        },
-        sql_db_schema: {
-          name: 'Lược đồ CSDL',
-          description: 'Lấy lược đồ và một số dòng mẫu cho danh sách các bảng.',
-        },
-        sql_db_list_tables: {
-          name: 'Liệt kê bảng CSDL',
-          description: 'Liệt kê tất cả các bảng có trong cơ sở dữ liệu.',
-        },
-        sql_db_query_checker: {
-          name: 'Kiểm tra truy vấn',
-          description:
-            'Kiểm tra xem truy vấn SQL của bạn có chính xác không trước khi thực thi.',
-        },
         internet_search: {
           name: 'Tìm kiếm Internet',
           description: 'Tìm kiếm thông tin trên internet.',
@@ -213,11 +191,6 @@ Bạn sẽ phân loại email này như thế nào?`,
         title: 'Tên',
         description: 'Mô tả',
         instruction: 'Hướng dẫn',
-      },
-      explore: {
-        label: {
-          pageTitle: 'Bảng điều khiển Bot',
-        },
       },
       apiSettings: {
         pageTitle: 'Cài đặt API Công bố Bot Chia Sẻ',
@@ -479,14 +452,6 @@ Bạn sẽ phân loại email này như thế nào?`,
           'Tham số này có thể ảnh hưởng đến lượng văn bản được xem xét cùng nhau để xác định ranh giới mỗi chunk, ảnh hưởng đến mức độ chi tiết và mạch lạc của chunk. Kích thước bộ đệm lớn có thể nắm bắt nhiều ngữ cảnh hơn nhưng dễ gây nhiễu.',
         breakpointPercentileThreshold:
           'Ngưỡng phần trăm cao hơn yêu cầu câu phải khác biệt hơn mới tách thành chunk mới. Ngưỡng cao hơn dẫn đến ít chunk hơn và kích thước chunk trung bình lớn hơn.',
-      },
-      alert: {
-        sync: {
-          error: {
-            title: 'Lỗi Tách Câu',
-            body: 'Hãy thử lại với giá trị phần chồng lấp chunk nhỏ hơn',
-          },
-        },
       },
     },
     generationConfig: {

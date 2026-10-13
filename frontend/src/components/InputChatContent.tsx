@@ -232,8 +232,9 @@ const InputChatContent = forwardRef<HTMLElement, Props>(
       });
     }, []);
 
-    // A conversion belongs to the conversation it was started in. Leaving it means
-    // navigating or starting a new chat; a new chat getting its id is not leaving.
+    // Attachments and conversions belong to the conversation they were added in.
+    // Leaving it means navigating or starting a new chat; a new chat getting its
+    // id is not leaving.
     const { pathname } = useLocation();
     const newChatCount = useNewChatCount();
     useEffect(() => {
@@ -242,8 +243,10 @@ const InputChatContent = forwardRef<HTMLElement, Props>(
           files.forEach((f) => f.controller.abort());
           return [];
         });
+        clearBase64EncodedImages();
+        clearAttachedFiles();
       };
-    }, [pathname, newChatCount]);
+    }, [pathname, newChatCount, clearBase64EncodedImages, clearAttachedFiles]);
 
     const disabledSend = useMemo(() => {
       return content === '' || props.disabledSend || convertingFiles.length > 0;

@@ -28,28 +28,6 @@ const translation = {
       progressCard: {
         toolInput: 'Inndata: ',
         toolOutput: 'Utdata: ',
-        sql_db_query: {
-          name: 'Databaseforespørsel',
-          description:
-            'Utfør en detaljert og korrekt SQL-forespørsel for å hente resultater fra databasen.',
-        },
-        sql_db_schema: {
-          name: 'Databaseskjema',
-          description:
-            'Hent skjemaet og eksempelrader for en liste over tabeller.',
-        },
-        sql_db_list_tables: {
-          name: 'List opp databasetabeller',
-          description: 'List opp alle tilgjengelige tabeller i databasen.',
-        },
-        sql_db_query_checker: {
-          name: 'Forespørselskontroll',
-          description: 'Sjekk om din SQL-forespørsel er korrekt før kjøring.',
-        },
-        internet_search: {
-          name: 'Internett-søk',
-          description: 'Søk på internett etter informasjon.',
-        },
       },
     },
     bot: {
@@ -167,11 +145,6 @@ Hvordan vil du kategorisere denne e-posten?`,
         title: 'Navn',
         description: 'Beskrivelse',
         instruction: 'Instruksjoner',
-      },
-      explore: {
-        label: {
-          pageTitle: 'Botkonsoll',
-        },
       },
       apiSettings: {
         pageTitle: 'Innstillinger for publisering av delt bot-API',
@@ -419,14 +392,6 @@ Hvordan vil du kategorisere denne e-posten?`,
         chunkOverlap:
           'Ved å spesifisere chunk-overlapp kan du bevare kontekstuell informasjon rundt chunk-grensene. Å øke chunk-størrelsen kan noen ganger forbedre søkenøyaktigheten. Vær imidlertid oppmerksom på at økt chunk-overlapp kan føre til høyere beregningskostnader.',
       },
-      alert: {
-        sync: {
-          error: {
-            title: 'Feil ved setningsdeling',
-            body: 'Prøv igjen med mindre chunk-overlappverdi',
-          },
-        },
-      },
     },
     generationConfig: {
       title: 'Generasjonskonfigurasjon',
@@ -482,9 +447,6 @@ Hvordan vil du kategorisere denne e-posten?`,
         'Velg den innebygde modellen for å konfigurere kunnskap, og sett metoden for å dele opp dokumenter som legges til som kunnskap. Disse innstillingene kan ikke endres etter at boten er opprettet.',
       embeddingModel: {
         label: 'Innebyggingsmodell',
-        titan_v1: {
-          label: 'Titan Embeddings G1 - Tekst v1.2',
-        },
         cohere_multilingual_v3: {
           label: 'Embed Multilingual v3',
         },

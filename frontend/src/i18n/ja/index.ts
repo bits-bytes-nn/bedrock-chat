@@ -183,28 +183,6 @@ const translation: typeof en = {
         toolOutput: '出力: ',
       },
       tools: {
-        get_weather: {
-          name: '現在の天気',
-          description: '現在の天気予報を取得します。',
-        },
-        sql_db_query: {
-          name: 'データベースクエリ',
-          description:
-            'データベースから結果を取得するために、詳細で正確なSQLクエリを実行します。',
-        },
-        sql_db_schema: {
-          name: 'データベーススキーマ',
-          description: 'テーブルのリストのスキーマとサンプル行を取得します。',
-        },
-        sql_db_list_tables: {
-          name: 'データベーステーブル一覧',
-          description:
-            'データベースで利用可能なすべてのテーブルをリストします。',
-        },
-        sql_db_query_checker: {
-          name: 'クエリチェッカー',
-          description: '実行前にSQLクエリが正しいかどうかを確認します。',
-        },
         internet_search: {
           name: 'インターネット検索',
           description: 'インターネットで情報を検索します。',
@@ -325,6 +303,8 @@ const translation: typeof en = {
             title: '同期が未完了です',
             body: 'このボットはナレッジの同期が完了していないため、更新前のナレッジが利用されます。',
           },
+          inProgress:
+            'ナレッジベースを同期しています。完了すると保存できます。',
         },
       },
       samples: {
@@ -525,8 +505,6 @@ const translation: typeof en = {
         failDelete: 'ボットを削除できませんでした。',
         failPublish: 'APIを公開できませんでした。',
         failSave: 'ボットを保存できませんでした。',
-        failDeleteInProgress:
-          'ナレッジの同期中または API の公開中はボットを削除できません。完了後にもう一度お試しください。',
         failShare: '共有設定を変更できませんでした。',
         failAddApiKey: 'API キーを追加できませんでした。',
         failDeleteApiKey: 'API キーを削除できませんでした。',
@@ -603,6 +581,7 @@ const translation: typeof en = {
         },
         button: {
           deleteApi: 'API削除',
+          deleteBot: 'ボット削除',
         },
       },
       validationError: {
@@ -756,14 +735,6 @@ const translation: typeof en = {
           'このパラメータは、各チャンクの境界を決定するために一緒に検査されるテキストの量に影響を与え、結果として生じるチャンクの粒度と一貫性に影響を与える可能性があります。バッファサイズを大きくすると、より多くのコンテキストをキャプチャできますが、ノイズも発生する可能性があります。バッファサイズを小さくすると、重要なコンテキストを見逃す可能性がありますが、より正確なチャンクが保証されます。',
         breakpointPercentileThreshold:
           'しきい値が高いほど、文を異なるチャンクに分割するために、文をより区別できる必要があります。しきい値が高いほどチャンクが少なくなり、通常は平均チャンクサイズが大きくなります。',
-      },
-      alert: {
-        sync: {
-          error: {
-            title: 'チャンキングエラー',
-            body: 'チャンクオーバーラップ値を小さくして再試行してください',
-          },
-        },
       },
     },
     generationConfig: {
@@ -970,6 +941,7 @@ const translation: typeof en = {
         api_publishing: 'API を公開しています。完了してから再度お試しください。',
         dedicated_knowledge_base_limit:
           '専用のナレッジベースを持つボットは最大 {{limit}} 個までです。既存のボットを削除するか、共有ナレッジベースを使用してください。',
+        bot_not_published: 'このボットは公開されていません。',
       },
       answerResponse: '回答中にエラーが発生しました。',
       notFoundConversation:
@@ -985,17 +957,22 @@ const translation: typeof en = {
           'モデルへのリクエストが多すぎます。しばらくしてからもう一度お試しください。',
         model_unavailable:
           '選択したモデルは利用できません。別のモデルを選択してください。',
-        model_error: 'モデルがリクエストを処理できませんでした: {{reason}}',
+        model_error: 'モデルがリクエストを処理できませんでした。',
         bot_not_found: 'ボットが見つかりません。削除された可能性があります。',
-        invalid_request: 'リクエストが正しくありません: {{reason}}',
+        invalid_request: 'リクエストが正しくありません。',
         generation_failed:
           '回答を生成できませんでした。もう一度お試しください。',
+        input_too_long:
+          '会話または添付ファイルがこのモデルには長すぎます。添付ファイルを削除するか、新しい会話を開始してください。',
+        unauthorized: 'セッションの有効期限が切れました。再度サインインしてください。',
         invalidResponse: '想定外のResponseが返ってきました。',
         connectionClosed:
           '回答が完了する前に接続が切断されました。ページを再読み込みすると保存された回答を確認できます。',
       },
       maxTokensReached:
         '最大出力長に達したため回答が途中で終了しました。ボットの生成設定で最大トークン数を増やしてください。',
+      maxTokensReachedWithoutSettings:
+        '最大出力長に達したため回答が途中で終了しました。続きは新しいメッセージで依頼してください。',
       notSupportedImage: '選択しているモデルは、画像を利用できません。',
       unsupportedFileFormat: '選択したファイル形式はサポートされていません。',
       emptyAnswer:
@@ -1027,6 +1004,7 @@ const translation: typeof en = {
       loadFailed:
         'データを読み込めませんでした。ページを再読み込みしてもう一度お試しください。',
       searchFailed: '検索できませんでした。もう一度お試しください。',
+      feedbackFailed: 'フィードバックを送信できませんでした。もう一度お試しください。',
     },
     validation: {
       s3Url: {

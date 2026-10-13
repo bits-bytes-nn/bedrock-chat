@@ -16,58 +16,6 @@ const translation = {
       adminConsoles: 'Hanya Admin',
     },
     model: {
-      haiku3: {
-        label: 'Claude 3 (Haiku)',
-        description:
-          'Versi sebelumnya dioptimumkan untuk kelajuan dan kepadatan, memberikan respons hampir serta-merta.',
-      },
-      sonnet3: {
-        label: 'Claude 3 (Sonnet)',
-        description: 'Keseimbangan antara kecerdasan dan kelajuan.',
-      },
-      'sonnet3-5': {
-        label: 'Claude 3.5 (Sonnet) v1',
-        description:
-          'Versi awal Claude 3.5. Menyokong pelbagai tugasan, tetapi v2 menawarkan ketepatan yang lebih baik.',
-      },
-      'sonnet3-5-v2': {
-        label: 'Claude 3.5 (Sonnet) v2',
-        description:
-          'Versi terbaru Claude 3.5. Model yang dipertingkatkan yang membina ke atas v1 dengan ketepatan dan prestasi yang lebih tinggi.',
-      },
-      'haiku3-5': {
-        label: 'Claude 3.5 (Haiku)',
-        description:
-          'Versi terbaru, menawarkan respons yang lebih pantas dan keupayaan yang diperbaiki berbanding Haiku 3.',
-      },
-      opus3: {
-        label: 'Claude 3 (Opus)',
-        description: 'Model yang kuat untuk tugasan yang sangat kompleks.',
-      },
-      mistral7b: {
-        label: 'Mistral 7B',
-      },
-      mistral8x7b: {
-        label: 'Mixtral-8x7B',
-      },
-      mistralLarge: {
-        label: 'Mistral Large',
-      },
-      novaPro: {
-        label: 'Amazon Nova Pro',
-        description:
-          'Model multimodal yang sangat mampu dengan kombinasi terbaik ketepatan, kelajuan, dan kos untuk pelbagai tugasan.',
-      },
-      novaLite: {
-        label: 'Amazon Nova Lite',
-        description:
-          'Model multimodal yang sangat murah yang sangat pantas untuk memproses input imej, video, dan teks.',
-      },
-      novaMicro: {
-        label: 'Amazon Nova Micro',
-        description:
-          'Model teks sahaja yang memberikan respons dengan latensi terendah dalam keluarga model Amazon Nova dengan kos yang sangat rendah.',
-      },
     },
     agent: {
       label: 'Ejen',
@@ -84,29 +32,6 @@ const translation = {
         toolOutput: 'Output: ',
       },
       tools: {
-        get_weather: {
-          name: 'Cuaca Semasa',
-          description: 'Dapatkan ramalan cuaca semasa.',
-        },
-        sql_db_query: {
-          name: 'Pertanyaan Pangkalan Data',
-          description:
-            'Laksanakan pertanyaan SQL yang terperinci dan betul untuk mendapatkan hasil dari pangkalan data.',
-        },
-        sql_db_schema: {
-          name: 'Skema Pangkalan Data',
-          description: 'Dapatkan skema dan baris sampel untuk senarai jadual.',
-        },
-        sql_db_list_tables: {
-          name: 'Senaraikan Jadual Pangkalan Data',
-          description:
-            'Senaraikan semua jadual yang tersedia dalam pangkalan data.',
-        },
-        sql_db_query_checker: {
-          name: 'Pemeriksa Pertanyaan',
-          description:
-            'Semak jika pertanyaan SQL anda betul sebelum pelaksanaan.',
-        },
         internet_search: {
           name: 'Carian Internet',
           description: 'Cari maklumat di internet.',
@@ -232,11 +157,6 @@ const translation = {
         title: 'Nama',
         description: 'Penerangan',
         instruction: 'Arahan',
-      },
-      explore: {
-        label: {
-          pageTitle: 'Konsol Bot',
-        },
       },
       apiSettings: {
         pageTitle: 'Tetapan API Terbitan Bot Berkongsi',
@@ -493,14 +413,6 @@ const translation = {
           'Parameter ini boleh mempengaruhi berapa banyak teks yang diperiksa bersama-sama untuk menentukan sempadan setiap potongan, mempengaruhi kehalusan dan koherensi potongan yang dihasilkan. Saiz penimbal yang lebih besar mungkin menangkap lebih banyak konteks tetapi juga boleh memperkenalkan bunyi, manakala saiz penimbal yang lebih kecil mungkin terlepas konteks penting tetapi memastikan pemotongan yang lebih tepat.',
         breakpointPercentileThreshold:
           'Ambang peratusan titik putus yang lebih tinggi memerlukan ayat untuk lebih dapat dibezakan untuk dipecahkan ke dalam potongan yang berbeza. Ambang yang lebih tinggi menghasilkan lebih sedikit potongan dan biasanya saiz potongan purata yang lebih besar.',
-      },
-      alert: {
-        sync: {
-          error: {
-            title: 'Ralat Pemecahan Ayat',
-            body: 'Cuba lagi dengan nilai tindih potongan yang lebih kecil',
-          },
-        },
       },
     },
     generationConfig: {

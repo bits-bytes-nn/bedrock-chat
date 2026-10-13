@@ -183,28 +183,6 @@ const translation: typeof en = {
         toolOutput: '출력: ',
       },
       tools: {
-        get_weather: {
-          name: '현재 날씨',
-          description: '현재 날씨 예보를 가져옵니다.',
-        },
-        sql_db_query: {
-          name: '데이터베이스 쿼리',
-          description:
-            '정확하고 상세한 SQL 쿼리를 실행해 데이터베이스에서 결과를 가져옵니다.',
-        },
-        sql_db_schema: {
-          name: '데이터베이스 스키마',
-          description: '테이블 목록의 스키마와 샘플 행을 가져옵니다.',
-        },
-        sql_db_list_tables: {
-          name: '데이터베이스 테이블 목록',
-          description:
-            '데이터베이스에서 사용할 수 있는 모든 테이블을 나열합니다.',
-        },
-        sql_db_query_checker: {
-          name: '쿼리 검사기',
-          description: '실행 전에 SQL 쿼리가 올바른지 확인합니다.',
-        },
         internet_search: {
           name: '인터넷 검색',
           description: '인터넷에서 정보를 검색합니다.',
@@ -325,6 +303,8 @@ const translation: typeof en = {
             title: '준비되지 않음',
             body: '이 봇은 지식 동기화가 완료되지 않아 업데이트 이전의 지식을 사용합니다.',
           },
+          inProgress:
+            '지식 기반을 동기화하는 중입니다. 동기화가 끝나면 저장할 수 있습니다.',
         },
       },
       samples: {
@@ -521,8 +501,6 @@ const translation: typeof en = {
         failDelete: '봇을 삭제하지 못했습니다.',
         failPublish: 'API를 게시하지 못했습니다.',
         failSave: '봇을 저장하지 못했습니다.',
-        failDeleteInProgress:
-          '지식을 동기화하거나 API를 게시하는 동안에는 봇을 삭제할 수 없습니다. 작업이 끝난 뒤 다시 시도하세요.',
         failShare: '공유 설정을 변경하지 못했습니다.',
         failAddApiKey: 'API 키를 추가하지 못했습니다.',
         failDeleteApiKey: 'API 키를 삭제하지 못했습니다.',
@@ -598,6 +576,7 @@ const translation: typeof en = {
         },
         button: {
           deleteApi: 'API 삭제',
+          deleteBot: '봇 삭제',
         },
       },
       validationError: {
@@ -751,14 +730,6 @@ const translation: typeof en = {
           '각 청크의 경계를 정할 때 함께 살펴볼 텍스트 양에 영향을 주며, 결과 청크의 세분성과 일관성을 좌우합니다. 버퍼 크기가 크면 더 많은 맥락을 담을 수 있지만 노이즈가 섞일 수 있고, 작으면 중요한 맥락을 놓칠 수 있지만 더 정밀하게 청크를 나눌 수 있습니다.',
         breakpointPercentileThreshold:
           '임곗값이 높을수록 문장이 더 뚜렷하게 구분되어야 서로 다른 청크로 나뉩니다. 임곗값이 높으면 청크 수가 줄고 평균 청크 크기는 대체로 커집니다.',
-      },
-      alert: {
-        sync: {
-          error: {
-            title: '문장 분할 오류',
-            body: '청크 중첩 값을 줄여 다시 시도하세요',
-          },
-        },
       },
     },
     generationConfig: {
@@ -965,6 +936,7 @@ const translation: typeof en = {
         api_publishing: 'API를 게시하는 중입니다. 게시가 끝난 뒤 다시 시도하세요.',
         dedicated_knowledge_base_limit:
           '전용 지식 기반이 있는 봇은 최대 {{limit}}개까지 만들 수 있습니다. 기존 봇을 삭제하거나 공유 지식 기반을 사용하세요.',
+        bot_not_published: '게시되지 않은 봇입니다.',
       },
       answerResponse: '응답 중 오류가 발생했습니다.',
       notFoundConversation: '지정한 채팅이 없어 새 채팅 화면을 표시했습니다.',
@@ -979,10 +951,13 @@ const translation: typeof en = {
         throttled: '모델에 요청이 너무 많습니다. 잠시 후 다시 시도하세요.',
         model_unavailable:
           '선택한 모델을 사용할 수 없습니다. 다른 모델을 선택하세요.',
-        model_error: '모델이 요청을 처리하지 못했습니다: {{reason}}',
+        model_error: '모델이 요청을 처리하지 못했습니다.',
         bot_not_found: '봇을 찾을 수 없습니다. 삭제되었을 수 있습니다.',
-        invalid_request: '요청이 올바르지 않습니다: {{reason}}',
+        invalid_request: '요청이 올바르지 않습니다.',
         generation_failed: '답변을 생성하지 못했습니다. 다시 시도하세요.',
+        input_too_long:
+          '대화나 첨부 파일이 이 모델에서 처리하기에 너무 깁니다. 첨부 파일을 빼거나 새 대화를 시작하세요.',
+        unauthorized: '세션이 만료되었습니다. 다시 로그인하세요.',
         invalidResponse:
           '예상치 못한 응답을 받았습니다. 응답 형식이 예상 형식과 일치하지 않습니다.',
         connectionClosed:
@@ -990,6 +965,8 @@ const translation: typeof en = {
       },
       maxTokensReached:
         '최대 출력 길이에 도달해 답변이 중간에 끝났습니다. 봇 생성 설정에서 최대 토큰 수를 늘려 주세요.',
+      maxTokensReachedWithoutSettings:
+        '최대 출력 길이에 도달해 답변이 중간에 끝났습니다. 나머지 내용은 새 메시지로 요청하세요.',
       notSupportedImage: '선택한 모델은 이미지를 지원하지 않습니다.',
       unsupportedFileFormat: '선택한 파일 형식은 지원되지 않습니다.',
       emptyAnswer:
@@ -1020,6 +997,7 @@ const translation: typeof en = {
       loadFailed:
         '데이터를 불러오지 못했습니다. 페이지를 새로 고친 뒤 다시 시도하세요.',
       searchFailed: '검색하지 못했습니다. 다시 시도하세요.',
+      feedbackFailed: '피드백을 보내지 못했습니다. 다시 시도하세요.',
     },
     validation: {
       s3Url: {

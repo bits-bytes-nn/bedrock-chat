@@ -348,14 +348,6 @@ Come classificheresti questa email?`,
         chunkOverlap:
           "Specificando la sovrapposizione dei blocchi, puoi preservare le informazioni contestuali attorno ai limiti dei blocchi. L'aumento della dimensione del blocco a volte può migliorare la precisione della ricerca. Tuttavia, tieni presente che l'aumento della sovrapposizione dei blocchi può portare a costi computazionali più elevati.",
       },
-      alert: {
-        sync: {
-          error: {
-            title: 'Errore di suddivisione della frase',
-            body: 'Riprovare con un valore di sovrapposizione dei blocchi inferiore',
-          },
-        },
-      },
     },
     error: {
       answerResponse: 'Si è verificato un errore durante la risposta.',

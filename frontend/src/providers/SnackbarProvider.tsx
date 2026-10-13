@@ -8,17 +8,19 @@ type Props = {
   children: React.ReactNode;
 };
 
+const SNACKBAR_DURATION_MS = 5000;
+
 const SnackbarProvider: React.FC<Props> = ({ children }) => {
-  const { isOpen, close, message } = useSnackbar();
+  const { isOpen, close, message, openCount } = useSnackbar();
 
   useEffect(() => {
-    if (isOpen) {
-      // Close automatically after 5 seconds.
-      setTimeout(() => {
-        close();
-      }, 5000);
+    if (!isOpen) {
+      return;
     }
-  }, [close, isOpen]);
+    // Close automatically 5 seconds after the latest message.
+    const timer = setTimeout(close, SNACKBAR_DURATION_MS);
+    return () => clearTimeout(timer);
+  }, [close, isOpen, openCount]);
 
   return (
     <>
@@ -32,7 +34,9 @@ const SnackbarProvider: React.FC<Props> = ({ children }) => {
           leaveFrom="opacity-100 scale-100 "
           leaveTo="opacity-0 scale-95 ">
           <div className="">
-            <div className="mx-4 mt-4 flex justify-between rounded bg-red p-3  text-sm text-aws-font-color-white-light shadow-lg">
+            <div
+              role="alert"
+              className="mx-4 mt-4 flex justify-between rounded bg-red p-3  text-sm text-aws-font-color-white-light shadow-lg">
               <div className="mr-3 text-3xl">
                 <PiWarningFill />
               </div>

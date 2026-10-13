@@ -1,6 +1,6 @@
 import React, { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { getApiErrorMessage, getApiErrorStatus } from '../utils/ErrorUtils';
+import { getApiErrorMessage } from '../utils/ErrorUtils';
 import useSnackbar from '../hooks/useSnackbar';
 import Button from '../components/Button';
 import { PiLink, PiPlus } from 'react-icons/pi';
@@ -37,8 +37,14 @@ const BotExplorePage: React.FC = () => {
   const { pinBot, unpinBot } = useBotPinning();
 
   const newChat = useNewChat();
-  const { myBots, deleteMyBot, updateStarred, mutateMyBots, isLoadingMyBots } =
-    useBot(true);
+  const {
+    myBots,
+    myBotsError,
+    deleteMyBot,
+    updateStarred,
+    mutateMyBots,
+    isLoadingMyBots,
+  } = useBot(true);
 
   const {
     isPublication,
@@ -75,12 +81,7 @@ const BotExplorePage: React.FC = () => {
     if (targetDelete) {
       setIsOpenDeleteDialog(false);
       deleteMyBot(targetDelete.id).catch((e) => {
-        // The knowledge base is being synchronized or the API published.
-        openSnackbar(
-          getApiErrorStatus(e) === 409
-            ? t('bot.error.failDeleteInProgress')
-            : (getApiErrorMessage(e) ?? t('bot.error.failDelete'))
-        );
+        openSnackbar(getApiErrorMessage(e) ?? t('bot.error.failDelete'));
       });
     }
   }, [deleteMyBot, targetDelete, openSnackbar, t]);
@@ -180,7 +181,10 @@ const BotExplorePage: React.FC = () => {
         }
         isLoading={isLoadingMyBots}
         isEmpty={myBots?.length === 0}
-        emptyMessage={t('bot.label.noBots')}>
+        emptyMessage={t('bot.label.noBots')}
+        errorMessage={
+          myBotsError && !myBots ? t('error.loadFailed') : undefined
+        }>
         {myBots?.map((bot) => (
           <ListItemBot key={bot.id} bot={bot} onClick={onClickBot}>
             <div className="flex items-center">

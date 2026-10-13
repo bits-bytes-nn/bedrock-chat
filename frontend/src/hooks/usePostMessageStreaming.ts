@@ -4,6 +4,7 @@ import { create } from 'zustand';
 import i18next from 'i18next';
 import { StreamingEvent } from './xstates/streaming';
 import { PostStreamingStatus } from '../constants';
+import { isEnglishLanguage } from '../utils/ErrorUtils';
 
 const WS_ENDPOINT: string = import.meta.env.VITE_APP_WS_ENDPOINT;
 // API Gateway closes the connection for frames over 32 KB. 8K UTF-16 code units
@@ -42,12 +43,20 @@ const PREDICT_ERROR_CODES = [
   'bot_not_found',
   'invalid_request',
   'generation_failed',
+  'input_too_long',
+  'unauthorized',
 ] as const;
 type PredictErrorCode = (typeof PREDICT_ERROR_CODES)[number];
 const isPredictErrorCode = (code: unknown): code is PredictErrorCode =>
   PREDICT_ERROR_CODES.includes(code as PredictErrorCode);
 
-/** Return the message to show for an ERROR frame. */
+/**
+ * Return the message to show for an ERROR frame.
+ *
+ * The reason is the backend's English message. Only the English texts of
+ * `model_error` and `invalid_request` include it, and a reason without a known
+ * code is shown only in English; other languages get the generic message.
+ */
 export const getPredictErrorMessage = ({
   code,
   reason,
@@ -58,7 +67,10 @@ export const getPredictErrorMessage = ({
   if (isPredictErrorCode(code)) {
     return i18next.t(`error.predict.${code}`, { reason });
   }
-  return reason || i18next.t('error.predict.invalidResponse');
+  if (!reason) {
+    return i18next.t('error.predict.invalidResponse');
+  }
+  return isEnglishLanguage() ? reason : i18next.t('error.predict.general');
 };
 
 const usePostMessageStreaming = create<{
@@ -140,14 +152,7 @@ const usePostMessageStreaming = create<{
 
         ws.onmessage = (message) => {
           try {
-            if (
-              message.data === '' ||
-              message.data === 'Message sent.' ||
-              // Ignore timeout message from api gateway
-              message.data.startsWith(
-                '{"message": "Endpoint request timed out",'
-              )
-            ) {
+            if (message.data === '' || message.data === 'Message sent.') {
               return;
             } else if (message.data === 'Session started.') {
               sendParts();
@@ -229,6 +234,14 @@ const usePostMessageStreaming = create<{
                   console.warn('[FRONTEND_WS] Ignored status:', data.status);
                   break;
               }
+            } else if (typeof data.message === 'string') {
+              // API Gateway frames carry a message but no status.
+              if (data.message === 'Endpoint request timed out') {
+                // The integration timed out, but the handler keeps streaming.
+                return;
+              }
+              console.error('[FRONTEND_WS] API Gateway error:', data);
+              fail(i18next.t('error.predict.general'));
             } else {
               console.error(data);
               fail(i18next.t('error.predict.invalidResponse'));

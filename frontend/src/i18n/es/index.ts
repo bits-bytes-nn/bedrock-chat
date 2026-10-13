@@ -60,30 +60,6 @@ const translation = {
         toolOutput: 'Salida: ',
       },
       tools: {
-        get_weather: {
-          name: 'Clima Actual',
-          description: 'Obtener el pronóstico del clima actual.',
-        },
-        sql_db_query: {
-          name: 'Consulta de Base de Datos',
-          description:
-            'Ejecuta una consulta SQL detallada y correcta para obtener resultados de la base de datos.',
-        },
-        sql_db_schema: {
-          name: 'Esquema de Base de Datos',
-          description:
-            'Obtén el esquema y muestras de filas de una lista de tablas.',
-        },
-        sql_db_list_tables: {
-          name: 'Listar Tablas de Base de Datos',
-          description:
-            'Listar todas las tablas disponibles en la base de datos.',
-        },
-        sql_db_query_checker: {
-          name: 'Verificador de Consultas',
-          description:
-            'Verifica si tu consulta SQL es correcta antes de ejecutarla.',
-        },
         internet_search: {
           name: 'Búsqueda en Internet',
           description: 'Buscar información en internet.',
@@ -205,11 +181,6 @@ Las categorías de clasificación son:
         title: 'Nombre',
         description: 'Descripción',
         instruction: 'Instrucciones',
-      },
-      explore: {
-        label: {
-          pageTitle: 'Consola de Bots',
-        },
       },
       apiSettings: {
         pageTitle: 'Configuración de Publicación de API de Bot Compartido',
@@ -468,14 +439,6 @@ Las categorías de clasificación son:
           'Este parámetro puede influir en cuánta cantidad de texto se examina en conjunto para determinar los límites de cada fragmento, afectando la granularidad y coherencia de los fragmentos resultantes. Un tamaño de buffer mayor podría capturar más contexto, pero también puede introducir ruido, mientras que un tamaño de buffer menor puede omitir contexto importante pero asegura fragmentos más precisos.',
         breakpointPercentileThreshold:
           'Un umbral más alto requiere que las oraciones sean más distinguibles para ser divididas en diferentes fragmentos. Un umbral más alto da como resultado menos fragmentos y generalmente un tamaño promedio de fragmento más grande.',
-      },
-      alert: {
-        sync: {
-          error: {
-            title: 'Error de División de Oraciones',
-            body: 'Intenta nuevamente con un valor menor de superposición de fragmentos',
-          },
-        },
       },
     },
     generationConfig: {

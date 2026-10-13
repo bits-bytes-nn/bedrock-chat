@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 vi.mock('aws-amplify/auth', () => ({
-  fetchAuthSession: async () => ({ tokens: { idToken: 'token' } }),
+  fetchAuthSession: async () => ({ tokens: { idToken: 'header.pay+load/sig=' } }),
 }));
 
 import i18next from 'i18next';
@@ -18,7 +18,7 @@ class FakeWebSocket {
   onerror?: (e: unknown) => void;
   onclose?: (e: { code: number; reason: string }) => void;
 
-  constructor() {
+  constructor(public url: string) {
     FakeWebSocket.last = this;
     setTimeout(() => this.onopen?.());
   }
@@ -62,12 +62,18 @@ const initI18n = () =>
         translation: {
           error: {
             predict: {
+              general: 'general',
               connectionClosed: 'closed',
               invalidResponse: 'invalid',
               throttled: 'throttled',
               model_error: 'model error: {{reason}}',
             },
           },
+        },
+      },
+      ko: {
+        translation: {
+          error: { predict: { general: 'general (ko)' } },
         },
       },
     },
@@ -88,6 +94,9 @@ describe('usePostMessageStreaming', () => {
     ws.receive({ status: 'STREAMING_END', stop_reason: 'max_tokens' });
 
     await expect(promise).resolves.toBeUndefined();
+    expect(ws.url).toContain(
+      `token=${encodeURIComponent('header.pay+load/sig=')}`
+    );
     expect(ws.sent.map((m) => m.step)).toEqual(['START', 'BODY', 'END']);
     expect(events.map((e) => e.type)).toEqual(['wakeup', 'text', 'goodbye']);
     expect(usePostMessageStreaming.getState().truncatedConversationId).toBe(
@@ -148,14 +157,22 @@ describe('usePostMessageStreaming', () => {
     expect(bodies().every((m) => (m.part ?? '').length <= 8 * 1024)).toBe(true);
   });
 
-  test('ignores the API Gateway timeout message', async () => {
+  test.each([
+    '{"message": "Endpoint request timed out", "connectionId": "x"}',
+    '{"connectionId":"x","message":"Endpoint request timed out"}',
+  ])('ignores the API Gateway timeout frame %s', async (frame) => {
     const { promise, ws } = await startPost();
-    ws.receive(
-      '{"message": "Endpoint request timed out", "connectionId": "x"}'
-    );
+    ws.receive(frame);
     ws.receive({ status: 'STREAMING_END', stop_reason: 'end_turn' });
 
     await expect(promise).resolves.toBeUndefined();
+  });
+
+  test('fails on other API Gateway frames', async () => {
+    const { promise, ws } = await startPost();
+    ws.receive({ message: 'Internal server error', connectionId: 'x' });
+
+    await expect(promise).rejects.toBe('general');
   });
 });
 
@@ -174,5 +191,15 @@ describe('getPredictErrorMessage', () => {
     );
     expect(getPredictErrorMessage({ reason: 'No access' })).toBe('No access');
     expect(getPredictErrorMessage({})).toBe('invalid');
+  });
+
+  test('hides reasons without a known code in other languages', async () => {
+    await i18next.changeLanguage('ko');
+    expect(getPredictErrorMessage({ code: 'other', reason: 'No access' })).toBe(
+      'general (ko)'
+    );
+    expect(getPredictErrorMessage({ reason: 'No access' })).toBe(
+      'general (ko)'
+    );
   });
 });

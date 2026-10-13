@@ -103,6 +103,12 @@ export const usePageLabel = () => {
   const pageLabel: { path: (typeof allPaths)[number]; label: string }[] = [
     { path: '/bot/my', label: t('bot.my.label.pageTitle') },
     { path: '/bot/discover', label: t('discover.pageTitle') },
+    { path: '/bot/starred', label: t('app.starredBots') },
+    { path: '/bot/recently-used', label: t('bot.label.recentlyUsedBots') },
+    { path: '/conversations', label: t('conversationHistory.pageTitle') },
+    { path: '/bot/new', label: t('bot.create.pageTitle') },
+    { path: '/bot/edit/:botId', label: t('bot.edit.pageTitle') },
+    { path: '/bot/api-settings/:botId', label: t('bot.apiSettings.pageTitle') },
     {
       path: '/admin/shared-bot-analytics',
       label: t('admin.botAnalytics.label.pageTitle'),
@@ -110,6 +116,10 @@ export const usePageLabel = () => {
     {
       path: '/admin/api-management',
       label: t('admin.apiManagement.label.pageTitle'),
+    },
+    {
+      path: '/admin/bot/:botId',
+      label: t('admin.botManagement.label.pageTitle'),
     },
   ];
 

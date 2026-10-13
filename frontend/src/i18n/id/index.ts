@@ -67,29 +67,6 @@ const translation = {
         toolOutput: 'Output: ',
       },
       tools: {
-        get_weather: {
-          name: 'Cuaca Saat Ini',
-          description: 'Mengambil prakiraan cuaca saat ini.',
-        },
-        sql_db_query: {
-          name: 'Query Database',
-          description:
-            'Menjalankan query SQL yang detail dan benar untuk mengambil hasil dari database.',
-        },
-        sql_db_schema: {
-          name: 'Skema Database',
-          description:
-            'Mengambil skema dan sampel baris data dari daftar tabel.',
-        },
-        sql_db_list_tables: {
-          name: 'Daftar Tabel Database',
-          description: 'Daftar semua tabel yang tersedia di database.',
-        },
-        sql_db_query_checker: {
-          name: 'Pemeriksa Query',
-          description:
-            'Periksa apakah query SQL Anda sudah benar sebelum dieksekusi.',
-        },
         internet_search: {
           name: 'Pencarian Internet',
           description: 'Mencari informasi di internet.',
@@ -215,11 +192,6 @@ const translation = {
         title: 'Nama',
         description: 'Deskripsi',
         instruction: 'Instruksi',
-      },
-      explore: {
-        label: {
-          pageTitle: 'Konsol Bot',
-        },
       },
       apiSettings: {
         pageTitle: 'Pengaturan API Publikasi Bot Bersama',
@@ -482,14 +454,6 @@ const translation = {
           'Parameter ini dapat mempengaruhi seberapa banyak teks yang diperiksa bersama untuk menentukan batas setiap potongan, yang berdampak pada tingkat detail dan keterkaitan potongan yang dihasilkan. Ukuran buffer yang lebih besar mungkin dapat menangkap lebih banyak konteks tetapi juga dapat menimbulkan noise, sementara ukuran buffer yang lebih kecil mungkin melewatkan konteks penting tetapi memastikan pemotongan yang lebih tepat.',
         breakpointPercentileThreshold:
           'Ambang batas yang lebih tinggi mengharuskan kalimat lebih mudah dibedakan agar dapat dipisahkan menjadi potongan yang berbeda. Ambang batas yang lebih tinggi menghasilkan lebih sedikit potongan dan biasanya ukuran potongan rata-rata yang lebih besar.',
-      },
-      alert: {
-        sync: {
-          error: {
-            title: 'Kesalahan Pemisah Kalimat',
-            body: 'Coba lagi dengan nilai irisan potongan yang lebih kecil',
-          },
-        },
       },
     },
     generationConfig: {
