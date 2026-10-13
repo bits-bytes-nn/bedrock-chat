@@ -83,7 +83,7 @@ describe('getApiErrorCode', () => {
 });
 
 describe('isBotNotPublishedError', () => {
-  it('reads the error code or a 404', () => {
+  it('reads the error code only', () => {
     expect(isBotNotPublishedError(apiError({ code: 'bot_not_published' }, 400))).toBe(true);
     expect(isBotNotPublishedError(apiError({}, 404))).toBe(false);
     expect(isBotNotPublishedError(apiError({ errors: ['Bot X is not published.'] }, 400))).toBe(
