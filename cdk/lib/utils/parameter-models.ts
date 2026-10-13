@@ -28,6 +28,19 @@ const contextBoolean = z.union([
 ]);
 
 /**
+ * A number from cdk.json or parameter.ts, or a numeric string from a `-c` option.
+ * An empty or non-numeric string is rejected instead of becoming 0, which would
+ * turn guards such as the cost alarm or the knowledge base limit off.
+ */
+const contextNumber = z.union([
+  z.number(),
+  z
+    .string()
+    .regex(/^-?\d+(\.\d+)?$/, "Expected a number")
+    .transform(Number),
+]);
+
+/**
  * Base parameters schema that is common across all entry points
  */
 const BaseParametersSchema = z.object({
@@ -126,7 +139,7 @@ const BedrockChatParametersSchema = BaseParametersSchema.extend({
   botStoreLanguage: BotStoreLanguageSchema.default("en"),
 
   // ID token refresh interval
-  tokenValidMinutes: z.coerce.number().default(30),
+  tokenValidMinutes: contextNumber.default(30),
 
   // Global model configuration
   // If not configured (empty array), all models are available
@@ -147,17 +160,17 @@ const BedrockChatParametersSchema = BaseParametersSchema.extend({
   alarmEmail: z.string().default(""),
   // Alarm when the chat answers of a day cost more than this, in USD (0 turns it off).
   // Computed with the model prices in the backend, including published APIs.
-  dailyChatCostAlarmUsd: z.coerce.number().min(0).default(100),
+  dailyChatCostAlarmUsd: contextNumber.pipe(z.number().min(0)).default(100),
   // Bots with their own knowledge base per user; each has an OpenSearch Serverless
   // collection billed while it exists. 0 means no limit. Admins are not limited.
-  maxDedicatedKnowledgeBasesPerUser: z.coerce.number().int().min(0).default(2),
+  maxDedicatedKnowledgeBasesPerUser: contextNumber.pipe(z.number().int().min(0)).default(2),
   // Days to keep the hourly conversation exports for usage analysis. They contain
   // conversation text, including deleted conversations.
-  usageAnalysisRetentionDays: z.coerce.number().int().min(1).default(90),
+  usageAnalysisRetentionDays: contextNumber.pipe(z.number().int().min(1)).default(90),
   // Requests per second for the REST and WebSocket APIs. API Gateway's account limit
   // still applies; these defaults only stop runaway clients.
-  apiThrottleRateLimit: z.coerce.number().default(500),
-  apiThrottleBurstLimit: z.coerce.number().default(1000),
+  apiThrottleRateLimit: contextNumber.default(500),
+  apiThrottleBurstLimit: contextNumber.default(1000),
 
   // debug parameter
   devAccessIamRoleArn: z.string().default("")

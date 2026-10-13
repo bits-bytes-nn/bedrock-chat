@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { tagTableAccessRoles } from "../lib/utils/table-access";
 import { metricsNamespace } from "../lib/utils/metrics";
 import "source-map-support/register";
 import * as cdk from "aws-cdk-lib";
@@ -42,7 +43,7 @@ const alarmTopicArn = cdk.Fn.importValue(
 const DEFAULT_PUBLISHED_API_THROTTLE = { rateLimit: 10, burstLimit: 20 };
 
 // NOTE: DO NOT change the stack id naming rule.
-new ApiPublishmentStack(app, `ApiPublishmentStack${params.publishedApiId}`, {
+const publishmentStack = new ApiPublishmentStack(app, `ApiPublishmentStack${params.publishedApiId}`, {
   env: {
     region: process.env.CDK_DEFAULT_REGION,
   },
@@ -92,3 +93,5 @@ new ApiPublishmentStack(app, `ApiPublishmentStack${params.publishedApiId}`, {
 });
 
 cdk.Tags.of(app).add("CDKEnvironment", params.envName);
+// The stack's roles assume the chat stack's table access role.
+tagTableAccessRoles(publishmentStack, params.envPrefix);

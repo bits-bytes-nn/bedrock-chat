@@ -40,11 +40,9 @@ export const getApiErrorMessage = (error: unknown): string | undefined => {
   return typeof message === 'string' ? message : undefined;
 };
 
-/** Return the HTTP status of a failed API request, if it has one. */
-export const getApiErrorStatus = (error: unknown): number | undefined =>
-  isAxiosError(error) ? error.response?.status : undefined;
-
-/** Whether the publication of a bot was not found because it is not published. */
+/**
+ * Whether the bot is not published. Only the code tells, because a 404 also means
+ * a deleted bot or a missing build.
+ */
 export const isBotNotPublishedError = (error: unknown): boolean =>
-  getApiErrorCode(error) === 'bot_not_published' ||
-  getApiErrorStatus(error) === 404;
+  getApiErrorCode(error) === 'bot_not_published';
