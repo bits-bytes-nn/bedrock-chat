@@ -140,6 +140,10 @@ class TestVerifyToken(unittest.TestCase):
     def test_accepts_id_tokens(self):
         self.assertEqual(self.verify(self.token())["sub"], "user")
 
+    def test_tolerates_small_clock_skew(self):
+        issued = int(time.time()) + 2
+        self.assertEqual(self.verify(self.token(iat=issued))["sub"], "user")
+
     def test_rejects_access_tokens(self):
         with self.assertRaises(JWTError):
             self.verify(self.token(token_use="access"))

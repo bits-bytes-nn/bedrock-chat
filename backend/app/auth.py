@@ -7,6 +7,7 @@ import jwt
 REGION = os.environ.get("REGION", "ap-northeast-1")
 USER_POOL_ID = os.environ.get("USER_POOL_ID", "")
 CLIENT_ID = os.environ.get("CLIENT_ID", "")
+CLOCK_SKEW_SECONDS = 5
 
 ISSUER = f"https://cognito-idp.{REGION}.amazonaws.com/{USER_POOL_ID}"
 
@@ -58,6 +59,9 @@ def verify_token(token: str) -> dict:
         algorithms=["RS256"],
         audience=CLIENT_ID,
         issuer=ISSUER,
+        # Cognito's clock may run slightly ahead of Lambda's; PyJWT rejects a
+        # future `iat` without leeway.
+        leeway=CLOCK_SKEW_SECONDS,
     )
     # Only ID tokens carry the user attributes that the app relies on.
     if decoded.get("token_use") != "id":
