@@ -2,14 +2,13 @@
 @tailwind components;
 @tailwind utilities;
 
-/* tailwindの設定で上書きされてしまうので、importantを設定する */
+/* Tailwind overrides this color otherwise, so it needs !important. */
 .amplify-button--primary {
   background-color: var(
     --amplify-components-button-primary-background-color
   ) !important;
 }
 
-/* styles/globals.css もしくは該当コンポーネントのCSS */
 @keyframes liner-progress {
   0% {
     transform: translateX(-100%);

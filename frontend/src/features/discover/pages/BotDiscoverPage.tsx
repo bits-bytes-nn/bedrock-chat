@@ -291,7 +291,7 @@ const BotDiscoverPage: React.FC = () => {
                   ))}
                 </div>
 
-                {/* ディスカバーボットのページネーション */}
+                {/* Pagination of the discover bots */}
                 {pickupBots.length > 0 && (
                   <Pagination
                     currentPage={discoverCurrentPage}

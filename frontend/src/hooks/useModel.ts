@@ -16,6 +16,9 @@ const IMAGE_MEDIA_TYPES = [
   'image/webp',
 ];
 
+// Selected when no model is available, so that a model ID is always set.
+const FALLBACK_MODEL_ID: Model = 'amazon-nova-lite';
+
 // These models return reasoning on every request, so the toggle is always on.
 const ALWAYS_REASONING = {
   supportReasoning: true,
@@ -259,8 +262,7 @@ const useModel = (botId?: string | null, activeModels?: ActiveModels) => {
     }
 
     // If config default is not available or not set yet, select the first model
-    // Returns undefined if no models are available
-    return filteredModels[0]?.modelId ?? 'amazon-nova-lite';
+    return filteredModels[0]?.modelId ?? FALLBACK_MODEL_ID;
   }, [filteredModels, globalConfig?.defaultModel]);
 
   // select the model via list of activeModels
@@ -269,11 +271,7 @@ const useModel = (botId?: string | null, activeModels?: ActiveModels) => {
       const modelExists = filteredModels.some(
         (m: ModelItem) => toCamelCase(m.modelId) === toCamelCase(targetModelId)
       );
-      return modelExists
-        ? targetModelId
-        : (getDefaultModel() ??
-            filteredModels[0]?.modelId ??
-            'amazon-nova-lite');
+      return modelExists ? targetModelId : getDefaultModel();
     },
     [filteredModels, getDefaultModel]
   );

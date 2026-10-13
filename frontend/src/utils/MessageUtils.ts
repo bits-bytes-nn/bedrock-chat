@@ -12,24 +12,25 @@ export const convertMessageMapToArray = (
   let key: string | null = currentMessageId;
   let messageContent: MessageMap[string] = messageMap[key];
 
-  //  指定のKeyが存在する場合
+  // The given key exists.
   if (messageContent) {
-    //末端のKeyを取得
+    // Find the leaf key.
     while (messageContent.children.length > 0) {
       key = messageContent.children[0];
       messageContent = messageMap[key];
     }
 
-    // 末端から順にArrayに設定してく
+    // Add the messages from the leaf to the root.
     while (key) {
       messageContent = messageMap[key];
-      // 参照が途中で切れている場合は処理中断
+      // Stop when a reference is broken.
       if (!messageContent) {
         messageArray[0].parent = null;
         break;
       }
 
-      // 既に配列上に存在する場合は循環参照状態なので処理中断
+      // Stop when the message is already in the array: the references form
+      // a cycle.
       if (
         messageArray.some((a) => {
           return a.id === key || a.children.includes(key ?? '');
@@ -55,23 +56,24 @@ export const convertMessageMapToArray = (
       key = messageContent.parent;
     }
 
-    // 存在しないKeyが指定された場合
+    // The given key does not exist.
   } else {
-    // 最上位のKeyを取得
+    // Find the root key.
     key = Object.keys(messageMap).filter(
       (k) => messageMap[k].parent === null
     )[0];
 
-    // 上から順にArrayに設定する
+    // Add the messages from the root to the leaf.
     while (key) {
       messageContent = messageMap[key];
-      // 参照が途中で切れている場合は処理中断
+      // Stop when a reference is broken.
       if (!messageContent) {
         messageArray[messageArray.length - 1].children = [];
         break;
       }
 
-      // 既に配列上に存在する場合は循環参照状態なので処理中断
+      // Stop when the message is already in the array: the references form
+      // a cycle.
       if (
         messageArray.some((a) => {
           return a.id === key;
@@ -97,14 +99,14 @@ export const convertMessageMapToArray = (
     }
   }
 
-  // 兄弟ノードの設定
+  // Set the siblings.
   messageArray[0].sibling = [messageArray[0].id];
   messageArray.forEach((m, idx) => {
     if (m.children.length > 0) {
       messageArray[idx + 1].sibling = [...m.children];
     }
   });
-  // 先頭にsystemノードが設定されている場合は、それを除去する
+  // Remove the system message at the top, if any.
   if (messageArray[0].id === 'system') {
     messageArray.shift();
   }
