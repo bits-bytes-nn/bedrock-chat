@@ -43,6 +43,7 @@ const ConversationHistoryPage: React.FC = () => {
     deleteConversation,
     updateTitle,
     isLoadingConversations,
+    conversationsError,
   } = useConversation();
 
   // Search hook
@@ -211,7 +212,13 @@ const ConversationHistoryPage: React.FC = () => {
         }
         isLoading={isLoadingConversations && !hasSearched}
         isEmpty={conversations?.length === 0 && !hasSearched}
-        emptyMessage={t('conversationHistory.label.noConversations')}>
+        emptyMessage={t('conversationHistory.label.noConversations')}
+        // Search results do not depend on the conversation list.
+        errorMessage={
+          conversationsError && !conversations && !hasSearched
+            ? t('error.loadFailed')
+            : undefined
+        }>
         {/* Search results */}
         <ConversationSearchResults
           results={searchResults}

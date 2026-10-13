@@ -9,6 +9,7 @@ const useBot = (shouldAutoRefreshMyBots?: boolean) => {
 
   const {
     data: myBots,
+    error: myBotsError,
     mutate: mutateMyBots,
     isLoading: isLoadingMyBots,
   } = api.bots(
@@ -44,6 +45,7 @@ const useBot = (shouldAutoRefreshMyBots?: boolean) => {
 
   const {
     data: recentlyUsedBots,
+    error: recentlyUsedBotsError,
     mutate: mutateRecentlyUsedBots,
     isLoading: isLoadingRecentlyUsedBots,
   } = api.bots({
@@ -55,6 +57,7 @@ const useBot = (shouldAutoRefreshMyBots?: boolean) => {
     myBots,
     mutateMyBots,
     isLoadingMyBots,
+    myBotsError,
     pinnedBots: pinnedBots?.filter((bot) => bot.available),
     mutatePinnedBots,
     starredBots: starredBots?.filter((bot) => bot.available),
@@ -62,6 +65,7 @@ const useBot = (shouldAutoRefreshMyBots?: boolean) => {
     mutateStarredBots,
     recentlyUsedBots,
     isLoadingRecentlyUsedBots,
+    recentlyUsedBotsError,
     mutateRecentlyUsedBots,
     recentlyUsedUnstarredBots: recentlyUsedBots?.filter(
       (bot) => !bot.isStarred && bot.available

@@ -38,6 +38,7 @@ const BotRecentlyUsedPage: React.FC = () => {
   const {
     recentlyUsedBots,
     isLoadingRecentlyUsedBots,
+    recentlyUsedBotsError,
     deleteMyBot,
     updateStarred,
     mutateRecentlyUsedBots,
@@ -164,6 +165,11 @@ const BotRecentlyUsedPage: React.FC = () => {
         pageTitle={t('bot.label.recentlyUsedBots')}
         isLoading={isLoadingRecentlyUsedBots}
         isEmpty={recentlyUsedBots?.length === 0}
+        errorMessage={
+          recentlyUsedBotsError && !recentlyUsedBots
+            ? t('error.loadFailed')
+            : undefined
+        }
         emptyMessage={t('bot.label.noBotsRecentlyUsed')}>
         {recentlyUsedBots?.map((bot) => (
           <ListItemBot key={bot.id} bot={bot} onClick={onClickBot}>

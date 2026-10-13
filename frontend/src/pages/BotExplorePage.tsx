@@ -37,8 +37,14 @@ const BotExplorePage: React.FC = () => {
   const { pinBot, unpinBot } = useBotPinning();
 
   const newChat = useNewChat();
-  const { myBots, deleteMyBot, updateStarred, mutateMyBots, isLoadingMyBots } =
-    useBot(true);
+  const {
+    myBots,
+    myBotsError,
+    deleteMyBot,
+    updateStarred,
+    mutateMyBots,
+    isLoadingMyBots,
+  } = useBot(true);
 
   const {
     isPublication,
@@ -175,7 +181,10 @@ const BotExplorePage: React.FC = () => {
         }
         isLoading={isLoadingMyBots}
         isEmpty={myBots?.length === 0}
-        emptyMessage={t('bot.label.noBots')}>
+        emptyMessage={t('bot.label.noBots')}
+        errorMessage={
+          myBotsError && !myBots ? t('error.loadFailed') : undefined
+        }>
         {myBots?.map((bot) => (
           <ListItemBot key={bot.id} bot={bot} onClick={onClickBot}>
             <div className="flex items-center">

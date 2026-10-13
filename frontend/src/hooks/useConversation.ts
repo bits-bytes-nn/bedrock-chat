@@ -5,13 +5,17 @@ import useConversationApi from './useConversationApi';
 const useConversation = () => {
   const conversationApi = useConversationApi();
 
-  const { data: conversations, isLoading: isLoadingConversations } =
-    conversationApi.getConversations();
+  const {
+    data: conversations,
+    isLoading: isLoadingConversations,
+    error: conversationsError,
+  } = conversationApi.getConversations();
   const mutate = conversationApi.mutateConversations;
 
   return {
     conversations,
     isLoadingConversations,
+    conversationsError,
     mutateConversations: mutate,
     syncConversations: () => {
       return mutate(conversations);
