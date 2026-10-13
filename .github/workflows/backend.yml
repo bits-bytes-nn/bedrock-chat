@@ -45,6 +45,7 @@ defaults:
 jobs:
   lint-and-test:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     env:
       # Unit tests must not reach AWS. Tests marked `aws` are excluded by default.
       AWS_DEFAULT_REGION: us-east-1
@@ -54,7 +55,8 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - name: Install Poetry
-        run: pipx install poetry
+        # Same version as the poetry.lock header.
+        run: pipx install poetry==2.2.1
       - name: Set up Python 3.13
         uses: actions/setup-python@v6
         with:
@@ -76,6 +78,7 @@ jobs:
 
   container-build:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v6
       - name: Build backend/Dockerfile
