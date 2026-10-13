@@ -18,6 +18,7 @@ from app.user import User
 from boto3.dynamodb.conditions import Key
 from botocore.config import Config
 from botocore.exceptions import ClientError
+from strands.types.exceptions import ModelThrottledException
 
 WEBSOCKET_SESSION_TABLE_NAME = os.environ["WEBSOCKET_SESSION_TABLE_NAME"]
 
@@ -292,6 +293,10 @@ def process_chat_input(
     except (PermissionError, ValueError) as e:
         logger.exception("Rejected chat input")
         return error_response(400, str(e))
+
+    except ModelThrottledException:
+        logger.exception("Bedrock throttled the request")
+        return error_response(502, "The model is busy. Please try again shortly.")
 
     except ClientError as e:
         logger.exception("Bedrock request failed")

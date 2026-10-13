@@ -8,6 +8,7 @@ from unittest.mock import patch
 import boto3
 import pytest
 from botocore.exceptions import ClientError
+from strands.types.exceptions import ModelThrottledException
 from moto import mock_aws
 
 sys.path.insert(0, ".")
@@ -145,6 +146,11 @@ class TestProcessChatInput(unittest.TestCase):
         )
 
     def bedrock_error_reason(self, code: str, message: str) -> str:
+        return self.error_reason(
+            ClientError({"Error": {"Code": code, "Message": message}}, "ConverseStream")
+        )
+
+    def error_reason(self, error: Exception) -> str:
         sender = NotificationSender(
             endpoint_url="https://example.com/dev", connection_id="connection"
         )
@@ -152,9 +158,6 @@ class TestProcessChatInput(unittest.TestCase):
             conversation_id="conversation",
             bot_id=None,
             message=SimpleNamespace(model="claude-v4.7-opus"),
-        )
-        error = ClientError(
-            {"Error": {"Code": code, "Message": message}}, "ConverseStream"
         )
 
         with patch.object(websocket, "chat", side_effect=error):
@@ -173,6 +176,10 @@ class TestProcessChatInput(unittest.TestCase):
             self.bedrock_error_reason("ValidationException", "Input is too long"),
             "Input is too long",
         )
+
+    def test_reports_throttling(self):
+        reason = self.error_reason(ModelThrottledException("Too many requests"))
+        self.assertIn("busy", reason)
 
     def test_hides_access_denied_details(self):
         reason = self.bedrock_error_reason(

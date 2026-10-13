@@ -5,6 +5,8 @@ Agent factory for Strands integration.
 import logging
 import os
 
+from botocore.config import Config
+
 from app.repositories.models.conversation import type_model_name
 from app.repositories.models.custom_bot import BotModel, GenerationParamsModel
 from app.repositories.models.custom_bot_guardrails import BedrockGuardrailsModel
@@ -18,6 +20,14 @@ from app.strands_integration.agent.config import get_bedrock_model_config
 logger = logging.getLogger(__name__)
 
 BEDROCK_REGION = os.environ.get("BEDROCK_REGION", "us-east-1")
+# botocore retries throttling and transient errors before the stream starts. The
+# Strands retry is disabled because it also retries a stream that was cut off midway,
+# which would send the tokens that the user already received again.
+BEDROCK_CLIENT_CONFIG = Config(
+    connect_timeout=5,
+    read_timeout=120,
+    retries={"mode": "standard", "max_attempts": 3},
+)
 
 
 def create_strands_agent(
@@ -43,6 +53,7 @@ def create_strands_agent(
     logger.debug(f"[AGENT_FACTORY] Model config: {model_config}")
     model = BedrockModel(
         region_name=BEDROCK_REGION,
+        boto_client_config=BEDROCK_CLIENT_CONFIG,
         **model_config,
     )
 
@@ -55,5 +66,6 @@ def create_strands_agent(
         tools=get_strands_tools(bot, model_name),  # type: ignore
         hooks=agent_hooks,
         system_prompt=system_prompt,
+        retry_strategy=None,
     )
     return agent

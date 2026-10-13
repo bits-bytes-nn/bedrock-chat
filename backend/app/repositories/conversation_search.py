@@ -127,7 +127,8 @@ def find_conversations_by_query(
                 )
                 conversations.append(conversation_meta)
             except Exception as e:
-                logger.error(f"Error processing hit: {e}, hit: {hit}")
+                # The hit holds conversation text, so only its ID is logged.
+                logger.error(f"Error processing hit {hit.get('_id')}: {e}")
                 continue
         logger.info("Found %d conversations", len(conversations))
         return conversations

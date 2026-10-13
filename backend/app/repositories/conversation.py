@@ -124,12 +124,26 @@ def _put_conversation(user_id: str, conversation: ConversationModel, threshold: 
     )
     try:
         previous = table.put_item(
-            Item=item_params, ReturnValues="ALL_OLD", **condition
+            Item=item_params,
+            ReturnValues="ALL_OLD",
+            ReturnValuesOnConditionCheckFailure="ALL_OLD",
+            **condition,
         ).get("Attributes", {})
     except ClientError as e:
+        conflict = e.response["Error"]["Code"] == "ConditionalCheckFailedException"
+        if conflict and large_message_path:
+            stored: dict = e.response.get("Item", {})  # type: ignore[assignment]
+            if stored.get("LargeMessagePath") == {"S": large_message_path}:
+                # A retry of a write that succeeded but whose response was lost: the
+                # stored item already points at this object, so it must be kept. The
+                # object of the previous write is unknown here and stays behind.
+                logger.warning("Conversation %s was already written", conversation.id)
+                conversation.version = version
+                conversation.mark_stored()
+                return
         if large_message_path:
             s3_client.delete_object(Bucket=LARGE_MESSAGE_BUCKET, Key=large_message_path)
-        if e.response["Error"]["Code"] == "ConditionalCheckFailedException":
+        if conflict:
             raise ResourceConflictError(
                 f"Conversation {conversation.id} was updated concurrently."
             ) from e
@@ -182,52 +196,32 @@ def find_conversation_by_user_id(user_id: str) -> list[ConversationMeta]:
         # NOTE: Need SK to fetch only conversations
         & Key("SK").begins_with(f"{user_id}#CONV#"),
         "ScanIndexForward": False,
+        "ProjectionExpression": "SK, CreateTime, Title, MessageMap, BotId",
     }
 
-    response = table.query(**query_params)
-    conversations = [
-        ConversationMeta(
-            id=decompose_conv_id(item["SK"]),
-            create_time=float(item["CreateTime"]),
-            title=item["Title"],
-            # NOTE: all message has the same model
-            model=json.loads(item["MessageMap"]).get("system", {}).get("model", ""),
-            bot_id=item["BotId"] if "BotId" in item else None,
-        )
-        for item in response["Items"]
-    ]
-
-    query_count = 1
-    MAX_QUERY_COUNT = 5
-    while "LastEvaluatedKey" in response:
-        model = (
-            json.loads(response["Items"][0]["MessageMap"])
-            .get("system", {})
-            .get("model", "")
-        )
-        query_params["ExclusiveStartKey"] = response["LastEvaluatedKey"]
-        # NOTE: max page size is 1MB
-        # See: https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Query.Pagination.html
-        response = table.query(
-            **query_params,
-        )
+    conversations: list[ConversationMeta] = []
+    pages = 0
+    while True:
+        # Each page holds up to 1 MB of whole items, so users with many or long
+        # conversations need several pages.
+        response = table.query(**query_params)
+        pages += 1
         conversations.extend(
-            [
-                ConversationMeta(
-                    id=decompose_conv_id(item["SK"]),
-                    create_time=float(item["CreateTime"]),
-                    title=item["Title"],
-                    model=model,
-                    bot_id=item["BotId"] if "BotId" in item else None,
-                )
-                for item in response["Items"]
-            ]
+            ConversationMeta(
+                id=decompose_conv_id(item["SK"]),
+                create_time=float(item["CreateTime"]),
+                title=item["Title"],
+                # NOTE: all message has the same model
+                model=json.loads(item["MessageMap"]).get("system", {}).get("model", ""),
+                bot_id=item.get("BotId"),
+            )
+            for item in response["Items"]
         )
-        query_count += 1
-        if query_count > MAX_QUERY_COUNT:
-            logger.warning(f"Query count exceeded {MAX_QUERY_COUNT}")
+        if "LastEvaluatedKey" not in response:
             break
+        query_params["ExclusiveStartKey"] = response["LastEvaluatedKey"]
 
+    logger.info("Read %d pages of conversations", pages)
     logger.info("Found %d conversations", len(conversations))
     return conversations
 

@@ -683,3 +683,40 @@ class TestRemoveFromRecentlyUsed(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestBatchGetItems(unittest.TestCase):
+    def test_requests_unprocessed_keys_again(self):
+        from unittest.mock import MagicMock, patch
+
+        from app.repositories import custom_bot
+
+        client = MagicMock()
+        client.batch_get_item.side_effect = [
+            {
+                "Responses": {"bots": [{"BotId": "1"}]},
+                "UnprocessedKeys": {"bots": {"Keys": [{"PK": "u", "SK": "2"}]}},
+            },
+            {"Responses": {"bots": [{"BotId": "2"}]}, "UnprocessedKeys": {}},
+        ]
+        with patch.object(custom_bot.time, "sleep"):
+            items = custom_bot._batch_get_items(client, {"bots": {"Keys": []}})
+
+        self.assertEqual([item["BotId"] for item in items], ["1", "2"])
+        second_request = client.batch_get_item.call_args_list[1].kwargs
+        self.assertEqual(
+            second_request["RequestItems"], {"bots": {"Keys": [{"PK": "u", "SK": "2"}]}}
+        )
+
+    def test_fails_when_keys_stay_unprocessed(self):
+        from unittest.mock import MagicMock, patch
+
+        from app.repositories import custom_bot
+
+        client = MagicMock()
+        client.batch_get_item.return_value = {
+            "Responses": {},
+            "UnprocessedKeys": {"bots": {"Keys": [{"PK": "u", "SK": "1"}]}},
+        }
+        with patch.object(custom_bot.time, "sleep"), self.assertRaises(RuntimeError):
+            custom_bot._batch_get_items(client, {"bots": {"Keys": []}})

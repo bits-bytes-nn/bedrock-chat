@@ -32,7 +32,8 @@ def handler(event: Dict, context: Dict) -> Dict:
     :return: The response to Cognito.
     """
     try:
-        print("Received event:", json.dumps(event, indent=2))
+        # The event holds the user's attributes, so only its source is logged.
+        print("Received event:", event.get("triggerSource"))
         email = event["request"]["userAttributes"]["email"]
         is_allowed = check_email_domain(email)
         if is_allowed:
