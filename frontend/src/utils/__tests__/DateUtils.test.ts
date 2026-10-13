@@ -1,22 +1,20 @@
-import { describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { toUtcDateHour } from '../DateUtils';
 
-// The UTC hour of a local time, computed without dayjs, so the test holds in any
-// time zone.
-const utcHour = (year: number, month: number, day: number, hour: number) => {
-  const date = new Date(year, month - 1, day, hour);
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return `${date.getUTCFullYear()}${pad(date.getUTCMonth() + 1)}${pad(
-    date.getUTCDate()
-  )}${pad(date.getUTCHours())}`;
-};
+// CI runs in UTC, where a missing conversion would go unnoticed, so the test uses
+// a zone with an offset. Node applies TZ changes to later Date operations.
+const originalTimeZone = process.env.TZ;
+beforeAll(() => {
+  process.env.TZ = 'Asia/Seoul';
+});
+afterAll(() => {
+  process.env.TZ = originalTimeZone;
+});
 
 describe('toUtcDateHour', () => {
   it('converts the hours of a local day to the UTC hours of the partitions', () => {
-    expect(toUtcDateHour('20261014', 0, 'YYYYMMDD')).toBe(utcHour(2026, 10, 14, 0));
-    expect(toUtcDateHour('20261014', 23, 'YYYYMMDD')).toBe(
-      utcHour(2026, 10, 14, 23)
-    );
+    expect(toUtcDateHour('20261014', 0, 'YYYYMMDD')).toBe('2026101315');
+    expect(toUtcDateHour('20261014', 23, 'YYYYMMDD')).toBe('2026101414');
   });
 
   it('returns nothing for an invalid date', () => {

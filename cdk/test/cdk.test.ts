@@ -398,20 +398,21 @@ describe("Bedrock Chat Stack Test", () => {
     expect(actions).not.toContain("aoss:ListCollections");
 
     // Alarms and API throttling.
-    // Roles are trusted by tag as well, because long stack names are shortened in
-    // generated role names.
-    const tagTrust = Object.values(template.findResources("AWS::IAM::Role")).find(
-      (role: any) =>
-        JSON.stringify(role.Properties.AssumeRolePolicyDocument).includes(
-          "aws:PrincipalTag/bedrock-chat:table-access"
-        )
+    // Roles that access the tables are created under a path that the table access
+    // role trusts, because generated names shorten long stack names.
+    const pathTrusted = Object.values(template.findResources("AWS::IAM::Role")).filter(
+      (role: any) => role.Properties.Path === "/bedrock-chat/test-/"
     );
-    expect(tagTrust).toBeDefined();
-    template.hasResourceProperties("AWS::IAM::Role", {
-      Tags: Match.arrayWith([
-        Match.objectLike({ Key: "bedrock-chat:table-access" }),
-      ]),
-    });
+    expect(pathTrusted).toHaveLength(4);
+    const tableTrust = JSON.stringify(
+      Object.values(template.findResources("AWS::IAM::Role")).find((role: any) =>
+        JSON.stringify(role.Properties.AssumeRolePolicyDocument).includes(
+          "aws:PrincipalArn"
+        )
+      )
+    );
+    expect(tableTrust).toContain(":role/bedrock-chat/test-/*");
+    expect(tableTrust).not.toContain("PrincipalTag");
 
     template.resourceCountIs("AWS::CloudWatch::Alarm", 10);
     template.hasResourceProperties("AWS::CloudWatch::Alarm", {
@@ -1240,8 +1241,16 @@ describe("Api Publishment Stack", () => {
       usagePlan: {},
       metricsNamespace: "BedrockChat",
       alarmTopicArn: "arn:aws:sns:us-east-1:123456789012:alarms",
+      tableAccessRolePath: "/bedrock-chat/default/",
     });
     const template = Template.fromStack(stack);
+
+    // Both handler roles assume the chat stack's table access role, which trusts
+    // roles under this path.
+    const pathRoles = Object.values(template.findResources("AWS::IAM::Role")).filter(
+      (role: any) => role.Properties.Path === "/bedrock-chat/default/"
+    );
+    expect(pathRoles).toHaveLength(2);
 
     // Answers that failed for good are reported through the chat stack's topic.
     template.hasResourceProperties("AWS::CloudWatch::Alarm", {

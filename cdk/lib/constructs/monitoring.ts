@@ -147,7 +147,7 @@ export class Monitoring extends Construct {
       alarms.push([
         "DailyChatCost",
         new cloudwatch.Metric({
-          // Published by backend/app/websocket.py (emit_chat_cost).
+          // Published by backend/app/usecases/chat.py (emit_chat_cost) for every answer.
           namespace: props.metricsNamespace,
           metricName: "ChatCost",
           statistic: "Sum",

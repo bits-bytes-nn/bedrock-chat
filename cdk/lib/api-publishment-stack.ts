@@ -36,6 +36,8 @@ interface ApiPublishmentStackProps extends StackProps {
   readonly corsOptions?: apigateway.CorsOptions;
   /** Namespace of the ChatCost metric, shared with the chat stack's alarm. */
   readonly metricsNamespace: string;
+  /** Path that the chat stack's table access role trusts. */
+  readonly tableAccessRolePath: string;
   /** The chat stack's alarm topic, notified when answers fail. */
   readonly alarmTopicArn: string;
 }
@@ -90,6 +92,7 @@ export class ApiPublishmentStack extends Stack {
     // a bot with the internet search tool reads its Firecrawl API key.
     const newHandlerRole = (roleId: string): iam.Role => {
       const role = new iam.Role(this, roleId, {
+        path: props.tableAccessRolePath,
         assumedBy: new iam.ServicePrincipal("lambda.amazonaws.com"),
       });
       role.addManagedPolicy(

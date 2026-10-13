@@ -82,6 +82,7 @@ export class Api extends Construct {
     const { usageAnalysis } = props;
 
     const handlerRole = new iam.Role(this, "HandlerRole", {
+      path: props.database.tableAccessRolePath,
       assumedBy: new iam.ServicePrincipal("lambda.amazonaws.com"),
     });
     handlerRole.addManagedPolicy(

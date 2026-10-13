@@ -34,7 +34,7 @@ To send us a pull request, please:
 3. Ensure the main CI checks pass locally. After installing dependencies (`poetry install` in `backend`, `npm ci` in `frontend` and `cdk`), run `lefthook run check` (or `npx lefthook run check` without a global [Lefthook](https://github.com/evilmartians/lefthook#install)) in the repository root. It runs the main CI checks:
    - `backend`: `poetry run black --check .`, `poetry run mypy --config-file mypy.ini .` and `poetry run pytest`
    - `frontend`: `npm run lint`, `npx vitest run` and `npm run build`
-   - `cdk`: `npm test`
+   - `cdk`: `npx tsc --noEmit -p .` and `npm test`
 
    CI additionally synthesizes the CDK app, starts the backend and builds the Docker images.
 4. Commit to your fork using clear commit messages.
