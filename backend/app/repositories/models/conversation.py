@@ -641,6 +641,15 @@ def merge_conversations(
     for field in ("title", "last_message_id", "should_continue"):
         if base is None or getattr(mine, field) != getattr(base, field):
             setattr(merged, field, getattr(mine, field))
+    if merged.last_message_id not in message_map:
+        # Removed by the repair: show the latest branch instead.
+        if theirs.last_message_id in message_map:
+            merged.last_message_id = theirs.last_message_id
+        elif "system" in message_map:
+            leaf = "system"
+            while message_map[leaf].children:
+                leaf = message_map[leaf].children[-1]
+            merged.last_message_id = leaf
     merged.version = theirs.version
     return merged
 

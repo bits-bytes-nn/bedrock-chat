@@ -152,6 +152,24 @@ class TestMergeConversations(unittest.TestCase):
         self.assertNotIn("old", merged.message_map)
         self.assertEqual(merged.message_map["a"].children, [])
 
+    def test_last_message_points_to_a_message_that_survived(self):
+        base = conversation()
+        add_reply(base, "old", 0)
+        mine, theirs = base.model_copy(deep=True), base.model_copy(deep=True)
+        theirs.message_map["child"] = message("old", "child")
+        theirs.message_map["old"].children.append("child")
+        theirs.last_message_id = "child"
+        del mine.message_map["old"]
+        mine.message_map["a"].children.remove("old")
+        mine.last_message_id = "a"
+
+        merged = merge_conversations(base, mine, theirs)
+        self.assertEqual(merged.last_message_id, "a")
+
+        mine.last_message_id = "old"  # unchanged from base, so theirs wins
+        merged = merge_conversations(base, mine, theirs)
+        self.assertIn(merged.last_message_id, merged.message_map)
+
     def test_no_message_is_left_without_its_parent(self):
         base = conversation()
         add_reply(base, "old", 0)

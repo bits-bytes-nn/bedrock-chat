@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import argparse
 import base64
+import functools
 import json
 import logging
 import os
@@ -12,7 +13,6 @@ from typing import Any, Dict, List, Optional, Set, Tuple
 import boto3
 from boto3.dynamodb.conditions import Attr, Key
 from botocore.exceptions import ClientError
-from reretry import retry
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("migration")
@@ -365,14 +365,26 @@ def batch_write_items(table, items: List[Dict]):
         logger.info(f"✅ All {len(items)} items successfully processed")
 
 
-@retry(
-    exceptions=(ClientError),
-    tries=5,  # バッチ全体の再試行回数
-    delay=2,  # 初回遅延(秒)
-    max_delay=30,  # 最大遅延(秒)
-    backoff=2,  # 指数バックオフ倍率
-    logger=logger,
-)
+def _retry_client_errors(func, tries=5, delay=2, max_delay=30):
+    """Retry the whole batch on ClientError with exponential backoff."""
+
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        wait = delay
+        for attempt in range(1, tries + 1):
+            try:
+                return func(*args, **kwargs)
+            except ClientError as e:
+                if attempt == tries:
+                    raise
+                logger.warning(f"{e}, retrying in {wait} seconds...")
+                time.sleep(wait)
+                wait = min(wait * 2, max_delay)
+
+    return wrapper
+
+
+@_retry_client_errors
 def process_batch_with_retries(client, table, batch_items):
     """単一バッチの処理と詳細なリトライロジック"""
     remaining_items = batch_items
