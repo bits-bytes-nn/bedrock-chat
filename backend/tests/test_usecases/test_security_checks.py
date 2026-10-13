@@ -3,12 +3,15 @@ import sys
 import time
 import unittest
 from types import SimpleNamespace
+from typing import get_args
 from unittest.mock import MagicMock, patch
 
 sys.path.insert(0, ".")
 
 from app import auth
 from app.repositories.models.conversation import MessageModel, TextContentModel
+from app.repositories.models.custom_bot import ActiveModelsModel
+from app.routes.schemas.conversation import active_model_field_name, type_model_name
 from app.usecases import bot as bot_usecase
 from app.usecases import chat as chat_usecase
 from app.usecases import publication
@@ -68,6 +71,17 @@ class TestValidateModelIsAvailable(unittest.TestCase):
         with patch.object(chat_usecase, "get_global_available_models", return_value=[]):
             with self.assertRaises(PermissionError):
                 validate_model_is_available("claude-v4.7-opus", bot=bot)  # type: ignore[arg-type]
+
+    def test_rejects_model_without_a_field(self):
+        bot = SimpleNamespace(active_models=SimpleNamespace())
+        with patch.object(chat_usecase, "get_global_available_models", return_value=[]):
+            with self.assertRaises(PermissionError):
+                validate_model_is_available("claude-v4.7-opus", bot=bot)  # type: ignore[arg-type]
+
+    def test_every_model_has_an_active_models_field(self):
+        fields = ActiveModelsModel.model_fields
+        for model in get_args(type_model_name):
+            self.assertIn(active_model_field_name(model), fields)
 
     def test_accepts_active_model(self):
         bot = SimpleNamespace(active_models=SimpleNamespace(claude_v4_7_opus=True))

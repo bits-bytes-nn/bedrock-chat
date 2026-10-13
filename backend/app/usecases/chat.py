@@ -49,6 +49,7 @@ from app.routes.schemas.conversation import (
     FeedbackOutput,
     MessageOutput,
     SearchHighlight,
+    active_model_field_name,
 )
 from app.stream import OnStopInput, OnThinking
 from app.usecases.bot import fetch_bot, modify_bot_last_used_time, modify_bot_stats
@@ -239,8 +240,8 @@ def validate_model_is_available(model: str, bot: BotModel | None) -> None:
         raise PermissionError(f"Model {model} is not available.")
 
     if bot is not None:
-        field_name = model.replace("-", "_").replace(".", "_")
-        if not getattr(bot.active_models, field_name, True):
+        # A model without a field cannot have been activated, so fail closed.
+        if not getattr(bot.active_models, active_model_field_name(model), False):
             raise PermissionError(f"Model {model} is not active for this bot.")
 
 

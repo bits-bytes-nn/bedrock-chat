@@ -28,7 +28,7 @@ from app.routes.schemas.bot import (
     type_shared_scope,
     type_sync_status,
 )
-from app.routes.schemas.conversation import type_model_name
+from app.routes.schemas.conversation import active_model_field_name, type_model_name
 from app.user import User
 from app.utils import (
     get_api_key_from_secret_manager,
@@ -50,7 +50,7 @@ logger = logging.getLogger(__name__)
 
 def _create_model_activate_model(model_names: List[str]) -> Type[DynamicBaseModel]:
     fields: Dict[str, Any] = {
-        name.replace("-", "_").replace(".", "_"): (bool, True) for name in model_names
+        active_model_field_name(name): (bool, True) for name in model_names
     }
     return create_model("ActiveModelsModel", __base__=DynamicBaseModel, **fields)
 

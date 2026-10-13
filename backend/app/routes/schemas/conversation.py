@@ -63,6 +63,11 @@ type_model_name = Literal[
 ]
 
 
+def active_model_field_name(model: str) -> str:
+    """Name of the model's field in the active models of a bot."""
+    return model.replace("-", "_").replace(".", "_")
+
+
 class TextContent(BaseSchema):
     content_type: Literal["text"] = Field(
         ..., description="Content type. Note that image is only available for claude 3."
