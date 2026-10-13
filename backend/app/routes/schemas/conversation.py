@@ -1,9 +1,9 @@
-from typing import Annotated, Literal
+from typing import Annotated, Literal, Self
 
 from app.repositories.models.common import Base64EncodedBytes
 from app.routes.schemas.base import BaseSchema
 from mypy_boto3_bedrock_runtime.literals import DocumentFormatType, ImageFormatType
-from pydantic import Discriminator, Field, JsonValue, field_validator, root_validator
+from pydantic import Discriminator, Field, JsonValue, field_validator, model_validator
 
 # Every model name ever offered. Retired models stay here so that stored
 # conversations and bots remain readable; see app/model_registry.py.
@@ -99,15 +99,11 @@ class FeedbackInput(BaseSchema):
     )
     comment: str | None = Field(None, description="optional comment")
 
-    @root_validator(pre=True)
-    def check_category(cls, values):
-        thumbs_up = values.get("thumbs_up")
-        category = values.get("category")
-
-        if not thumbs_up and category is None:
+    @model_validator(mode="after")
+    def check_category(self) -> Self:
+        if not self.thumbs_up and self.category is None:
             raise ValueError("category is required if `thumbs_up` is `False`")
-
-        return values
+        return self
 
 
 class FeedbackOutput(BaseSchema):

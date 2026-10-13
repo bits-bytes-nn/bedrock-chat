@@ -11,7 +11,7 @@ from app.repositories.api_publication import (
     find_usage_plan_by_id,
 )
 from app.repositories.common import RecordNotFoundError, decompose_sk
-from app.utils import delete_api_key_from_secret_manager
+from app.utils import delete_api_key_from_secret_manager, delete_s3_prefix
 
 DOCUMENT_BUCKET = os.environ.get("DOCUMENT_BUCKET", "bedrock-documents")
 BEDROCK_REGION = os.environ.get("BEDROCK_REGION", "us-east-1")
@@ -29,12 +29,7 @@ def delete_custom_bot_stack_by_bot_id(bot_id: str):
 
 def delete_from_s3(user_id: str, bot_id: str):
     """Delete all files in S3 bucket for the specified `user_id` and `bot_id`."""
-    prefix = f"{user_id}/{bot_id}/"
-    paginator = s3_client.get_paginator("list_objects_v2")
-    for page in paginator.paginate(Bucket=DOCUMENT_BUCKET, Prefix=prefix):
-        keys = [{"Key": obj["Key"]} for obj in page.get("Contents", [])]
-        if keys:
-            s3_client.delete_objects(Bucket=DOCUMENT_BUCKET, Delete={"Objects": keys})
+    delete_s3_prefix(s3_client, DOCUMENT_BUCKET, f"{user_id}/{bot_id}/")
     logger.info("Deleted the S3 files of bot %s", bot_id)
 
 

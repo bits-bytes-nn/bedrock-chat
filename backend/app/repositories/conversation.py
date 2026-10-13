@@ -15,6 +15,7 @@ from app.repositories.common import (
     decompose_related_document_source_id,
     get_conversation_table_client,
 )
+from app.utils import delete_s3_prefix
 from app.repositories.models.conversation import (
     ConversationMeta,
     ConversationModel,
@@ -32,7 +33,7 @@ from ulid import ULID
 logger = logging.getLogger(__name__)
 
 THRESHOLD_LARGE_MESSAGE = 300 * 1024  # 300KB
-LARGE_MESSAGE_BUCKET = os.environ.get("LARGE_MESSAGE_BUCKET")
+LARGE_MESSAGE_BUCKET = os.environ.get("LARGE_MESSAGE_BUCKET", "")
 
 BEDROCK_REGION = os.environ.get("BEDROCK_REGION", "us-east-1")
 s3_client = boto3.client("s3", BEDROCK_REGION)
@@ -49,15 +50,7 @@ def _large_message_path(user_id: str, conversation_id: str) -> str:
 
 def _delete_large_messages(user_id: str, conversation_id: str):
     """Delete every stored version of a large message map."""
-    paginator = s3_client.get_paginator("list_objects_v2")
-    for page in paginator.paginate(
-        Bucket=LARGE_MESSAGE_BUCKET, Prefix=f"{user_id}/{conversation_id}/"
-    ):
-        keys = [{"Key": obj["Key"]} for obj in page.get("Contents", [])]
-        if keys:
-            s3_client.delete_objects(
-                Bucket=LARGE_MESSAGE_BUCKET, Delete={"Objects": keys}
-            )
+    delete_s3_prefix(s3_client, LARGE_MESSAGE_BUCKET, f"{user_id}/{conversation_id}/")
 
 
 def _put_conversation(user_id: str, conversation: ConversationModel, threshold: int):

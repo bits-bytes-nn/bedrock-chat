@@ -2,7 +2,7 @@ import logging
 from typing import Any, TypedDict
 from urllib.parse import urlparse
 
-from app.repositories.knowledge_base import get_knowledge_base_info
+from app.repositories.knowledge_base import get_knowledge_base_type
 from app.repositories.models.conversation import (
     RelatedDocumentModel,
     TextToolResultModel,
@@ -105,15 +105,7 @@ def _bedrock_knowledge_base_search(bot: BotModel, query: str) -> list[SearchResu
             if "overrideSearchType" in target_parameter:
                 del target_parameter["overrideSearchType"]
 
-        # Get Knowledge Base from Bedrock Agent API :: get_knowledge_base
-        knowledge_base_info = get_knowledge_base_info(
-            knowledge_base_id=knowledge_base_id
-        )
-        # Check the knowledge base resource type
-        if (
-            knowledge_base_info.knowledge_base.knowledge_base_configuration.type
-            == "KENDRA"
-        ):
+        if get_knowledge_base_type(knowledge_base_id) == "KENDRA":
             # Omit overrideSearchType option when the type is "KENDRA"
             omit_override_search_type_parameter(retrieve_parameter)
 

@@ -10,7 +10,6 @@ from app.routes.schemas.bot_kb import (
     type_os_character_filter,
     type_os_token_filter,
     type_os_tokenizer,
-    type_kb_resource_type,
 )
 from typing import Literal
 from pydantic import BaseModel
@@ -62,18 +61,6 @@ class NoneParamsModel(BaseModel):
 class WebCrawlingFiltersModel(BaseModel):
     exclude_patterns: list[str]
     include_patterns: list[str]
-
-
-class KnowledgeBaseConfiguration(BaseModel):
-    type: type_kb_resource_type
-
-
-class KnowledgeBase(BaseModel):
-    knowledge_base_configuration: KnowledgeBaseConfiguration
-
-
-class BedrockAgentGetKnowledgeBaseResponse(BaseModel):
-    knowledge_base: KnowledgeBase
 
 
 class BedrockKnowledgeBaseModel(BaseModel):

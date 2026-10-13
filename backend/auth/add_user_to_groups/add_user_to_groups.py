@@ -17,7 +17,8 @@ cognito = boto3.client("cognito-idp")
 
 
 @tracer.capture_lambda_handler
-@logger.inject_lambda_context(log_event=True)
+# The event holds the user's attributes, so it is not logged.
+@logger.inject_lambda_context
 def handler(event: dict, context: LambdaContext) -> dict:
     user_name: str = event["userName"]
     user_attributes: dict = event["request"]["userAttributes"]
