@@ -75,6 +75,7 @@ describe("Bedrock Chat Stack Test", () => {
         alarmEmail: "",
         dailyChatCostAlarmUsd: 100,
         maxDedicatedKnowledgeBasesPerUser: 2,
+        usageAnalysisRetentionDays: 90,
         apiThrottle: { rateLimit: 500, burstLimit: 1000 },
       }
     );
@@ -158,6 +159,7 @@ describe("Bedrock Chat Stack Test", () => {
         alarmEmail: "",
         dailyChatCostAlarmUsd: 100,
         maxDedicatedKnowledgeBasesPerUser: 2,
+        usageAnalysisRetentionDays: 90,
         apiThrottle: { rateLimit: 500, burstLimit: 1000 },
       }
     );
@@ -229,6 +231,7 @@ describe("Bedrock Chat Stack Test", () => {
       alarmEmail: "",
       dailyChatCostAlarmUsd: 100,
       maxDedicatedKnowledgeBasesPerUser: 2,
+      usageAnalysisRetentionDays: 90,
       apiThrottle: { rateLimit: 500, burstLimit: 1000 },
     });
     const template = Template.fromStack(stack);
@@ -333,6 +336,12 @@ describe("Bedrock Chat Stack Test", () => {
 
     // Alarms and API throttling.
     template.resourceCountIs("AWS::CloudWatch::Alarm", 8);
+    // Usage exports hold conversation text, so they expire.
+    template.hasResourceProperties("AWS::S3::Bucket", {
+      LifecycleConfiguration: {
+        Rules: [Match.objectLike({ ExpirationInDays: 90, Status: "Enabled" })],
+      },
+    });
     template.hasResourceProperties("AWS::CloudWatch::Alarm", {
       Namespace: "BedrockChat",
       MetricName: "ChatCost",
@@ -464,6 +473,7 @@ describe("Bedrock Chat Stack Test", () => {
       alarmEmail: "",
       dailyChatCostAlarmUsd: 100,
       maxDedicatedKnowledgeBasesPerUser: 2,
+      usageAnalysisRetentionDays: 90,
       apiThrottle: { rateLimit: 500, burstLimit: 1000 },
     });
 
@@ -550,6 +560,7 @@ describe("Bedrock Chat Stack Test", () => {
       alarmEmail: "",
       dailyChatCostAlarmUsd: 100,
       maxDedicatedKnowledgeBasesPerUser: 2,
+      usageAnalysisRetentionDays: 90,
       apiThrottle: { rateLimit: 500, burstLimit: 1000 },
     });
 
@@ -611,6 +622,7 @@ describe("Bedrock Chat Stack Test", () => {
       alarmEmail: "",
       dailyChatCostAlarmUsd: 100,
       maxDedicatedKnowledgeBasesPerUser: 2,
+      usageAnalysisRetentionDays: 90,
       apiThrottle: { rateLimit: 500, burstLimit: 1000 },
     });
 
@@ -666,6 +678,7 @@ describe("Bedrock Chat Stack Test", () => {
       alarmEmail: "",
       dailyChatCostAlarmUsd: 100,
       maxDedicatedKnowledgeBasesPerUser: 2,
+      usageAnalysisRetentionDays: 90,
       apiThrottle: { rateLimit: 500, burstLimit: 1000 },
     });
 

@@ -41,7 +41,7 @@ Currently provides a basic overview of chatbot and user usage, focusing on aggre
 
 - As stated in the [architecture](../README.md#architecture), the admin features will refer to the S3 bucket exported from DynamoDB. Please note that since the export is performed once every hour, the latest conversations may not be reflected immediately.
 
-- The exports contain the full text of conversations. They have no expiration and are kept until the stack is deleted, which deletes the bucket. Restrict access to the bucket and Athena accordingly.
+- The exports contain the full text of conversations, including conversations that users deleted. They expire after `usageAnalysisRetentionDays` (default 90), so usage analysis covers that period. Restrict access to the bucket and Athena accordingly.
 
 - In public bot usages, bots that have not been used at all during the specified period will not be listed.
 
@@ -120,3 +120,7 @@ ORDER BY
 
 > [!Note]
 > If using a named environment (e.g., "dev"), replace `bedrockchatstack_usage_analysis.ddb_export` with `dev_bedrockchatstack_usage_analysis.dev_ddb_export` in the query above.
+
+## Deleting a user's data
+
+Deleting a user in Cognito does not delete their conversations or bots. To delete them, run [delete_user_data.py](../backend/scripts/delete_user_data.py) with the user's id (the Cognito `sub`), the table names and the large message bucket from the `BedrockChatStack` outputs. It lists what it would delete unless you pass `--yes`. Deleting the bots also removes their knowledge base stacks, documents and published APIs. The usage analysis exports expire after `usageAnalysisRetentionDays`.

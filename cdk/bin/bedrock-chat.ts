@@ -99,6 +99,7 @@ const chat = new BedrockChatStack(
     alarmEmail: params.alarmEmail,
     dailyChatCostAlarmUsd: params.dailyChatCostAlarmUsd,
     maxDedicatedKnowledgeBasesPerUser: params.maxDedicatedKnowledgeBasesPerUser,
+    usageAnalysisRetentionDays: params.usageAnalysisRetentionDays,
     apiThrottle: {
       rateLimit: params.apiThrottleRateLimit,
       burstLimit: params.apiThrottleBurstLimit,

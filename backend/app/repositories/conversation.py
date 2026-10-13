@@ -185,19 +185,15 @@ def find_conversation_by_user_id(user_id: str) -> list[ConversationMeta]:
     table = get_conversation_table_client(user_id)
 
     query_params = {
-        "KeyConditionExpression": Key("PK").eq(user_id)
-        # NOTE: Need SK to fetch only conversations
-        & Key("SK").begins_with(f"{user_id}#CONV#"),
+        # Holds only conversations, without their messages (cdk/lib/constructs/database.ts).
+        "IndexName": "ConversationListIndex",
+        "KeyConditionExpression": Key("PK").eq(user_id),
         "ScanIndexForward": False,
-        # The messages are not needed, but they still count toward the 1 MB pages.
-        "ProjectionExpression": "SK, CreateTime, Title, BotId",
     }
 
     conversations: list[ConversationMeta] = []
     pages = 0
     while True:
-        # Each page holds up to 1 MB of whole items, so users with many or long
-        # conversations need several pages.
         response = table.query(**query_params)
         pages += 1
         conversations.extend(

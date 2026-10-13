@@ -1,3 +1,4 @@
+from app.metrics import emit_chat_cost
 from app.repositories.conversation import (
     change_conversation_title,
     delete_conversation_by_id,
@@ -44,7 +45,11 @@ def post_message(request: Request, chat_input: ChatInput):
     """Send chat message"""
     current_user: User = request.state.current_user
 
-    conversation, message = chat(user=current_user, chat_input=chat_input)
+    conversation, message = chat(
+        user=current_user,
+        chat_input=chat_input,
+        on_stop=lambda result: emit_chat_cost(result["price"]),
+    )
     output = chat_output_from_message(conversation=conversation, message=message)
     return output
 

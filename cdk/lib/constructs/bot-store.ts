@@ -10,7 +10,7 @@ import {
   BucketEncryption,
   ObjectOwnership,
 } from "aws-cdk-lib/aws-s3";
-import { CfnOutput, RemovalPolicy, Stack } from "aws-cdk-lib";
+import { CfnOutput, Duration, RemovalPolicy, Stack } from "aws-cdk-lib";
 import {
   Effect,
   IRole,
@@ -122,6 +122,9 @@ export class BotStore extends Construct {
       removalPolicy: RemovalPolicy.DESTROY,
       objectOwnership: ObjectOwnership.OBJECT_WRITER,
       autoDeleteObjects: true,
+      // Initial table exports for the ingestion pipelines, which read them once.
+      // They contain conversation text.
+      lifecycleRules: [{ expiration: Duration.days(7) }],
     });
 
     const ingestionLogGroup = new logs.LogGroup(this, "IngensionLogGroup", {
