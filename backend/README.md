@@ -38,6 +38,8 @@ export OPENSEARCH_DOMAIN_ENDPOINT=https://abcdefghijklmnopqrst.aa-region-1.aoss.
   - `GLOBAL_AVAILABLE_MODELS`: JSON array of model names users may choose. Empty means all models.
   - `DEFAULT_MODEL`, `TITLE_MODEL`: model names for new conversations and title generation.
   - `EMBEDDING_STATE_MACHINE_ARN`: the embedding state machine, needed to sync bot knowledge.
+  - `MAX_DEDICATED_KNOWLEDGE_BASES_PER_USER`: how many bots with a dedicated knowledge base a user may own (default `0`, unlimited).
+  - `METRICS_NAMESPACE`: CloudWatch namespace of the chat cost metric (default `BedrockChat`).
 
 - Configure CDK configration.
 Local development requires OpenSearch data access permissions for the IAM role to be used. You can set this parameter in either `cdk/cdk.json` or `cdk/parameter.ts`.
@@ -94,5 +96,7 @@ Tests marked `aws` call real AWS resources (Bedrock, DynamoDB, Cognito, OpenSear
 ```sh
 poetry run pytest -m aws
 ```
+
+Some of them also need deployed resources or ids from the environment; for example, some create users in the user pool given by `USER_POOL_ID`.
 
 Tests that only need DynamoDB use in-memory tables from [moto](https://github.com/getmoto/moto): add `@pytest.mark.usefixtures("dynamodb_tables")` (see `tests/conftest.py`). Mark a new test with `@pytest.mark.aws` only if it needs other AWS services or internet access.

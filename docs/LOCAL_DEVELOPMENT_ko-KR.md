@@ -17,28 +17,20 @@
 cd frontend && npm ci && npm run dev
 ```
 
-## (선택사항, 권장) pre-commit 훅 설정하기
+개발 서버는 Vite 기본값인 5173 포트에서 실행해야 합니다. 배포된 API가 CORS로 허용하는 로컬 출처는 `http://localhost:5173`뿐입니다.
 
-GitHub workflows를 통해 타입 체크와 린팅을 도입했습니다. 이러한 검사는 Pull Request가 생성될 때 실행되지만, 린팅이 완료될 때까지 기다리는 것은 좋은 개발 경험이 아닙니다. 따라서 이러한 린팅 작업은 커밋 단계에서 자동으로 수행되어야 합니다. 이를 위해 [Lefthook](https://github.com/evilmartians/lefthook?tab=readme-ov-file#install)을 도입했습니다. 필수는 아니지만, 효율적인 개발 경험을 위해 이를 채택하는 것을 권장합니다. 또한, [Prettier](https://prettier.io/)를 사용한 TypeScript 포맷팅을 강제하지는 않지만, 코드 리뷰 중 불필요한 차이를 방지하기 위해 기여할 때 이를 채택해 주시면 감사하겠습니다.
+스트리밍 응답은 WebSocket API Lambda가 처리하며, 이 Lambda는 로컬에서 실행할 수 없습니다. `VITE_APP_WS_ENDPOINT`에 배포된 WebSocket 엔드포인트(스택 출력의 `BedrockChatStack.WebSocketWebSocketEndpoint...`)를 지정하거나, `VITE_APP_USE_STREAMING`을 `false`로 설정해 스트리밍 없이 REST API를 사용하세요.
 
-### Lefthook 설치하기
-
-[여기](https://github.com/evilmartians/lefthook#install)를 참조하세요. Mac과 homebrew 사용자라면 간단히 `brew install lefthook`를 실행하면 됩니다.
-
-### Poetry 설치하기
-
-Python 코드 린팅이 `mypy`와 `black`에 의존하기 때문에 이 설치가 필요합니다.
+## 테스트
 
 ```sh
-cd backend
-python3 -m venv .venv  # 선택사항 (자신의 환경에 poetry를 설치하고 싶지 않은 경우)
-source .venv/bin/activate  # 선택사항 (자신의 환경에 poetry를 설치하고 싶지 않은 경우)
-pip install poetry
-poetry install
+cd backend && poetry run pytest          # 단위 테스트, AWS 접근 없음
+cd frontend && npx vitest run            # 단위 테스트
+cd cdk && npm test                       # 인프라 테스트
 ```
 
-자세한 내용은 [backend README](../backend/README.md)를 확인해 주세요.
+AWS를 호출하는 백엔드 테스트에는 `aws` 마커가 붙어 있으며 기본 실행에서 제외됩니다. 자세한 내용은 [backend/README](../backend/README.md#tests)를 참고하세요.
 
-### pre-commit 훅 생성하기
+## pre-commit 훅
 
-이 프로젝트의 루트 디렉토리에서 `lefthook install`을 실행하기만 하면 됩니다.
+저장소 루트에서 `lefthook install`을 실행하면 커밋할 때 스테이징한 파일을 검사합니다. 주요 CI 검사를 실행하는 `lefthook run check`는 [CONTRIBUTING](../CONTRIBUTING.md#contributing-via-pull-requests)을 참고하세요.

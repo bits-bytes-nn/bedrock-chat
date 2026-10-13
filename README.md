@@ -23,7 +23,14 @@ This fork of [aws-samples/bedrock-chat](https://github.com/aws-samples/bedrock-c
 - Claude Haiku 4.5 as the knowledge base parsing model ([parsing](#knowledge-base-parsing)).
 - Self sign-up off by default, and user data (tables, user pool, buckets) retained when the stack is deleted ([remove resources](#remove-resources)).
 - Only administrators can attach existing knowledge bases, S3 sources and Bedrock agents to bots.
-- CloudWatch alarms and API throttling ([alarms](#alarms-and-api-throttling)).
+- New users join no group (`autoJoinUserGroups` defaults to `[]`) ([groups](#add-new-users-to-groups-automatically)).
+- A per-user limit on bots with dedicated knowledge bases, `maxDedicatedKnowledgeBasesPerUser` ([limit](#limit-dedicated-knowledge-bases)).
+- CloudWatch alarms, including a daily chat cost alarm, and API throttling ([alarms](#alarms-and-api-throttling)).
+- WebSocket connections need a valid ID token at `$connect` ([alarms and throttling](#alarms-and-api-throttling)).
+- The REST API allows CORS only from the app origins and `http://localhost:5173` ([local development](./docs/LOCAL_DEVELOPMENT.md#frontend-development)).
+- Published APIs default to 10 requests per second with a burst of 20, and alarm on failed answers ([API publication](./docs/PUBLISH_API.md#architecture)).
+- Usage analysis exports expire after `usageAnalysisRetentionDays` (default 90) ([retention](#usage-analysis-retention)).
+- A script that deletes a user's conversations and bots ([deleting a user's data](./docs/ADMINISTRATOR.md#deleting-a-users-data)).
 - Conversation writes that merge concurrent updates instead of overwriting them.
 
 A multilingual generative AI platform powered by [Amazon Bedrock](https://aws.amazon.com/bedrock/).
@@ -81,7 +88,7 @@ API Management, Mark bots as essential, Analyze usage for bots. [detail](./docs/
 ![](./docs/imgs/admin_bot_menue.png)
 ![](./docs/imgs/bot_store.png)
 ![](./docs/imgs/admn_api_management.png)
-![](./docs/imgs/admin_bot_analytics.png))
+![](./docs/imgs/admin_bot_analytics.png)
 
 </details>
 
@@ -137,7 +144,7 @@ A comprehensive workshop is available [here](https://catalog.us-east-1.prod.work
 
 ### Supported regions
 
-Please make sure that you deploy Bedrock Chat in a region [where OpenSearch Serverless and Ingestion APIs are available](https://docs.aws.amazon.com/general/latest/gr/opensearch-service.html), if you want to use bots and create knowledge bases (OpenSearch Serverless is the default choice). As of August 2025, the following regions are supported: us-east-1, us-east-2, us-west-1, us-west-2, ap-south-1, ap-northeast-1, ap-northeast-2, ap-southeast-1, ap-southeast-2, ca-central-1, eu-central-1, eu-west-1, eu-west-2, eu-south-2, eu-north-1, sa-east-1
+Please make sure that you deploy Bedrock Chat in a region [where OpenSearch Serverless and Ingestion APIs are available](https://docs.aws.amazon.com/general/latest/gr/opensearch-service.html), if you want to use bots and create knowledge bases (OpenSearch Serverless is the default choice). The following regions are supported: us-east-1, us-east-2, us-west-1, us-west-2, ap-south-1, ap-northeast-1, ap-northeast-2, ap-southeast-1, ap-southeast-2, ca-central-1, eu-central-1, eu-west-1, eu-west-2, eu-south-2, eu-north-1, sa-east-1
 
 For the **bedrock-region** parameter you need to choose a region [where Bedrock is available](https://docs.aws.amazon.com/general/latest/gr/bedrock.html).
 
@@ -355,6 +362,8 @@ To keep deployment-specific values out of Git, pass them with `-c` when you depl
 npx cdk deploy --all -c bedrockRegion=ap-northeast-2
 ```
 
+Numeric parameters accept numbers given with `-c` (for example `-c apiThrottleRateLimit=1000`), and boolean parameters accept `true` and `false`. Lists and objects, such as `allowedIpV4AddressRanges`, must be set in `cdk.json` or with `--cdk-json-override`.
+
 #### Using parameter.ts (Recommended Type-Safe Method)
 
 For better type safety and developer experience, you can use the `parameter.ts` file to define your parameters:
@@ -427,6 +436,7 @@ npx cdk deploy --all
 1. **Stack Naming**:
 
    - The main stacks for each environment will be prefixed with the environment name (e.g., `dev-BedrockChatStack`, `prod-BedrockChatStack`)
+   - The shared knowledge base stack is also prefixed (e.g., `dev-BrChatSharedKbStack`); the default environment keeps `BrChatSharedKbStack`
    - However, custom bot stacks (`BrChatKbStack*`) and API publishing stacks (`ApiPublishmentStack*`) do not receive environment prefixes as they are created dynamically at runtime
 
 2. **Resource Naming**:
@@ -450,7 +460,7 @@ npx cdk deploy --all
 
 ### Remove resources
 
-Delete the resources that the application created at runtime first, because they keep billing and `cdk destroy` does not know about them: delete every bot with a knowledge base and every published API in the app, or delete the stacks in [CloudFormation](https://console.aws.amazon.com/cloudformation/home): `BrChatKbStack*` and `BrChatSharedKbStack` in the Bedrock region, and `ApiPublishmentStack*` in the deployment region.
+Delete the resources that the application created at runtime first, because they keep billing and `cdk destroy` does not know about them: delete every bot with a knowledge base and every published API in the app, or delete the stacks in [CloudFormation](https://console.aws.amazon.com/cloudformation/home): `BrChatKbStack*` and `BrChatSharedKbStack` (`<envPrefix>-BrChatSharedKbStack` in a named environment) in the Bedrock region, and `ApiPublishmentStack*` in the deployment region.
 
 Then run `npx cdk destroy --all` in `cdk`. Without the CDK, delete `BedrockChatStack`, `BedrockRegionResourcesStack` and `FrontendWafStack` in CloudFormation. Please note that `FrontendWafStack` is in `us-east-1` region.
 
@@ -461,6 +471,8 @@ The conversation and bot tables, the Cognito user pool, the document bucket and 
 This asset automatically detects the language using [i18next-browser-languageDetector](https://github.com/i18next/i18next-browser-languageDetector). You can switch languages from the application menu. Alternatively, you can use Query String to set the language as shown below.
 
 > `https://example.com?lng=ja`
+
+Errors that the backend returns with a known code are shown translated. Other errors show the backend's English message when the language is English, and a translated generic message otherwise.
 
 ### Disable self sign up
 
@@ -544,7 +556,7 @@ The bot store feature allows users to share and discover custom bots. You can co
 }
 ```
 
-- **enableBotStore**: Controls whether the bot store feature is enabled (default: `true`)
+- **enableBotStore**: Controls whether the bot store feature is enabled (default: `true`). The bot store runs two OpenSearch Ingestion pipelines and an OpenSearch Serverless collection continuously, which incurs a baseline cost even when idle.
 - **botStoreLanguage**: Sets the primary language for bot search and discovery (default: `"en"`). This affects how bots are indexed and searched in the bot store, optimizing text analysis for the specified language.
 - **enableBotStoreReplicas**: Controls whether standby replicas are enabled for the OpenSearch Serverless collection used by bot store (default: `false`). Setting it to `true` improves availability but increases costs, while `false` reduces costs but may affect availability.
   > **Important**: You can't update this property after the collection is already created. If you attempt to modify this property, the collection continues to use the original value.
@@ -560,7 +572,7 @@ routes requests within the same AWS region, for example, within the US. Some
 SCPs may restrict on or the other or both and therefore you can configure them
 independently. By default both are enabled.
 
-To configure change the following settings in `cdk.json` or `parameters.ts`:
+To configure change the following settings in `cdk.json` or `parameter.ts`:
 
 ```json
 "enableBedrockGlobalInference": false,
@@ -598,9 +610,20 @@ bedrockChatParams.set("default", {
 
 ### Alarms and API Throttling
 
-CloudWatch alarms notify an SNS topic (output `AlarmTopicArn`) when the REST API answers with server errors or chat answers fail repeatedly, when chat requests are throttled, when a knowledge sync fails, when the resources of a deleted bot could not be removed, or when a day of chat answers costs more than `dailyChatCostAlarmUsd` (default 100 USD; 0 turns it off). The cost is computed with the model prices in the backend and includes published APIs. Set `alarmEmail` to subscribe an email address; AWS sends a confirmation email first.
+CloudWatch alarms notify an SNS topic (output `AlarmTopicArn`) when:
 
-The REST and WebSocket APIs are limited to `apiThrottleRateLimit` requests per second (default 500) with a burst of `apiThrottleBurstLimit` (default 1000). Raise them for large deployments.
+- the REST API answers with server errors (5xx);
+- generating chat answers fails repeatedly;
+- the WebSocket chat Lambda fails, for example with a timeout or out of memory;
+- Lambda concurrency limits throttle chat requests (these are not the API Gateway 429 responses caused by `apiThrottleRateLimit`);
+- the knowledge sync state machine fails, times out or is aborted, or a bot's knowledge sync fails;
+- the resources of a deleted bot could not be removed;
+- a day of chat answers costs more than `dailyChatCostAlarmUsd` (default 100 USD; 0 turns it off). The cost is computed with the model prices in the backend and includes published APIs;
+- a published API fails to answer or its Lambda functions fail. These alarms are in each `ApiPublishmentStack*` stack ([API publication](./docs/PUBLISH_API.md#architecture)).
+
+Set `alarmEmail` to subscribe an email address; AWS sends a confirmation email first.
+
+The REST and WebSocket APIs are limited to `apiThrottleRateLimit` requests per second (default 500) with a burst of `apiThrottleBurstLimit` (default 1000). Raise them for large deployments. The WebSocket API rejects connections at `$connect` unless they pass a valid Cognito ID token.
 
 ```typescript
 bedrockChatParams.set("default", {
@@ -611,7 +634,7 @@ bedrockChatParams.set("default", {
 ```
 
 > [!Important]
-> Defining the `default` environment in `parameter.ts` replaces every setting in `cdk.json`, including IP restrictions. To change a single setting, add it to `cdk.json` or pass it on the command line instead, for example `npx cdk deploy --all -c alarmEmail=ops@example.com`, or `./bin.sh --cdk-json-override '{"context":{"alarmEmail":"ops@example.com"}}'`.
+> Defining the `default` environment in `parameter.ts` replaces every setting in `cdk.json`, including IP restrictions. To change a single setting, add it to `cdk.json` or pass it on the command line instead, for example `npx cdk deploy --all -c alarmEmail=ops@example.com`, or `./bin.sh --cdk-json-override '{"context":{"alarmEmail":"ops@example.com"}}'`. `-c` works for strings, numbers and `true`/`false`; set lists and objects in `cdk.json` or with `--cdk-json-override`.
 
 ### Limit dedicated knowledge bases
 
@@ -619,6 +642,14 @@ Each bot with its own (dedicated) knowledge base has an OpenSearch Serverless co
 
 ```json
 "maxDedicatedKnowledgeBasesPerUser": 2
+```
+
+### Usage analysis retention
+
+The DynamoDB exports used for [usage analysis](./docs/ADMINISTRATOR.md#notes) and the Athena query results are deleted after `usageAnalysisRetentionDays` (default 90).
+
+```json
+"usageAnalysisRetentionDays": 90
 ```
 
 ### Lambda SnapStart

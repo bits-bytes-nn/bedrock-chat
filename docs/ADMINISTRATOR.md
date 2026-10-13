@@ -8,7 +8,7 @@ The admin user must be a member of group called `Admin`, which can be set up via
 
 ## Mark public bots as Essential
 
-Public bots can now be marked as "Essential" by administrators. Bots marked as Essential will be featured in the "Essential" section of the bot store, making them easily accessible to users. This allows administrators to pin important bots that they want all users to use.
+Public bots can be marked as "Essential" by administrators. Bots marked as Essential will be featured in the "Essential" section of the bot store, making them easily accessible to users. This allows administrators to pin important bots that they want all users to use.
 
 ### Examples
 
@@ -33,7 +33,7 @@ Data analysts can access to conversation logs using [Amazon Athena](https://aws.
 
 ## Dashboard
 
-Currently provides a basic overview of chatbot and user usage, focusing on aggregating data for each bot and user over specified time periods and sorting the results by usage fees.
+Currently provides a basic overview of public bot usage, aggregating data for each bot over specified time periods and sorting the results by usage fees.
 
 ![](./imgs/admin_bot_analytics.png)
 
@@ -44,8 +44,6 @@ Currently provides a basic overview of chatbot and user usage, focusing on aggre
 - The exports contain the full text of conversations, including conversations that users deleted. They expire after `usageAnalysisRetentionDays` (default 90), so usage analysis covers that period. Restrict access to the bucket and Athena accordingly.
 
 - In public bot usages, bots that have not been used at all during the specified period will not be listed.
-
-- In user usages, users who have not used the system at all during the specified period will not be listed.
 
 > [!Important]
 > If you're using multiple environments (dev, prod, etc.), the Athena database name will include the environment prefix. Instead of `bedrockchatstack_usage_analysis`, the database name will be:
@@ -95,9 +93,6 @@ ORDER BY
 
 Edit `user-id` and `datehour`. `user-id` can be referred on Bot Management screen.
 
-> [!Note]
-> User usage analytics is coming soon.
-
 ```sql
 SELECT
     d.newimage.PK.S AS UserId,
@@ -123,10 +118,24 @@ ORDER BY
 
 ## Upgrading
 
-`npx cdk deploy --all` updates a deployment in place. DynamoDB creates or deletes only one secondary index per table update, so a deployment whose conversation table has no index (this fork between the removal of `SKIndex` and the addition of `ConversationListIndex`) has to add them in two deployments: first a version that adds `ConversationListIndex` only, then the current one. Deployments of upstream v3 have `SKIndex` and upgrade in one step.
+`npx cdk deploy --all` updates a deployment in place. DynamoDB adds only one secondary index per table update. If the conversation table has no global secondary index (DynamoDB console > Indexes), deploy commit `d095ec1` first, then v3. Deployments of upstream v3 have `SKIndex` and upgrade in one step.
 
-Published APIs keep the backend they were published with; publish them again after upgrading.
+When you upgrade from upstream:
+
+- The usage analysis export and Athena query result buckets get an expiration of `usageAnalysisRetentionDays` (default 90), so older exports are deleted. Copy them first or raise the value.
+- `CreatingBotAllowed` keeps its members, who all joined automatically before (`autoJoinUserGroups` now defaults to `[]`). Review the group in Cognito.
+
+Published APIs keep the code and stack settings they were published with, including the default throttle, alarms, cost metric and metric namespace. Publish them again after upgrading.
 
 ## Deleting a user's data
 
-Deleting a user in Cognito does not delete their conversations or bots. To delete them, run [delete_user_data.py](../backend/scripts/delete_user_data.py) with the user's id (the Cognito `sub`), the table names and the large message bucket from the `BedrockChatStack` outputs. It lists what it would delete unless you pass `--yes`. Deleting the bots also removes their knowledge base stacks, documents and published APIs, and other users lose access to the bots this user shared. The usage analysis exports expire after `usageAnalysisRetentionDays`.
+Deleting a user in Cognito does not delete their conversations or bots. To delete them, run [delete_user_data.py](../backend/scripts/delete_user_data.py) from `backend` with the table names and the large message bucket from the `BedrockChatStack` outputs:
+
+```sh
+PYTHONPATH=. CONVERSATION_TABLE_NAME=... BOT_TABLE_NAME=... LARGE_MESSAGE_BUCKET=... REGION=... \
+  poetry run python scripts/delete_user_data.py <user-id> [--yes]
+```
+
+The user id is the user's `sub` attribute in Cognito, which differs from the Username for users who sign in with an external identity provider. The script lists what it would delete unless you pass `--yes`. Deleting the bots also removes their knowledge base stacks, documents, published APIs and the conversations of those APIs' clients, and other users lose access to the bots this user shared.
+
+Deleted items stay in the tables' point-in-time recovery backups for up to 35 days, and the usage analysis exports expire after `usageAnalysisRetentionDays`. Unpublishing an API keeps its clients' conversations; they are deleted when the bot is deleted.
