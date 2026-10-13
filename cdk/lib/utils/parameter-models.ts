@@ -206,22 +206,11 @@ const BedrockSharedKnowledgeBasesParametersSchema = BaseParametersSchema.extend(
  * Type definitions for each parameter set
  */
 // Input types (for user input, default values are optional)
-export type BaseParametersInput = z.input<typeof BaseParametersSchema>;
 export type BedrockChatParametersInput = z.input<
   typeof BedrockChatParametersSchema
 >;
-export type ApiPublishParametersInput = z.input<
-  typeof ApiPublishParametersSchema
->;
-export type BedrockCustomBotParametersInput = z.input<
-  typeof BedrockCustomBotParametersSchema
->;
-export type BedrockSharedKnowledgeBasesarametersInput = z.input<
-  typeof BedrockCustomBotParametersSchema
->;
 
 // Output types (for function returns, all properties are required)
-export type BaseParameters = z.infer<typeof BaseParametersSchema>;
 export type BedrockChatParameters = z.infer<typeof BedrockChatParametersSchema>;
 export type ApiPublishParameters = z.infer<typeof ApiPublishParametersSchema>;
 export type BedrockCustomBotParameters = z.infer<
@@ -252,8 +241,6 @@ export function resolveBedrockChatParameters(
   const envPrefix = envName === "default" ? "" : envName;
 
   // Otherwise, get parameters from context
-  const identityProviders = app.node.tryGetContext("identityProviders");
-
   const contextParams = {
     envName,
     envPrefix,

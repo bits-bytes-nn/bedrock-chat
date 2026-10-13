@@ -45,6 +45,7 @@ export interface BotStoreProps {
 
 export class BotStore extends Construct {
   readonly openSearchEndpoint: string;
+  readonly collectionArn: string;
   private collection: oss.CfnCollection;
   constructor(scope: Construct, id: string, props: BotStoreProps) {
     super(scope, id);
@@ -346,6 +347,7 @@ export class BotStore extends Construct {
     });
 
     this.openSearchEndpoint = endpoint;
+    this.collectionArn = this.collection.attrArn;
   }
 
 

@@ -4,12 +4,14 @@ import { Template } from "aws-cdk-lib/assertions";
 import {
   getEmbeddingModel,
   getChunkingStrategy,
+  getChunkingOptions,
   getAnalyzer,
   getKnowledgeBaseType,
 } from "../lib/utils/bedrock-knowledge-base-args";
 import { BedrockCustomBotStack } from "../lib/bedrock-custom-bot-stack";
 import { BedrockRegionResourcesStack } from "../lib/bedrock-region-resources";
-import { Analyzer } from "@cdklabs/generative-ai-cdk-constructs/lib/cdk-lib/opensearch-vectorindex";
+import { ApiPublishmentStack } from "../lib/api-publishment-stack";
+import { BedrockSharedKnowledgeBasesStack } from "../lib/bedrock-shared-knowledge-bases-stack";
 import { Match } from "aws-cdk-lib/assertions";
 
 // Skip asset bundling. It runs Docker for every synth and the tests do not inspect assets.
@@ -277,8 +279,59 @@ describe("Bedrock Chat Stack Test", () => {
       }
     }
 
+    // Access logs expire, and the projects that deploy bot and API stacks log to a
+    // group with retention.
+    for (const accessLogTemplate of [template, regionTemplate]) {
+      accessLogTemplate.hasResourceProperties("AWS::S3::Bucket", {
+        LifecycleConfiguration: {
+          Rules: [{ ExpirationInDays: 90, Status: "Enabled" }],
+        },
+      });
+    }
+    const deployProjects = Object.values(
+      template.findResources("AWS::CodeBuild::Project", {
+        Properties: { Source: Match.objectLike({ Type: "S3" }) },
+      })
+    );
+    expect(deployProjects).toHaveLength(3);
+    for (const project of deployProjects as any[]) {
+      expect(
+        project.Properties.LogsConfig.CloudWatchLogs.GroupName
+      ).toBeDefined();
+    }
+    template.resourcePropertiesCountIs(
+      "AWS::Logs::LogGroup",
+      { RetentionInDays: 90 },
+      // The three deploy projects, the API access logs and the state machine logs.
+      5
+    );
+
+    // Secrets, bot store search and stack lookups are scoped to the resources that
+    // the backend calls.
+    for (const statement of statements) {
+      const statementActions = [statement.Action].flat();
+      if (
+        statementActions.some(
+          (action: string) =>
+            action.startsWith("secretsmanager:") ||
+            action.startsWith("cloudformation:")
+        ) ||
+        statement.Action === "aoss:APIAccessAll"
+      ) {
+        expect([statement.Resource].flat()).not.toContain("*");
+      }
+    }
+    expect(actions).toContain("aoss:APIAccessAll");
+    expect(actions).not.toContain("secretsmanager:RotateSecret");
+    expect(actions).not.toContain("aoss:ListCollections");
+
     // Alarms and API throttling.
-    template.resourceCountIs("AWS::CloudWatch::Alarm", 6);
+    template.resourceCountIs("AWS::CloudWatch::Alarm", 7);
+    template.hasResourceProperties("AWS::CloudWatch::Alarm", {
+      Namespace: "AWS/Lambda",
+      MetricName: "Errors",
+      Statistic: "Sum",
+    });
     // Handlers answer errors without failing, so chat errors and failed bot syncs
     // are counted from their logs.
     template.resourceCountIs("AWS::Logs::MetricFilter", 2);
@@ -293,6 +346,30 @@ describe("Bedrock Chat Stack Test", () => {
         }),
       }),
     });
+    // Browsers revalidate index.html, so a deployment does not leave them with
+    // references to removed chunks. Hashed assets stay cached.
+    template.hasResourceProperties("AWS::CloudFront::ResponseHeadersPolicy", {
+      ResponseHeadersPolicyConfig: Match.objectLike({
+        CustomHeadersConfig: {
+          Items: [{ Header: "Cache-Control", Value: "no-cache", Override: true }],
+        },
+        SecurityHeadersConfig: Match.objectLike({
+          ContentSecurityPolicy: Match.anyValue(),
+          StrictTransportSecurity: Match.anyValue(),
+        }),
+      }),
+    });
+    template.hasResourceProperties("AWS::CloudFront::Distribution", {
+      DistributionConfig: Match.objectLike({
+        CacheBehaviors: [
+          Match.objectLike({
+            PathPattern: "/assets/*",
+            CachePolicyId: "658327ea-f89d-4fab-a63d-7e88639e58f6",
+            ResponseHeadersPolicyId: Match.anyValue(),
+          }),
+        ],
+      }),
+    });
     template.hasResourceProperties("AWS::ApiGatewayV2::Stage", {
       StageName: "dev",
       DefaultRouteSettings: Match.objectLike({ ThrottlingRateLimit: 500 }),
@@ -303,6 +380,17 @@ describe("Bedrock Chat Stack Test", () => {
       AccessLogSettings: Match.objectLike({ DestinationArn: Match.anyValue() }),
     });
     expect(actions).toContain("bedrock:InvokeModelWithResponseStream");
+
+    // The main API accepts requests from the app and the local development server only.
+    const httpApi = Object.values(
+      template.findResources("AWS::ApiGatewayV2::Api", {
+        Properties: { ProtocolType: "HTTP" },
+      })
+    )[0] as any;
+    const apiOrigins = httpApi.Properties.CorsConfiguration.AllowOrigins;
+    expect(apiOrigins).not.toContain("*");
+    expect(apiOrigins).toContain("http://localhost:5173");
+    expect(JSON.stringify(apiOrigins)).toContain("DomainName");
   });
 
   test("custom domain configuration", () => {
@@ -613,14 +701,13 @@ describe("Bedrock Knowledge Base Stack", () => {
     const embeddingsModel = getEmbeddingModel(knowledgeBase.embeddings_model);
     const chunkingStrategy = getChunkingStrategy(
       knowledgeBase.chunking_strategy,
-      knowledgeBase.embeddings_model
+      knowledgeBase.embeddings_model,
+      getChunkingOptions(knowledgeBase)
     );
-    const maxTokens: number | undefined = knowledgeBase.max_tokens;
     const instruction: string | undefined = knowledgeBase.instruction;
     const analyzer = knowledgeBase.open_search.analyzer
       ? getAnalyzer(knowledgeBase.open_search.analyzer)
       : undefined;
-    const overlapPercentage: number | undefined = knowledgeBase.overlap_percentage;
 
     const stack = new BedrockCustomBotStack(app, "BedrockCustomBotStackStack", {
       ownerUserId,
@@ -631,10 +718,8 @@ describe("Bedrock Knowledge Base Stack", () => {
       knowledgeBaseType,
       chunkingStrategy,
       existingS3Urls,
-      maxTokens,
       instruction,
       analyzer,
-      overlapPercentage,
       filenames: knowledge.filenames,
       sourceUrls: knowledge.source_urls,
       existKnowledgeBaseId: undefined,
@@ -726,5 +811,70 @@ describe("Bedrock Knowledge Base Stack", () => {
       }`,
     });
     expect(template).toBeDefined();
+  });
+});
+
+describe("Bedrock Shared Knowledge Bases Stack", () => {
+  test("temporary files and logs expire", () => {
+    const app = new cdk.App(testAppProps);
+    const stack = new BedrockSharedKnowledgeBasesStack(
+      app,
+      "BrChatSharedKbStack",
+      {
+        env: { region: "us-east-1" },
+        documentBucketName: "test-document-bucket-name",
+        knowledgeBases: [
+          {
+            knowledgeBaseHash: "hash",
+            embeddingsModel: getEmbeddingModel("titan_v2"),
+            chunkingStrategy: getChunkingStrategy("default"),
+          },
+        ],
+      }
+    );
+    const template = Template.fromStack(stack);
+
+    template.hasResourceProperties("AWS::S3::Bucket", {
+      LifecycleConfiguration: {
+        Rules: [{ ExpirationInDays: 7, Status: "Enabled" }],
+      },
+    });
+    template.hasResourceProperties("Custom::LogRetention", {
+      RetentionInDays: 90,
+    });
+  });
+});
+
+describe("Api Publishment Stack", () => {
+  test("queues deny requests without TLS", () => {
+    const app = new cdk.App(testAppProps);
+    const stack = new ApiPublishmentStack(app, "ApiPublishmentStackTest", {
+      env: { region: "us-east-1" },
+      bedrockRegion: "us-east-1",
+      enableBedrockGlobalInference: false,
+      enableBedrockCrossRegionInference: false,
+      conversationTableName: "conversation-table",
+      botTableName: "bot-table",
+      tableAccessRoleArn: "arn:aws:iam::123456789012:role/table-access",
+      webAclArn: "arn:aws:wafv2:us-east-1:123456789012:regional/webacl/test/id",
+      largeMessageBucketName: "large-message-bucket",
+      modelEnvironment: {},
+      usagePlan: {},
+    });
+    const template = Template.fromStack(stack);
+
+    template.resourceCountIs("AWS::SQS::Queue", 2);
+    const queuePolicies = Object.values(
+      template.findResources("AWS::SQS::QueuePolicy")
+    );
+    expect(queuePolicies).toHaveLength(2);
+    for (const policy of queuePolicies as any[]) {
+      expect(policy.Properties.PolicyDocument.Statement).toContainEqual(
+        expect.objectContaining({
+          Effect: "Deny",
+          Condition: { Bool: { "aws:SecureTransport": "false" } },
+        })
+      );
+    }
   });
 });

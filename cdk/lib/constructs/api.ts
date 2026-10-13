@@ -1,6 +1,5 @@
 import { Construct } from "constructs";
 import { CfnOutput, CfnResource, Duration } from "aws-cdk-lib";
-import { ITable } from "aws-cdk-lib/aws-dynamodb";
 import { HttpLambdaIntegration } from "aws-cdk-lib/aws-apigatewayv2-integrations";
 import { HttpUserPoolAuthorizer } from "aws-cdk-lib/aws-apigatewayv2-authorizers";
 import {
@@ -21,6 +20,10 @@ import * as iam from "aws-cdk-lib/aws-iam";
 
 // Transcription jobs started by the API, which IAM is scoped to.
 const TRANSCRIPTION_JOB_PREFIX = "brchat-";
+// Runs FastAPI on Lambda. The layer is published in the commercial partition only.
+// https://github.com/awslabs/aws-lambda-web-adapter?tab=readme-ov-file#lambda-functions-packaged-as-zip-package-for-aws-managed-runtimes
+const lambdaWebAdapterLayerArn = (region: string) =>
+  `arn:aws:lambda:${region}:753240598075:layer:LambdaAdapterLayerX86:23`;
 import {
   botStackPolicyStatement,
   publishedApiKeyPolicyStatement,
@@ -34,14 +37,17 @@ import { UsageAnalysis } from "./usage-analysis";
 import { excludeDockerImage } from "../constants/docker";
 import { PythonFunction } from "@aws-cdk/aws-lambda-python-alpha";
 import { Database } from "./database";
-import { bedrockChatPolicyStatement } from "../utils/bedrock-policies";
+import {
+  bedrockChatPolicyStatement,
+  firecrawlSecretPolicyStatement,
+} from "../utils/bedrock-policies";
 import { CfnStage, ThrottleSettings } from "aws-cdk-lib/aws-apigatewayv2";
 
 export interface ApiProps {
   readonly database: Database;
   readonly envName: string;
   readonly envPrefix: string;
-  readonly corsAllowOrigins?: string[];
+  readonly corsAllowOrigins: string[];
   readonly throttle: ThrottleSettings;
   readonly auth: Auth;
   readonly bedrockRegion: string;
@@ -51,11 +57,13 @@ export interface ApiProps {
   readonly bedrockCustomBotProject: codebuild.IProject;
   readonly bedrockSharedKnowledgeBasesProject: codebuild.IProject;
   readonly embeddingStateMachine: sfn.IStateMachine;
-  readonly usageAnalysis?: UsageAnalysis;
+  readonly usageAnalysis: UsageAnalysis;
   readonly enableBedrockGlobalInference: boolean;
   readonly enableBedrockCrossRegionInference: boolean;
   readonly enableLambdaSnapStart: boolean;
   readonly openSearchEndpoint?: string;
+  /** Bot store collection that the handler searches, if the bot store is enabled. */
+  readonly openSearchCollectionArn?: string;
   readonly globalAvailableModels?: string[];
   readonly defaultModel?: string;
   readonly titleModel?: string;
@@ -68,11 +76,10 @@ export class Api extends Construct {
   constructor(scope: Construct, id: string, props: ApiProps) {
     super(scope, id);
 
-    const { database, corsAllowOrigins: allowOrigins = ["*"] } = props;
+    const { database, corsAllowOrigins: allowOrigins } = props;
     const { tableAccessRole } = database;
 
-    const usageAnalysisOutputLocation =
-      `s3://${props.usageAnalysis?.resultOutputBucket.bucketName}` || "";
+    const { usageAnalysis } = props;
 
     const handlerRole = new iam.Role(this, "HandlerRole", {
       assumedBy: new iam.ServicePrincipal("lambda.amazonaws.com"),
@@ -93,7 +100,7 @@ export class Api extends Construct {
     handlerRole.addToPolicy(
       new iam.PolicyStatement({
         effect: iam.Effect.ALLOW,
-        actions: ["codebuild:StartBuild"],
+        actions: ["codebuild:StartBuild", "codebuild:BatchGetBuilds"],
         resources: [
           props.apiPublishProject.projectArn,
           props.bedrockCustomBotProject.projectArn,
@@ -104,17 +111,6 @@ export class Api extends Construct {
     props.embeddingStateMachine.grantStartExecution(handlerRole);
     handlerRole.addToPolicy(
       botStackPolicyStatement(Stack.of(this), ["ApiPublishmentStack"])
-    );
-    handlerRole.addToPolicy(
-      new iam.PolicyStatement({
-        effect: iam.Effect.ALLOW,
-        actions: ["codebuild:BatchGetBuilds"],
-        resources: [
-          props.apiPublishProject.projectArn,
-          props.bedrockCustomBotProject.projectArn,
-          props.bedrockSharedKnowledgeBasesProject.projectArn,
-        ],
-      })
     );
     handlerRole.addToPolicy(publishedApiKeyPolicyStatement(Stack.of(this)));
     handlerRole.addToPolicy(
@@ -128,17 +124,7 @@ export class Api extends Construct {
           "athena:GetQueryResults",
           "athena:GetDataCatalog",
         ],
-        resources: [props.usageAnalysis?.workgroupArn || ""],
-      })
-    );
-    handlerRole.addToPolicy(
-      new iam.PolicyStatement({
-        effect: iam.Effect.ALLOW,
-        actions: ["glue:GetDatabase", "glue:GetDatabases"],
-        resources: [
-          props.usageAnalysis?.database.databaseArn || "",
-          props.usageAnalysis?.database.catalogArn || "",
-        ],
+        resources: [usageAnalysis.workgroupArn],
       })
     );
     handlerRole.addToPolicy(
@@ -146,15 +132,16 @@ export class Api extends Construct {
         effect: iam.Effect.ALLOW,
         actions: [
           "glue:GetDatabase",
+          "glue:GetDatabases",
           "glue:GetTable",
           "glue:GetTables",
           "glue:GetPartition",
           "glue:GetPartitions",
         ],
         resources: [
-          props.usageAnalysis?.database.databaseArn || "",
-          props.usageAnalysis?.database.catalogArn || "",
-          props.usageAnalysis?.ddbExportTable.tableArn || "",
+          usageAnalysis.database.databaseArn,
+          usageAnalysis.database.catalogArn,
+          usageAnalysis.ddbExportTable.tableArn,
         ],
       })
     );
@@ -169,56 +156,40 @@ export class Api extends Construct {
         resources: [props.auth.userPool.userPoolArn],
       })
     );
-    handlerRole.addToPolicy(
-      new iam.PolicyStatement({
-        effect: iam.Effect.ALLOW,
-        actions: [
-          "aoss:APIAccessAll",
-          "aoss:DescribeCollection",
-          "aoss:GetCollection",
-          "aoss:SearchCollections",
-          "aoss:BatchGetCollection",
-          "aoss:ListCollections",
-        ],
-        resources: ["*"],
-      })
-    );
+    if (props.openSearchCollectionArn) {
+      // Bot store search. The handler calls the collection endpoint only.
+      handlerRole.addToPolicy(
+        new iam.PolicyStatement({
+          effect: iam.Effect.ALLOW,
+          actions: ["aoss:APIAccessAll"],
+          resources: [props.openSearchCollectionArn],
+        })
+      );
+    }
     handlerRole.addToPolicy(
       new iam.PolicyStatement({
         effect: iam.Effect.ALLOW,
         actions: ["aoss:DescribeIndex", "aoss:ReadDocument"],
         resources: [
-          `arn:aws:aoss:${Stack.of(this).region}:${
+          `arn:${Stack.of(this).partition}:aoss:${Stack.of(this).region}:${
             Stack.of(this).account
           }:collection/*`,
         ],
       })
     );
-    // For Firecrawl api key
+    // Bots with the internet search tool keep their Firecrawl API key here.
+    // CreateSecret sets a tag, which needs TagResource.
     handlerRole.addToPolicy(
-      new iam.PolicyStatement({
-        actions: [
-          "secretsmanager:CreateSecret",
-          "secretsmanager:GetSecretValue",
-          "secretsmanager:DescribeSecret",
-          "secretsmanager:RestoreSecret",
-          "secretsmanager:PutSecretValue",
-          "secretsmanager:UpdateSecretVersionStage",
-          "secretsmanager:DeleteSecret",
-          "secretsmanager:RotateSecret",
-          "secretsmanager:CancelRotateSecret",
-          "secretsmanager:UpdateSecret",
-          "secretsmanager:TagResource",
-        ],
-        resources: [
-          `arn:aws:secretsmanager:${Stack.of(this).region}:${
-            Stack.of(this).account
-          }:secret:firecrawl/*/*`,
-        ],
-      })
+      firecrawlSecretPolicyStatement(Stack.of(this), [
+        "secretsmanager:CreateSecret",
+        "secretsmanager:UpdateSecret",
+        "secretsmanager:GetSecretValue",
+        "secretsmanager:DeleteSecret",
+        "secretsmanager:TagResource",
+      ])
     );
-    props.usageAnalysis?.resultOutputBucket.grantReadWrite(handlerRole);
-    props.usageAnalysis?.ddbBucket.grantRead(handlerRole);
+    usageAnalysis.resultOutputBucket.grantReadWrite(handlerRole);
+    usageAnalysis.ddbBucket.grantRead(handlerRole);
     props.largeMessageBucket.grantReadWrite(handlerRole);
     handlerRole.addToPolicy(
       // Transcribes recordings in the document bucket, which is in the Bedrock Region.
@@ -264,12 +235,10 @@ export class Api extends Construct {
         LARGE_MESSAGE_BUCKET: props.largeMessageBucket.bucketName,
         PUBLISH_API_CODEBUILD_PROJECT_NAME: props.apiPublishProject.projectName,
         EMBEDDING_STATE_MACHINE_ARN: props.embeddingStateMachine.stateMachineArn,
-        USAGE_ANALYSIS_DATABASE:
-          props.usageAnalysis?.database.databaseName || "",
-        USAGE_ANALYSIS_TABLE:
-          props.usageAnalysis?.ddbExportTable.tableName || "",
-        USAGE_ANALYSIS_WORKGROUP: props.usageAnalysis?.workgroupName || "",
-        USAGE_ANALYSIS_OUTPUT_LOCATION: usageAnalysisOutputLocation,
+        USAGE_ANALYSIS_DATABASE: usageAnalysis.database.databaseName,
+        USAGE_ANALYSIS_TABLE: usageAnalysis.ddbExportTable.tableName,
+        USAGE_ANALYSIS_WORKGROUP: usageAnalysis.workgroupName,
+        USAGE_ANALYSIS_OUTPUT_LOCATION: `s3://${usageAnalysis.resultOutputBucket.bucketName}`,
         TRANSCRIPTION_JOB_PREFIX,
         ENABLE_BEDROCK_GLOBAL_INFERENCE:
           props.enableBedrockGlobalInference.toString(),
@@ -294,10 +263,7 @@ export class Api extends Construct {
         LayerVersion.fromLayerVersionArn(
           this,
           "LwaLayer",
-          // https://github.com/awslabs/aws-lambda-web-adapter?tab=readme-ov-file#lambda-functions-packaged-as-zip-package-for-aws-managed-runtimes
-          `arn:aws:lambda:${
-            Stack.of(this).region
-          }:753240598075:layer:LambdaAdapterLayerX86:23`
+          lambdaWebAdapterLayerArn(Stack.of(this).region)
         ),
       ],
     });

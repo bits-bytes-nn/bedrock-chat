@@ -9,17 +9,13 @@ import {
 import { AccountPrincipal, Role } from "aws-cdk-lib/aws-iam";
 import { Construct } from "constructs";
 
-export interface DatabaseProps {
-  pointInTimeRecovery?: boolean;
-}
-
 export class Database extends Construct {
   readonly conversationTable: Table;
   readonly botTable: Table;
   readonly tableAccessRole: Role;
   readonly websocketSessionTable: Table;
 
-  constructor(scope: Construct, id: string, props?: DatabaseProps) {
+  constructor(scope: Construct, id: string) {
     super(scope, id);
 
     // Conversation Table
@@ -33,7 +29,8 @@ export class Database extends Construct {
       removalPolicy: RemovalPolicy.RETAIN,
       deletionProtection: true,
       stream: StreamViewType.NEW_IMAGE,
-      pointInTimeRecovery: props?.pointInTimeRecovery,
+      // Needed to export the data to S3 for usage analysis.
+      pointInTimeRecoverySpecification: { pointInTimeRecoveryEnabled: true },
       encryption: TableEncryption.AWS_MANAGED,
     });
     // Bot Table
@@ -48,7 +45,7 @@ export class Database extends Construct {
       deletionProtection: true,
       stream: StreamViewType.NEW_IMAGE,
       // Need to enable PITR for bot table for Zero-ETL pipeline
-      pointInTimeRecovery: true,
+      pointInTimeRecoverySpecification: { pointInTimeRecoveryEnabled: true },
       encryption: TableEncryption.AWS_MANAGED,
     });
     // LSI-1

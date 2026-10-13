@@ -272,7 +272,7 @@ export class UsageAnalysis extends Construct {
     this.ddbExportTable = ddbExportTable;
     this.workgroupName = wg.name;
     this.resultOutputBucket = queryResultBucket;
-    this.workgroupArn = `arn:aws:athena:*:${Stack.of(this).account}:workgroup/${
+    this.workgroupArn = `arn:${Stack.of(this).partition}:athena:*:${Stack.of(this).account}:workgroup/${
       wg.name
     }`;
   }

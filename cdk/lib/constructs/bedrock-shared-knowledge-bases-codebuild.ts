@@ -1,8 +1,9 @@
 import { Construct } from "constructs";
-import { Stack } from "aws-cdk-lib";
+import { RemovalPolicy, Stack } from "aws-cdk-lib";
 import * as codebuild from "aws-cdk-lib/aws-codebuild";
 import * as s3 from "aws-cdk-lib/aws-s3";
 import * as iam from "aws-cdk-lib/aws-iam";
+import * as logs from "aws-cdk-lib/aws-logs";
 import { NagSuppressions } from "cdk-nag";
 
 export interface BedrockSharedKnowledgeBasesCodebuildProps {
@@ -19,6 +20,10 @@ export class BedrockSharedKnowledgeBasesCodebuild extends Construct {
     super(scope, id);
 
     const sourceBucket = props.sourceBucket;
+    const logGroup = new logs.LogGroup(this, "LogGroup", {
+      retention: logs.RetentionDays.THREE_MONTHS,
+      removalPolicy: RemovalPolicy.DESTROY,
+    });
     const project = new codebuild.Project(this, "Project", {
       source: codebuild.Source.s3({
         bucket: sourceBucket,
@@ -53,6 +58,12 @@ export class BedrockSharedKnowledgeBasesCodebuild extends Construct {
           },
         },
       }),
+      logging: {
+        cloudWatch: {
+          enabled: true,
+          logGroup,
+        },
+      },
     });
     sourceBucket.grantRead(project.role!);
 
@@ -61,7 +72,7 @@ export class BedrockSharedKnowledgeBasesCodebuild extends Construct {
       new iam.PolicyStatement({
         actions: ["sts:AssumeRole"],
         // Only the CDK bootstrap roles of this account.
-        resources: [`arn:aws:iam::${Stack.of(this).account}:role/cdk-*`],
+        resources: [`arn:${Stack.of(this).partition}:iam::${Stack.of(this).account}:role/cdk-*`],
       })
     );
 

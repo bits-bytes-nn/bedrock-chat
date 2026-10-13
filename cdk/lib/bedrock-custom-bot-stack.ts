@@ -1,4 +1,4 @@
-import { CfnOutput, RemovalPolicy, Stack, StackProps } from "aws-cdk-lib";
+import { CfnOutput, Stack, StackProps } from "aws-cdk-lib";
 import { Construct } from "constructs";
 import { VectorCollection } from "@cdklabs/generative-ai-cdk-constructs/lib/cdk-lib/opensearchserverless";
 import {
@@ -69,8 +69,6 @@ interface BedrockCustomBotStackProps extends StackProps {
 
   // Chunking configuration
   readonly chunkingStrategy: ChunkingStrategy;
-  readonly maxTokens?: number;
-  readonly overlapPercentage?: number;
 
   // Crawling configuration
   readonly crawlingScope?: CrawlingScope;
@@ -202,7 +200,7 @@ export class BedrockCustomBotStack extends Stack {
           new iam.PolicyStatement({
             actions: ["bedrock:GetKnowledgeBase"],
             resources: [
-              `arn:aws:bedrock:${this.region}:${this.account}:knowledge-base/${props.existKnowledgeBaseId}`,
+              `arn:${this.partition}:bedrock:${this.region}:${this.account}:knowledge-base/${props.existKnowledgeBaseId}`,
             ],
           }),
         ]),

@@ -1,3 +1,4 @@
+import { Stack } from "aws-cdk-lib";
 import * as iam from "aws-cdk-lib/aws-iam";
 
 /**
@@ -33,4 +34,19 @@ export const bedrockIngestionPolicyStatement = (): iam.PolicyStatement =>
       "bedrock:DeleteKnowledgeBaseDocuments",
     ],
     resources: ["*"],
+  });
+
+/**
+ * Secrets Manager actions on the Firecrawl API keys of bots with the internet
+ * search tool, which the backend stores as `firecrawl/<user id>/<bot id>`.
+ */
+export const firecrawlSecretPolicyStatement = (
+  stack: Stack,
+  actions: string[]
+): iam.PolicyStatement =>
+  new iam.PolicyStatement({
+    actions,
+    resources: [
+      `arn:${stack.partition}:secretsmanager:${stack.region}:${stack.account}:secret:firecrawl/*/*`,
+    ],
   });

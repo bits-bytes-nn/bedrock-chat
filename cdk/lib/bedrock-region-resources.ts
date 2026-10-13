@@ -36,6 +36,7 @@ export class BedrockRegionResourcesStack extends Stack {
       removalPolicy: RemovalPolicy.DESTROY,
       objectOwnership: ObjectOwnership.OBJECT_WRITER,
       autoDeleteObjects: true,
+      lifecycleRules: [{ expiration: Duration.days(90) }],
     });
 
     this.documentBucket = new Bucket(this, `${prefix}DocumentBucket`, {

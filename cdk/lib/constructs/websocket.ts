@@ -5,16 +5,18 @@ import { WebSocketLambdaIntegration } from "aws-cdk-lib/aws-apigatewayv2-integra
 import { IFunction, Runtime, SnapStartConf } from "aws-cdk-lib/aws-lambda";
 import * as path from "path";
 import * as iam from "aws-cdk-lib/aws-iam";
-import { CfnOutput, Duration, RemovalPolicy, Stack } from "aws-cdk-lib";
+import { CfnOutput, Duration, Stack } from "aws-cdk-lib";
 import { Auth } from "./auth";
-import { ITable } from "aws-cdk-lib/aws-dynamodb";
 import { CfnRouteResponse } from "aws-cdk-lib/aws-apigatewayv2";
 import * as logs from "aws-cdk-lib/aws-logs";
 import * as s3 from "aws-cdk-lib/aws-s3";
 import { excludeDockerImage } from "../constants/docker";
 import { PythonFunction } from "@aws-cdk/aws-lambda-python-alpha";
 import { Database } from "./database";
-import { bedrockChatPolicyStatement } from "../utils/bedrock-policies";
+import {
+  bedrockChatPolicyStatement,
+  firecrawlSecretPolicyStatement,
+} from "../utils/bedrock-policies";
 
 export interface WebSocketProps {
   readonly database: Database;
@@ -22,7 +24,6 @@ export interface WebSocketProps {
   readonly bedrockRegion: string;
   readonly documentBucket: s3.IBucket;
   readonly largeMessageBucket: s3.IBucket;
-  readonly accessLogBucket?: s3.Bucket;
   readonly enableBedrockGlobalInference: boolean;
   readonly enableBedrockCrossRegionInference: boolean;
   readonly enableLambdaSnapStart: boolean;
@@ -44,23 +45,6 @@ export class WebSocket extends Construct {
     const { database } = props;
     const { tableAccessRole } = database;
 
-    // Bucket for SNS large payload support
-    // See: https://docs.aws.amazon.com/sns/latest/dg/extended-client-library-python.html
-    const largePayloadSupportBucket = new s3.Bucket(
-      this,
-      "LargePayloadSupportBucket",
-      {
-        encryption: s3.BucketEncryption.S3_MANAGED,
-        blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
-        enforceSSL: true,
-        removalPolicy: RemovalPolicy.DESTROY,
-        objectOwnership: s3.ObjectOwnership.OBJECT_WRITER,
-        autoDeleteObjects: true,
-        serverAccessLogsBucket: props.accessLogBucket,
-        serverAccessLogsPrefix: "LargePayloadSupportBucket",
-      }
-    );
-
     const handlerRole = new iam.Role(this, "HandlerRole", {
       assumedBy: new iam.ServicePrincipal("lambda.amazonaws.com"),
     });
@@ -78,19 +62,13 @@ export class WebSocket extends Construct {
     );
     handlerRole.addToPolicy(bedrockChatPolicyStatement());
 
-    // get api key from secrets manager
+    // Bots with the internet search tool keep their Firecrawl API key here.
     handlerRole.addToPolicy(
-      new iam.PolicyStatement({
-        actions: ["secretsmanager:GetSecretValue"],
-        resources: [
-          `arn:aws:secretsmanager:${Stack.of(this).region}:${
-            Stack.of(this).account
-          }:secret:firecrawl/*/*`,
-        ],
-      })
+      firecrawlSecretPolicyStatement(Stack.of(this), [
+        "secretsmanager:GetSecretValue",
+      ])
     );
 
-    largePayloadSupportBucket.grantRead(handlerRole);
     database.websocketSessionTable.grantReadWriteData(handlerRole);
     props.largeMessageBucket.grantReadWrite(handlerRole);
     props.documentBucket.grantRead(handlerRole);
@@ -115,7 +93,6 @@ export class WebSocket extends Construct {
         BOT_TABLE_NAME: database.botTable.tableName,
         TABLE_ACCESS_ROLE_ARN: tableAccessRole.roleArn,
         LARGE_MESSAGE_BUCKET: props.largeMessageBucket.bucketName,
-        LARGE_PAYLOAD_SUPPORT_BUCKET: largePayloadSupportBucket.bucketName,
         WEBSOCKET_SESSION_TABLE_NAME: database.websocketSessionTable.tableName,
         ENABLE_BEDROCK_GLOBAL_INFERENCE:
           props.enableBedrockGlobalInference.toString(),

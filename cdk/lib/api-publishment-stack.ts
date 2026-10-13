@@ -12,7 +12,10 @@ import * as sqs from "aws-cdk-lib/aws-sqs";
 import * as s3 from "aws-cdk-lib/aws-s3";
 import * as logs from "aws-cdk-lib/aws-logs";
 import { excludeDockerImage } from "./constants/docker";
-import { bedrockChatPolicyStatement } from "./utils/bedrock-policies";
+import {
+  bedrockChatPolicyStatement,
+  firecrawlSecretPolicyStatement,
+} from "./utils/bedrock-policies";
 
 interface ApiPublishmentStackProps extends StackProps {
   readonly bedrockRegion: string;
@@ -40,9 +43,11 @@ export class ApiPublishmentStack extends Stack {
 
     const chatQueueDLQ = new sqs.Queue(this, "ChatQueueDlq", {
       retentionPeriod: cdk.Duration.days(14),
+      enforceSSL: true,
     });
     const chatQueue = new sqs.Queue(this, "ChatQueue", {
       visibilityTimeout: cdk.Duration.minutes(30),
+      enforceSSL: true,
       deadLetterQueue: {
         maxReceiveCount: 2, // one retry
         queue: chatQueueDLQ,
@@ -67,12 +72,7 @@ export class ApiPublishmentStack extends Stack {
     handlerRole.addToPolicy(bedrockChatPolicyStatement());
     handlerRole.addToPolicy(
       // Bots with the internet search tool keep their Firecrawl API key here.
-      new iam.PolicyStatement({
-        actions: ["secretsmanager:GetSecretValue"],
-        resources: [
-          `arn:aws:secretsmanager:${this.region}:${this.account}:secret:firecrawl/*/*`,
-        ],
-      })
+      firecrawlSecretPolicyStatement(this, ["secretsmanager:GetSecretValue"])
     );
     const largeMessageBucket = s3.Bucket.fromBucketName(
       this,
@@ -185,7 +185,7 @@ export class ApiPublishmentStack extends Stack {
       this,
       "WebAclAssociation",
       {
-        resourceArn: `arn:aws:apigateway:${this.region}::/restapis/${api.restApiId}/stages/${api.deploymentStage.stageName}`,
+        resourceArn: `arn:${this.partition}:apigateway:${this.region}::/restapis/${api.restApiId}/stages/${api.deploymentStage.stageName}`,
         webAclArn: props.webAclArn,
       }
     );
