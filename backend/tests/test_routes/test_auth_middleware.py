@@ -2,6 +2,7 @@ import unittest
 from unittest.mock import patch
 
 from app import main
+from app.user import User
 from fastapi import HTTPException
 from fastapi.testclient import TestClient
 
@@ -13,11 +14,20 @@ class TestAuthMiddleware(unittest.TestCase):
         rejected = HTTPException(
             status_code=403, detail="Could not validate credentials"
         )
-        with patch.object(main, "get_current_user", side_effect=rejected):
+        with patch.object(main, "user_from_token", side_effect=rejected):
             response = self.client.get(
                 "/conversations", headers={"Authorization": "Bearer access-token"}
             )
         self.assertEqual(response.status_code, 403)
+
+    def test_route_checks_reuse_the_verified_user(self):
+        user = User(id="u", name="u", email="u@example.com", groups=[])
+        with patch.object(main, "user_from_token", return_value=user) as verify:
+            response = self.client.get(
+                "/admin/public-bots", headers={"Authorization": "Bearer id-token"}
+            )
+        self.assertEqual(response.status_code, 403)
+        verify.assert_called_once_with("id-token")
 
     def test_malformed_header_returns_403(self):
         response = self.client.get(
