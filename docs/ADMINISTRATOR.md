@@ -121,6 +121,12 @@ ORDER BY
 > [!Note]
 > If using a named environment (e.g., "dev"), replace `bedrockchatstack_usage_analysis.ddb_export` with `dev_bedrockchatstack_usage_analysis.dev_ddb_export` in the query above.
 
+## Upgrading
+
+`npx cdk deploy --all` updates a deployment in place. DynamoDB creates or deletes only one secondary index per table update, so a deployment whose conversation table has no index (this fork between the removal of `SKIndex` and the addition of `ConversationListIndex`) has to add them in two deployments: first a version that adds `ConversationListIndex` only, then the current one. Deployments of upstream v3 have `SKIndex` and upgrade in one step.
+
+Published APIs keep the backend they were published with; publish them again after upgrading.
+
 ## Deleting a user's data
 
 Deleting a user in Cognito does not delete their conversations or bots. To delete them, run [delete_user_data.py](../backend/scripts/delete_user_data.py) with the user's id (the Cognito `sub`), the table names and the large message bucket from the `BedrockChatStack` outputs. It lists what it would delete unless you pass `--yes`. Deleting the bots also removes their knowledge base stacks, documents and published APIs, and other users lose access to the bots this user shared. The usage analysis exports expire after `usageAnalysisRetentionDays`.

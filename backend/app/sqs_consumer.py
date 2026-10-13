@@ -18,6 +18,17 @@ MAX_RECEIVE_COUNT = int(os.environ.get("MAX_RECEIVE_COUNT", "2"))
 NON_RETRYABLE_ERRORS = (ValueError, PermissionError, RecordNotFoundError)
 
 
+def _failure_reason(error: Exception) -> str:
+    # Fixed texts, so that clients never see internal details of an error.
+    if isinstance(error, RecordNotFoundError):
+        return "The bot or the conversation was not found."
+    if isinstance(error, PermissionError):
+        return "The bot is not available."
+    if isinstance(error, ValueError):
+        return "The request is invalid, or its model is not available."
+    return "The answer could not be generated."
+
+
 def handler(event, context):
     """SQS consumer.
     This is used for async invocation for published api.
@@ -51,11 +62,7 @@ def handler(event, context):
                 user.id,
                 chat_input.conversation_id,
                 message_id,
-                (
-                    str(e)
-                    if isinstance(e, NON_RETRYABLE_ERRORS)
-                    else "The answer could not be generated."
-                ),
+                _failure_reason(e),
             )
             continue
         logger.info(
