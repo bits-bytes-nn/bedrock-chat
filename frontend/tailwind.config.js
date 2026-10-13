@@ -54,7 +54,8 @@ export default {
         'light-red': '#fee2e2',
         yellow: '#f59e0b',
         'light-yellow': '#fef9c3',
-        'dark-gray': '#6b7280',
+        // Readable as small text on the light paper background (WCAG AA).
+        'dark-gray': '#5b616e',
         gray: '#9ca3af',
         'light-gray': '#e5e7eb',
       },

@@ -150,7 +150,7 @@ const BotDiscoverPage: React.FC = () => {
             {t('discover.pageTitle').toUpperCase()}
           </div>
 
-          <div className=" flex w-full flex-col items-center justify-center text-dark-gray">
+          <div className=" flex w-full flex-col items-center justify-center text-dark-gray dark:text-gray">
             <div>{t('discover.description')}</div>
           </div>
 

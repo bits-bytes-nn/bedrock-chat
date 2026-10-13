@@ -29,15 +29,16 @@ const Select: React.FC<Props> = (props) => {
 
   return (
     <div className={props.className}>
-      {props.label && (
-        <div>
-          <span className="text-sm dark:text-aws-font-color-dark">{props.label}</span>
-        </div>
-      )}
       <Listbox
         value={props.value}
         disabled={props.disabled}
         onChange={props.onChange}>
+        {props.label && (
+          // Names the listbox button for assistive technology.
+          <Listbox.Label className="block text-sm dark:text-aws-font-color-dark">
+            {props.label}
+          </Listbox.Label>
+        )}
         <div className={twMerge('relative')}>
           <Listbox.Button
             className={twMerge(

@@ -1,4 +1,12 @@
-import { FC, Dispatch, ReactNode, useEffect, useState, useCallback } from 'react';
+import {
+  FC,
+  Dispatch,
+  ReactNode,
+  useEffect,
+  useState,
+  useCallback,
+  useId,
+} from 'react';
 import { twMerge } from 'tailwind-merge';
 
 interface Props {
@@ -35,17 +43,21 @@ export const Slider: FC<Props> = (props) => {
     }
   }, [props, setValue]);
 
+  const id = useId();
   return (
     <div className="flex flex-col">
       <label
+        id={`${id}-label`}
+        htmlFor={id}
         className={twMerge(
-          'text-sm text-dark-gray dark:text-light-gray',
+          'text-sm text-aws-font-color-light/80 dark:text-light-gray',
           props.errorMessage && 'border-red dark:border-red text-red dark:text-red-400'
         )}>
         {props.label}
       </label>
       <div className="flex gap-2">
         <input
+          id={id}
           className={twMerge(
             'w-full cursor-pointer dark:accent-white',
             props.disabled && 'cursor-default'
@@ -59,6 +71,7 @@ export const Slider: FC<Props> = (props) => {
           disabled={props.disabled}
         />
         <input
+          aria-labelledby={`${id}-label`}
           className={twMerge(
             'peer h-9 w-16 rounded border p-1 text-center',
             props.errorMessage

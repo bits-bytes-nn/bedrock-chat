@@ -82,7 +82,7 @@ const CardBotForDiscover: React.FC<Props> = (props) => {
           )}
           <div className="truncate text-base font-bold">{props.bot.title}</div>
         </div>
-        <div className="line-clamp-3 overflow-hidden text-sm italic text-dark-gray">
+        <div className="line-clamp-3 overflow-hidden text-sm italic text-dark-gray dark:text-gray">
           {props.bot.description === ''
             ? t('bot.label.noDescription')
             : props.bot.description}

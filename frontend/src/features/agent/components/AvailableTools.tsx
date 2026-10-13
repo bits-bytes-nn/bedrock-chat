@@ -208,6 +208,7 @@ export const AvailableTools = ({ availableTools, tools, setTools }: Props) => {
         <div key={tool.name}>
           <div className="flex items-center">
             <Toggle
+              ariaLabel={formatDescription(tool, t)}
               value={!!tools?.map(({ name }) => name).includes(tool.name)}
               disabled={
                 tool.name === 'bedrock_agent' &&
