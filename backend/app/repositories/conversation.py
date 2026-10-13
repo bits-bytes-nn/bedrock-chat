@@ -180,6 +180,39 @@ def store_conversation(
             conversation._stored = latest._stored
 
 
+def _failed_message_key(user_id: str, conversation_id: str, message_id: str) -> dict:
+    # Under the conversation's key prefix, so deleting all conversations of the user
+    # deletes it too; without CreateTime, it stays out of the conversation list.
+    return {
+        "PK": user_id,
+        "SK": f"{compose_conv_id(user_id, conversation_id)}#FAILED#{message_id}",
+    }
+
+
+def store_failed_message(
+    user_id: str, conversation_id: str, message_id: str, reason: str
+) -> None:
+    """Record that no answer will come for a message (published APIs poll for it)."""
+    get_conversation_table_client(user_id).put_item(
+        Item={
+            **_failed_message_key(user_id, conversation_id, message_id),
+            "Reason": reason,
+        }
+    )
+
+
+def find_failed_message(
+    user_id: str, conversation_id: str, message_id: str
+) -> str | None:
+    """Return why answering the message failed, if it did."""
+    item = (
+        get_conversation_table_client(user_id)
+        .get_item(Key=_failed_message_key(user_id, conversation_id, message_id))
+        .get("Item")
+    )
+    return item["Reason"] if item else None
+
+
 def find_conversation_by_user_id(user_id: str) -> list[ConversationMeta]:
     logger.info(f"Finding conversations for user: {user_id}")
     table = get_conversation_table_client(user_id)

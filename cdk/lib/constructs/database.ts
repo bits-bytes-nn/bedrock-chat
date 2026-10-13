@@ -34,6 +34,15 @@ export class Database extends Construct {
       pointInTimeRecoverySpecification: { pointInTimeRecoveryEnabled: true },
       encryption: TableEncryption.AWS_MANAGED,
     });
+    // No longer used by this backend, but published API stacks built from older
+    // versions query it, and DynamoDB changes only one index per update: removing it
+    // while adding the index below would fail upgrades. Remove it in a later
+    // release, after republishing the APIs.
+    conversationTable.addGlobalSecondaryIndex({
+      indexName: "SKIndex",
+      partitionKey: { name: "SK", type: AttributeType.STRING },
+    });
+
     // Lists conversations without reading their messages. Only conversation items
     // have CreateTime, so related documents stay out of the index.
     conversationTable.addGlobalSecondaryIndex({

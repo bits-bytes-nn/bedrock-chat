@@ -292,6 +292,10 @@ export class Auth extends Construct {
             PostConfirmation: addUserToGroupsFunction.functionArn,
             PostAuthentication: addUserToGroupsFunction.functionArn,
           },
+          // CloudFormation's UpdateUserPool resets the Lambda configuration that
+          // this resource added, so the triggers are registered again on every
+          // deployment.
+          DeployedAt: new Date().toISOString(),
         },
       });
       cognitoTrigger.node.addDependency(addUserToGroupsFunction);

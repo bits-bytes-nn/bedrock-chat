@@ -40,6 +40,10 @@ Once a user click publish the bot, [AWS CodeBuild](https://aws.amazon.com/codebu
 
 Client needs to set `x-api-key` on the request header.
 
+Published APIs keep the backend version they were published with. After upgrading Bedrock Chat, publish each API again to update it.
+
+`GET /conversation/{conversationId}/{messageId}` returns 404 while the answer is not ready, and 500 with the reason when it could not be generated; such failures also raise the alarm of the chat stack.
+
 Without throttling settings, a published API allows 10 requests per second with a burst of 20, so that a leaked key cannot run up model costs unchecked.
 
 ## API specification

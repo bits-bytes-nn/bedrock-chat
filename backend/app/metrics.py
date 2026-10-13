@@ -1,8 +1,9 @@
 import json
+import os
 from datetime import datetime
 
-# Shared with cdk/lib/constructs/monitoring.ts (DailyChatCost alarm).
-CHAT_METRICS_NAMESPACE = "BedrockChat"
+# Set per environment by cdk/lib/utils/metrics.ts, which the alarms also use.
+CHAT_METRICS_NAMESPACE = os.environ.get("METRICS_NAMESPACE", "BedrockChat")
 
 
 def emit_chat_cost(price: float) -> None:

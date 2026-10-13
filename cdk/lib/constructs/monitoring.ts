@@ -15,6 +15,8 @@ export interface MonitoringProps {
   readonly alarmEmail: string;
   /** Alarm when a day of chat answers costs more than this, in USD. 0 turns it off. */
   readonly dailyChatCostAlarmUsd: number;
+  /** Namespace of the metrics that the handlers publish and that log filters count. */
+  readonly metricsNamespace: string;
   readonly api: IHttpApi;
   readonly webSocketHandler: IFunction;
   readonly webSocketLogGroup: logs.ILogGroup;
@@ -50,7 +52,7 @@ export class Monitoring extends Construct {
       new logs.MetricFilter(this, id, {
         logGroup,
         filterPattern: logs.FilterPattern.anyTerm(...terms),
-        metricNamespace: "BedrockChat",
+        metricNamespace: props.metricsNamespace,
         metricName: id,
         metricValue: "1",
       }).metric({ period, statistic: "Sum" });
@@ -116,7 +118,7 @@ export class Monitoring extends Construct {
         "DailyChatCost",
         new cloudwatch.Metric({
           // Published by backend/app/websocket.py (emit_chat_cost).
-          namespace: "BedrockChat",
+          namespace: props.metricsNamespace,
           metricName: "ChatCost",
           statistic: "Sum",
           period: Duration.days(1),

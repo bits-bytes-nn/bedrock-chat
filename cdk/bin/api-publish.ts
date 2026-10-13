@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { metricsNamespace } from "../lib/utils/metrics";
 import "source-map-support/register";
 import * as cdk from "aws-cdk-lib";
 import { ApiPublishmentStack } from "../lib/api-publishment-stack";
@@ -35,6 +36,10 @@ const largeMessageBucketName = cdk.Fn.importValue(
   `${params.envPrefix}${sepHyphen}BedrockClaudeChatLargeMessageBucketName`
 );
 
+const alarmTopicArn = cdk.Fn.importValue(
+  `${params.envPrefix}${sepHyphen}BedrockClaudeChatAlarmTopicArn`
+);
+
 // Applied when the publisher sets no throttling.
 const DEFAULT_PUBLISHED_API_THROTTLE = { rateLimit: 10, burstLimit: 20 };
 
@@ -44,6 +49,8 @@ new ApiPublishmentStack(app, `ApiPublishmentStack${params.publishedApiId}`, {
     region: process.env.CDK_DEFAULT_REGION,
   },
   bedrockRegion: params.bedrockRegion,
+  metricsNamespace: metricsNamespace(params.envPrefix),
+  alarmTopicArn,
   enableBedrockGlobalInference: params.enableBedrockGlobalInference,
   enableBedrockCrossRegionInference: params.enableBedrockCrossRegionInference,
   conversationTableName: conversationTableName,

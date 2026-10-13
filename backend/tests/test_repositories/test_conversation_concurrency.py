@@ -336,5 +336,25 @@ class TestRelatedDocuments(unittest.TestCase):
             find_related_document_by_id("user", "c", "missing")
 
 
+@pytest.mark.usefixtures("dynamodb_tables")
+class TestFailedMessages(unittest.TestCase):
+    def test_marker_is_found_hidden_from_the_list_and_deleted_with_all(self):
+        from app.repositories.conversation import (
+            delete_conversation_by_user_id,
+            find_failed_message,
+            store_failed_message,
+        )
+
+        store_conversation("user", conversation())
+        store_failed_message("user", "c", "m", "failed")
+
+        self.assertEqual(find_failed_message("user", "c", "m"), "failed")
+        self.assertIsNone(find_failed_message("user", "c", "other"))
+        self.assertEqual([c.id for c in find_conversation_by_user_id("user")], ["c"])
+
+        delete_conversation_by_user_id("user")
+        self.assertIsNone(find_failed_message("user", "c", "m"))
+
+
 if __name__ == "__main__":
     unittest.main()
