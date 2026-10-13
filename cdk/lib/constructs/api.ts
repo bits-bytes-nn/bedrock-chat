@@ -34,7 +34,7 @@ import { IBucket } from "aws-cdk-lib/aws-s3";
 import * as codebuild from "aws-cdk-lib/aws-codebuild";
 import * as sfn from "aws-cdk-lib/aws-stepfunctions";
 import { UsageAnalysis } from "./usage-analysis";
-import { excludeDockerImage } from "../constants/docker";
+import { excludeDockerImage, POETRY_VERSION } from "../constants/docker";
 import { PythonFunction } from "@aws-cdk/aws-lambda-python-alpha";
 import { Database } from "./database";
 import {
@@ -54,8 +54,6 @@ export interface ApiProps {
   readonly documentBucket: IBucket;
   readonly largeMessageBucket: IBucket;
   readonly apiPublishProject: codebuild.IProject;
-  readonly bedrockCustomBotProject: codebuild.IProject;
-  readonly bedrockSharedKnowledgeBasesProject: codebuild.IProject;
   readonly embeddingStateMachine: sfn.IStateMachine;
   readonly usageAnalysis: UsageAnalysis;
   readonly enableBedrockGlobalInference: boolean;
@@ -100,19 +98,18 @@ export class Api extends Construct {
     );
     handlerRole.addToPolicy(bedrockChatPolicyStatement());
     handlerRole.addToPolicy(
+      // Publishes APIs. Knowledge base builds are started by the embedding state machine.
       new iam.PolicyStatement({
         effect: iam.Effect.ALLOW,
         actions: ["codebuild:StartBuild", "codebuild:BatchGetBuilds"],
-        resources: [
-          props.apiPublishProject.projectArn,
-          props.bedrockCustomBotProject.projectArn,
-          props.bedrockSharedKnowledgeBasesProject.projectArn,
-        ],
+        resources: [props.apiPublishProject.projectArn],
       })
     );
     props.embeddingStateMachine.grantStartExecution(handlerRole);
     handlerRole.addToPolicy(
-      botStackPolicyStatement(Stack.of(this), ["ApiPublishmentStack"])
+      botStackPolicyStatement(Stack.of(this), [
+        { stackNamePrefix: "ApiPublishmentStack", region: Stack.of(this).region },
+      ])
     );
     handlerRole.addToPolicy(publishedApiKeyPolicyStatement(Stack.of(this)));
     handlerRole.addToPolicy(
@@ -168,17 +165,6 @@ export class Api extends Construct {
         })
       );
     }
-    handlerRole.addToPolicy(
-      new iam.PolicyStatement({
-        effect: iam.Effect.ALLOW,
-        actions: ["aoss:DescribeIndex", "aoss:ReadDocument"],
-        resources: [
-          `arn:${Stack.of(this).partition}:aoss:${Stack.of(this).region}:${
-            Stack.of(this).account
-          }:collection/*`,
-        ],
-      })
-    );
     // Bots with the internet search tool keep their Firecrawl API key here.
     // CreateSecret sets a tag, which needs TagResource.
     handlerRole.addToPolicy(
@@ -214,7 +200,7 @@ export class Api extends Construct {
       index: "app/main.py",
       bundling: {
         assetExcludes: [...excludeDockerImage],
-        buildArgs: { POETRY_VERSION: "1.8.5" },
+        buildArgs: { POETRY_VERSION },
       },
       runtime: Runtime.PYTHON_3_13,
       architecture: Architecture.X86_64,

@@ -38,13 +38,12 @@ class DataSource(TypedDict):
 
 
 def handler(event, context):
-    """Obtain the ID of the shared Knowledge Bases built by `BrChatSharedKbStack`, and update `knowledge_base_id` of the referring bots."""
+    """Obtain the ID of the shared Knowledge Bases built by the shared knowledge bases stack, and update `knowledge_base_id` of the referring bots."""
     queued_bots = event["QueuedBots"]
     shared_knowledge_bases = event["SharedKnowledgeBases"]
 
-    # Note: stack naming rule is defined on:
-    # cdk/bin/bedrock-shared-knowledge-bases.ts
-    stack_name = "BrChatSharedKbStack"
+    # Named per environment by cdk/lib/utils/stack-names.ts.
+    stack_name = os.environ["SHARED_KNOWLEDGE_BASES_STACK_NAME"]
 
     response = cfn.describe_stacks(StackName=stack_name)
     outputs = response["Stacks"][0].get("Outputs")
@@ -57,7 +56,7 @@ def handler(event, context):
         if "OutputKey" in output and "OutputValue" in output
     )
 
-    # Dict of Knowledge Bases built by `BrChatSharedKbStack`. Key is knowledge base hash.
+    # Dict of Knowledge Bases built by the stack. Key is knowledge base hash.
     knowledge_bases: dict[str, KnowledgeBase] = {}
 
     for shared_knowledge_base in shared_knowledge_bases:

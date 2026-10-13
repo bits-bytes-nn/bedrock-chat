@@ -22,7 +22,7 @@ pre-commit:
       run: npx eslint --fix --max-warnings=0 {staged_files}
       stage_fixed: true
 
-# Same checks as CI (.github/workflows). Run with `lefthook run check`.
+# The main checks of CI (.github/workflows). Run with `lefthook run check`.
 check:
   commands:
     backend-black:
@@ -43,6 +43,9 @@ check:
     frontend-build:
       root: "frontend/"
       run: npm run build
+    cdk-tsc:
+      root: "cdk/"
+      run: npx tsc --noEmit -p .
     cdk-jest:
       root: "cdk/"
       run: npm test

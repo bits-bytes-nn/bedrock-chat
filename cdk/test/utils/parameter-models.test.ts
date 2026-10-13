@@ -7,6 +7,8 @@ import {
   getBedrockChatParameters,
 } from "../../lib/utils/parameter-models";
 import { ZodError } from "zod";
+import * as fs from "fs";
+import * as path from "path";
 
 /**
  * Test helper function: create CDK App instance
@@ -564,6 +566,7 @@ describe("resolveApiPublishParameters", () => {
         ...originalEnv,
         BEDROCK_REGION: "us-east-1",
         PUBLISHED_API_THROTTLE_RATE_LIMIT: "200",
+        PUBLISHED_API_THROTTLE_BURST_LIMIT: "400",
         PUBLISHED_API_ALLOWED_ORIGINS: '["https://test.com"]',
         ENABLE_BEDROCK_GLOBAL_INFERENCE: "false",
         ENABLE_BEDROCK_CROSS_REGION_INFERENCE: "true",
@@ -607,6 +610,7 @@ describe("resolveApiPublishParameters", () => {
         PUBLISHED_API_THROTTLE_RATE_LIMIT: "100",
         PUBLISHED_API_THROTTLE_BURST_LIMIT: "200",
         PUBLISHED_API_QUOTA_LIMIT: "1000",
+        PUBLISHED_API_QUOTA_PERIOD: "DAY",
       };
 
       try {
@@ -633,6 +637,7 @@ describe("resolveApiPublishParameters", () => {
         PUBLISHED_API_THROTTLE_RATE_LIMIT: "100",
         PUBLISHED_API_THROTTLE_BURST_LIMIT: "200",
         PUBLISHED_API_QUOTA_LIMIT: "1000",
+        PUBLISHED_API_QUOTA_PERIOD: "WEEK",
       };
 
       try {
@@ -643,6 +648,7 @@ describe("resolveApiPublishParameters", () => {
         expect(result.publishedApiThrottleRateLimit).toBe(100);
         expect(result.publishedApiThrottleBurstLimit).toBe(200);
         expect(result.publishedApiQuotaLimit).toBe(1000);
+        expect(result.publishedApiQuotaPeriod).toBe("WEEK");
       } finally {
         // Restore original environment
         process.env = originalEnv;
@@ -799,5 +805,108 @@ describe("resolveBedrockCustomBotParameters", () => {
         process.env = originalEnv;
       }
     });
+  });
+});
+
+describe("CDK context values from the command line", () => {
+  // `cdk deploy -c name=value` passes every value as a string.
+  test("coerces numeric strings", () => {
+    const result = resolveBedrockChatParameters(
+      createTestApp({
+        tokenValidMinutes: "45",
+        dailyChatCostAlarmUsd: "0",
+        maxDedicatedKnowledgeBasesPerUser: "5",
+        usageAnalysisRetentionDays: "30",
+        apiThrottleRateLimit: "50",
+        apiThrottleBurstLimit: "100",
+      })
+    );
+
+    expect(result.tokenValidMinutes).toBe(45);
+    expect(result.dailyChatCostAlarmUsd).toBe(0);
+    expect(result.maxDedicatedKnowledgeBasesPerUser).toBe(5);
+    expect(result.usageAnalysisRetentionDays).toBe(30);
+    expect(result.apiThrottleRateLimit).toBe(50);
+    expect(result.apiThrottleBurstLimit).toBe(100);
+  });
+
+  test("rejects non-numeric strings", () => {
+    expect(() =>
+      resolveBedrockChatParameters(
+        createTestApp({ usageAnalysisRetentionDays: "ninety" })
+      )
+    ).toThrow(ZodError);
+  });
+
+  test.each([
+    ["true", true],
+    ["false", false],
+    [true, true],
+    [false, false],
+  ])("accepts %p as a boolean", (value, expected) => {
+    const result = resolveBedrockChatParameters(
+      createTestApp({ enableBotStore: value, selfSignUpEnabled: value })
+    );
+
+    expect(result.enableBotStore).toBe(expected);
+    expect(result.selfSignUpEnabled).toBe(expected);
+  });
+
+  test.each(["yes", "1", "TRUE", "", 1])("rejects %p as a boolean", (value) => {
+    expect(() =>
+      resolveBedrockChatParameters(createTestApp({ enableFrontendWaf: value }))
+    ).toThrow(ZodError);
+  });
+});
+
+describe("cdk.json", () => {
+  const context = JSON.parse(
+    fs.readFileSync(path.join(__dirname, "../../cdk.json"), "utf8")
+  ).context;
+
+  test.each([
+    ["alarmEmail", ""],
+    ["dailyChatCostAlarmUsd", 100],
+    ["maxDedicatedKnowledgeBasesPerUser", 2],
+    ["usageAnalysisRetentionDays", 90],
+    ["apiThrottleRateLimit", 500],
+    ["apiThrottleBurstLimit", 1000],
+    ["logoPath", ""],
+  ])("lists %s with the default of the parameters", (name, value) => {
+    const defaults = resolveBedrockChatParameters(createTestApp()) as Record<
+      string,
+      unknown
+    >;
+
+    expect(context[name]).toEqual(value);
+    expect(defaults[name]).toEqual(value);
+  });
+
+  test.each(["defaultModel", "titleModel"])("lists %s as unset", (name) => {
+    expect(context[name]).toBe("");
+  });
+});
+
+describe("published API usage plan", () => {
+  test.each([
+    [{ PUBLISHED_API_THROTTLE_RATE_LIMIT: "100" }, "PUBLISHED_API_THROTTLE_BURST_LIMIT"],
+    [{ PUBLISHED_API_THROTTLE_BURST_LIMIT: "200" }, "PUBLISHED_API_THROTTLE_RATE_LIMIT"],
+    [{ PUBLISHED_API_QUOTA_LIMIT: "1000" }, "PUBLISHED_API_QUOTA_PERIOD"],
+    [{ PUBLISHED_API_QUOTA_PERIOD: "DAY" }, "PUBLISHED_API_QUOTA_LIMIT"],
+  ])("rejects %p without its pair", (env, missing) => {
+    const originalEnv = process.env;
+    process.env = { ...originalEnv, ...env };
+    try {
+      expect(() => resolveApiPublishParameters()).toThrow(missing);
+    } finally {
+      process.env = originalEnv;
+    }
+  });
+
+  test("accepts neither throttle nor quota", () => {
+    const result = resolveApiPublishParameters();
+
+    expect(result.publishedApiThrottleRateLimit).toBeUndefined();
+    expect(result.publishedApiQuotaLimit).toBeUndefined();
   });
 });

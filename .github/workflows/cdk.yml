@@ -7,6 +7,7 @@ on:
     paths:
       - "cdk/**"
       - "backend/**"
+      - "!backend/tests/**"
       - "frontend/**"
       - ".github/workflows/cdk.yml"
   push:
@@ -15,6 +16,7 @@ on:
     paths:
       - "cdk/**"
       - "backend/**"
+      - "!backend/tests/**"
       - "frontend/**"
       - ".github/workflows/cdk.yml"
   workflow_dispatch: {}
@@ -24,7 +26,7 @@ permissions:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 defaults:
   run:
@@ -44,6 +46,9 @@ jobs:
           cache-dependency-path: cdk/package-lock.json
       - name: Install dependencies
         run: npm ci
+      - name: Type check
+        # Jest checks only the files that the tests import, not the bin entry points.
+        run: npx tsc --noEmit -p .
       - name: Run unit tests
         run: npm test
       - name: Synthesize

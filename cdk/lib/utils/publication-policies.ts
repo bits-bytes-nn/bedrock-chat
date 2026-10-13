@@ -7,7 +7,7 @@ import * as iam from "aws-cdk-lib/aws-iam";
  */
 export const botStackPolicyStatement = (
   stack: Stack,
-  stackNamePrefixes: string[]
+  botStacks: { readonly stackNamePrefix: string; readonly region: string }[]
 ): iam.PolicyStatement =>
   new iam.PolicyStatement({
     actions: [
@@ -17,9 +17,9 @@ export const botStackPolicyStatement = (
       "cloudformation:DescribeStackResources",
       "cloudformation:DeleteStack",
     ],
-    resources: stackNamePrefixes.map(
-      (prefix) =>
-        `arn:${stack.partition}:cloudformation:*:${stack.account}:stack/${prefix}*/*`
+    resources: botStacks.map(
+      ({ stackNamePrefix, region }) =>
+        `arn:${stack.partition}:cloudformation:${region}:${stack.account}:stack/${stackNamePrefix}*/*`
     ),
   });
 

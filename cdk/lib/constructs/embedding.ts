@@ -26,8 +26,23 @@ import {
   bedrockIngestionPolicyStatement,
   firecrawlSecretPolicyStatement,
 } from "../utils/bedrock-policies";
+import { sharedKnowledgeBasesStackName } from "../utils/stack-names";
+
+/** Lets the handlers write their logs, in this account and Region only. */
+const lambdaLogsPolicyStatement = (stack: Stack): iam.PolicyStatement =>
+  new iam.PolicyStatement({
+    actions: [
+      "logs:CreateLogGroup",
+      "logs:CreateLogStream",
+      "logs:PutLogEvents",
+    ],
+    resources: [
+      `arn:${stack.partition}:logs:${stack.region}:${stack.account}:log-group:/aws/lambda/*`,
+    ],
+  });
 
 export interface EmbeddingProps {
+  readonly envPrefix: string;
   readonly database: Database;
   readonly bedrockRegion: string;
   readonly documentBucket: IBucket;
@@ -40,7 +55,6 @@ export interface EmbeddingProps {
 
 export class Embedding extends Construct {
   readonly stateMachine: sfn.StateMachine;
-  readonly removalHandler: IFunction;
   /** Bot removals that failed after the retries, which may leave stacks behind. */
   readonly removalDeadLetterQueue: sqs.Queue;
 
@@ -60,7 +74,7 @@ export class Embedding extends Construct {
       retentionPeriod: Duration.days(14),
       enforceSSL: true,
     });
-    this.removalHandler = this.setupRemovalHandler(props);
+    this.setupRemovalHandler(props);
   }
 
   /** Log group of the handler that logs `Knowledge sync failed` for failed bots. */
@@ -69,6 +83,7 @@ export class Embedding extends Construct {
   }
 
   private setupStateMachineHandlers(props: EmbeddingProps) {
+    const sharedStackName = sharedKnowledgeBasesStackName(props.envPrefix);
     const handlerRole = new iam.Role(this, "HandlerRole", {
       assumedBy: new iam.ServicePrincipal("lambda.amazonaws.com"),
     });
@@ -91,7 +106,7 @@ export class Embedding extends Construct {
       // are named in cdk/bin/bedrock-custom-bot.ts and bedrock-shared-knowledge-bases.ts.
       new iam.PolicyStatement({
         actions: ["cloudformation:DescribeStacks"],
-        resources: ["BrChatKbStack*", "BrChatSharedKbStack"].map(
+        resources: ["BrChatKbStack*", sharedStackName].map(
           (stackName) =>
             `arn:${Stack.of(this).partition}:cloudformation:${props.bedrockRegion}:${
               Stack.of(this).account
@@ -99,16 +114,7 @@ export class Embedding extends Construct {
         ),
       })
     );
-    handlerRole.addToPolicy(
-      new iam.PolicyStatement({
-        actions: [
-          "logs:CreateLogGroup",
-          "logs:CreateLogStream",
-          "logs:PutLogEvents",
-        ],
-        resources: [`arn:${Stack.of(this).partition}:logs:*:*:*`],
-      })
-    );
+    handlerRole.addToPolicy(lambdaLogsPolicyStatement(Stack.of(this)));
     props.documentBucket.grantReadWrite(handlerRole);
 
     this._updateSyncStatusHandler = new DockerImageFunction(
@@ -215,6 +221,7 @@ export class Embedding extends Construct {
         timeout: Duration.minutes(1),
         role: handlerRole,
         environment: {
+          SHARED_KNOWLEDGE_BASES_STACK_NAME: sharedStackName,
           ACCOUNT: Stack.of(this).account,
           REGION: Stack.of(this).region,
           BEDROCK_REGION: props.bedrockRegion,
@@ -259,8 +266,6 @@ export class Embedding extends Construct {
       memorySize: 512,
       timeout: Duration.minutes(1),
       environment: {
-        ACCOUNT: Stack.of(this).account,
-        REGION: Stack.of(this).region,
         BEDROCK_REGION: props.bedrockRegion,
         DOCUMENT_BUCKET: props.documentBucket.bucketName,
       },
@@ -356,7 +361,7 @@ export class Embedding extends Construct {
       resultPath: "$.Error",
     })
 
-    // Obtain the ID of the shared Knowledge Bases built by `BrChatSharedKbStack`, and update `knowledge_base_id` of the referring bots.
+    // Obtain the ID of the shared Knowledge Bases built by the shared knowledge bases stack, and update `knowledge_base_id` of the referring bots.
     const finalizeSharedKnowledgeBasesBuild = new tasks.LambdaInvoke(this, "FinalizeSharedKnowledgeBasesBuild", {
       lambdaFunction: this._finalizeSharedKnowledgeBasesBuildHandler,
       resultSelector: {
@@ -549,7 +554,8 @@ export class Embedding extends Construct {
       }),
       resultPath: sfn.JsonPath.DISCARD,
     });
-    updateSyncStatusSucceeded.addCatch(syncCustomBotFinished, {
+    // Otherwise the bot would stay RUNNING.
+    updateSyncStatusSucceeded.addCatch(updateSyncStatusFailedForCustomBot, {
       resultPath: "$.Error",
     });
 
@@ -614,6 +620,10 @@ export class Embedding extends Construct {
 
     return new sfn.StateMachine(this, "StateMachine", {
       definitionBody: sfn.DefinitionBody.fromChainable(definition),
+      // The lock files expire after a day (cdk/lib/bedrock-region-resources.ts), so a
+      // longer execution may already run alongside another one holding its lock. The
+      // default timeout is a year, which would leave a stuck execution unnoticed.
+      timeout: Duration.hours(24),
       logs: {
         destination: new logs.LogGroup(this, "StateMachineLogs", {
           retention: logs.RetentionDays.THREE_MONTHS,
@@ -635,19 +645,13 @@ export class Embedding extends Construct {
       })
     );
     removeHandlerRole.addToPolicy(
-      botStackPolicyStatement(Stack.of(this), ["ApiPublishmentStack", "BrChatKbStack"])
+      botStackPolicyStatement(Stack.of(this), [
+        { stackNamePrefix: "ApiPublishmentStack", region: Stack.of(this).region },
+        { stackNamePrefix: "BrChatKbStack", region: props.bedrockRegion },
+      ])
     );
     removeHandlerRole.addToPolicy(publishedApiKeyPolicyStatement(Stack.of(this)));
-    removeHandlerRole.addToPolicy(
-      new iam.PolicyStatement({
-        actions: [
-          "logs:CreateLogGroup",
-          "logs:CreateLogStream",
-          "logs:PutLogEvents",
-        ],
-        resources: [`arn:${Stack.of(this).partition}:logs:*:*:*`],
-      })
-    );
+    removeHandlerRole.addToPolicy(lambdaLogsPolicyStatement(Stack.of(this)));
     removeHandlerRole.addToPolicy(
       firecrawlSecretPolicyStatement(Stack.of(this), [
         "secretsmanager:DeleteSecret",
@@ -668,6 +672,8 @@ export class Embedding extends Construct {
           exclude: [...excludeDockerImage],
         }
       ),
+      // As the other handlers that load the backend app; the default is 128 MB.
+      memorySize: 512,
       // Deleting the conversations of a busy published API takes long.
       timeout: Duration.minutes(15),
       environment: {
@@ -688,6 +694,10 @@ export class Embedding extends Construct {
         startingPosition: lambda.StartingPosition.TRIM_HORIZON,
         batchSize: 1,
         retryAttempts: 5,
+        // The stream keeps records for 24 hours. A record that is still retried after
+        // 12 hours goes to the dead-letter queue before the stream drops it, and no
+        // longer blocks the removals behind it.
+        maxRecordAge: Duration.hours(12),
         // Keep the record of a failed removal instead of dropping it.
         onFailure: new SqsDlq(this.removalDeadLetterQueue),
         filters: [
@@ -697,8 +707,6 @@ export class Embedding extends Construct {
         ],
       })
     );
-
-    return removalHandler;
   }
 
   private createIngestionTask(idSuffix: string, {

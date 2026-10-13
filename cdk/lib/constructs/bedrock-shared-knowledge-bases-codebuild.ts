@@ -5,6 +5,7 @@ import * as s3 from "aws-cdk-lib/aws-s3";
 import * as iam from "aws-cdk-lib/aws-iam";
 import * as logs from "aws-cdk-lib/aws-logs";
 import { NagSuppressions } from "cdk-nag";
+import { sharedKnowledgeBasesStackName } from "../utils/stack-names";
 
 export interface BedrockSharedKnowledgeBasesCodebuildProps {
   readonly envName: string;
@@ -53,7 +54,8 @@ export class BedrockSharedKnowledgeBasesCodebuild extends Construct {
               "npm ci",
               // Replace cdk's entrypoint. This is a workaround to avoid the issue that cdk synthesize all stacks.
               "sed -i 's|bin/bedrock-chat.ts|bin/bedrock-shared-knowledge-bases.ts|' cdk.json",
-              "npx cdk deploy --require-approval never BrChatSharedKbStack",
+              // bin/bedrock-shared-knowledge-bases.ts names the stack from ENV_PREFIX.
+              `npx cdk deploy --require-approval never ${sharedKnowledgeBasesStackName(props.envPrefix)}`,
             ],
           },
         },

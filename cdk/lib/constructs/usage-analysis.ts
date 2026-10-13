@@ -7,7 +7,7 @@ import * as events from "aws-cdk-lib/aws-events";
 import * as targets from "aws-cdk-lib/aws-events-targets";
 import * as python from "@aws-cdk/aws-lambda-python-alpha";
 import * as path from "path";
-import { Runtime } from "aws-cdk-lib/aws-lambda";
+import { IFunction, Runtime } from "aws-cdk-lib/aws-lambda";
 import { aws_glue } from "aws-cdk-lib";
 import { Database } from "./database";
 import * as iam from "aws-cdk-lib/aws-iam";
@@ -31,6 +31,8 @@ export class UsageAnalysis extends Construct {
   public readonly resultOutputBucket: s3.IBucket;
   public readonly workgroupName: string;
   public readonly workgroupArn: string;
+  /** Exports the conversation table every hour. */
+  public readonly exportHandler: IFunction;
   constructor(scope: Construct, id: string, props: UsageAnalysisProps) {
     super(scope, id);
 
@@ -276,6 +278,7 @@ export class UsageAnalysis extends Construct {
     });
 
     this.database = database;
+    this.exportHandler = exportHandler;
     this.ddbBucket = ddbBucket;
     this.ddbExportTable = ddbExportTable;
     this.workgroupName = wg.name;

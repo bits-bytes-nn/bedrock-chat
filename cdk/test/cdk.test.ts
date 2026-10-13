@@ -1,5 +1,10 @@
 import * as cdk from "aws-cdk-lib";
-import { BedrockChatStack } from "../lib/bedrock-chat-stack";
+import * as fs from "fs";
+import * as path from "path";
+import {
+  BedrockChatStack,
+  BedrockChatStackProps,
+} from "../lib/bedrock-chat-stack";
 import { Template } from "aws-cdk-lib/assertions";
 import {
   getEmbeddingModel,
@@ -17,6 +22,64 @@ import { Match } from "aws-cdk-lib/assertions";
 // Skip asset bundling. It runs Docker for every synth and the tests do not inspect assets.
 const testAppProps: cdk.AppProps = {
   context: { "aws:cdk:bundling-stacks": [] },
+};
+
+/** Policy statements attached to the role of a Lambda function in the template. */
+const roleStatementsOf = (template: Template, fn: any): any[] => {
+  const roleId = fn.Properties.Role["Fn::GetAtt"][0];
+  return Object.values(template.findResources("AWS::IAM::Policy"))
+    .filter((policy: any) =>
+      policy.Properties.Roles.some((role: any) => role.Ref === roleId)
+    )
+    .flatMap((policy: any) => policy.Properties.PolicyDocument.Statement);
+};
+const actionsOf = (statements: any[]): string[] =>
+  statements.flatMap((statement: any) => [statement.Action].flat());
+
+/** Chat stack with the settings of the default stack test, changed by `overrides`. */
+const newChatStack = (
+  overrides: Partial<BedrockChatStackProps> = {}
+): Template => {
+  const app = new cdk.App(testAppProps);
+  const regionStack = new BedrockRegionResourcesStack(
+    app,
+    "BedrockRegionResourcesStack",
+    { env: { region: "us-east-1" }, crossRegionReferences: true }
+  );
+  const stack = new BedrockChatStack(app, "MyTestStack", {
+    env: { region: "us-west-2" },
+    envName: "test",
+    envPrefix: "test-",
+    bedrockRegion: "us-east-1",
+    crossRegionReferences: true,
+    webAclId: "",
+    identityProviders: [],
+    userPoolDomainPrefix: "",
+    publishedApiAllowedIpV4AddressRanges: [""],
+    publishedApiAllowedIpV6AddressRanges: [""],
+    allowedSignUpEmailDomains: [],
+    autoJoinUserGroups: [],
+    selfSignUpEnabled: true,
+    enableIpV6: true,
+    allowedIpV4AddressRanges: [""],
+    allowedIpV6AddressRanges: [""],
+    documentBucket: regionStack.documentBucket,
+    enableRagReplicas: false,
+    enableBedrockGlobalInference: false,
+    enableBedrockCrossRegionInference: false,
+    enableLambdaSnapStart: true,
+    enableBotStore: true,
+    enableBotStoreReplicas: false,
+    botStoreLanguage: "en",
+    tokenValidMinutes: 60,
+    alarmEmail: "",
+    dailyChatCostAlarmUsd: 100,
+    maxDedicatedKnowledgeBasesPerUser: 2,
+    usageAnalysisRetentionDays: 90,
+    apiThrottle: { rateLimit: 500, burstLimit: 1000 },
+    ...overrides,
+  });
+  return Template.fromStack(stack);
 };
 
 describe("Bedrock Chat Stack Test", () => {
@@ -335,21 +398,56 @@ describe("Bedrock Chat Stack Test", () => {
     expect(actions).not.toContain("aoss:ListCollections");
 
     // Alarms and API throttling.
-    template.resourceCountIs("AWS::CloudWatch::Alarm", 8);
-    // Usage exports hold conversation text, so they expire.
+    template.resourceCountIs("AWS::CloudWatch::Alarm", 9);
+    // The bot store's initial table exports hold conversation text, so they expire.
     template.hasResourceProperties("AWS::S3::Bucket", {
       LifecycleConfiguration: {
-        Rules: [Match.objectLike({ ExpirationInDays: 90, Status: "Enabled" })],
+        Rules: [Match.objectLike({ ExpirationInDays: 7, Status: "Enabled" })],
       },
     });
+    // The alarms read the namespace that the handlers publish to, which is per
+    // environment (cdk/lib/utils/metrics.ts).
+    const namespace = "BedrockChat/test-";
     template.hasResourceProperties("AWS::CloudWatch::Alarm", {
-      // Per environment (cdk/lib/utils/metrics.ts).
-      Namespace: Match.stringLikeRegexp("^BedrockChat"),
+      Namespace: namespace,
       MetricName: "ChatCost",
       Statistic: "Sum",
       Period: 86400,
       Threshold: 100,
     });
+    const handlerNamespaces = Object.values(
+      template.findResources("AWS::Lambda::Function")
+    ).flatMap((fn: any) => {
+      const value = fn.Properties.Environment?.Variables?.METRICS_NAMESPACE;
+      return value === undefined ? [] : [value];
+    });
+    // The REST API and chat handlers.
+    expect(handlerNamespaces).toEqual([namespace, namespace]);
+    // Connections are authorized when they open.
+    template.hasResourceProperties("AWS::ApiGatewayV2::Route", {
+      RouteKey: "$connect",
+      AuthorizationType: "CUSTOM",
+    });
+    // The conversation list reads its index only (backend/app/repositories/conversation.py).
+    const conversationTable = Object.values(
+      template.findResources("AWS::DynamoDB::Table", {
+        Properties: { StreamSpecification: Match.anyValue() },
+      })
+    ).find((table: any) =>
+      (table.Properties.GlobalSecondaryIndexes ?? []).some(
+        (index: any) => index.IndexName === "ConversationListIndex"
+      )
+    ) as any;
+    const conversationIndexes = conversationTable.Properties.GlobalSecondaryIndexes;
+    expect(conversationIndexes.map((index: any) => index.IndexName).sort()).toEqual([
+      "ConversationListIndex",
+      "SKIndex",
+    ]);
+    expect(
+      conversationIndexes.find(
+        (index: any) => index.IndexName === "ConversationListIndex"
+      ).Projection
+    ).toEqual({ ProjectionType: "INCLUDE", NonKeyAttributes: ["Title", "BotId"] });
     // Cost guards: connections need a token, and bots with their own knowledge
     // base are limited per user.
     template.hasResourceProperties("AWS::ApiGatewayV2::Authorizer", {
@@ -425,6 +523,221 @@ describe("Bedrock Chat Stack Test", () => {
     expect(apiOrigins).not.toContain("*");
     expect(apiOrigins).toContain("http://localhost:5173");
     expect(JSON.stringify(apiOrigins)).toContain("DomainName");
+
+    // The shared knowledge bases stack is named per environment, and the build that
+    // deploys it, the handler that reads it and the policy that allows it agree.
+    const sharedStackName = "test--BrChatSharedKbStack";
+    template.hasResourceProperties("AWS::Lambda::Function", {
+      Environment: {
+        Variables: Match.objectLike({
+          SHARED_KNOWLEDGE_BASES_STACK_NAME: sharedStackName,
+        }),
+      },
+    });
+    template.hasResourceProperties("AWS::CodeBuild::Project", {
+      Source: Match.objectLike({
+        BuildSpec: Match.stringLikeRegexp(
+          `deploy --require-approval never ${sharedStackName}"`
+        ),
+      }),
+    });
+    const describeStackResources = statements
+      .filter((statement: any) => statement.Action === "cloudformation:DescribeStacks")
+      .flatMap((statement: any) => [statement.Resource].flat());
+    expect(JSON.stringify(describeStackResources)).toContain(
+      `:stack/${sharedStackName}/*`
+    );
+
+    // The API handler starts the API publication build only. Knowledge base builds
+    // are started by the state machine.
+    const functions = template.findResources("AWS::Lambda::Function");
+    const apiHandler = Object.values(functions).find(
+      (fn: any) =>
+        fn.Properties.Environment?.Variables?.PUBLISH_API_CODEBUILD_PROJECT_NAME
+    );
+    const apiHandlerStatements = roleStatementsOf(template, apiHandler);
+    const codebuildStatements = apiHandlerStatements.filter((statement: any) =>
+      [statement.Action].flat().includes("codebuild:StartBuild")
+    );
+    expect(codebuildStatements).toHaveLength(1);
+    expect([codebuildStatements[0].Resource].flat()).toHaveLength(1);
+    // DescribeIndex and ReadDocument are data access policy permissions, not IAM actions.
+    expect(actions).not.toContain("aoss:DescribeIndex");
+    expect(actions).not.toContain("aoss:ReadDocument");
+
+    // The ingestion pipelines write to the bot store collection only, and do not
+    // need OpenSearch Service domain actions.
+    expect(actions.some((action) => action.startsWith("es:"))).toBe(false);
+    const collectionId = Object.keys(
+      template.findResources("AWS::OpenSearchServerless::Collection")
+    )[0];
+    const apiAccessStatements = statements.filter((statement: any) =>
+      [statement.Action].flat().includes("aoss:APIAccessAll")
+    );
+    // The API handler and the pipelines.
+    expect(apiAccessStatements).toHaveLength(2);
+    for (const statement of apiAccessStatements) {
+      expect(statement.Resource).toEqual({ "Fn::GetAtt": [collectionId, "Arn"] });
+    }
+
+    // Bot stacks are looked up in the Region that they are deployed to.
+    const stackArns = JSON.stringify(
+      statements
+        .filter((statement: any) =>
+          [statement.Action].flat().includes("cloudformation:DeleteStack")
+        )
+        .map((statement: any) => statement.Resource)
+    );
+    expect(stackArns).not.toContain(":cloudformation:*:");
+    expect(stackArns).toContain(":cloudformation:us-east-1:");
+    expect(stackArns).toContain("stack/ApiPublishmentStack*/*");
+    expect(stackArns).toContain("stack/BrChatKbStack*/*");
+    expect(JSON.stringify(statements)).not.toContain(":logs:*:*:*");
+
+    // Only the Lambda roles of this stack and of published API stacks can assume
+    // the table access role. CloudFormation names roles after their stack.
+    for (const role of Object.values(
+      template.findResources("AWS::IAM::Role")
+    ) as any[]) {
+      expect(role.Properties.RoleName).toBeUndefined();
+    }
+    const tableAccessRole = Object.entries(
+      template.findResources("AWS::IAM::Role")
+    ).find(([id]) => id.startsWith("DatabaseTableAccessRole"))![1] as any;
+    const trust = JSON.stringify(
+      tableAccessRole.Properties.AssumeRolePolicyDocument
+    );
+    expect(trust).toContain('"ArnLike":{"aws:PrincipalArn"');
+    expect(trust).toContain(":role/MyTestStack-*");
+    expect(trust).toContain(":role/ApiPublishmentStack*");
+
+    // Knowledge syncs end within a day and alarm when they fail, time out or are
+    // aborted. A bot is marked ready a minute after its ingestion, and a failed
+    // update of that status marks it failed instead of leaving it RUNNING.
+    const stateMachine = Object.values(
+      template.findResources("AWS::StepFunctions::StateMachine")
+    )[0] as any;
+    const definition = JSON.parse(
+      stateMachine.Properties.DefinitionString["Fn::Join"][1]
+        .map((part: any) => (typeof part === "string" ? part : "TOKEN"))
+        .join("")
+    );
+    expect(definition.TimeoutSeconds).toBe(86400);
+    const mapQueuedBots = definition.States.MapQueuedBots.ItemProcessor.States;
+    expect(mapQueuedBots.WaitForSearchIndex).toMatchObject({
+      Type: "Wait",
+      Seconds: 60,
+      Next: "UpdateSyncStatusSuccess",
+    });
+    expect(mapQueuedBots.UpdateSyncStatusSuccess.Catch).toEqual([
+      expect.objectContaining({ Next: "UpdateSyncStatusFailedForCustomBot" }),
+    ]);
+    const syncAlarm = Object.values(
+      template.findResources("AWS::CloudWatch::Alarm", {
+        Properties: { AlarmDescription: Match.stringLikeRegexp("timed out") },
+      })
+    )[0] as any;
+    expect(
+      syncAlarm.Properties.Metrics.flatMap((metric: any) =>
+        metric.MetricStat ? [metric.MetricStat.Metric.MetricName] : []
+      )
+    ).toEqual(["ExecutionsFailed", "ExecutionsTimedOut", "ExecutionsAborted"]);
+    expect(syncAlarm.Properties.Metrics).toContainEqual(
+      expect.objectContaining({ Expression: "failed + timedOut + aborted" })
+    );
+
+    // The usage export runs from a schedule, so its failures alarm on Lambda errors.
+    const exportHandlerId = Object.entries(functions).find(
+      ([, fn]: [string, any]) =>
+        fn.Properties.Environment?.Variables?.BUCKET_NAME &&
+        fn.Properties.Environment?.Variables?.TABLE_ARN
+    )![0];
+    template.hasResourceProperties("AWS::CloudWatch::Alarm", {
+      Namespace: "AWS/Lambda",
+      MetricName: "Errors",
+      Dimensions: [{ Name: "FunctionName", Value: { Ref: exportHandlerId } }],
+    });
+
+    // Bot removals have the memory of the other backend handlers, and a stuck
+    // record goes to the dead-letter queue before the stream drops it.
+    const removalHandler = Object.values(functions).find((fn: any) =>
+      JSON.stringify(fn.Properties.ImageConfig ?? {}).includes("app.bot_remove")
+    ) as any;
+    expect(removalHandler.Properties.MemorySize).toBe(512);
+    template.hasResourceProperties("AWS::Lambda::EventSourceMapping", {
+      MaximumRecordAgeInSeconds: 12 * 3600,
+      DestinationConfig: Match.objectLike({ OnFailure: Match.anyValue() }),
+    });
+    // The document bucket is an output of the Bedrock Region stack only.
+    expect(Object.keys(template.toJSON().Outputs)).not.toContain(
+      "DocumentBucketName"
+    );
+    expect(Object.keys(regionTemplate.toJSON().Outputs)).toContain(
+      "DocumentBucketName"
+    );
+    // The lock handler reads the bucket and the Bedrock Region only.
+    const lockHandler = Object.values(functions).find((fn: any) =>
+      JSON.stringify(fn.Properties.ImageConfig ?? {}).includes(".lock.handler")
+    ) as any;
+    expect(Object.keys(lockHandler.Properties.Environment.Variables).sort()).toEqual(
+      ["BEDROCK_REGION", "DOCUMENT_BUCKET"]
+    );
+  });
+
+  test("usage exports expire after the retention days", () => {
+    // Exports hold conversation text, including deleted conversations.
+    const template = newChatStack({ usageAnalysisRetentionDays: 30 });
+
+    const expiringBuckets = template.findResources("AWS::S3::Bucket", {
+      Properties: {
+        LifecycleConfiguration: {
+          Rules: [Match.objectLike({ ExpirationInDays: 30, Status: "Enabled" })],
+        },
+      },
+    });
+    // The table exports and the Athena query results.
+    expect(Object.keys(expiringBuckets)).toHaveLength(2);
+  });
+
+  test("auto-joined user groups register the Cognito triggers", () => {
+    const template = newChatStack({ autoJoinUserGroups: ["Users"] });
+
+    // Registered again on every deployment, because CloudFormation's user pool
+    // updates reset the triggers.
+    template.hasResourceProperties("Custom::CognitoTrigger", {
+      Triggers: {
+        PostConfirmation: Match.anyValue(),
+        PostAuthentication: Match.anyValue(),
+      },
+      DeployedAt: Match.anyValue(),
+    });
+    const actions = actionsOf(
+      Object.values(template.findResources("AWS::IAM::Policy")).flatMap(
+        (policy: any) => policy.Properties.PolicyDocument.Statement
+      )
+    );
+    expect(actions).toContain("cognito-idp:UpdateUserPool");
+    expect(actions).toContain("cognito-idp:AdminAddUserToGroup");
+
+    // The registration function's logs expire as well.
+    const registrationFunctionId = Object.keys(
+      template.findResources("AWS::Lambda::Function")
+    ).find((id) => id.startsWith("CognitoTriggerRegistrationFunctiona84c6122"));
+    expect(registrationFunctionId).toBeDefined();
+    template.hasResourceProperties("Custom::LogRetention", {
+      LogGroupName: {
+        "Fn::Join": ["", ["/aws/lambda/", { Ref: registrationFunctionId }]],
+      },
+      RetentionInDays: 90,
+    });
+  });
+
+  test("the Cognito trigger code fits in an inline CloudFormation function", () => {
+    // CloudFormation accepts at most 4096 bytes of ZipFile code.
+    const code = fs.readFileSync(
+      path.join(__dirname, "../custom-resources/cognito-trigger/index.py")
+    );
+    expect(code.byteLength).toBeLessThan(4096);
   });
 
   test("custom domain configuration", () => {
@@ -916,20 +1229,75 @@ describe("Api Publishment Stack", () => {
       MetricName: "ApproximateNumberOfMessagesVisible",
       AlarmActions: ["arn:aws:sns:us-east-1:123456789012:alarms"],
     });
-    // Failures recorded for the client end the message normally, so they are
-    // counted from the consumer's log as well.
-    template.resourceCountIs("AWS::CloudWatch::Alarm", 2);
-    template.hasResourceProperties("AWS::Logs::MetricFilter", {
-      FilterPattern: '"Failed to answer message"',
+    // Failures recorded for the client end the message normally, so the consumer
+    // publishes them as a metric of this API. Both handlers alarm on Lambda errors.
+    template.resourceCountIs("AWS::CloudWatch::Alarm", 4);
+    template.resourceCountIs("AWS::Logs::MetricFilter", 0);
+    template.hasResourceProperties("AWS::CloudWatch::Alarm", {
+      Namespace: "BedrockChat",
+      MetricName: "FailedAnswers",
+      Dimensions: [{ Name: "PublishedApiId", Value: "Test" }],
+      Statistic: "Sum",
+      AlarmActions: ["arn:aws:sns:us-east-1:123456789012:alarms"],
     });
-    template.hasResourceProperties("AWS::Lambda::Function", {
-      Environment: {
-        Variables: Match.objectLike({
-          MAX_RECEIVE_COUNT: "2",
-          METRICS_NAMESPACE: "BedrockChat",
-        }),
-      },
+    const errorAlarms = template.findResources("AWS::CloudWatch::Alarm", {
+      Properties: { Namespace: "AWS/Lambda", MetricName: "Errors" },
     });
+    expect(Object.keys(errorAlarms)).toHaveLength(2);
+    for (const alarm of Object.values(errorAlarms) as any[]) {
+      expect(alarm.Properties.AlarmActions).toEqual([
+        "arn:aws:sns:us-east-1:123456789012:alarms",
+      ]);
+    }
+
+    const functions = template.findResources("AWS::Lambda::Function");
+    const consumer = Object.values(functions).find(
+      (fn: any) => fn.Properties.Environment?.Variables?.MAX_RECEIVE_COUNT
+    ) as any;
+    const apiHandler = Object.values(functions).find(
+      (fn: any) => fn.Properties.Environment?.Variables?.QUEUE_URL
+    ) as any;
+    // The consumer reads the API ID for the metric dimension, not the queue or CORS.
+    expect(consumer.Properties.Environment.Variables).toMatchObject({
+      MAX_RECEIVE_COUNT: "2",
+      METRICS_NAMESPACE: "BedrockChat",
+      PUBLISHED_API_ID: "Test",
+    });
+    expect(consumer.Properties.Environment.Variables).not.toHaveProperty(
+      "QUEUE_URL"
+    );
+    expect(consumer.Properties.Environment.Variables).not.toHaveProperty(
+      "CORS_ALLOW_ORIGINS"
+    );
+
+    // The API handler only queues messages and reads conversations, so its role
+    // cannot call models.
+    const roleActions = (fn: any) => actionsOf(roleStatementsOf(template, fn));
+    expect(apiHandler.Properties.Role).not.toEqual(consumer.Properties.Role);
+    const apiActions = roleActions(apiHandler);
+    expect(apiActions).toContain("sqs:SendMessage");
+    expect(apiActions).toContain("sts:AssumeRole");
+    expect(apiActions.some((action) => action.startsWith("bedrock:"))).toBe(false);
+    expect(apiActions).not.toContain("s3:PutObject");
+    expect(roleActions(consumer)).toContain("bedrock:InvokeModelWithResponseStream");
+
+    // Concurrent answers are bounded, and a message stays invisible for six times
+    // the consumer timeout.
+    template.hasResourceProperties("AWS::Lambda::EventSourceMapping", {
+      BatchSize: 1,
+      ScalingConfig: { MaximumConcurrency: 10 },
+    });
+    expect(consumer.Properties.Timeout).toBe(900);
+    template.hasResourceProperties("AWS::SQS::Queue", {
+      VisibilityTimeout: 900 * 6,
+    });
+
+    // The WAF association names the stage, so it waits for the stage.
+    const stageId = Object.keys(template.findResources("AWS::ApiGateway::Stage"))[0];
+    const association = Object.values(
+      template.findResources("AWS::WAFv2::WebACLAssociation")
+    )[0] as any;
+    expect(association.DependsOn).toContain(stageId);
 
     template.resourceCountIs("AWS::SQS::Queue", 2);
     const queuePolicies = Object.values(

@@ -9,3 +9,6 @@ export const excludeDockerImage = [
   ".env",
   ".env.local",
 ]
+
+/** Poetry that bundles the backend for the Python Lambda functions. */
+export const POETRY_VERSION = "1.8.5";

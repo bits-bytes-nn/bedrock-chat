@@ -15,6 +15,7 @@ import {
 import { ChunkingStrategy } from "@cdklabs/generative-ai-cdk-constructs/lib/cdk-lib/bedrock/data-sources/chunking";
 import { Analyzer } from "@cdklabs/generative-ai-cdk-constructs/lib/cdk-lib/opensearch-vectorindex";
 import { resolveBedrockSharedKnowledgeBasesParameters } from "../lib/utils/parameter-models";
+import { sharedKnowledgeBasesStackName } from "../lib/utils/stack-names";
 
 const app = new cdk.App();
 
@@ -121,7 +122,7 @@ const knowledgeBases = sharedKnowledgeBasesJson.map((sharedKnowledgeBase: any) =
 });
 
 // Create the stack
-new BedrockSharedKnowledgeBasesStack(app, "BrChatSharedKbStack", {
+new BedrockSharedKnowledgeBasesStack(app, sharedKnowledgeBasesStackName(baseConfig.envPrefix), {
   // Environment configuration
   env: {
     region: baseConfig.bedrockRegion,

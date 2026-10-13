@@ -19,6 +19,15 @@ export const BotStoreLanguageSchema = z.enum([
 ]);
 
 /**
+ * A boolean from cdk.json or parameter.ts, or "true" or "false" from a `-c` option,
+ * which the CDK CLI passes as a string. Anything else is rejected.
+ */
+const contextBoolean = z.union([
+  z.boolean(),
+  z.enum(["true", "false"]).transform((value) => value === "true"),
+]);
+
+/**
  * Base parameters schema that is common across all entry points
  */
 const BaseParametersSchema = z.object({
@@ -32,8 +41,8 @@ const BaseParametersSchema = z.object({
 
   // Bedrock configuration
   bedrockRegion: z.string().default("us-east-1"),
-  enableBedrockGlobalInference: z.boolean().default(true),
-  enableBedrockCrossRegionInference: z.boolean().default(true),
+  enableBedrockGlobalInference: contextBoolean.default(true),
+  enableBedrockCrossRegionInference: contextBoolean.default(true),
 });
 
 /**
@@ -59,10 +68,10 @@ const BedrockChatParametersSchema = BaseParametersSchema.extend({
 
   // Frontend WAF toggle (CloudFront scope)
   // Set to 'false' if you're unable to deploy resources in us-east-1
-  enableFrontendWaf: z.boolean().default(true),
+  enableFrontendWaf: contextBoolean.default(true),
 
   // Frontend (CloudFront) IPv6 toggle
-  enableFrontendIpv6: z.boolean().default(true),
+  enableFrontendIpv6: contextBoolean.default(true),
 
   // IP address restrictions - enforced by WAF if enabled
   allowedIpV4AddressRanges: z
@@ -101,23 +110,23 @@ const BedrockChatParametersSchema = BaseParametersSchema.extend({
   // with its own OpenSearch Serverless collection.
   autoJoinUserGroups: z.array(z.string()).default([]),
   // Off by default: users are created by an administrator.
-  selfSignUpEnabled: z.boolean().default(false),
+  selfSignUpEnabled: contextBoolean.default(false),
 
   // Performance and availability
-  enableRagReplicas: z.boolean().default(true),
-  enableLambdaSnapStart: z.boolean().default(true),
+  enableRagReplicas: contextBoolean.default(true),
+  enableLambdaSnapStart: contextBoolean.default(true),
 
   // Custom domain configuration
   alternateDomainName: z.string().default(""),
   hostedZoneId: z.string().default(""),
 
   // BotStore
-  enableBotStore: z.boolean().default(true),
-  enableBotStoreReplicas: z.boolean().default(false),
+  enableBotStore: contextBoolean.default(true),
+  enableBotStoreReplicas: contextBoolean.default(false),
   botStoreLanguage: BotStoreLanguageSchema.default("en"),
 
   // ID token refresh interval
-  tokenValidMinutes: z.number().default(30),
+  tokenValidMinutes: z.coerce.number().default(30),
 
   // Global model configuration
   // If not configured (empty array), all models are available
@@ -138,17 +147,17 @@ const BedrockChatParametersSchema = BaseParametersSchema.extend({
   alarmEmail: z.string().default(""),
   // Alarm when the chat answers of a day cost more than this, in USD (0 turns it off).
   // Computed with the model prices in the backend, including published APIs.
-  dailyChatCostAlarmUsd: z.number().min(0).default(100),
+  dailyChatCostAlarmUsd: z.coerce.number().min(0).default(100),
   // Bots with their own knowledge base per user; each has an OpenSearch Serverless
   // collection billed while it exists. 0 means no limit. Admins are not limited.
-  maxDedicatedKnowledgeBasesPerUser: z.number().int().min(0).default(2),
+  maxDedicatedKnowledgeBasesPerUser: z.coerce.number().int().min(0).default(2),
   // Days to keep the hourly conversation exports for usage analysis. They contain
   // conversation text, including deleted conversations.
-  usageAnalysisRetentionDays: z.number().int().min(1).default(90),
+  usageAnalysisRetentionDays: z.coerce.number().int().min(1).default(90),
   // Requests per second for the REST and WebSocket APIs. API Gateway's account limit
   // still applies; these defaults only stop runaway clients.
-  apiThrottleRateLimit: z.number().default(500),
-  apiThrottleBurstLimit: z.number().default(1000),
+  apiThrottleRateLimit: z.coerce.number().default(500),
+  apiThrottleBurstLimit: z.coerce.number().default(1000),
 
   // debug parameter
   devAccessIamRoleArn: z.string().default("")
@@ -179,6 +188,30 @@ const ApiPublishParametersSchema = BaseParametersSchema.extend({
   globalAvailableModels: z.string().default("[]"),
   defaultModel: z.string().default(""),
   titleModel: z.string().default(""),
+}).superRefine((params, ctx) => {
+  // API Gateway needs both values of a usage plan's throttle and of its quota.
+  const pairs: [string, unknown, string, unknown][] = [
+    [
+      "PUBLISHED_API_THROTTLE_RATE_LIMIT",
+      params.publishedApiThrottleRateLimit,
+      "PUBLISHED_API_THROTTLE_BURST_LIMIT",
+      params.publishedApiThrottleBurstLimit,
+    ],
+    [
+      "PUBLISHED_API_QUOTA_LIMIT",
+      params.publishedApiQuotaLimit,
+      "PUBLISHED_API_QUOTA_PERIOD",
+      params.publishedApiQuotaPeriod,
+    ],
+  ];
+  for (const [name, value, otherName, otherValue] of pairs) {
+    if ((value === undefined) !== (otherValue === undefined)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `Set both ${name} and ${otherName}, or neither.`,
+      });
+    }
+  }
 });
 
 /**

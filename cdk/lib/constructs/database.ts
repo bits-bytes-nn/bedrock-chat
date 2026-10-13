@@ -103,8 +103,18 @@ export class Database extends Construct {
       },
     });
 
+    // Assumed by the Lambda roles of this stack and of the published API stacks
+    // (cdk/bin/api-publish.ts), which CloudFormation names after their stacks.
+    const { partition, account, stackName } = Stack.of(this);
     const tableAccessRole = new Role(this, "TableAccessRole", {
-      assumedBy: new AccountPrincipal(Stack.of(this).account),
+      assumedBy: new AccountPrincipal(account).withConditions({
+        ArnLike: {
+          "aws:PrincipalArn": [
+            `arn:${partition}:iam::${account}:role/${stackName}-*`,
+            `arn:${partition}:iam::${account}:role/ApiPublishmentStack*`,
+          ],
+        },
+      }),
     });
     conversationTable.grantReadWriteData(tableAccessRole);
     botTable.grantReadWriteData(tableAccessRole);

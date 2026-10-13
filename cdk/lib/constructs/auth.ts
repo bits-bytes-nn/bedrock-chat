@@ -24,7 +24,6 @@ import * as path from "path";
 import * as fs from "fs";
 import { Idp, TIdentityProvider } from "../utils/identity-provider";
 import * as wafv2 from "aws-cdk-lib/aws-wafv2";
-import { CfnResource } from "aws-cdk-lib";
 
 export interface AuthProps {
   readonly origin: string;
@@ -276,6 +275,7 @@ export class Auth extends Construct {
           },
 
           timeout: Duration.minutes(1),
+          logRetention: logs.RetentionDays.THREE_MONTHS,
         }
       );
       userPool.grant(
@@ -310,7 +310,7 @@ export class Auth extends Construct {
           webAclArn: props.webAclArn,
         }
       );
-      cognitoWebAclAssociation.addDependency(userPool.node.defaultChild as CfnResource);
+      cognitoWebAclAssociation.node.addDependency(userPool.node.defaultChild!);
     }
     
     this.client = client;

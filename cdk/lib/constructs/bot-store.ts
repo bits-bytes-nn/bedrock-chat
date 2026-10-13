@@ -193,15 +193,21 @@ export class BotStore extends Construct {
           resources: [`${bucket.bucketArn}/*`],
         }),
         new PolicyStatement({
+          // The pipelines write to this collection only.
+          effect: Effect.ALLOW,
+          actions: ["aoss:APIAccessAll"],
+          resources: [this.collection.attrArn],
+        }),
+        new PolicyStatement({
+          // Pipeline role permissions for a collection sink, from
+          // https://docs.aws.amazon.com/opensearch-service/latest/developerguide/pipeline-collection-access.html.
+          // These aoss actions do not support resource-level permissions.
           effect: Effect.ALLOW,
           actions: [
-            "aoss:APIAccessAll",
             "aoss:BatchGetCollection",
             "aoss:CreateSecurityPolicy",
             "aoss:GetSecurityPolicy",
             "aoss:UpdateSecurityPolicy",
-            "es:DescribeDomain",
-            "es:ESHttp*",
             "logs:CreateLogGroup",
             "logs:CreateLogStream",
             "logs:PutLogEvents",
@@ -267,9 +273,9 @@ export class BotStore extends Construct {
         `,
     });
 
-    this.collection.addDependency(encryptionPolicy);
-    this.collection.addDependency(networkPolicy);
-    this.collection.addDependency(dataAccessPolicy);
+    this.collection.node.addDependency(encryptionPolicy);
+    this.collection.node.addDependency(networkPolicy);
+    this.collection.node.addDependency(dataAccessPolicy);
 
     const region = Stack.of(this).region;
     const botOsisPipelineConfig = this._createBotOsisPipelineConfig({
@@ -393,7 +399,7 @@ export class BotStore extends Construct {
       ]),
     });
 
-    newPolicy.addDependency(this.collection);
+    newPolicy.node.addDependency(this.collection);
   }
 
   /**

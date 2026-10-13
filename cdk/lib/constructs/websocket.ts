@@ -11,7 +11,7 @@ import { Auth } from "./auth";
 import { CfnRouteResponse } from "aws-cdk-lib/aws-apigatewayv2";
 import * as logs from "aws-cdk-lib/aws-logs";
 import * as s3 from "aws-cdk-lib/aws-s3";
-import { excludeDockerImage } from "../constants/docker";
+import { excludeDockerImage, POETRY_VERSION } from "../constants/docker";
 import { PythonFunction } from "@aws-cdk/aws-lambda-python-alpha";
 import { Database } from "./database";
 import {
@@ -80,7 +80,7 @@ export class WebSocket extends Construct {
       index: "app/websocket.py",
       bundling: {
         assetExcludes: [...excludeDockerImage],
-        buildArgs: { POETRY_VERSION: "1.8.5" },
+        buildArgs: { POETRY_VERSION },
       },
       runtime: Runtime.PYTHON_3_13,
       memorySize: 512,
@@ -120,7 +120,7 @@ export class WebSocket extends Construct {
       index: "app/websocket_authorizer.py",
       bundling: {
         assetExcludes: [...excludeDockerImage],
-        buildArgs: { POETRY_VERSION: "1.8.5" },
+        buildArgs: { POETRY_VERSION },
       },
       runtime: Runtime.PYTHON_3_13,
       memorySize: 256,

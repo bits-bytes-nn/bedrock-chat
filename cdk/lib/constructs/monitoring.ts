@@ -24,6 +24,8 @@ export interface MonitoringProps {
   /** Log group of the function that records sync results. */
   readonly syncStatusLogGroup: logs.ILogGroup;
   readonly botRemovalDeadLetterQueue: sqs.IQueue;
+  /** Exports conversations for usage analysis. */
+  readonly usageExportHandler: IFunction;
 }
 
 /** Alarms for failures that users notice: API errors, chat errors and failed knowledge syncs. */
@@ -90,9 +92,18 @@ export class Monitoring extends Construct {
       ],
       [
         "KnowledgeSyncFailures",
-        props.embeddingStateMachine.metricFailed({ period }),
+        // Timed-out and aborted executions leave their bots RUNNING as well.
+        new cloudwatch.MathExpression({
+          expression: "failed + timedOut + aborted",
+          usingMetrics: {
+            failed: props.embeddingStateMachine.metricFailed({ period }),
+            timedOut: props.embeddingStateMachine.metricTimedOut({ period }),
+            aborted: props.embeddingStateMachine.metricAborted({ period }),
+          },
+          period,
+        }),
         1,
-        "The shared knowledge base sync (embedding state machine) failed.",
+        "The knowledge sync (embedding state machine) failed, timed out or was aborted.",
       ],
       [
         "BotKnowledgeSyncFailures",
@@ -111,6 +122,12 @@ export class Monitoring extends Construct {
         }),
         1,
         "Removing a deleted bot's resources failed. Its knowledge base or API stack may still be running and billing.",
+      ],
+      [
+        "UsageExportErrors",
+        props.usageExportHandler.metricErrors({ period, statistic: "Sum" }),
+        1,
+        "The hourly conversation export for usage analysis failed.",
       ],
     ];
     if (props.dailyChatCostAlarmUsd > 0) {

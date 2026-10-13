@@ -233,6 +233,7 @@ export class BedrockChatStack extends cdk.Stack {
     });
 
     const embedding = new Embedding(this, "Embedding", {
+      envPrefix: props.envPrefix,
       bedrockRegion: props.bedrockRegion,
       database,
       documentBucket: props.documentBucket,
@@ -261,8 +262,6 @@ export class BedrockChatStack extends cdk.Stack {
       bedrockRegion: props.bedrockRegion,
       documentBucket: props.documentBucket,
       apiPublishProject: apiPublishCodebuild.project,
-      bedrockCustomBotProject: bedrockCustomBotCodebuild.project,
-      bedrockSharedKnowledgeBasesProject: bedrockSharedKnowledgeBasesCodebuild.project,
       embeddingStateMachine: embedding.stateMachine,
       usageAnalysis,
       largeMessageBucket,
@@ -345,6 +344,7 @@ export class BedrockChatStack extends cdk.Stack {
       embeddingStateMachine: embedding.stateMachine,
       syncStatusLogGroup: embedding.syncStatusLogGroup,
       botRemovalDeadLetterQueue: embedding.removalDeadLetterQueue,
+      usageExportHandler: usageAnalysis.exportHandler,
     });
 
     frontend.buildViteApp({
@@ -382,9 +382,6 @@ export class BedrockChatStack extends cdk.Stack {
       }
     );
 
-    new CfnOutput(this, "DocumentBucketName", {
-      value: props.documentBucket.bucketName,
-    });
     new CfnOutput(this, "FrontendURL", {
       value: frontend.getOrigin(),
     });
