@@ -20,6 +20,7 @@ import {
   maxConvertibleFileSizeMb,
 } from '../constants/supportedAttachedFiles';
 import { getApiErrorMessage } from '../utils/ErrorUtils';
+import { removeBotFile } from '../utils/BotUtils';
 
 type Props = BaseProps & {
   botId: string;
@@ -92,8 +93,9 @@ const KnowledgeFileUploader: React.FC<Props> = (props) => {
             const registeredNames = isConvertibleFile(file.name)
               ? [file.name, convertedFileName(file.name)]
               : [file.name];
-            const isDuplicatedFile = props.files.some((botFile) =>
-              registeredNames.includes(botFile.filename)
+            const isDuplicatedFile = props.files.some(
+              (botFile) =>
+                !botFile.rejected && registeredNames.includes(botFile.filename)
             );
             const maxSizeMb = isConvertibleFile(file.name)
               ? maxConvertibleFileSizeMb(file.name)
@@ -112,6 +114,7 @@ const KnowledgeFileUploader: React.FC<Props> = (props) => {
                 uid: uids[idx],
                 filename: file.name,
                 status: 'ERROR',
+                rejected: true,
                 errorMessage: isDuplicatedFile
                   ? t('bot.error.duplicatedFile')
                   : isTooLarge
@@ -156,8 +159,14 @@ const KnowledgeFileUploader: React.FC<Props> = (props) => {
             .catch((e: AxiosError | Error) => {
               console.error(e);
               updateFile(uid, (f) => {
+                f.errorMessage =
+                  getApiErrorMessage(e) ??
+                  (f.status === 'CONVERTING'
+                    ? t('error.attachment.conversionFailed', {
+                        fileName: file.name,
+                      })
+                    : t('bot.error.failUpload'));
                 f.status = 'ERROR';
-                f.errorMessage = getApiErrorMessage(e) ?? e.message;
               });
             });
         }
@@ -184,15 +193,18 @@ const KnowledgeFileUploader: React.FC<Props> = (props) => {
   );
 
   const onDeleteFile = useCallback(
-    (idx: number) => {
+    (uid: string) => {
       if (props.disabled) {return;}
-      
-      const files = produce(props.files, (draft) => {
-        draft.splice(idx, 1);
-      });
+
+      const { files, deletedFilename } = removeBotFile(props.files, uid);
       // Keep the copy that pending uploads update in sync.
       _setFiles(files);
-      props.onDelete(files, props.files[idx].filename);
+      if (deletedFilename === undefined) {
+        // A rejected row may share the name of a bot file, which must be kept.
+        props.onUpdate(files);
+      } else {
+        props.onDelete(files, deletedFilename);
+      }
     },
     [_setFiles, props]
   );
@@ -226,8 +238,8 @@ const KnowledgeFileUploader: React.FC<Props> = (props) => {
       </div>
 
       <div className="flex flex-col gap-1">
-        {props.files.map((file, idx) => (
-          <div key={idx} className="rounded border border-gray bg-white p-1 ">
+        {props.files.map((file) => (
+          <div key={file.uid} className="rounded border border-gray bg-white p-1 ">
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2 break-all px-1">
                 <PiFile className="w-5" />
@@ -267,7 +279,7 @@ const KnowledgeFileUploader: React.FC<Props> = (props) => {
                       props.disabled
                     }
                     onClick={() => {
-                      onDeleteFile(idx);
+                      onDeleteFile(file.uid);
                     }}>
                     <PiTrash />
                   </ButtonIcon>

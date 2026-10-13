@@ -1,5 +1,5 @@
 import useLoginUser from '../../../hooks/useLoginUser';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 import InputText from '../../../components/InputText';
 import Button from '../../../components/Button';
@@ -457,6 +457,38 @@ const BotKbEditPage: React.FC = () => {
     botSummary?.syncStatus === SyncStatus.QUEUED ||
     botSummary?.syncStatus === SyncStatus.RUNNING;
 
+  // Show a sync that fails while the page is open. The summary has no reason,
+  // so the bot is fetched again.
+  const wasSyncing = useRef(false);
+  useEffect(() => {
+    if (isSyncing) {
+      wasSyncing.current = true;
+      return;
+    }
+    if (!wasSyncing.current || !botSummary) {
+      return;
+    }
+    wasSyncing.current = false;
+    if (botSummary.syncStatus === SyncStatus.FAILED) {
+      getMyBot(botId)
+        .then((bot) => {
+          setErrorMessages('syncError', bot.syncStatusReason);
+        })
+        .catch((e) => {
+          console.error(e);
+          openSnackbar(getApiErrorMessage(e) ?? t('error.loadFailed'));
+        });
+    }
+  }, [
+    botId,
+    botSummary,
+    getMyBot,
+    isSyncing,
+    openSnackbar,
+    setErrorMessages,
+    t,
+  ]);
+
   const onChangeIncludePattern = useCallback(
     (pattern: string, idx: number) => {
       setWebCrawlingFilters(
@@ -554,6 +586,7 @@ const BotKbEditPage: React.FC = () => {
           }
           setFiles(
             bot.knowledge.filenames.map((filename) => ({
+              uid: ulid(),
               filename,
               status: 'UPLOADED',
             }))

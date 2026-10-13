@@ -164,7 +164,9 @@ const BotStarredPage: React.FC = () => {
         isLoading={!starredBots && !starredBotsError}
         isEmpty={starredBots?.length === 0}
         emptyMessage={t('bot.label.noStarredBots')}
-        errorMessage={starredBotsError ? t('error.loadFailed') : undefined}>
+        errorMessage={
+          starredBotsError && !starredBots ? t('error.loadFailed') : undefined
+        }>
         {starredBots?.map((bot) => (
           <ListItemBot key={bot.id} bot={bot} onClick={onClickBot}>
             <div className="flex items-center">
@@ -198,7 +200,11 @@ const BotStarredPage: React.FC = () => {
                   disabled={!bot.available}
                   isStarred={bot.isStarred}
                   onClick={() => {
-                    updateStarred(bot.id, !bot.isStarred);
+                    updateStarred(bot.id, !bot.isStarred).catch((e) => {
+                      openSnackbar(
+                        getApiErrorMessage(e) ?? t('bot.error.failStar')
+                      );
+                    });
                   }}
                 />
               </div>
