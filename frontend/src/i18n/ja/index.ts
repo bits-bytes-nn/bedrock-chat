@@ -970,6 +970,7 @@ const translation: typeof en = {
         api_publishing: 'API を公開しています。完了してから再度お試しください。',
         dedicated_knowledge_base_limit:
           '専用のナレッジベースを持つボットは最大 {{limit}} 個までです。既存のボットを削除するか、共有ナレッジベースを使用してください。',
+        bot_not_published: 'このボットは公開されていません。',
       },
       answerResponse: '回答中にエラーが発生しました。',
       notFoundConversation:
@@ -985,11 +986,14 @@ const translation: typeof en = {
           'モデルへのリクエストが多すぎます。しばらくしてからもう一度お試しください。',
         model_unavailable:
           '選択したモデルは利用できません。別のモデルを選択してください。',
-        model_error: 'モデルがリクエストを処理できませんでした: {{reason}}',
+        model_error: 'モデルがリクエストを処理できませんでした。',
         bot_not_found: 'ボットが見つかりません。削除された可能性があります。',
-        invalid_request: 'リクエストが正しくありません: {{reason}}',
+        invalid_request: 'リクエストが正しくありません。',
         generation_failed:
           '回答を生成できませんでした。もう一度お試しください。',
+        input_too_long:
+          '会話または添付ファイルがこのモデルには長すぎます。添付ファイルを削除するか、新しい会話を開始してください。',
+        unauthorized: 'セッションの有効期限が切れました。再度サインインしてください。',
         invalidResponse: '想定外のResponseが返ってきました。',
         connectionClosed:
           '回答が完了する前に接続が切断されました。ページを再読み込みすると保存された回答を確認できます。',

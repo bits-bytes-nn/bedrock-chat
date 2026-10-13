@@ -968,6 +968,7 @@ How would you categorize this email?`,
           'The API is being published. Try again after it finishes.',
         dedicated_knowledge_base_limit:
           'You can have at most {{limit}} bots with their own knowledge base. Delete one, or use a shared knowledge base.',
+        bot_not_published: 'This bot is not published.',
       },
       answerResponse: 'An error occurred while responding.',
       notFoundConversation:
@@ -988,6 +989,9 @@ How would you categorize this email?`,
         bot_not_found: 'The bot was not found. It may have been deleted.',
         invalid_request: 'The request is invalid: {{reason}}',
         generation_failed: 'Failed to generate the answer. Try again.',
+        input_too_long:
+          'The conversation or attachments are too long for this model. Remove attachments or start a new conversation.',
+        unauthorized: 'Your session has expired. Sign in again.',
         invalidResponse:
           'Unexpected response received. The response format does not match the expected format.',
         connectionClosed:

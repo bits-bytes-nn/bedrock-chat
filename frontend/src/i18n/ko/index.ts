@@ -965,6 +965,7 @@ const translation: typeof en = {
         api_publishing: 'API를 게시하는 중입니다. 게시가 끝난 뒤 다시 시도하세요.',
         dedicated_knowledge_base_limit:
           '전용 지식 기반이 있는 봇은 최대 {{limit}}개까지 만들 수 있습니다. 기존 봇을 삭제하거나 공유 지식 기반을 사용하세요.',
+        bot_not_published: '게시되지 않은 봇입니다.',
       },
       answerResponse: '응답 중 오류가 발생했습니다.',
       notFoundConversation: '지정한 채팅이 없어 새 채팅 화면을 표시했습니다.',
@@ -979,10 +980,13 @@ const translation: typeof en = {
         throttled: '모델에 요청이 너무 많습니다. 잠시 후 다시 시도하세요.',
         model_unavailable:
           '선택한 모델을 사용할 수 없습니다. 다른 모델을 선택하세요.',
-        model_error: '모델이 요청을 처리하지 못했습니다: {{reason}}',
+        model_error: '모델이 요청을 처리하지 못했습니다.',
         bot_not_found: '봇을 찾을 수 없습니다. 삭제되었을 수 있습니다.',
-        invalid_request: '요청이 올바르지 않습니다: {{reason}}',
+        invalid_request: '요청이 올바르지 않습니다.',
         generation_failed: '답변을 생성하지 못했습니다. 다시 시도하세요.',
+        input_too_long:
+          '대화나 첨부 파일이 이 모델에서 처리하기에 너무 깁니다. 첨부 파일을 빼거나 새 대화를 시작하세요.',
+        unauthorized: '세션이 만료되었습니다. 다시 로그인하세요.',
         invalidResponse:
           '예상치 못한 응답을 받았습니다. 응답 형식이 예상 형식과 일치하지 않습니다.',
         connectionClosed:
