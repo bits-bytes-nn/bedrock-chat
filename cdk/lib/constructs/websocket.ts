@@ -14,7 +14,10 @@ import * as s3 from "aws-cdk-lib/aws-s3";
 import { excludeDockerImage } from "../constants/docker";
 import { PythonFunction } from "@aws-cdk/aws-lambda-python-alpha";
 import { Database } from "./database";
-import { bedrockChatPolicyStatement } from "../utils/bedrock-policies";
+import {
+  bedrockChatPolicyStatement,
+  firecrawlSecretPolicyStatement,
+} from "../utils/bedrock-policies";
 
 export interface WebSocketProps {
   readonly database: Database;
@@ -78,16 +81,11 @@ export class WebSocket extends Construct {
     );
     handlerRole.addToPolicy(bedrockChatPolicyStatement());
 
-    // get api key from secrets manager
+    // Bots with the internet search tool keep their Firecrawl API key here.
     handlerRole.addToPolicy(
-      new iam.PolicyStatement({
-        actions: ["secretsmanager:GetSecretValue"],
-        resources: [
-          `arn:aws:secretsmanager:${Stack.of(this).region}:${
-            Stack.of(this).account
-          }:secret:firecrawl/*/*`,
-        ],
-      })
+      firecrawlSecretPolicyStatement(Stack.of(this), [
+        "secretsmanager:GetSecretValue",
+      ])
     );
 
     largePayloadSupportBucket.grantRead(handlerRole);

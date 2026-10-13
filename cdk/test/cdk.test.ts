@@ -277,6 +277,25 @@ describe("Bedrock Chat Stack Test", () => {
       }
     }
 
+    // Secrets, bot store search and stack lookups are scoped to the resources that
+    // the backend calls.
+    for (const statement of statements) {
+      const statementActions = [statement.Action].flat();
+      if (
+        statementActions.some(
+          (action: string) =>
+            action.startsWith("secretsmanager:") ||
+            action.startsWith("cloudformation:")
+        ) ||
+        statement.Action === "aoss:APIAccessAll"
+      ) {
+        expect([statement.Resource].flat()).not.toContain("*");
+      }
+    }
+    expect(actions).toContain("aoss:APIAccessAll");
+    expect(actions).not.toContain("secretsmanager:RotateSecret");
+    expect(actions).not.toContain("aoss:ListCollections");
+
     // Alarms and API throttling.
     template.resourceCountIs("AWS::CloudWatch::Alarm", 6);
     // Handlers answer errors without failing, so chat errors and failed bot syncs

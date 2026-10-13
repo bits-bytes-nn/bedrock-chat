@@ -22,7 +22,10 @@ import * as sfn from "aws-cdk-lib/aws-stepfunctions";
 import * as tasks from "aws-cdk-lib/aws-stepfunctions-tasks";
 import { Platform } from "aws-cdk-lib/aws-ecr-assets";
 import { Database } from "./database";
-import { bedrockIngestionPolicyStatement } from "../utils/bedrock-policies";
+import {
+  bedrockIngestionPolicyStatement,
+  firecrawlSecretPolicyStatement,
+} from "../utils/bedrock-policies";
 
 export interface EmbeddingProps {
   readonly database: Database;
@@ -77,24 +80,21 @@ export class Embedding extends Construct {
     handlerRole.addToPolicy(bedrockIngestionPolicyStatement());
     handlerRole.addToPolicy(
       // Loading a bot with the internet search tool reads its Firecrawl API key.
-      new iam.PolicyStatement({
-        actions: ["secretsmanager:GetSecretValue"],
-        resources: [
-          `arn:aws:secretsmanager:${Stack.of(this).region}:${
-            Stack.of(this).account
-          }:secret:firecrawl/*/*`,
-        ],
-      })
+      firecrawlSecretPolicyStatement(Stack.of(this), [
+        "secretsmanager:GetSecretValue",
+      ])
     );
     handlerRole.addToPolicy(
+      // The finalize handlers read the outputs of the knowledge base stacks, which
+      // are named in cdk/bin/bedrock-custom-bot.ts and bedrock-shared-knowledge-bases.ts.
       new iam.PolicyStatement({
-        actions: [
-          "cloudformation:DescribeStacks",
-          "cloudformation:DescribeStackEvents",
-          "cloudformation:DescribeStackResource",
-          "cloudformation:DescribeStackResources",
-        ],
-        resources: [`*`],
+        actions: ["cloudformation:DescribeStacks"],
+        resources: ["BrChatKbStack*", "BrChatSharedKbStack"].map(
+          (stackName) =>
+            `arn:${Stack.of(this).partition}:cloudformation:${props.bedrockRegion}:${
+              Stack.of(this).account
+            }:stack/${stackName}/*`
+        ),
       })
     );
     handlerRole.addToPolicy(
@@ -104,7 +104,7 @@ export class Embedding extends Construct {
           "logs:CreateLogStream",
           "logs:PutLogEvents",
         ],
-        resources: ["arn:aws:logs:*:*:*"],
+        resources: [`arn:${Stack.of(this).partition}:logs:*:*:*`],
       })
     );
     props.documentBucket.grantReadWrite(handlerRole);
@@ -636,18 +636,13 @@ export class Embedding extends Construct {
           "logs:CreateLogStream",
           "logs:PutLogEvents",
         ],
-        resources: ["arn:aws:logs:*:*:*"],
+        resources: [`arn:${Stack.of(this).partition}:logs:*:*:*`],
       })
     );
     removeHandlerRole.addToPolicy(
-      new iam.PolicyStatement({
-        actions: ["secretsmanager:DeleteSecret"],
-        resources: [
-          `arn:aws:secretsmanager:${Stack.of(this).region}:${
-            Stack.of(this).account
-          }:secret:firecrawl/*/*`,
-        ],
-      })
+      firecrawlSecretPolicyStatement(Stack.of(this), [
+        "secretsmanager:DeleteSecret",
+      ])
     );
     props.database.botTable.grantStreamRead(removeHandlerRole);
     props.documentBucket.grantReadWrite(removeHandlerRole);

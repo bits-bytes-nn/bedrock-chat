@@ -202,7 +202,7 @@ export class BedrockCustomBotStack extends Stack {
           new iam.PolicyStatement({
             actions: ["bedrock:GetKnowledgeBase"],
             resources: [
-              `arn:aws:bedrock:${this.region}:${this.account}:knowledge-base/${props.existKnowledgeBaseId}`,
+              `arn:${this.partition}:bedrock:${this.region}:${this.account}:knowledge-base/${props.existKnowledgeBaseId}`,
             ],
           }),
         ]),

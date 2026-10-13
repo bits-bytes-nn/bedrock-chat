@@ -270,6 +270,7 @@ export class BedrockChatStack extends cdk.Stack {
         props.enableBedrockCrossRegionInference,
       enableLambdaSnapStart: props.enableLambdaSnapStart,
       openSearchEndpoint: botStore?.openSearchEndpoint,
+      openSearchCollectionArn: botStore?.collectionArn,
       globalAvailableModels: props.globalAvailableModels,
       defaultModel: props.defaultModel,
       titleModel: props.titleModel,

@@ -64,7 +64,7 @@ export class BedrockCustomBotCodebuild extends Construct {
       new iam.PolicyStatement({
         actions: ["sts:AssumeRole"],
         // Only the CDK bootstrap roles of this account.
-        resources: [`arn:aws:iam::${Stack.of(this).account}:role/cdk-*`],
+        resources: [`arn:${Stack.of(this).partition}:iam::${Stack.of(this).account}:role/cdk-*`],
       })
     );
 
