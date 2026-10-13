@@ -25,6 +25,12 @@ from fastapi import HTTPException
 MODEL = "claude-v4.5-sonnet"
 
 
+@pytest.fixture(autouse=True)
+def no_failed_messages():
+    with patch.object(published_api, "find_failed_message", return_value=None) as find:
+        yield find
+
+
 def _request(bot_id: str = "bot1"):
     user = User.from_published_api_id(bot_id)
     return SimpleNamespace(state=SimpleNamespace(current_user=user))
@@ -141,3 +147,13 @@ def test_get_message_returns_first_child():
 
     assert output.message == reply
     assert output.conversation_id == "conv1"
+
+
+def test_get_message_reports_a_failed_answer(no_failed_messages):
+    no_failed_messages.return_value = "The answer could not be generated."
+    with patch.object(published_api, "fetch_conversation") as fetch:
+        with pytest.raises(HTTPException) as e:
+            published_api.get_message(_request("bot1"), "conv1", "m1")
+    no_failed_messages.assert_called_once_with("PUBLISHED_API#bot1", "conv1", "m1")
+    fetch.assert_not_called()
+    assert e.value.status_code == 500

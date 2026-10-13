@@ -2,6 +2,7 @@ import logging
 import os
 
 import boto3
+from app.repositories.conversation import find_failed_message
 from app.routes.schemas.conversation import ChatInput, Conversation, MessageInput
 from app.routes.schemas.published_api import (
     ChatInputWithoutBotId,
@@ -94,6 +95,10 @@ def get_conversation(request: Request, conversation_id: str):
 def get_message(request: Request, conversation_id: str, message_id: str):
     """Get specified message in a conversation. If the message does not exist, it will return 404."""
     current_user: User = request.state.current_user
+
+    reason = find_failed_message(current_user.id, conversation_id, message_id)
+    if reason is not None:
+        raise HTTPException(status_code=500, detail=reason)
 
     conversation = fetch_conversation(current_user.id, conversation_id)
     input_message = conversation.message_map.get(message_id, None)

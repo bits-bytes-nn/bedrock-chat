@@ -68,6 +68,7 @@ export interface ApiProps {
   readonly defaultModel?: string;
   readonly titleModel?: string;
   readonly maxDedicatedKnowledgeBasesPerUser: number;
+  readonly metricsNamespace: string;
   readonly logoPath?: string;
 }
 
@@ -252,6 +253,7 @@ export class Api extends Construct {
         TITLE_MODEL: props.titleModel || "",
         MAX_DEDICATED_KNOWLEDGE_BASES_PER_USER:
           props.maxDedicatedKnowledgeBasesPerUser.toString(),
+        METRICS_NAMESPACE: props.metricsNamespace,
         OPENSEARCH_DOMAIN_ENDPOINT: props.openSearchEndpoint || "",
         LOGO_PATH: props.logoPath || "",
         AWS_LAMBDA_EXEC_WRAPPER: "/opt/bootstrap",

@@ -343,7 +343,8 @@ describe("Bedrock Chat Stack Test", () => {
       },
     });
     template.hasResourceProperties("AWS::CloudWatch::Alarm", {
-      Namespace: "BedrockChat",
+      // Per environment (cdk/lib/utils/metrics.ts).
+      Namespace: Match.stringLikeRegexp("^BedrockChat"),
       MetricName: "ChatCost",
       Statistic: "Sum",
       Period: 86400,
@@ -905,8 +906,24 @@ describe("Api Publishment Stack", () => {
       largeMessageBucketName: "large-message-bucket",
       modelEnvironment: {},
       usagePlan: {},
+      metricsNamespace: "BedrockChat",
+      alarmTopicArn: "arn:aws:sns:us-east-1:123456789012:alarms",
     });
     const template = Template.fromStack(stack);
+
+    // Answers that failed for good are reported through the chat stack's topic.
+    template.hasResourceProperties("AWS::CloudWatch::Alarm", {
+      MetricName: "ApproximateNumberOfMessagesVisible",
+      AlarmActions: ["arn:aws:sns:us-east-1:123456789012:alarms"],
+    });
+    template.hasResourceProperties("AWS::Lambda::Function", {
+      Environment: {
+        Variables: Match.objectLike({
+          MAX_RECEIVE_COUNT: "2",
+          METRICS_NAMESPACE: "BedrockChat",
+        }),
+      },
+    });
 
     template.resourceCountIs("AWS::SQS::Queue", 2);
     const queuePolicies = Object.values(

@@ -1,3 +1,6 @@
+import * as cloudwatch from "aws-cdk-lib/aws-cloudwatch";
+import { SnsAction } from "aws-cdk-lib/aws-cloudwatch-actions";
+import * as sns from "aws-cdk-lib/aws-sns";
 import * as cdk from "aws-cdk-lib";
 import { CfnOutput, Stack, StackProps } from "aws-cdk-lib";
 import { Construct } from "constructs";
@@ -31,6 +34,10 @@ interface ApiPublishmentStackProps extends StackProps {
   /** Model allowlist and defaults of the main API. */
   readonly modelEnvironment: Record<string, string>;
   readonly corsOptions?: apigateway.CorsOptions;
+  /** Namespace of the ChatCost metric, shared with the chat stack's alarm. */
+  readonly metricsNamespace: string;
+  /** The chat stack's alarm topic, notified when answers fail. */
+  readonly alarmTopicArn: string;
 }
 
 export class ApiPublishmentStack extends Stack {
@@ -45,14 +52,29 @@ export class ApiPublishmentStack extends Stack {
       retentionPeriod: cdk.Duration.days(14),
       enforceSSL: true,
     });
+    // One retry; the consumer records a failure for the client on the last receive.
+    const maxReceiveCount = 2;
     const chatQueue = new sqs.Queue(this, "ChatQueue", {
       visibilityTimeout: cdk.Duration.minutes(30),
       enforceSSL: true,
       deadLetterQueue: {
-        maxReceiveCount: 2, // one retry
+        maxReceiveCount,
         queue: chatQueueDLQ,
       },
     });
+    new cloudwatch.Alarm(this, "ChatQueueDlqMessages", {
+      metric: chatQueueDLQ.metricApproximateNumberOfMessagesVisible({
+        period: cdk.Duration.minutes(5),
+      }),
+      threshold: 1,
+      evaluationPeriods: 1,
+      comparisonOperator:
+        cloudwatch.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
+      treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
+      alarmDescription: `Published API ${id} could not answer messages.`,
+    }).addAlarmAction(
+      new SnsAction(sns.Topic.fromTopicArn(this, "AlarmTopic", props.alarmTopicArn))
+    );
 
     const handlerRole = new iam.Role(this, "HandlerRole", {
       assumedBy: new iam.ServicePrincipal("lambda.amazonaws.com"),
@@ -147,6 +169,8 @@ export class ApiPublishmentStack extends Stack {
           // Conversations over the DynamoDB item limit are stored in this bucket.
           LARGE_MESSAGE_BUCKET: props.largeMessageBucketName,
           TABLE_ACCESS_ROLE_ARN: props.tableAccessRoleArn,
+          METRICS_NAMESPACE: props.metricsNamespace,
+          MAX_RECEIVE_COUNT: maxReceiveCount.toString(),
           ...props.modelEnvironment,
         },
         role: handlerRole,

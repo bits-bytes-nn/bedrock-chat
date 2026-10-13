@@ -27,6 +27,7 @@ import { BedrockCustomBotCodebuild } from "./constructs/bedrock-custom-bot-codeb
 import { BedrockSharedKnowledgeBasesCodebuild } from "./constructs/bedrock-shared-knowledge-bases-codebuild";
 import { BotStore, Language } from "./constructs/bot-store";
 import { Duration } from "aws-cdk-lib";
+import { metricsNamespace } from "./utils/metrics";
 import { Monitoring } from "./constructs/monitoring";
 import { ThrottleSettings } from "aws-cdk-lib/aws-apigatewayv2";
 
@@ -276,6 +277,7 @@ export class BedrockChatStack extends cdk.Stack {
       defaultModel: props.defaultModel,
       titleModel: props.titleModel,
       maxDedicatedKnowledgeBasesPerUser: props.maxDedicatedKnowledgeBasesPerUser,
+      metricsNamespace: metricsNamespace(props.envPrefix),
       logoPath: props.logoPath,
       throttle: props.apiThrottle,
     });
@@ -330,11 +332,13 @@ export class BedrockChatStack extends cdk.Stack {
       defaultModel: props.defaultModel,
       titleModel: props.titleModel,
       throttle: props.apiThrottle,
+      metricsNamespace: metricsNamespace(props.envPrefix),
     });
 
-    new Monitoring(this, "Monitoring", {
+    const monitoring = new Monitoring(this, "Monitoring", {
       alarmEmail: props.alarmEmail,
       dailyChatCostAlarmUsd: props.dailyChatCostAlarmUsd,
+      metricsNamespace: metricsNamespace(props.envPrefix),
       api: backendApi.api,
       webSocketHandler: websocket.handler,
       webSocketLogGroup: websocket.handlerLogGroup,
@@ -408,6 +412,11 @@ export class BedrockChatStack extends cdk.Stack {
     new CfnOutput(this, "LargeMessageBucketName", {
       value: largeMessageBucket.bucketName,
       exportName: `${props.envPrefix}${sepHyphen}BedrockClaudeChatLargeMessageBucketName`,
+    });
+    // Published API stacks alarm on their dead-letter queues through this topic.
+    new CfnOutput(this, "AlarmTopicArnExport", {
+      value: monitoring.alarmTopic.topicArn,
+      exportName: `${props.envPrefix}${sepHyphen}BedrockClaudeChatAlarmTopicArn`,
     });
     new CfnOutput(this, 'EmbeddingStateMachineArn', {
       value: embedding.stateMachine.stateMachineArn,

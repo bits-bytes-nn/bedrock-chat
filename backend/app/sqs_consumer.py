@@ -1,12 +1,21 @@
 import json
 import logging
+import os
 
 from app.metrics import emit_chat_cost
+from app.repositories.common import RecordNotFoundError
+from app.repositories.conversation import store_failed_message
 from app.routes.schemas.conversation import ChatInput
 from app.usecases.chat import chat
 from app.user import User
 
 logger = logging.getLogger(__name__)
+
+# Receives before SQS moves a message to the dead-letter queue
+# (cdk/lib/api-publishment-stack.ts).
+MAX_RECEIVE_COUNT = int(os.environ.get("MAX_RECEIVE_COUNT", "2"))
+# Retrying these would fail again and bill the model again.
+NON_RETRYABLE_ERRORS = (ValueError, PermissionError, RecordNotFoundError)
 
 
 def handler(event, context):
@@ -20,12 +29,35 @@ def handler(event, context):
         assert chat_input.bot_id is not None, "bot_id is required for published api"
 
         user = User.from_published_api_id(chat_input.bot_id)
+        message_id = chat_input.message.message_id or ""
 
-        conversation, message = chat(
-            user=user,
-            chat_input=chat_input,
-            on_stop=lambda result: emit_chat_cost(result["price"]),
-        )
+        try:
+            conversation, message = chat(
+                user=user,
+                chat_input=chat_input,
+                on_stop=lambda result: emit_chat_cost(result["price"]),
+            )
+        except Exception as e:
+            final = (
+                isinstance(e, NON_RETRYABLE_ERRORS)
+                or int(record.get("attributes", {}).get("ApproximateReceiveCount", "1"))
+                >= MAX_RECEIVE_COUNT
+            )
+            if not final:
+                raise
+            logger.exception("Failed to answer message %s", message_id)
+            # Clients poll for the answer; tell them that none will come.
+            store_failed_message(
+                user.id,
+                chat_input.conversation_id,
+                message_id,
+                (
+                    str(e)
+                    if isinstance(e, NON_RETRYABLE_ERRORS)
+                    else "The answer could not be generated."
+                ),
+            )
+            continue
         logger.info(
             "Processed message: conversation_id=%s, message_id=%s",
             conversation.id,

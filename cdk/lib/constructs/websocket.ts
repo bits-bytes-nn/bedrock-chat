@@ -32,6 +32,7 @@ export interface WebSocketProps {
   readonly defaultModel?: string;
   readonly titleModel?: string;
   readonly throttle: apigwv2.ThrottleSettings;
+  readonly metricsNamespace: string;
 }
 
 export class WebSocket extends Construct {
@@ -103,6 +104,7 @@ export class WebSocket extends Construct {
         GLOBAL_AVAILABLE_MODELS: JSON.stringify(props.globalAvailableModels ?? []),
         DEFAULT_MODEL: props.defaultModel || "",
         TITLE_MODEL: props.titleModel || "",
+        METRICS_NAMESPACE: props.metricsNamespace,
       },
       role: handlerRole,
       snapStart: props.enableLambdaSnapStart
