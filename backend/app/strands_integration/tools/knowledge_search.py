@@ -1,5 +1,4 @@
 import logging
-import traceback
 
 from app.repositories.models.custom_bot import BotModel
 from strands import tool
@@ -10,22 +9,14 @@ logger = logging.getLogger(__name__)
 
 def _search_knowledge_standalone(bot: BotModel, query: str) -> list:
     """Standalone knowledge search implementation."""
-    try:
-        from app.vector_search import search_related_docs
+    from app.vector_search import search_related_docs
 
-        logger.info("Running knowledge search")
+    logger.info("Running knowledge search")
 
-        search_results = search_related_docs(bot, query=query)
+    search_results = search_related_docs(bot, query=query)
 
-        logger.info("Knowledge search found %d results", len(search_results))
-        return search_results
-
-    except Exception as e:
-        error_traceback = traceback.format_exc()
-        logger.error(
-            f"Failed to run knowledge search: {e}\nTraceback: {error_traceback}"
-        )
-        raise e
+    logger.info("Knowledge search found %d results", len(search_results))
+    return search_results
 
 
 def create_knowledge_search_tool(bot: BotModel | None) -> StrandsAgentTool:
@@ -91,13 +82,13 @@ def create_knowledge_search_tool(bot: BotModel | None) -> StrandsAgentTool:
                 "content": [{"json": result} for result in results],
             }
 
-        except Exception as e:
-            logger.error(f"[KNOWLEDGE_SEARCH_V3] Knowledge search error: {e}")
+        except Exception:
+            # Error texts can name internal resources; the model and the
+            # conversation get a fixed text.
+            logger.exception("[KNOWLEDGE_SEARCH_V3] Knowledge search failed")
             return {
                 "status": "error",
-                "content": [
-                    {"text": f"An error occurred during knowledge search: {str(e)}"}
-                ],
+                "content": [{"text": "The knowledge search failed."}],
             }
 
     return knowledge_base_tool

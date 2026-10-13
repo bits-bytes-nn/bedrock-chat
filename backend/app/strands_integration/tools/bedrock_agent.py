@@ -263,15 +263,13 @@ def create_bedrock_agent_tool(bot: BotModel | None) -> StrandsAgentTool:
                 "content": [{"json": result} for result in results],
             }
 
-        except Exception as e:
-            logger.error(f"[BEDROCK_AGENT_V3] Bedrock Agent error: {e}")
+        except Exception:
+            # Error texts can name internal resources; the model and the
+            # conversation get a fixed text.
+            logger.exception("[BEDROCK_AGENT_V3] Bedrock Agent invocation failed")
             return {
                 "status": "error",
-                "content": [
-                    {
-                        "text": f"An error occurred during Bedrock Agent invocation: {str(e)}"
-                    }
-                ],
+                "content": [{"text": "The Bedrock Agent invocation failed."}],
             }
 
     # Update tool description dynamically to reflect the actual agent's purpose.

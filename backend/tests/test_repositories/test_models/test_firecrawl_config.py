@@ -33,6 +33,16 @@ class TestFirecrawlConfigModel(unittest.TestCase):
         self.assertEqual(deserialized.secret_arn, model.secret_arn)
         self.assertEqual(deserialized.max_results, 15)
 
+    def test_missing_secret_is_not_a_validation_error(self):
+        # A ValueError would reach the client as a 422 that names the secret ARN.
+        with self.assertRaises(RuntimeError):
+            FirecrawlConfigModel.model_validate(
+                {
+                    "secret_arn": "arn:aws:secretsmanager:us-east-1:123456789012:secret:x",
+                    "api_key": "",
+                }
+            )
+
 
 if __name__ == "__main__":
     unittest.main()

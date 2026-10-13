@@ -212,7 +212,8 @@ def get_opensearch_client() -> OpenSearch:
     """Get an OpenSearch client for the collection that indexes bots and conversations."""
     endpoint = OPENSEARCH_DOMAIN_ENDPOINT
     if not endpoint:
-        raise ValueError("OPENSEARCH_DOMAIN_ENDPOINT is not set")
+        # A deployment error, not a bad request (ValueError is returned as 400).
+        raise RuntimeError("OPENSEARCH_DOMAIN_ENDPOINT is not set")
 
     # Get credentials from boto3
     credentials = boto3.Session().get_credentials()

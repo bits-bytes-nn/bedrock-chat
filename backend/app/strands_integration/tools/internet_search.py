@@ -242,11 +242,13 @@ def create_internet_search_tool(bot: BotModel | None) -> StrandsAgentTool:
                 "content": [{"json": result} for result in results],
             }
 
-        except Exception as e:
-            logger.error(f"[INTERNET_SEARCH_V3] Internet search error: {e}")
+        except Exception:
+            # Error texts can name internal resources; the model and the
+            # conversation get a fixed text.
+            logger.exception("[INTERNET_SEARCH_V3] Internet search failed")
             return {
                 "status": "error",
-                "content": [{"text": f"Search error: {str(e)}"}],
+                "content": [{"text": "The internet search failed."}],
             }
 
     return internet_search

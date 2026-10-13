@@ -151,10 +151,11 @@ class FirecrawlConfigModel(BaseModel):
                 api_key = get_api_key_from_secret_manager(data["secret_arn"])
                 data["api_key"] = api_key
             except Exception as e:
-                logger.error(f"Failed to retrieve secret from ARN: {e}")
-                raise ValueError(
+                # Not a ValueError: pydantic would return it to the client as a
+                # validation error, with the secret ARN.
+                raise RuntimeError(
                     f"Failed to retrieve secret from ARN: {data['secret_arn']}"
-                )
+                ) from e
 
         return data
 
