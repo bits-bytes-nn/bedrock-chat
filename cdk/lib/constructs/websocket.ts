@@ -48,6 +48,7 @@ export class WebSocket extends Construct {
     const { tableAccessRole } = database;
 
     const handlerRole = new iam.Role(this, "HandlerRole", {
+      path: props.database.tableAccessRolePath,
       assumedBy: new iam.ServicePrincipal("lambda.amazonaws.com"),
     });
     handlerRole.addManagedPolicy(

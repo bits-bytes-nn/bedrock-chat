@@ -4,14 +4,17 @@
 set -uo pipefail
 
 log=$(mktemp)
-for attempt in 1 2 3; do
-  if docker build "$@" 2>&1 | tee "$log"; then
+attempts=3
+for attempt in $(seq "$attempts"); do
+  docker build "$@" 2>&1 | tee "$log"
+  status=${PIPESTATUS[0]}
+  if [ "$status" -eq 0 ]; then
     exit 0
   fi
-  if ! grep -q "429 Too Many Requests" "$log"; then
-    exit 1
+  if [ "$attempt" -eq "$attempts" ] ||
+    ! grep -Eq "429 Too Many Requests|toomanyrequests" "$log"; then
+    exit "$status"
   fi
   echo "ECR Public rate limit, retrying in $((attempt * 60)) seconds" >&2
   sleep $((attempt * 60))
 done
-exit 1

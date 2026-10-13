@@ -1,18 +1,7 @@
-import { Tags } from "aws-cdk-lib";
-import { IConstruct } from "constructs";
-
 /**
- * Tag on the roles that may assume the table access role. Generated role names keep
- * the stack name only when it is short, so the trust policy does not rely on names
- * alone.
+ * IAM path of the roles that may assume the table access role. A path is set only
+ * when a role is created, so, unlike names (which CloudFormation shortens for long
+ * stack names) or tags (which session tags can supply), it identifies these roles.
  */
-export const TABLE_ACCESS_TAG_KEY = "bedrock-chat:table-access";
-
-export const tableAccessTagValue = (envPrefix: string): string =>
-  envPrefix || "default";
-
-/** Tag every role in the scope as allowed to assume the table access role. */
-export const tagTableAccessRoles = (scope: IConstruct, envPrefix: string) =>
-  Tags.of(scope).add(TABLE_ACCESS_TAG_KEY, tableAccessTagValue(envPrefix), {
-    includeResourceTypes: ["AWS::IAM::Role"],
-  });
+export const tableAccessRolePath = (envPrefix: string): string =>
+  `/bedrock-chat/${envPrefix || "default"}/`;

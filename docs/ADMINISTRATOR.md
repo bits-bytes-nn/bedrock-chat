@@ -43,6 +43,8 @@ Currently provides a basic overview of public bot usage, aggregating data for ea
 
 - The exports contain the full text of conversations, including conversations that users deleted. They expire after `usageAnalysisRetentionDays` (default 90), so usage analysis covers that period. Restrict access to the bucket and Athena accordingly.
 
+- The `TableAccessRole` of `BedrockChatStack` reads and writes the conversation and bot tables. It trusts only roles under the IAM path `/bedrock-chat/<env>/` (`default` for the default environment) and roles named after this stack or `ApiPublishmentStack*`. Creating roles is therefore as sensitive as access to the tables.
+
 - In public bot usages, bots that have not been used at all during the specified period will not be listed.
 
 > [!Important]

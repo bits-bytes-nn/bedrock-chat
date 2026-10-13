@@ -356,7 +356,7 @@ The traditional way to configure parameters is by editing the `cdk.json` file. T
 }
 ```
 
-To keep deployment-specific values out of Git, pass them with `-c` when you deploy. Command-line context overrides `cdk.json`; values in `cdk.context.json` do not:
+To keep deployment-specific values out of Git, pass them with `-c` when you deploy, or put keys that `cdk.json` does not define (such as `alarmEmail`) in `cdk/cdk.context.json`, which Git ignores. Command-line context overrides `cdk.json`; `cdk.context.json` applies only to keys that are not in `cdk.json`:
 
 ```sh
 npx cdk deploy --all -c bedrockRegion=ap-northeast-2
@@ -618,7 +618,9 @@ CloudWatch alarms notify an SNS topic (output `AlarmTopicArn`) when:
 - Lambda concurrency limits throttle chat requests (these are not the API Gateway 429 responses caused by `apiThrottleRateLimit`);
 - the knowledge sync state machine fails, times out or is aborted, or a bot's knowledge sync fails;
 - the resources of a deleted bot could not be removed;
-- a day of chat answers costs more than `dailyChatCostAlarmUsd` (default 100 USD; 0 turns it off). The cost is computed with the model prices in the backend and includes published APIs;
+- the hourly conversation export for usage analysis fails;
+- updating the usage counts of bots fails at least 5 times in an hour (the answers are still saved);
+- a day of chat answers costs at least `dailyChatCostAlarmUsd` (default 100 USD; 0 turns it off). The cost is computed with the model prices in the backend and includes published APIs;
 - a published API fails to answer or its Lambda functions fail. These alarms are in each `ApiPublishmentStack*` stack ([API publication](./docs/PUBLISH_API.md#architecture)).
 
 Set `alarmEmail` to subscribe an email address; AWS sends a confirmation email first.
@@ -634,7 +636,7 @@ bedrockChatParams.set("default", {
 ```
 
 > [!Important]
-> Defining the `default` environment in `parameter.ts` replaces every setting in `cdk.json`, including IP restrictions. To change a single setting, add it to `cdk.json` or pass it on the command line instead, for example `npx cdk deploy --all -c alarmEmail=ops@example.com`, or `./bin.sh --cdk-json-override '{"context":{"alarmEmail":"ops@example.com"}}'`. `-c` works for strings, numbers and `true`/`false`; set lists and objects in `cdk.json` or with `--cdk-json-override`.
+> Defining the `default` environment in `parameter.ts` replaces every setting in `cdk.json`, including IP restrictions. To change a single setting, add it to `cdk.json` instead. Keep `alarmEmail` in `cdk/cdk.context.json` (ignored by Git), for example `{"alarmEmail": "ops@example.com"}`: values given with `-c` or `--cdk-json-override` apply to that deployment only, and deploying again without them removes the email subscription. `-c` works for strings, numbers and `true`/`false`; set lists and objects in `cdk.json` or with `--cdk-json-override`.
 
 ### Limit dedicated knowledge bases
 

@@ -85,6 +85,7 @@ export class Embedding extends Construct {
   private setupStateMachineHandlers(props: EmbeddingProps) {
     const sharedStackName = sharedKnowledgeBasesStackName(props.envPrefix);
     const handlerRole = new iam.Role(this, "HandlerRole", {
+      path: props.database.tableAccessRolePath,
       assumedBy: new iam.ServicePrincipal("lambda.amazonaws.com"),
     });
     handlerRole.addToPolicy(
@@ -635,6 +636,7 @@ export class Embedding extends Construct {
 
   private setupRemovalHandler(props: EmbeddingProps) {
     const removeHandlerRole = new iam.Role(this, "RemovalHandlerRole", {
+      path: props.database.tableAccessRolePath,
       assumedBy: new iam.ServicePrincipal("lambda.amazonaws.com"),
     });
     removeHandlerRole.addToPolicy(

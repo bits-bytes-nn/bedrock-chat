@@ -39,7 +39,7 @@ export OPENSEARCH_DOMAIN_ENDPOINT=https://abcdefghijklmnopqrst.aa-region-1.aoss.
   - `DEFAULT_MODEL`, `TITLE_MODEL`: model names for new conversations and title generation.
   - `EMBEDDING_STATE_MACHINE_ARN`: the embedding state machine, needed to sync bot knowledge.
   - `MAX_DEDICATED_KNOWLEDGE_BASES_PER_USER`: how many bots with a dedicated knowledge base a user may own (default `0`, unlimited).
-  - `METRICS_NAMESPACE`: CloudWatch namespace of the chat cost metric (default `BedrockChat`).
+  - `METRICS_NAMESPACE`: CloudWatch namespace of the metrics the backend publishes for the alarms, such as `ChatCost`, `BotUsageUpdateFailures` and `FailedAnswers` (default `BedrockChat`).
 
 - Configure CDK configration.
 Local development requires OpenSearch data access permissions for the IAM role to be used. You can set this parameter in either `cdk/cdk.json` or `cdk/parameter.ts`.
