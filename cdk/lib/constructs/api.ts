@@ -67,6 +67,7 @@ export interface ApiProps {
   readonly globalAvailableModels?: string[];
   readonly defaultModel?: string;
   readonly titleModel?: string;
+  readonly maxDedicatedKnowledgeBasesPerUser: number;
   readonly logoPath?: string;
 }
 
@@ -249,6 +250,8 @@ export class Api extends Construct {
           : "[]",
         DEFAULT_MODEL: props.defaultModel || "",
         TITLE_MODEL: props.titleModel || "",
+        MAX_DEDICATED_KNOWLEDGE_BASES_PER_USER:
+          props.maxDedicatedKnowledgeBasesPerUser.toString(),
         OPENSEARCH_DOMAIN_ENDPOINT: props.openSearchEndpoint || "",
         LOGO_PATH: props.logoPath || "",
         AWS_LAMBDA_EXEC_WRAPPER: "/opt/bootstrap",

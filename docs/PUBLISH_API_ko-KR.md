@@ -40,6 +40,8 @@ WAF는 IP 주소 제한에 사용됩니다. 주소는 `cdk.json`의 `publishedAp
 
 클라이언트는 요청 헤더에 `x-api-key`를 설정해야 합니다.
 
+스로틀링을 설정하지 않으면 게시된 API는 초당 10건, 버스트 20건까지 허용합니다. API 키가 유출되더라도 모델 비용이 제한 없이 늘지 않게 하기 위해서입니다.
+
 ## API 사양
 
 [공개된 명세](https://aws-samples.github.io/bedrock-chat)는 upstream 프로젝트 기준입니다. 이 포크의 명세는 백엔드를 로컬에서 실행한 뒤([backend/README.md](../backend/README.md) 참고) `/docs` 또는 `/openapi.json`에서 확인하세요.

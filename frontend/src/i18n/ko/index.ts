@@ -404,7 +404,8 @@ const translation: typeof en = {
           endpoint: '클라이언트는 이 엔드포인트로 봇을 사용할 수 있습니다.',
           usagePlan:
             '사용량 계획은 API가 클라이언트로부터 받을 수 있는 요청 수나 요청 속도를 지정합니다. API를 사용량 계획에 연결하면 API가 받는 요청을 추적할 수 있습니다.',
-          throttling: '사용자가 API를 호출할 수 있는 속도를 제한합니다.',
+          throttling:
+            '사용자가 API를 호출할 수 있는 속도를 제한합니다. 지정하지 않으면 초당 10건, 버스트 20건이 적용됩니다.',
           rateLimit:
             '클라이언트가 API를 호출할 수 있는 속도를 초당 요청 수로 입력하세요.',
           burstLimit:

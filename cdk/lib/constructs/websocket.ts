@@ -1,6 +1,7 @@
 import { Construct } from "constructs";
 import * as apigwv2 from "aws-cdk-lib/aws-apigatewayv2";
 import { WebSocketLambdaIntegration } from "aws-cdk-lib/aws-apigatewayv2-integrations";
+import { WebSocketLambdaAuthorizer } from "aws-cdk-lib/aws-apigatewayv2-authorizers";
 
 import { IFunction, Runtime, SnapStartConf } from "aws-cdk-lib/aws-lambda";
 import * as path from "path";
@@ -110,11 +111,36 @@ export class WebSocket extends Construct {
       logRetention: logs.RetentionDays.THREE_MONTHS,
     });
 
+    // Rejects connections without a valid ID token. Browsers cannot set headers on
+    // a WebSocket, so the token comes in the query string.
+    const authorizerHandler = new PythonFunction(this, "ConnectAuthorizer", {
+      entry: path.join(__dirname, "../../../backend"),
+      index: "app/websocket_authorizer.py",
+      bundling: {
+        assetExcludes: [...excludeDockerImage],
+        buildArgs: { POETRY_VERSION: "1.8.5" },
+      },
+      runtime: Runtime.PYTHON_3_13,
+      memorySize: 256,
+      timeout: Duration.seconds(10),
+      environment: {
+        REGION: Stack.of(this).region,
+        USER_POOL_ID: props.auth.userPool.userPoolId,
+        CLIENT_ID: props.auth.client.userPoolClientId,
+      },
+      logRetention: logs.RetentionDays.THREE_MONTHS,
+    });
+
     const webSocketApi = new apigwv2.WebSocketApi(this, "WebSocketApi", {
       connectRouteOptions: {
         integration: new WebSocketLambdaIntegration(
           "ConnectIntegration",
           handler.currentVersion
+        ),
+        authorizer: new WebSocketLambdaAuthorizer(
+          "ConnectAuthorizer",
+          authorizerHandler,
+          { identitySource: ["route.request.querystring.token"] }
         ),
       },
     });

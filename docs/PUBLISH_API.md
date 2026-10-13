@@ -40,6 +40,8 @@ Once a user click publish the bot, [AWS CodeBuild](https://aws.amazon.com/codebu
 
 Client needs to set `x-api-key` on the request header.
 
+Without throttling settings, a published API allows 10 requests per second with a burst of 20, so that a leaked key cannot run up model costs unchecked.
+
 ## API specification
 
 The [published specification](https://aws-samples.github.io/bedrock-chat) is the upstream project's. For this fork, run the backend locally (see [backend/README.md](../backend/README.md)) and open `/docs` or `/openapi.json`.

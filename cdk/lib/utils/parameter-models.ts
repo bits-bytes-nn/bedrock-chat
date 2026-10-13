@@ -97,7 +97,9 @@ const BedrockChatParametersSchema = BaseParametersSchema.extend({
     .default([]),
   userPoolDomainPrefix: z.string().default(""),
   allowedSignUpEmailDomains: z.array(z.string()).default([]),
-  autoJoinUserGroups: z.array(z.string()).default(["CreatingBotAllowed"]),
+  // Off by default: members of CreatingBotAllowed can create knowledge bases, each
+  // with its own OpenSearch Serverless collection.
+  autoJoinUserGroups: z.array(z.string()).default([]),
   // Off by default: users are created by an administrator.
   selfSignUpEnabled: z.boolean().default(false),
 
@@ -134,6 +136,12 @@ const BedrockChatParametersSchema = BaseParametersSchema.extend({
   // Operations
   // Email address subscribed to alarm notifications. Leave empty to only create the topic.
   alarmEmail: z.string().default(""),
+  // Alarm when the chat answers of a day cost more than this, in USD (0 turns it off).
+  // Computed with the model prices in the backend; published APIs are not included.
+  dailyChatCostAlarmUsd: z.number().min(0).default(100),
+  // Bots with their own knowledge base per user; each has an OpenSearch Serverless
+  // collection billed while it exists. 0 means no limit. Admins are not limited.
+  maxDedicatedKnowledgeBasesPerUser: z.number().int().min(0).default(2),
   // Requests per second for the REST and WebSocket APIs. API Gateway's account limit
   // still applies; these defaults only stop runaway clients.
   apiThrottleRateLimit: z.number().default(500),
@@ -287,6 +295,10 @@ export function resolveBedrockChatParameters(
     devAccessIamRoleArn: app.node.tryGetContext("devAccessIamRoleArn"),
     tokenValidMinutes: app.node.tryGetContext("tokenValidMinutes"),
     alarmEmail: app.node.tryGetContext("alarmEmail"),
+    dailyChatCostAlarmUsd: app.node.tryGetContext("dailyChatCostAlarmUsd"),
+    maxDedicatedKnowledgeBasesPerUser: app.node.tryGetContext(
+      "maxDedicatedKnowledgeBasesPerUser"
+    ),
     apiThrottleRateLimit: app.node.tryGetContext("apiThrottleRateLimit"),
     apiThrottleBurstLimit: app.node.tryGetContext("apiThrottleBurstLimit"),
   };

@@ -11,6 +11,7 @@ from app.repositories.common import (
     RecordNotFoundError,
     compose_item_type,
     compose_sk,
+    decompose_sk,
     get_bot_table_client,
     get_dynamodb_client,
 )
@@ -446,6 +447,28 @@ def update_alias_is_origin_accessible(
     return response
 
 
+def count_dedicated_knowledge_bases(user_id: str, exclude_bot_id: str) -> int:
+    """Count the user's bots, other than `exclude_bot_id`, with their own knowledge base."""
+    table = get_bot_table_client()
+    query: dict = {
+        "KeyConditionExpression": Key("PK").eq(user_id)
+        & Key("SK").begins_with(compose_sk("", "bot")),
+        "ProjectionExpression": "SK, BedrockKnowledgeBase",
+    }
+    count = 0
+    while True:
+        response = table.query(**query)
+        count += sum(
+            1
+            for item in response["Items"]
+            if decompose_sk(item["SK"]) != exclude_bot_id
+            and (item.get("BedrockKnowledgeBase") or {}).get("type") == "dedicated"
+        )
+        if "LastEvaluatedKey" not in response:
+            return count
+        query["ExclusiveStartKey"] = response["LastEvaluatedKey"]
+
+
 def find_owned_bots_by_user_id(user_id: str, limit: int | None = None) -> list[BotMeta]:
     """Find all owned bots by user id.
     The order is descending by `last_used_time`.
@@ -467,10 +490,10 @@ def find_owned_bots_by_user_id(user_id: str, limit: int | None = None) -> list[B
         query_count += 1
         response = table.query(**query_params)
 
-        bots = [
+        bots.extend(
             BotMeta.from_dynamo_item(item, owned=True, is_origin_accessible=True)
             for item in response["Items"]
-        ]
+        )
 
         if limit and len(bots) >= limit:
             break

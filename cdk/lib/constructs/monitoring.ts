@@ -13,6 +13,8 @@ import { Construct } from "constructs";
 export interface MonitoringProps {
   /** Email address subscribed to the alarm topic. Empty to skip the subscription. */
   readonly alarmEmail: string;
+  /** Alarm when a day of chat answers costs more than this, in USD. 0 turns it off. */
+  readonly dailyChatCostAlarmUsd: number;
   readonly api: IHttpApi;
   readonly webSocketHandler: IFunction;
   readonly webSocketLogGroup: logs.ILogGroup;
@@ -109,6 +111,20 @@ export class Monitoring extends Construct {
         "Removing a deleted bot's resources failed. Its knowledge base or API stack may still be running and billing.",
       ],
     ];
+    if (props.dailyChatCostAlarmUsd > 0) {
+      alarms.push([
+        "DailyChatCost",
+        new cloudwatch.Metric({
+          // Published by backend/app/websocket.py (emit_chat_cost).
+          namespace: "BedrockChat",
+          metricName: "ChatCost",
+          statistic: "Sum",
+          period: Duration.days(1),
+        }),
+        props.dailyChatCostAlarmUsd,
+        `Chat answers cost at least ${props.dailyChatCostAlarmUsd} USD in a day, by the model prices in the backend.`,
+      ]);
+    }
     for (const [alarmId, metric, threshold, description] of alarms) {
       new cloudwatch.Alarm(this, alarmId, {
         metric,

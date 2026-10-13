@@ -97,7 +97,10 @@ const usePostMessageStreaming = create<{
       let streamEnded = false;
       let failed = false;
       return new Promise<void>((resolve, reject) => {
-        const ws = new WebSocket(WS_ENDPOINT);
+        // The $connect authorizer reads the token; browsers cannot set headers here.
+        const ws = new WebSocket(
+          `${WS_ENDPOINT}?token=${encodeURIComponent(token ?? '')}`
+        );
 
         const fail = (reason: string) => {
           // Closing the socket below triggers onclose, so report only the first failure.

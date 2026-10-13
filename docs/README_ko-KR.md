@@ -523,7 +523,7 @@ npx cdk deploy --all
 이 샘플은 외부 ID 공급자를 지원합니다. 현재 [Google](./idp/SET_UP_GOOGLE_ko-KR.md)과 [사용자 지정 OIDC 공급자](./idp/SET_UP_CUSTOM_OIDC_ko-KR.md)를 지원합니다.
 
 > [!Important]
-> 로그인할 수 있는 사람은 공급자가 정합니다. 공급자가 인증한 계정마다 사용자가 생기고, 기본 `autoJoinUserGroups` 설정에서는 그 사용자가 봇을 만들 수 있습니다. 공급자 쪽에서 대상을 제한하거나(예: 조직 내부용 Google OAuth 앱) `allowedSignUpEmailDomains`를 설정하세요.
+> 로그인할 수 있는 사람은 공급자가 정합니다. 공급자가 인증한 계정마다 사용자가 생깁니다. `autoJoinUserGroups`에 그룹을 지정했다면 그 사용자도 해당 그룹의 권한을 얻습니다. 공급자 쪽에서 대상을 제한하거나(예: 조직 내부용 Google OAuth 앱) `allowedSignUpEmailDomains`를 설정하세요.
 
 ### 선택적 프론트엔드 WAF
 
@@ -559,7 +559,7 @@ bedrockChatParams.set("default", {
 "autoJoinUserGroups": ["CreatingBotAllowed"],
 ```
 
-기본적으로 새로 생성된 사용자는 `CreatingBotAllowed` 그룹에 가입됩니다.
+기본값에서는 새 사용자가 어떤 그룹에도 가입되지 않습니다. `CreatingBotAllowed` 멤버는 비용이 드는 전용 지식 기반 봇을 만들 수 있기 때문입니다. Cognito에서 직접 그룹에 추가하거나 여기에 그룹을 지정하세요.
 
 ### RAG 복제본 구성
 

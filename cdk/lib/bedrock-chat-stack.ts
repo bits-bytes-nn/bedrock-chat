@@ -63,6 +63,8 @@ export interface BedrockChatStackProps extends StackProps {
   readonly allowedCountries?: string[];
   readonly logoPath?: string;
   readonly alarmEmail: string;
+  readonly dailyChatCostAlarmUsd: number;
+  readonly maxDedicatedKnowledgeBasesPerUser: number;
   readonly apiThrottle: ThrottleSettings;
 }
 
@@ -270,6 +272,7 @@ export class BedrockChatStack extends cdk.Stack {
       globalAvailableModels: props.globalAvailableModels,
       defaultModel: props.defaultModel,
       titleModel: props.titleModel,
+      maxDedicatedKnowledgeBasesPerUser: props.maxDedicatedKnowledgeBasesPerUser,
       logoPath: props.logoPath,
       throttle: props.apiThrottle,
     });
@@ -328,6 +331,7 @@ export class BedrockChatStack extends cdk.Stack {
 
     new Monitoring(this, "Monitoring", {
       alarmEmail: props.alarmEmail,
+      dailyChatCostAlarmUsd: props.dailyChatCostAlarmUsd,
       api: backendApi.api,
       webSocketHandler: websocket.handler,
       webSocketLogGroup: websocket.handlerLogGroup,

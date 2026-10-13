@@ -335,5 +335,20 @@ class TestHandler:
         process.assert_not_called()
 
 
+class TestChatCostMetric(unittest.TestCase):
+    def test_emits_the_price_in_embedded_metric_format(self):
+        import io
+        from contextlib import redirect_stdout
+
+        out = io.StringIO()
+        with redirect_stdout(out):
+            websocket.emit_chat_cost(0.25)
+        line = json.loads(out.getvalue())
+        metric = line["_aws"]["CloudWatchMetrics"][0]
+        self.assertEqual(metric["Namespace"], "BedrockChat")
+        self.assertEqual(metric["Metrics"][0]["Name"], "ChatCost")
+        self.assertEqual(line["ChatCost"], 0.25)
+
+
 if __name__ == "__main__":
     unittest.main()
