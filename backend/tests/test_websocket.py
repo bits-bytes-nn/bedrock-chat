@@ -15,6 +15,7 @@ sys.path.insert(0, ".")
 os.environ.setdefault("WEBSOCKET_SESSION_TABLE_NAME", "test-websocket-session")
 
 from app import websocket
+from app.metrics import emit_chat_cost
 from app.websocket import NotificationSender, process_chat_input
 
 
@@ -336,13 +337,14 @@ class TestHandler:
 
 
 class TestChatCostMetric(unittest.TestCase):
+    # app.metrics, used by the chat and published API handlers.
     def test_emits_the_price_in_embedded_metric_format(self):
         import io
         from contextlib import redirect_stdout
 
         out = io.StringIO()
         with redirect_stdout(out):
-            websocket.emit_chat_cost(0.25)
+            emit_chat_cost(0.25)
         line = json.loads(out.getvalue())
         metric = line["_aws"]["CloudWatchMetrics"][0]
         self.assertEqual(metric["Namespace"], "BedrockChat")

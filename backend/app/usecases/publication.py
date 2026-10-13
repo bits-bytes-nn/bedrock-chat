@@ -54,7 +54,8 @@ def create_bot_publication(user: User, bot_id: str, bot_publish_input: BotPublis
     if bot.published_api_codebuild_id is not None:
         if is_build_running(bot.published_api_codebuild_id):
             raise ResourceConflictError(
-                f"Bot {bot_id} publication is already requested (build id: {bot.published_api_codebuild_id}). Please wait until the previous publication is completed."
+                f"Bot {bot_id} publication is already requested (build id: {bot.published_api_codebuild_id}). Please wait until the previous publication is completed.",
+                code="api_publishing",
             )
         else:
             raise ValueError(

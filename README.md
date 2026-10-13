@@ -111,7 +111,7 @@ A knowledge file is registered as `<filename>.txt`. A chat attachment is sent as
 The bot's knowledge settings offer an advanced parsing model that reads figures, charts and tables in PDF files and images. Claude Haiku 4.5 is called through a global cross-Region inference profile, so documents may be processed in other Regions. Claude 3 Haiku is kept as a legacy option and is not available in every Region. Bots saved with Claude 3 or 3.5 Sonnet, which Bedrock no longer offers, use the default parser.
 
 > [!NOTE]
-> After a knowledge base sync succeeds, OpenSearch Serverless can take up to a minute before the new documents are returned by searches.
+> OpenSearch Serverless returns newly indexed documents about a minute after ingestion, so a sync is marked as succeeded a minute after its ingestion completes.
 
 ## 🎓Workshop
 
@@ -598,7 +598,7 @@ bedrockChatParams.set("default", {
 
 ### Alarms and API Throttling
 
-CloudWatch alarms notify an SNS topic (output `AlarmTopicArn`) when the REST API answers with server errors or chat answers fail repeatedly, when chat requests are throttled, when a knowledge sync fails, when the resources of a deleted bot could not be removed, or when a day of chat answers costs more than `dailyChatCostAlarmUsd` (default 100 USD; 0 turns it off). The cost is computed with the model prices in the backend and does not include published APIs. Set `alarmEmail` to subscribe an email address; AWS sends a confirmation email first.
+CloudWatch alarms notify an SNS topic (output `AlarmTopicArn`) when the REST API answers with server errors or chat answers fail repeatedly, when chat requests are throttled, when a knowledge sync fails, when the resources of a deleted bot could not be removed, or when a day of chat answers costs more than `dailyChatCostAlarmUsd` (default 100 USD; 0 turns it off). The cost is computed with the model prices in the backend and includes published APIs. Set `alarmEmail` to subscribe an email address; AWS sends a confirmation email first.
 
 The REST and WebSocket APIs are limited to `apiThrottleRateLimit` requests per second (default 500) with a burst of `apiThrottleBurstLimit` (default 1000). Raise them for large deployments.
 

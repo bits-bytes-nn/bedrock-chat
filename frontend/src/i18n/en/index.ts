@@ -961,6 +961,14 @@ How would you categorize this email?`,
       },
     },
     error: {
+      api: {
+        knowledge_base_syncing:
+          'The knowledge base is being synchronized. Try again after it finishes.',
+        api_publishing:
+          'The API is being published. Try again after it finishes.',
+        dedicated_knowledge_base_limit:
+          'You can have at most {{limit}} bots with their own knowledge base. Delete one, or use a shared knowledge base.',
+      },
       answerResponse: 'An error occurred while responding.',
       notFoundConversation:
         'Since the specified chat does not exist, a new chat screen is displayed.',

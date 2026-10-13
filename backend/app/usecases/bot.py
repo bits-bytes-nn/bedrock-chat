@@ -5,7 +5,11 @@ from typing import Literal, TypeGuard
 
 from app.config import DEFAULT_GENERATION_CONFIG
 from app.repositories.api_publication import is_build_running
-from app.repositories.common import RecordNotFoundError, ResourceConflictError
+from app.repositories.common import (
+    LimitExceededError,
+    RecordNotFoundError,
+    ResourceConflictError,
+)
 from app.repositories.custom_bot import (
     alias_exists,
     count_dedicated_knowledge_bases,
@@ -218,9 +222,11 @@ def _check_dedicated_knowledge_base_limit(user: User, bot_id: str) -> None:
         count_dedicated_knowledge_bases(user.id, exclude_bot_id=bot_id)
         >= MAX_DEDICATED_KNOWLEDGE_BASES_PER_USER
     ):
-        raise ValueError(
+        raise LimitExceededError(
             f"You can have at most {MAX_DEDICATED_KNOWLEDGE_BASES_PER_USER} bots with "
-            "their own knowledge base. Delete one, or use a shared knowledge base."
+            "their own knowledge base. Delete one, or use a shared knowledge base.",
+            code="dedicated_knowledge_base_limit",
+            limit=MAX_DEDICATED_KNOWLEDGE_BASES_PER_USER,
         )
 
 
@@ -301,7 +307,8 @@ def modify_owned_bot(
     # longer protects the bot from deletion while its stack is being built.
     if bot.sync_status in ("QUEUED", "RUNNING") and not user.is_admin():
         raise ResourceConflictError(
-            "The knowledge base is being synchronized. Edit the bot after it finishes."
+            "The knowledge base is being synchronized. Edit the bot after it finishes.",
+            code="knowledge_base_syncing",
         )
     validate_external_resource_references(user, modify_input, current_bot=bot)
     if modify_input.knowledge and _uses_dedicated_knowledge_base(
@@ -643,13 +650,15 @@ def remove_bot_by_id(user: User, bot_id: str):
     if not user.is_admin():
         if bot.sync_status in ("QUEUED", "RUNNING"):
             raise ResourceConflictError(
-                "The knowledge base is being synchronized. Delete the bot after it finishes."
+                "The knowledge base is being synchronized. Delete the bot after it finishes.",
+                code="knowledge_base_syncing",
             )
         if bot.published_api_codebuild_id is not None and is_build_running(
             bot.published_api_codebuild_id
         ):
             raise ResourceConflictError(
-                "The API is being published. Delete the bot after it finishes."
+                "The API is being published. Delete the bot after it finishes.",
+                code="api_publishing",
             )
 
     if bot.is_editable_by_user(user):

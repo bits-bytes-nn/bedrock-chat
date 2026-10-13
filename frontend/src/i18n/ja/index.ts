@@ -964,6 +964,13 @@ const translation: typeof en = {
       },
     },
     error: {
+      api: {
+        knowledge_base_syncing:
+          'ナレッジベースを同期しています。完了してから再度お試しください。',
+        api_publishing: 'API を公開しています。完了してから再度お試しください。',
+        dedicated_knowledge_base_limit:
+          '専用のナレッジベースを持つボットは最大 {{limit}} 個までです。既存のボットを削除するか、共有ナレッジベースを使用してください。',
+      },
       answerResponse: '回答中にエラーが発生しました。',
       notFoundConversation:
         '指定のチャットは存在しないため、新規チャット画面を表示しました。',

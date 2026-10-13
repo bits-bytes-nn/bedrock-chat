@@ -531,6 +531,12 @@ export class Embedding extends Construct {
       resultPath: "$.Error",
     });
 
+    // OpenSearch Serverless returns newly indexed documents only about a minute
+    // after the ingestion completes, so the bot is marked ready after that.
+    const waitForSearchIndex = new sfn.Wait(this, "WaitForSearchIndex", {
+      time: sfn.WaitTime.duration(Duration.minutes(1)),
+    });
+
     const updateSyncStatusSucceeded = new tasks.LambdaInvoke(this, "UpdateSyncStatusSuccess", {
       lambdaFunction: this._updateSyncStatusHandler,
       payload: sfn.TaskInput.fromObject({
@@ -596,6 +602,7 @@ export class Embedding extends Construct {
                       ingestionJobForCustomBot
                     )
                   )
+                  .next(waitForSearchIndex)
                   .next(updateSyncStatusSucceeded)
                   .next(syncCustomBotFinished)
               )
