@@ -2,13 +2,20 @@ import sys
 import unittest
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 sys.path.insert(0, ".")
 
 from app.repositories.common import RecordNotFoundError
 from app.repositories.models.conversation import AttachmentContentModel
 from app.repositories.usage_analysis import _to_datehour_range, _validate_query
 from app.usecases import bot as bot_usecase
-from app.usecases.bot import issue_presigned_url, validate_new_bot_id
+from app.usecases.bot import (
+    fetch_knowledge_file_conversion,
+    issue_presigned_url,
+    start_knowledge_file_conversion,
+    validate_new_bot_id,
+)
 from app.user import User
 
 BOT_ID = "01J9Z3Q4R5S6T7V8W9X0Y1Z2A3"
@@ -38,9 +45,12 @@ class TestIssuePresignedUrl(unittest.TestCase):
         return issue_presigned_url(self.user, bot_id, filename, "application/pdf")
 
     def test_allows_uploads_for_a_new_bot(self):
-        with patch.object(
-            bot_usecase, "find_bot_by_id", side_effect=RecordNotFoundError("none")
-        ), patch.object(bot_usecase, "generate_presigned_url", return_value="url"):
+        with (
+            patch.object(
+                bot_usecase, "find_bot_by_id", side_effect=RecordNotFoundError("none")
+            ),
+            patch.object(bot_usecase, "generate_presigned_url", return_value="url"),
+        ):
             self.assertEqual(self.issue(), "url")
 
     def test_rejects_another_users_bot(self):
@@ -54,6 +64,41 @@ class TestIssuePresignedUrl(unittest.TestCase):
         for bot_id, filename in (("../bot", "doc.pdf"), (BOT_ID, "a/b.pdf")):
             with self.assertRaises(ValueError):
                 self.issue(bot_id, filename)
+
+
+@pytest.mark.parametrize(
+    "call",
+    [
+        pytest.param(
+            lambda user: issue_presigned_url(
+                user, BOT_ID, "doc.pdf", "application/pdf"
+            ),
+            id="issue_presigned_url",
+        ),
+        pytest.param(
+            lambda user: start_knowledge_file_conversion(user, BOT_ID, "doc.pdf"),
+            id="start_knowledge_file_conversion",
+        ),
+        pytest.param(
+            lambda user: fetch_knowledge_file_conversion(user, BOT_ID, "doc.pdf"),
+            id="fetch_knowledge_file_conversion",
+        ),
+    ],
+)
+def test_knowledge_file_access_rejects_another_users_bot(call):
+    bot = MagicMock()
+    bot.is_editable_by_user.return_value = False
+    with (
+        patch.object(bot_usecase, "find_bot_by_id", return_value=bot),
+        patch.object(bot_usecase, "generate_presigned_url") as presign,
+        patch.object(bot_usecase, "start_conversion") as start,
+        patch.object(bot_usecase, "get_conversion") as get,
+    ):
+        with pytest.raises(PermissionError):
+            call(TestIssuePresignedUrl.user)
+
+    for s3_call in (presign, start, get):
+        s3_call.assert_not_called()
 
 
 class TestAttachmentName(unittest.TestCase):
