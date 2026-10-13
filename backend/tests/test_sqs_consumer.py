@@ -64,5 +64,8 @@ class TestSqsConsumer(unittest.TestCase):
     def test_does_not_retry_errors_that_would_fail_again(self):
         store = self.handle(ValueError("Model is not available."), receive_count=1)
         store.assert_called_once_with(
-            "PUBLISHED_API#bot", "c", "m", "Model is not available."
+            "PUBLISHED_API#bot",
+            "c",
+            "m",
+            "The request is invalid, or its model is not available.",
         )
