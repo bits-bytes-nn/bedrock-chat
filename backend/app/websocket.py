@@ -433,10 +433,16 @@ def handler(event, context):
 
             logger.info("Number of message chunks: %d", len(message_parts))
             message_parts.sort(key=lambda x: x["MessagePartId"])
+            part_ids = [int(item["MessagePartId"]) for item in message_parts]
+            if part_ids != list(range(1, len(part_ids) + 1)):
+                return _error(400, "Message parts are missing.")
             full_message = "".join(item["MessagePart"] for item in message_parts)
 
-            # Process the concatenated full message
-            chat_input = ChatInput(**json.loads(full_message))
+            # JSON and pydantic validation errors are both ValueErrors.
+            try:
+                chat_input = ChatInput(**json.loads(full_message))
+            except (ValueError, TypeError):
+                return _error(400, "Invalid message.")
             return _process_with_sender(event, context, connection_id, user, chat_input)
 
         else:
