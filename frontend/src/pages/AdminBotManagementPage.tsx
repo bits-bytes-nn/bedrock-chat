@@ -109,7 +109,7 @@ const AdminBotManagementPage: React.FC = () => {
         }}
       />
       <div className="mb-20 flex justify-center">
-        <div className="w-2/3">
+        <div className="w-full px-4 md:w-2/3">
           <div className="mt-5 w-full">
             <div className="text-xl font-bold">
               {t('admin.botManagement.label.pageTitle')}

@@ -49,7 +49,7 @@ const AuthCustom: React.FC<Props> = ({ children }) => {
     <>
       {loading ? (
         <div className="flex flex-col items-center p-4">
-          <div className="mb-3 text-4xl">Loading...</div>
+          <div className="mb-3 text-4xl">{t('app.loading')}</div>
           <div className="animate-spin">
             <PiCircleNotch size={100} />
           </div>

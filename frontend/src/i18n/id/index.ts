@@ -65,11 +65,6 @@ const translation = {
       progressCard: {
         toolInput: 'Input: ',
         toolOutput: 'Output: ',
-        status: {
-          running: 'Sedang Berjalan...',
-          success: 'Berhasil',
-          error: 'Kesalahan',
-        },
       },
       tools: {
         get_weather: {
@@ -112,9 +107,7 @@ const translation = {
         knowledge: 'Pengetahuan',
         url: 'URL',
         s3url: 'Sumber Data S3',
-        sitemap: 'URL Sitemap',
         file: 'File',
-        loadingBot: 'Memuat...',
         normalChat: 'Chat',
         notAvailableBot: '[TIDAK tersedia]',
         notAvailableBotInputMessage: 'Bot ini TIDAK tersedia.',
@@ -144,7 +137,6 @@ const translation = {
           example: 'Contoh Percakapan',
         },
         citeRetrievedContexts: 'Referensi Konteks yang Diambil',
-        unsupported: 'Tidak Didukung, Hanya Bisa Dibaca',
       },
       titleSubmenu: {
         edit: 'Edit',
@@ -162,8 +154,6 @@ const translation = {
           url: 'Informasi dari URL yang ditentukan akan digunakan sebagai sumber Pengetahuan.',
           s3url:
             'Dengan memasukkan URI S3, Anda dapat menambahkan S3 sebagai sumber data. Anda dapat menambahkan hingga 4 sumber. Hanya mendukung bucket yang ada di akun dan region yang sama dengan region Bedrock.',
-          sitemap:
-            'Dengan memasukkan URL sitemap, informasi akan dikumpulkan secara otomatis dari website-website yang terdaftar dalam sitemap dan digunakan sebagai sumber Pengetahuan.',
           file: 'File yang diunggah akan digunakan sebagai sumber Pengetahuan.',
           citeRetrievedContexts:
             'Konfigurasikan apakah akan konteks yang diambil untuk menjawab pertanyaan penggunaakan ditampilkan sebagai informasi kutipan.\nJika diaktifkan, pengguna dapat mengakses URL atau file sumber aslinya.',
@@ -256,7 +246,6 @@ const translation = {
           rateLimit: 'Batas Kecepatan',
           quota: 'Kuota',
           requestLimit: 'Permintaan',
-          offset: 'Offset',
         },
         help: {
           overview:
@@ -451,10 +440,6 @@ const translation = {
     },
     button: {
       newChat: 'Chat Baru',
-      botConsole: 'Konsol Bot',
-      botAnalytics: 'Analitik Bot',
-      apiManagement: 'Manajemen API',
-      userUsages: 'Penggunaan Pengguna',
       SaveAndSubmit: 'Simpan & Kirim',
       resend: 'Kirim Ulang',
       regenerate: 'Hasilkan ulang',
@@ -482,22 +467,6 @@ const translation = {
       },
     },
     embeddingSettings: {
-      title: 'Pengaturan Embedding',
-      description:
-        'Anda dapat mengonfigurasi parameter untuk embeddings vektor. Dengan menyesuaikan parameter, Anda dapat mengubah akurasi pengambilan dokumen.',
-      chunkSize: {
-        label: 'ukuran potongan',
-        hint: 'Ukuran potongan mengacu pada ukuran di mana sebuah dokumen dibagi menjadi potongan-potongan dokumen yang lebih kecil',
-      },
-      chunkOverlap: {
-        label: 'irisan potongan',
-        hint: 'Anda dapat menentukan jumlah karakter yang beririsan antara potongan-potongan yang bersebelahan.',
-      },
-      enablePartitionPdf: {
-        label:
-          'Aktifkan analisis PDF terperinci. Jika diaktifkan, PDF akan dianalisis secara mendetail seiring waktu.',
-        hint: 'Efektif ketika Anda ingin meningkatkan akurasi pencarian. Biaya komputasi meningkat karena komputasi membutuhkan lebih banyak waktu.',
-      },
       help: {
         chunkSize:
           'Ketika ukuran potongan dokumen terlalu kecil, informasi kontekstual bisa hilang. Namun ketika ukuran potongan dokumen terlalu besar, informasi kontekstual yang berbeda mungkin ada dalam potongan yang sama dan berpotensi mengurangi akurasi pencarian.',
@@ -657,11 +626,9 @@ const translation = {
       },
       advancedParsing: {
         label: 'Parsing Lanjutan',
-        description: 'Pilih model untuk parsing dokumen tingkat lanjut.',
         hint: 'Cocok untuk memahami lebih dari sekadar teks standar dalam format dokumen yang didukung, misalnya termasuk tabel dalam PDF dengan struktur utuh. Biaya tambahan dikenakan untuk parsing menggunakan AI generatif.',
       },
       parsingModel: {
-        label: 'Model Parsing Lanjutan',
         none: {
           label: 'Dinonaktifkan',
           hint: 'Tidak ada parsing lanjutan yang akan diterapkan.',
@@ -740,15 +707,11 @@ const translation = {
       },
     },
     validation: {
-      title: 'Kesalahan Validasi',
       maxRange: {
         message: 'Nilai maksimum yang dapat diatur adalah {{size}}',
       },
       minRange: {
         message: 'Nilai minimum yang dapat diatur adalah {{size}}',
-      },
-      chunkOverlapLessThanChunkSize: {
-        message: 'Nilai irisan token harus kurang dari ukuran potongan dokumen',
       },
       parentTokenRange: {
         message:
@@ -768,12 +731,8 @@ const translation = {
       },
     },
     guardrails: {
-      title: 'Guardrails',
-      label: 'Aktifkan Guardrails untuk Amazon Bedrock',
-      hint: 'Guardrails untuk Amazon Bedrock digunakan untuk menerapkan pengaman khusus aplikasi berdasarkan kasus penggunaan Anda dan kebijakan AI yang bertanggung jawab.',
       harmfulCategories: {
         label: 'Kategori Berbahaya',
-        hint: 'Konfigurasikan filter konten dengan menyesuaikan tingkat penyaringan untuk mendeteksi dan memblokir input pengguna yang berbahaya dan respons model yang melanggar kebijakan penggunaan Anda. 0: nonaktifkan, 1: rendah, 2: sedang, 3: tinggi',
         hate: {
           label: 'Hate',
           hint: 'Menggambarkan prompt input dan respons model yang mendiskriminasi, mengkritik, menghina, mengecam, atau mendehumanisasi seseorang atau kelompok berdasarkan identitas (seperti ras, etnis, gender, agama, orientasi seksual, kemampuan, dan asal negara). 0: nonaktifkan, 1: rendah, 2: sedang, 3: tinggi',
@@ -797,7 +756,6 @@ const translation = {
       },
       contextualGroundingCheck: {
         label: 'Pemeriksaan Kontekstual',
-        hint: 'Gunakan kebijakan ini untuk memvalidasi apakah respons model didasarkan pada sumber referensi dan relevan dengan pertanyaan pengguna, sehingga dapat mengurangi kemungkinan halusinasi model.',
         groundingThreshold: {
           label: 'Grounding',
           hint: 'Validasi apakah respons model memilik dasar dan secara faktual benar berdasarkan informasi yang diberikan dalam sumber referensi, dan blok respons yang berada di bawah ambang batas grounding yang ditentukan. 0: tidak memblokir apa pun, 1: memblokir hampir semuanya',

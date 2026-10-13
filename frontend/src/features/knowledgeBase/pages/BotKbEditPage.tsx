@@ -670,6 +670,12 @@ const BotKbEditPage: React.FC = () => {
           });
           setActiveModels(bot.activeModels);
         })
+        .catch((e) => {
+          console.error(e);
+          // Saving an empty form would overwrite the bot.
+          openSnackbar(getApiErrorMessage(e) ?? t('error.loadFailed'));
+          navigate('/bot/my');
+        })
         .finally(() => {
           setIsLoading(false);
         });
@@ -1030,7 +1036,7 @@ const BotKbEditPage: React.FC = () => {
     // S3 URLs validation - s3://example-bucket/path/to/data-source/
     const isS3UrlsValid = s3Urls.every((url, idx) => {
       if (url && !/^s3:\/\/[a-z0-9.-]+\/.+/.test(url)) {
-        setErrorMessages(`s3Urls-${idx}`, 'S3 URL is invalid');
+        setErrorMessages(`s3Urls-${idx}`, t('validation.s3Url.message'));
         return false;
       } else {
         return true;
@@ -1578,7 +1584,7 @@ const BotKbEditPage: React.FC = () => {
         }}
       />
       <div className="mb-20 flex justify-center">
-        <div className="w-2/3">
+        <div className="w-full px-4 md:w-2/3">
           <div className="mt-5 w-full">
             <div className="text-xl font-bold">
               {isNewBot ? t('bot.create.pageTitle') : t('bot.edit.pageTitle')}
@@ -2746,6 +2752,11 @@ const BotKbEditPage: React.FC = () => {
                 </Alert>
               )}
 
+              {files.some((f) => f.status === 'ERROR') && (
+                <div className="text-right text-sm text-red dark:text-red-400">
+                  {t('bot.error.removeFailedFiles')}
+                </div>
+              )}
               <div className="flex justify-between">
                 <Button outlined icon={<PiCaretLeft />} onClick={onClickBack}>
                   {t('button.back')}

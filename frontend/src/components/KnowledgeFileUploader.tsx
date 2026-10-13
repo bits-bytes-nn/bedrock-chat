@@ -19,6 +19,7 @@ import {
   isConvertibleFile,
   maxConvertibleFileSizeMb,
 } from '../constants/supportedAttachedFiles';
+import { getApiErrorMessage } from '../utils/ErrorUtils';
 
 type Props = BaseProps & {
   botId: string;
@@ -156,7 +157,7 @@ const KnowledgeFileUploader: React.FC<Props> = (props) => {
               console.error(e);
               updateFile(uid, (f) => {
                 f.status = 'ERROR';
-                f.errorMessage = e.message;
+                f.errorMessage = getApiErrorMessage(e) ?? e.message;
               });
             });
         }

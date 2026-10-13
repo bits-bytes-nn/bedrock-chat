@@ -43,6 +43,7 @@ const BotDiscoverPage: React.FC = () => {
     displayQuery, // Query used for displaying search results
     searchResults,
     isSearching,
+    isSearchError,
     hasSearched,
     handleSearch,
     clearSearch,
@@ -174,6 +175,7 @@ const BotDiscoverPage: React.FC = () => {
           <BotSearchResults
             results={searchResults}
             isSearching={isSearching}
+            isSearchError={isSearchError}
             hasSearched={hasSearched}
             searchQuery={displayQuery}
             onBackToHome={handleClearSearch}
@@ -289,7 +291,7 @@ const BotDiscoverPage: React.FC = () => {
                   ))}
                 </div>
 
-                {/* ディスカバーボットのページネーション */}
+                {/* Pagination of the discover bots */}
                 {pickupBots.length > 0 && (
                   <Pagination
                     currentPage={discoverCurrentPage}

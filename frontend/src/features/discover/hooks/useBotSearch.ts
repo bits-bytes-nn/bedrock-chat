@@ -13,6 +13,7 @@ const useBotSearch = () => {
   // Fetch search results using SWR
   const {
     data: searchResults,
+    error: searchError,
     isLoading: isSearching,
     mutate: mutateSearchResults,
   } = searchBots(hasSearched ? debouncedQuery : '');
@@ -68,6 +69,7 @@ const useBotSearch = () => {
     displayQuery, // Query for displaying search results
     searchResults: searchResults ?? [],
     isSearching,
+    isSearchError: !!searchError,
     hasSearched,
     handleSearch,
     clearSearch,

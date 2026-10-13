@@ -8,8 +8,13 @@ describe('toAppLanguage', () => {
     ['zh-TW', 'zhhant'],
     ['zh-HK', 'zhhant'],
     ['pt-BR', 'ptbr'],
-    ['ko-KR', 'ko-KR'],
+    ['ko-KR', 'ko'],
+    ['en-US', 'en'],
+    ['nb_NO', 'nb'],
     ['en', 'en'],
+    // Keys that the app saved before are kept.
+    ['zhhant', 'zhhant'],
+    ['ptbr', 'ptbr'],
   ])('maps %s to %s', (detected, expected) => {
     expect(toAppLanguage(detected)).toBe(expected);
   });

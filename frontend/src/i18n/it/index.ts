@@ -22,9 +22,7 @@ const translation = {
         recentlyUsedBots: 'Bot condivisi utilizzati di recente',
         knowledge: 'Informazioni',
         url: 'URL',
-        sitemap: 'Mappa del sito',
         file: 'File',
-        loadingBot: 'Caricamento...',
         normalChat: 'Chat',
         notAvailableBot: '[NON Disponibile]',
         notAvailableBotInputMessage: 'Questo Bot NON è disponibile.',
@@ -63,8 +61,6 @@ const translation = {
           overview:
             'Fornendo conoscenza esterna al Bot, il Bot diventa in grado di gestire dati su cui non è stato pre-addestrato.',
           url: "Le informazioni dall'URL specificato verranno utilizzate come Apprendimento.",
-          sitemap:
-            "Specificando l'URL della mappa del sito, le informazioni ottenute attraverso lo scraping automatico dei siti Web al suo interno verranno utilizzate come Apprendimento.",
           file: 'I file caricati verranno utilizzati come Apprendimento.',
         },
       },
@@ -146,7 +142,6 @@ Come classificheresti questa email?`,
           rateLimit: 'Richieste al secondo',
           quota: 'Quota',
           requestLimit: 'Richieste',
-          offset: 'Slittamento',
         },
         help: {
           overview:
@@ -317,10 +312,6 @@ Come classificheresti questa email?`,
     },
     button: {
       newChat: 'Nuova Chat',
-      botConsole: 'Console del Bot',
-      botAnalytics: 'Analisi dei Bot',
-      apiManagement: "Gestione dell'API",
-      userUsages: 'Usi degli utenti',
       SaveAndSubmit: 'Salva & invia',
       resend: 'Invia nuovamente',
       regenerate: 'Rigenerare',
@@ -351,17 +342,6 @@ Come classificheresti questa email?`,
       },
     },
     embeddingSettings: {
-      title: 'Impostazione di incorporamento',
-      description:
-        'È possibile configurare i parametri per gli incorporamenti di vettori. Regolando i parametri, è possibile modificare la precisione del recupero dei documenti.',
-      chunkSize: {
-        label: 'dimensione del blocco',
-        hint: 'La dimensione del blocco si riferisce alla dimensione con cui un documento viene diviso in segmenti più piccoli',
-      },
-      chunkOverlap: {
-        label: 'sovrapposizione dei blocchi',
-        hint: 'È possibile specificare il numero di caratteri sovrapposti tra blocchi adiacenti.',
-      },
       help: {
         chunkSize:
           "Quando la dimensione del blocco è troppo piccola, le informazioni contestuali possono andare perse, mentre quando è troppo grande possono esistere diverse informazioni contestuali all'interno dello stesso blocco, riducendo potenzialmente la precisione della ricerca.",
@@ -390,13 +370,8 @@ Come classificheresti questa email?`,
       notSupportedImage: 'Il modello selezionato non supporta le immagini.',
     },
     validation: {
-      title: 'Errore di convalida',
       maxRange: {
         message: 'Il valore massimo che può essere impostato è {{size}}',
-      },
-      chunkOverlapLessThanChunkSize: {
-        message:
-          'La sovrapposizione dei blocchi deve essere impostata su un valore inferiore alla dimensione del blocco',
       },
     },
   },

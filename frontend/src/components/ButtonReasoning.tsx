@@ -41,8 +41,9 @@ const ButtonReasoning: React.FC<Props> = ({
           onToggleReasoning();
         }
       }}
+      disabled={disabled}
       aria-pressed={displayShowReasoning}
-      title="Reasoning">
+      title={t('reasoning.button.label')}>
       <LuTimerReset className={icon ? '' : 'mr-2'} />
       {!icon && t('reasoning.button.label')}
     </button>

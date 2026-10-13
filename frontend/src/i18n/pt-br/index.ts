@@ -83,11 +83,6 @@ const translation = {
       progressCard: {
         toolInput: 'Entrada: ',
         toolOutput: 'Saída: ',
-        status: {
-          running: 'Executando...',
-          success: 'Sucesso',
-          error: 'Erro',
-        },
       },
       tools: {
         get_weather: {
@@ -161,9 +156,7 @@ const translation = {
         knowledge: 'Conhecimento',
         url: 'URL',
         s3url: 'Fonte de Dados S3',
-        sitemap: 'URL do Sitemap',
         file: 'Arquivo',
-        loadingBot: 'Carregando...',
         normalChat: 'Chat',
         notAvailableBot: '[NÃO Disponível]',
         notAvailableBotInputMessage: 'Este bot NÃO está disponível.',
@@ -194,7 +187,6 @@ const translation = {
           example: 'Exemplo de Conversa',
         },
         citeRetrievedContexts: 'Citação de Contextos Recuperados',
-        unsupported: 'Não Suportado, Somente Leitura',
       },
       titleSubmenu: {
         edit: 'Editar',
@@ -214,8 +206,6 @@ const translation = {
           url: 'As informações da URL especificada serão usadas como Conhecimento.',
           s3url:
             'Ao inserir o URI do S3, você pode adicionar o S3 como uma fonte de dados. Você pode adicionar até 4 fontes. Ele só suporta buckets que existem na mesma conta e na mesma região que a região do bedrock.',
-          sitemap:
-            'Ao especificar a URL do sitemap, as informações obtidas através da raspagem automática de sites dentro dele serão usadas como Conhecimento.',
           file: 'Os arquivos enviados serão usados como Conhecimento.',
           citeRetrievedContexts:
             'Configure se deseja exibir o contexto recuperado para responder às consultas do usuário como informações de citação.\nSe habilitado, os usuários podem acessar as URLs ou arquivos originais.',
@@ -307,7 +297,6 @@ Como você categorizaria este e-mail?`,
           rateLimit: 'Taxa',
           quota: 'Cota',
           requestLimit: 'Solicitações',
-          offset: 'Deslocamento',
         },
         help: {
           overview:
@@ -399,18 +388,12 @@ Como você categorizaria este e-mail?`,
           memberManagement: 'Editar Membros',
           sharing: {
             not_shared: 'Não compartilhado com nenhum grupo ou usuário',
-            shared_only_users: 'Compartilhado com {{count}} usuário',
-            shared_only_users_plural: 'Compartilhado com {{count}} usuários',
-            shared_only_groups: 'Compartilhado com {{count}} grupo',
-            shared_only_groups_plural: 'Compartilhado com {{count}} grupos',
-            shared_both:
-              'Compartilhado com {{groupCount}} grupo e {{userCount}} usuário',
-            shared_both_user_plural:
-              'Compartilhado com {{groupCount}} grupo e {{userCount}} usuários',
-            shared_both_group_plural:
-              'Compartilhado com {{groupCount}} grupos e {{userCount}} usuário',
-            shared_both_plural:
-              'Compartilhado com {{groupCount}} grupos e {{userCount}} usuários',
+            shared_with: 'Compartilhado com {{target}}',
+            shared_both: 'Compartilhado com {{groups}} e {{users}}',
+            user_count_one: '{{count}} usuário',
+            user_count_other: '{{count}} usuários',
+            group_count_one: '{{count}} grupo',
+            group_count_other: '{{count}} grupos',
           },
           user: 'Usuário',
           group: 'Grupo',
@@ -548,7 +531,6 @@ Como você categorizaria este e-mail?`,
         results: 'Encontradas {{count}} conversas correspondentes a "{{query}}"',
         noResults: 'Nenhuma conversa correspondente a "{{query}}"',
         tryDifferentKeywords: 'Tente palavras-chave diferentes',
-        resultsCount: '{{count}} resultados encontrados',
       },
     },
     deleteDialog: {
@@ -597,10 +579,6 @@ Como você categorizaria este e-mail?`,
     button: {
       newChat: 'Nova Conversa',
       backToConversationHistory: 'Voltar para o Histórico de Conversas',
-      botConsole: 'Console do Bot',
-      botAnalytics: 'Análise de Bot Compartilhado',
-      apiManagement: 'Gerenciamento de API',
-      userUsages: 'Usos do Usuário',
       SaveAndSubmit: 'Salvar & Enviar',
       resend: 'Reenviar',
       regenerate: 'Regenerar',
@@ -631,22 +609,6 @@ Como você categorizaria este e-mail?`,
       },
     },
     embeddingSettings: {
-      title: 'Configuração de Embedding',
-      description:
-        'Você pode configurar os parâmetros para embeddings vetoriais. Ao ajustar os parâmetros, você pode alterar a precisão da recuperação de documentos.',
-      chunkSize: {
-        label: 'tamanho do chunk',
-        hint: 'O tamanho do chunk refere-se ao tamanho em que um documento é dividido em segmentos menores',
-      },
-      chunkOverlap: {
-        label: 'sobreposição de chunk',
-        hint: 'Você pode especificar o número de caracteres sobrepostos entre chunks adjacentes.',
-      },
-      enablePartitionPdf: {
-        label:
-          'Ativar análise detalhada de PDF. Se ativado, o PDF será analisado em detalhes ao longo do tempo.',
-        hint: 'É eficaz quando você deseja melhorar a precisão da pesquisa. Os custos de computação aumentam porque a computação leva mais tempo.',
-      },
       help: {
         chunkSize:
           "Quando o tamanho do chunk é muito pequeno, informações contextuais podem ser perdidas, e quando é muito grande, diferentes informações contextuais podem existir dentro do mesmo chunk, potencialmente reduzindo a precisão da pesquisa.",
@@ -811,12 +773,9 @@ Como você categorizaria este e-mail?`,
       },
       advancedParsing: {
         label: 'Análise Avançada',
-        description:
-          'Selecione um modelo para usar para capacidades avançadas de análise de documentos.',
         hint: 'Adequado para análise além do texto padrão em formatos de documentos suportados, incluindo tabelas dentro de PDFs com sua estrutura intacta. Custos adicionais são incorridos para análise usando IA generativa.',
       },
       parsingModel: {
-        label: 'Modelo de Análise Avançada',
         none: {
           label: 'Desativado',
           hint: 'Nenhuma análise avançada será aplicada.',
@@ -907,7 +866,6 @@ Como você categorizaria este e-mail?`,
       },
     },
     validation: {
-      title: 'Erro de Validação',
       maxRange: {
         message: 'O valor máximo que pode ser definido é {{size}}',
       },
@@ -916,9 +874,6 @@ Como você categorizaria este e-mail?`,
       },
       maxBudgetTokens: {
         message: 'O maxBudgetToken não pode exceder o maxTokens {{size}}',
-      },
-      chunkOverlapLessThanChunkSize: {
-        message: 'A sobreposição de chunk deve ser definida como menor que o tamanho do chunk',
       },
       parentTokenRange: {
         message: 'O tamanho do token pai deve ser maior que o tamanho do token filho',
@@ -941,12 +896,8 @@ Como você categorizaria este e-mail?`,
       },
     },
     guardrails: {
-      title: 'Guardrails',
-      label: 'Ativar Guardrails para Amazon Bedrock',
-      hint: 'Guardrails para Amazon Bedrock são usados para implementar salvaguardas específicas da aplicação com base em seus casos de uso e políticas de IA responsável.',
       harmfulCategories: {
         label: 'Categorias Nocivas',
-        hint: 'Configure filtros de conteúdo ajustando o grau de filtragem para detectar e bloquear entradas de usuário nocivas e respostas do modelo que violem suas políticas de uso. 0: desativar, 1: baixo, 2: médio, 3: Alto',
         hate: {
           label: 'Ódio',
           hint: 'Descreve prompts de entrada e respostas do modelo que discriminam, criticam, insultam, denunciam ou desumanizam uma pessoa ou grupo com base em uma identidade (como raça, etnia, gênero, religião, orientação sexual, habilidade e nacionalidade). 0: desativar, 1: baixo, 2: médio, 3: Alto',
@@ -970,7 +921,6 @@ Como você categorizaria este e-mail?`,
       },
       contextualGroundingCheck: {
         label: 'Verificação de Aterramento Contextual',
-        hint: 'Use esta política para validar se as respostas do modelo estão fundamentadas na fonte de referência e são relevantes para a consulta do usuário para filtrar alucinações do modelo.',
         groundingThreshold: {
           label: 'Aterramento',
           hint: 'Valide se as respostas do modelo estão fundamentadas e factualmente corretas com base nas informações fornecidas na fonte de referência, e bloqueie respostas que estão abaixo do limite definido de aterramento. 0: não bloqueia nada, 1: bloqueia quase tudo',

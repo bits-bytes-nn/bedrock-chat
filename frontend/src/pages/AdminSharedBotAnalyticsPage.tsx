@@ -27,7 +27,11 @@ const AdminSharedBotAnalyticsPage: React.FC = () => {
   );
   const [isDescCost, setIsDescCost] = useState(true);
 
-  const { publicBots, isLoading: isLoadingPublicBots } = usePublicBotsForAdmin({
+  const {
+    publicBots,
+    error: publicBotsError,
+    isLoading: isLoadingPublicBots,
+  } = usePublicBotsForAdmin({
     start: searchDateFrom ? searchDateFrom + '00' : undefined,
     end: searchDateTo ? searchDateTo + '23' : undefined,
   });
@@ -126,7 +130,8 @@ const AdminSharedBotAnalyticsPage: React.FC = () => {
       }
       isLoading={isLoadingPublicBots}
       isEmpty={publicBots?.length === 0}
-      emptyMessage={t('admin.botAnalytics.label.noBotUsages')}>
+      emptyMessage={t('admin.botAnalytics.label.noBotUsages')}
+      errorMessage={publicBotsError ? t('error.loadFailed') : undefined}>
       {sortedBots?.map((bot, idx) => (
         <ListItemBot
           key={idx}

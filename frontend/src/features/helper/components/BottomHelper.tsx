@@ -2,10 +2,9 @@ import { useState } from 'react';
 import { PiQuestion } from 'react-icons/pi';
 import ModalDialog from '../../../components/ModalDialog';
 import { useTranslation } from 'react-i18next';
-import { useIsWindows } from '../../../hooks/useIsWindows';
+import { isWindows } from 'react-device-detect';
 export const BottomHelper = () => {
   const { t } = useTranslation();
-  const { isWindows } = useIsWindows();
   const [isOpen, setIsOpen] = useState(false);
 
   return (

@@ -1,6 +1,6 @@
 import React, { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { getApiErrorMessage } from '../utils/ErrorUtils';
+import { getApiErrorMessage, getApiErrorStatus } from '../utils/ErrorUtils';
 import useSnackbar from '../hooks/useSnackbar';
 import { PiLink } from 'react-icons/pi';
 import { useNavigate } from 'react-router-dom';
@@ -75,8 +75,12 @@ const BotRecentlyUsedPage: React.FC = () => {
     if (targetDelete) {
       setIsOpenDeleteDialog(false);
       deleteMyBot(targetDelete.id).catch((e) => {
-        // For example, the knowledge base is still being synchronized.
-        openSnackbar(getApiErrorMessage(e) ?? t('bot.error.failDelete'));
+        // The knowledge base is being synchronized or the API published.
+        openSnackbar(
+          getApiErrorStatus(e) === 409
+            ? t('bot.error.failDeleteInProgress')
+            : (getApiErrorMessage(e) ?? t('bot.error.failDelete'))
+        );
       });
     }
   }, [deleteMyBot, targetDelete, openSnackbar, t]);

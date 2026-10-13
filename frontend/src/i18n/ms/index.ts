@@ -82,11 +82,6 @@ const translation = {
       progressCard: {
         toolInput: 'Input: ',
         toolOutput: 'Output: ',
-        status: {
-          running: 'Sedang Berjalan...',
-          success: 'Berjaya',
-          error: 'Ralat',
-        },
       },
       tools: {
         get_weather: {
@@ -129,9 +124,7 @@ const translation = {
         knowledge: 'Pengetahuan',
         url: 'URL',
         s3url: 'Sumber Data S3',
-        sitemap: 'URL Peta Tapak',
         file: 'Fail',
-        loadingBot: 'Memuatkan...',
         normalChat: 'Chat',
         notAvailableBot: '[TIDAK Tersedia]',
         notAvailableBotInputMessage: 'Bot ini TIDAK tersedia.',
@@ -161,7 +154,6 @@ const translation = {
           example: 'Contoh Perbualan',
         },
         citeRetrievedContexts: 'Penyebutan Konteks Yang Didapatkan',
-        unsupported: 'Tidak Disokong, Baca-Saja',
       },
       titleSubmenu: {
         edit: 'Edit',
@@ -179,8 +171,6 @@ const translation = {
           url: 'Maklumat dari URL yang ditetapkan akan digunakan sebagai Pengetahuan.',
           s3url:
             'Dengan memasukkan URI S3, anda boleh menambah S3 sebagai sumber data. Anda boleh menambah sehingga 4 sumber. Ia hanya menyokong baldi yang wujud dalam akaun yang sama dan kawasan bedrock yang sama.',
-          sitemap:
-            'Dengan menentukan URL peta tapak, maklumat yang diperoleh melalui pengikisan automatik laman web dalamnya akan digunakan sebagai Pengetahuan.',
           file: 'Fail yang dimuat naik akan digunakan sebagai Pengetahuan.',
           citeRetrievedContexts:
             'Konfigurasikan sama ada untuk memaparkan konteks yang diambil untuk menjawab pertanyaan pengguna sebagai maklumat penyebutan.\nJika diaktifkan, pengguna boleh mengakses URL atau fail sumber asal.',
@@ -273,7 +263,6 @@ const translation = {
           rateLimit: 'Had Kadar',
           quota: 'Kuota',
           requestLimit: 'Permintaan',
-          offset: 'Offset',
         },
         help: {
           overview:
@@ -462,10 +451,6 @@ const translation = {
     },
     button: {
       newChat: 'Chat Baru',
-      botConsole: 'Konsol Bot',
-      botAnalytics: 'Analitik Bot Berkongsi',
-      apiManagement: 'Pengurusan API',
-      userUsages: 'Penggunaan Pengguna',
       SaveAndSubmit: 'Simpan & Hantar',
       resend: 'Hantar Semula',
       regenerate: 'Jana Semula',
@@ -493,22 +478,6 @@ const translation = {
       },
     },
     embeddingSettings: {
-      title: 'Tetapan Penyisipan',
-      description:
-        'Anda boleh mengkonfigurasi parameter untuk penyisipan vektor. Dengan menyesuaikan parameter, anda boleh mengubah ketepatan pengambilan dokumen.',
-      chunkSize: {
-        label: 'saiz potongan',
-        hint: 'Saiz potongan merujuk kepada saiz di mana dokumen dibahagikan kepada segmen yang lebih kecil',
-      },
-      chunkOverlap: {
-        label: 'tindih potongan',
-        hint: 'Anda boleh menentukan bilangan aksara yang tindih antara potongan bersebelahan.',
-      },
-      enablePartitionPdf: {
-        label:
-          'Aktifkan analisis PDF terperinci. Jika diaktifkan, PDF akan dianalisis secara terperinci dari masa ke masa.',
-        hint: 'Ia berkesan apabila anda ingin meningkatkan ketepatan carian. Kos pengiraan meningkat kerana pengiraan mengambil masa lebih lama.',
-      },
       help: {
         chunkSize:
           'Apabila saiz potongan terlalu kecil, maklumat konteks boleh hilang, dan apabila terlalu besar, maklumat konteks yang berbeza mungkin wujud dalam potongan yang sama, yang berpotensi mengurangkan ketepatan carian.',
@@ -668,12 +637,9 @@ const translation = {
       },
       advancedParsing: {
         label: 'Penguraian Lanjutan',
-        description:
-          'Pilih model untuk digunakan bagi keupayaan penguraian dokumen lanjutan.',
         hint: 'Sesuai untuk menguraikan lebih daripada teks standard dalam format dokumen yang disokong, termasuk jadual dalam PDF dengan struktur mereka yang terjaga. Kos tambahan dikenakan untuk penguraian menggunakan AI generatif.',
       },
       parsingModel: {
-        label: 'Model Penguraian Lanjutan',
         none: {
           label: 'Dinonaktifkan',
           hint: 'Tiada penguraian lanjutan akan diterapkan.',
@@ -736,16 +702,11 @@ const translation = {
       },
     },
     validation: {
-      title: 'Ralat Pengesahan',
       maxRange: {
         message: 'Nilai maksimum yang boleh ditetapkan adalah {{size}}',
       },
       minRange: {
         message: 'Nilai minimum yang boleh ditetapkan adalah {{size}}',
-      },
-      chunkOverlapLessThanChunkSize: {
-        message:
-          'Tindih potongan mesti ditetapkan kurang daripada saiz potongan',
       },
       parentTokenRange: {
         message: 'Saiz token ibu harus lebih besar daripada saiz token anak',
@@ -764,12 +725,8 @@ const translation = {
       },
     },
     guardrails: {
-      title: 'Tali Panduan',
-      label: 'Aktifkan Tali Panduan untuk Amazon Bedrock',
-      hint: 'Tali panduan untuk Amazon Bedrock digunakan untuk melaksanakan langkah berjaga-jaga khusus aplikasi berdasarkan kes penggunaan anda dan polisi AI bertanggungjawab.',
       harmfulCategories: {
         label: 'Kategori Berbahaya',
-        hint: 'Konfigurasikan penapis kandungan dengan menyesuaikan tahap penapisan untuk mengesan dan menyekat input pengguna yang berbahaya dan respons model yang melanggar polisi penggunaan anda. 0: matikan, 1: rendah, 2: sederhana, 3: Tinggi',
         hate: {
           label: 'Benci',
           hint: 'Menggambarkan prompt input dan respons model yang mendiskriminasi, mengkritik, menghina, mengecam, atau menghumanisasikan seseorang atau kumpulan berdasarkan identiti (seperti bangsa, etnik, jantina, agama, orientasi seksual, kebolehan, dan asal negara). 0: matikan, 1: rendah, 2: sederhana, 3: Tinggi',
@@ -793,7 +750,6 @@ const translation = {
       },
       contextualGroundingCheck: {
         label: 'Semakan Pengikatan Konteks',
-        hint: 'Gunakan polisi ini untuk mengesahkan jika respons model berteraskan sumber rujukan dan relevan dengan pertanyaan pengguna untuk menapis halusinasi model.',
         groundingThreshold: {
           label: 'Pengikatan',
           hint: 'Sahkan jika respons model berteraskan dan betul secara fakta berdasarkan maklumat yang diberikan dalam sumber rujukan, dan sekat respons yang berada di bawah ambang pengikatan yang ditetapkan. 0: tidak menyekat apa-apa, 0.99: menyekat hampir semua',

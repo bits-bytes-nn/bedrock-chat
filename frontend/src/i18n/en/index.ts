@@ -18,6 +18,8 @@ const translation = {
       adminConsoles: 'Admin Panel',
       backChat: 'Back to Chat',
       userGroups: 'User Groups',
+      loading: 'Loading...',
+      currentModel: 'model: {{model}}',
     },
     model: {
       'claude-v4.8-opus': {
@@ -178,11 +180,6 @@ const translation = {
       progressCard: {
         toolInput: 'Input: ',
         toolOutput: 'Output: ',
-        status: {
-          running: 'Running...',
-          success: 'Success',
-          error: 'Error',
-        },
       },
       tools: {
         get_weather: {
@@ -256,9 +253,7 @@ const translation = {
         knowledge: 'Knowledge',
         url: 'URL',
         s3url: 'S3 Data Source',
-        sitemap: 'Sitemap URL',
         file: 'File',
-        loadingBot: 'Loading...',
         normalChat: 'Chat',
         notAvailableBot: '[NOT Available]',
         notAvailableBotInputMessage: 'This bot is NOT available.',
@@ -290,7 +285,6 @@ const translation = {
           example: 'Conversation Example',
         },
         citeRetrievedContexts: 'Retrieved Context Citation',
-        unsupported: 'Unsupported, Read-only',
       },
       titleSubmenu: {
         edit: 'Edit',
@@ -311,8 +305,6 @@ const translation = {
           url: 'The information from the specified URL will be used as Knowledge.',
           s3url:
             'By entering the S3 URI, you can add S3 as a data source. You can add up to 4 sources. It only supports buckets that exist in the same account and the same region as bedrock region.',
-          sitemap:
-            'By specifying the URL of the sitemap, the information obtained through automatically scraping websites within it will be used as Knowledge.',
           file: 'The uploaded files will be used as Knowledge.',
           citeRetrievedContexts:
             'Configure whether to display context retrieved to answer user queries as citation information.\nIf enabled, users can access the original source URLs or files.',
@@ -404,7 +396,6 @@ How would you categorize this email?`,
           rateLimit: 'Rate',
           quota: 'Quota',
           requestLimit: 'Requests',
-          offset: 'Offset',
         },
         help: {
           overview:
@@ -496,18 +487,12 @@ How would you categorize this email?`,
           memberManagement: 'Edit Members',
           sharing: {
             not_shared: 'Not shared with any groups or users',
-            shared_only_users: 'Shared with {{count}} user',
-            shared_only_users_plural: 'Shared with {{count}} users',
-            shared_only_groups: 'Shared with {{count}} group',
-            shared_only_groups_plural: 'Shared with {{count}} groups',
-            shared_both:
-              'Shared with {{groupCount}} group and {{userCount}} user ',
-            shared_both_user_plural:
-              'Shared with {{groupCount}} group and {{userCount}} users',
-            shared_both_group_plural:
-              'Shared with {{groupCount}} groups and {{userCount}} user',
-            shared_both_plural:
-              'Shared with {{groupCount}} groups and {{userCount}} users ',
+            shared_with: 'Shared with {{target}}',
+            shared_both: 'Shared with {{groups}} and {{users}}',
+            user_count_one: '{{count}} user',
+            user_count_other: '{{count}} users',
+            group_count_one: '{{count}} group',
+            group_count_other: '{{count}} groups',
           },
           user: 'User',
           group: 'Group',
@@ -535,6 +520,13 @@ How would you categorize this email?`,
         failDelete: 'Failed to delete the bot.',
         failPublish: 'Failed to publish the API.',
         failSave: 'Failed to save the bot.',
+        failDeleteInProgress:
+          'The bot cannot be deleted while its knowledge is syncing or its API is being published. Try again after it finishes.',
+        failShare: 'Failed to change the sharing settings.',
+        failAddApiKey: 'Failed to add the API key.',
+        failDeleteApiKey: 'Failed to delete the API key.',
+        removeFailedFiles:
+          'Remove the files that failed to upload to save the bot.',
       },
       activeModels: {
         title: 'Model Activation',
@@ -656,7 +648,6 @@ How would you categorize this email?`,
         results: 'Found {{count}} chats matching "{{query}}"',
         noResults: 'No chats matching for "{{query}}"',
         tryDifferentKeywords: 'Try different keywords',
-        resultsCount: '{{count}} results found',
       },
     },
     deleteDialog: {
@@ -713,10 +704,6 @@ How would you categorize this email?`,
       rename: 'Rename',
       newChat: 'New Chat',
       backToConversationHistory: 'Back to Chat History',
-      botConsole: 'Bot Console',
-      botAnalytics: 'Shared Bot Analytics',
-      apiManagement: 'API Management',
-      userUsages: 'User Usages',
       SaveAndSubmit: 'Save & Submit',
       resend: 'Resend',
       regenerate: 'Regenerate',
@@ -737,6 +724,7 @@ How would you categorize this email?`,
       botManagement: 'Bot Management',
       mode: 'Mode',
       drawerOption: 'Side Menu Options',
+      startChat: 'Start Chat',
     },
     input: {
       hint: {
@@ -748,22 +736,6 @@ How would you categorize this email?`,
       },
     },
     embeddingSettings: {
-      title: 'Embedding Setting',
-      description:
-        'You can configure the parameters for vector embeddings. By adjusting the parameters, you can change the accuracy of document retrieval.',
-      chunkSize: {
-        label: 'chunk size',
-        hint: 'The chunk size refers to the size at which a document is divided into smaller segments',
-      },
-      chunkOverlap: {
-        label: 'chunk overlap',
-        hint: 'You can specify the number of overlapping characters between adjacent chunks.',
-      },
-      enablePartitionPdf: {
-        label:
-          'Enable detailed PDF analysis. If enabled, the PDF will be analyzed in detail over time.',
-        hint: 'It is effective when you want to improve search accuracy. Computation costs increase because computation takes more time.',
-      },
       help: {
         chunkSize:
           "When the chunk size is too small, contextual information can be lost, and when it's too large, different contextual information may exist within the same chunk, potentially reducing search accuracy.",
@@ -928,12 +900,9 @@ How would you categorize this email?`,
       },
       advancedParsing: {
         label: 'Advanced Parsing',
-        description:
-          'Select a model to use for advanced document parsing capabilities.',
         hint: 'Suitable for parsing more than standard text in supported document formats, including tables within PDFs with their structure intact. Additional costs are incurred for parsing using generative AI.',
       },
       parsingModel: {
-        label: 'Advanced Parsing Model',
         none: {
           label: 'Disabled',
           hint: 'No advanced parsing will be applied.',
@@ -1002,6 +971,14 @@ How would you categorize this email?`,
       },
       predict: {
         general: 'An error occurred while predicting.',
+        throttled:
+          'Too many requests are being sent to the model. Wait a moment and try again.',
+        model_unavailable:
+          'The selected model is not available. Select another model.',
+        model_error: 'The model could not process the request: {{reason}}',
+        bot_not_found: 'The bot was not found. It may have been deleted.',
+        invalid_request: 'The request is invalid: {{reason}}',
+        generation_failed: 'Failed to generate the answer. Try again.',
         invalidResponse:
           'Unexpected response received. The response format does not match the expected format.',
         connectionClosed:
@@ -1034,9 +1011,15 @@ How would you categorize this email?`,
         },
       },
       invalidMermaidFormat: 'Error in diagram drawing',
+      deleteConversation: 'Failed to delete the chat.',
+      clearConversations: 'Failed to delete the chats.',
+      loadFailed: 'Failed to load the data. Reload the page and try again.',
+      searchFailed: 'Failed to search. Try again.',
     },
     validation: {
-      title: 'Validation Error',
+      s3Url: {
+        message: 'Enter an S3 URI such as s3://bucket-name/prefix/.',
+      },
       maxRange: {
         message: 'The maximum value that can be set is {{size}}',
       },
@@ -1045,9 +1028,6 @@ How would you categorize this email?`,
       },
       maxBudgetTokens: {
         message: 'The maxBudgetToken cannot exceed the maxTokens {{size}}',
-      },
-      chunkOverlapLessThanChunkSize: {
-        message: 'Chunk overlap must be set to less than Chunk size',
       },
       parentTokenRange: {
         message: 'Parent token size should be larger than child token size',
@@ -1070,12 +1050,8 @@ How would you categorize this email?`,
       },
     },
     guardrails: {
-      title: 'Guardrails',
-      label: 'Enable Guardrails for Amazon Bedrock',
-      hint: 'Guardrails for Amazon Bedrock are used to implement application-specific safeguards based on your use cases and responsible AI policies.',
       harmfulCategories: {
         label: 'Harmful Categories',
-        hint: 'Configure content filters by adjusting the degree of filtering to detect and block harmful user inputs and model responses that violate your usage policies. 0: disable, 1: low, 2: middle, 3: High',
         hate: {
           label: 'Hate',
           hint: 'Describes input prompts and model responses that discriminate, criticize, insult, denounce, or dehumanize a person or group on the basis of an identity (such as race, ethnicity, gender, religion, sexual orientation, ability, and national origin). 0: disable, 1: low, 2: middle, 3: High',
@@ -1099,7 +1075,6 @@ How would you categorize this email?`,
       },
       contextualGroundingCheck: {
         label: 'Contextual Grounding Check',
-        hint: 'Use this policy to validate if model responses are grounded in the reference source and relevant to user’s query to filter model hallucination.',
         groundingThreshold: {
           label: 'Grounding',
           hint: 'Validate if the model responses are grounded and factually correct based on the information provided in the reference source, and block responses that are below the defined threshold of grounding. 0: blocks nothing, 1: blocks almost everything',

@@ -15,9 +15,7 @@ const translation = {
         recentlyUsedBots: 'Kürzlich genutzte Shared Bots',
         knowledge: 'Wissensbasis',
         url: 'URL',
-        sitemap: 'Sitemap URL',
         file: 'Datei',
-        loadingBot: 'Laden...',
         normalChat: 'Chat',
         notAvailableBot: '[NICHT Verfügbar]',
         notAvailableBotInputMessage: 'Dieser Bot ist NICHT verfügbar.',
@@ -55,8 +53,6 @@ const translation = {
           overview:
             'Indem man dem Bot eine externe Wissensbasis zur Verfügung stellt, wird er in die Lage versetzt, mit Daten umzugehen, für die er nicht vorher trainiert wurde.',
           url: 'Die Informationen aus der angegebenen URL werden als Wissensbasis verwendet.',
-          sitemap:
-            'Durch die Angabe der Sitemap URL werden die Informationen, die durch automatisches Scraping von Websites gewonnen werden, als Wissensbasis verwendet.',
           file: 'Die hochgeladenen Dateien werden als Wissensbasis verwendet.',
         },
       },
@@ -159,7 +155,6 @@ Wie würden Sie diese E-Mail kategorisieren?`,
     },
     button: {
       newChat: 'Neuer Chat',
-      botConsole: 'Bot Konsole',
       SaveAndSubmit: 'Speichern & Senden',
       resend: 'Eneut senden',
       regenerate: 'Erneut generieren',

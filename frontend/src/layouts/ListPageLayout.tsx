@@ -11,6 +11,8 @@ type Props = {
   isLoading?: boolean;
   isEmpty?: boolean;
   emptyMessage?: string;
+  // Shown instead of the list when it could not be loaded.
+  errorMessage?: string;
   children: ReactNode;
 };
 
@@ -45,12 +47,20 @@ const ListPageLayout: React.FC<Props> = (props) => {
                   ))}
                 </div>
               )}
-              {!props.isLoading && props.isEmpty && (
+              {!props.isLoading && props.errorMessage && (
+                <div className="flex size-full items-center justify-center text-red dark:text-red-400">
+                  {props.errorMessage}
+                </div>
+              )}
+              {!props.isLoading && !props.errorMessage && props.isEmpty && (
                 <div className="flex size-full items-center justify-center italic text-dark-gray dark:text-light-gray">
                   {props.emptyMessage}
                 </div>
               )}
-              {!props.isLoading && !props.isEmpty && props.children}
+              {!props.isLoading &&
+                !props.errorMessage &&
+                !props.isEmpty &&
+                props.children}
             </div>
           </div>
         </div>

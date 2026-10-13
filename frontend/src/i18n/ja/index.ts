@@ -20,6 +20,8 @@ const translation: typeof en = {
       chatWaitingSymbol: '▍',
       adminConsoles: '管理者用機能',
       userGroups: 'ユーザーグループ',
+      loading: '読み込み中...',
+      currentModel: 'モデル: {{model}}',
       backChat: 'チャットに戻る',
     },
     model: {
@@ -179,11 +181,6 @@ const translation: typeof en = {
       progressCard: {
         toolInput: '入力: ',
         toolOutput: '出力: ',
-        status: {
-          running: '実行中...',
-          success: '成功',
-          error: 'エラー',
-        },
       },
       tools: {
         get_weather: {
@@ -257,9 +254,7 @@ const translation: typeof en = {
         knowledge: 'ナレッジ',
         url: 'URL',
         s3url: 'S3 データソース',
-        sitemap: 'サイトマップURL',
         file: 'ファイル',
-        loadingBot: 'Loading...',
         normalChat: 'チャット',
         notAvailableBot: '[このボットは利用できません]',
         notAvailableBotInputMessage: 'このボットは利用できません。',
@@ -291,7 +286,6 @@ const translation: typeof en = {
           example: '会話例',
         },
         citeRetrievedContexts: '取得したコンテキストの引用',
-        unsupported: '非対応、読み取り専用',
       },
       titleSubmenu: {
         edit: 'ボットを編集',
@@ -312,8 +306,6 @@ const translation: typeof en = {
           url: 'URLを指定すると、そのURLの情報がナレッジとして利用されます。',
           s3url:
             'S3 の URI を入力し、S3 をデータソースとして追加します。最大 4 件追加できます。Bedrock利用リージョンと同じアカウント・同じリージョンに存在するバケットのみ対応しています。',
-          sitemap:
-            'サイトマップのURLを指定すると、そのサイトマップ内のサイトを自動的にスクレイピングして得られた情報がナレッジとして利用されます。',
           file: 'アップロードしたファイルがナレッジとして利用されます。',
           citeRetrievedContexts:
             'ユーザーの質問に答えるために取得したコンテキストを引用情報として表示するかどうかを設定します。\n有効にすると、ユーザーは元のソースURLやファイルにアクセスできます。',
@@ -405,7 +397,6 @@ const translation: typeof en = {
           rateLimit: 'レート',
           quota: 'クォータ',
           requestLimit: 'リクエスト数',
-          offset: 'オフセット',
         },
         help: {
           overview:
@@ -500,19 +491,12 @@ const translation: typeof en = {
           user: 'ユーザー',
           sharing: {
             not_shared: 'どのグループとグループにも共有されていません。',
-            shared_only_users: '{{count}}人のユーザに共有されています。',
-            shared_only_users_plural: '{{count}}人のユーザに共有されています。',
-            shared_only_groups: '{{count}}つのグループに共有されています。',
-            shared_only_groups_plural:
-              '{{count}}つのグループに共有されています。',
-            shared_both:
-              '{{groupCount}}つのグループと{{userCount}}人のユーザーに共有されています。',
-            shared_both_user_plural:
-              '{{groupCount}}つのグループと{{userCount}}人のユーザーに共有されています。',
-            shared_both_group_plural:
-              '{{groupCount}}つのグループと{{userCount}}人のユーザーに共有されています。',
-            shared_both_plural:
-              '{{groupCount}}つのグループと{{userCount}}人のユーザーに共有されています。',
+            shared_with: '{{target}}に共有されています。',
+            shared_both: '{{groups}}と{{users}}に共有されています。',
+            user_count_one: '{{count}}人のユーザー',
+            user_count_other: '{{count}}人のユーザー',
+            group_count_one: '{{count}}つのグループ',
+            group_count_other: '{{count}}つのグループ',
           },
         },
 
@@ -541,6 +525,13 @@ const translation: typeof en = {
         failDelete: 'ボットを削除できませんでした。',
         failPublish: 'APIを公開できませんでした。',
         failSave: 'ボットを保存できませんでした。',
+        failDeleteInProgress:
+          'ナレッジの同期中または API の公開中はボットを削除できません。完了後にもう一度お試しください。',
+        failShare: '共有設定を変更できませんでした。',
+        failAddApiKey: 'API キーを追加できませんでした。',
+        failDeleteApiKey: 'API キーを削除できませんでした。',
+        removeFailedFiles:
+          'ボットを保存するには、アップロードに失敗したファイルを削除してください。',
       },
       activeModels: {
         title: '利用可能なモデル設定',
@@ -662,7 +653,6 @@ const translation: typeof en = {
         results: ' "{{query}}"にマッチしたチャットが{{count}}件見つかりました',
         noResults: '{{query}}にマッチするチャットが見つかりませんでした',
         tryDifferentKeywords: '別のキーワードで試してください',
-        resultsCount: '{{count}}件の検索結果',
       },
     },
     deleteDialog: {
@@ -719,10 +709,6 @@ const translation: typeof en = {
       rename: '名前を変更',
       newChat: '新しいチャット',
       backToConversationHistory: 'チャット履歴に戻る',
-      botConsole: 'ボットコンソール',
-      botAnalytics: 'ボット確認',
-      apiManagement: 'API管理',
-      userUsages: 'ユーザ利用状況',
       SaveAndSubmit: '変更 & 送信',
       resend: '再送信',
       regenerate: '再生成',
@@ -742,6 +728,7 @@ const translation: typeof en = {
       continue: '生成を続ける',
       botManagement: 'ボットの管理',
       drawerOption: 'サイドメニューオプション',
+      startChat: 'チャットを開始',
       mode: 'モード',
     },
     input: {
@@ -754,22 +741,6 @@ const translation: typeof en = {
       },
     },
     embeddingSettings: {
-      title: 'ベクトル埋め込みパラメーター設定',
-      description:
-        'ベクトル埋め込みのパラメーター設定が行えます。パラメーターを変更することで、ドキュメントの検索精度が変わります。',
-      chunkSize: {
-        label: 'チャンクサイズ',
-        hint: '埋め込み時のドキュメントの分割サイズを指定します。',
-      },
-      chunkOverlap: {
-        label: 'チャンクオーバーラップ',
-        hint: '隣接するチャンク同士で重複する文字数を指定します。',
-      },
-      enablePartitionPdf: {
-        label:
-          'PDFの詳細解析の有効化。有効にすると時間をかけてPDFを詳細に分析します。',
-        hint: '検索精度を高めたい場合に有効です。計算により多くの時間がかかるため計算コストが増加します。',
-      },
       help: {
         chunkSize:
           'チャンクサイズが小さすぎると文脈情報が失われ、大きすぎると同一チャンクの中に異なる文脈の情報が存在することになり、検索精度が低下する場合があります。',
@@ -934,12 +905,9 @@ const translation: typeof en = {
       },
       advancedParsing: {
         label: '高度なドキュメント解析機能',
-        description:
-          'ドキュメントの高度なドキュメント解析機能に使用するモデルを選択してください。',
         hint: '構造が損なわれていないPDF内の表など、サポートされている文書形式の標準テキスト以外の解析に適しています。生成AIを使用した解析のために追加のコストが発生します。',
       },
       parsingModel: {
-        label: '高度なパースモデル',
         none: {
           label: 'なし',
           hint: 'ドキュメントの高度な解析機能は適用されません。',
@@ -1006,6 +974,15 @@ const translation: typeof en = {
       },
       predict: {
         general: '推論中にエラーが発生しました。',
+        throttled:
+          'モデルへのリクエストが多すぎます。しばらくしてからもう一度お試しください。',
+        model_unavailable:
+          '選択したモデルは利用できません。別のモデルを選択してください。',
+        model_error: 'モデルがリクエストを処理できませんでした: {{reason}}',
+        bot_not_found: 'ボットが見つかりません。削除された可能性があります。',
+        invalid_request: 'リクエストが正しくありません: {{reason}}',
+        generation_failed:
+          '回答を生成できませんでした。もう一度お試しください。',
         invalidResponse: '想定外のResponseが返ってきました。',
         connectionClosed:
           '回答が完了する前に接続が切断されました。ページを再読み込みすると保存された回答を確認できます。',
@@ -1038,18 +1015,22 @@ const translation: typeof en = {
         },
       },
       invalidMermaidFormat: 'ダイアグラム描画時にエラーが発生しました',
+      deleteConversation: '会話を削除できませんでした。',
+      clearConversations: '会話をすべて削除できませんでした。',
+      loadFailed:
+        'データを読み込めませんでした。ページを再読み込みしてもう一度お試しください。',
+      searchFailed: '検索できませんでした。もう一度お試しください。',
     },
     validation: {
-      title: 'バリデーションエラー',
+      s3Url: {
+        message:
+          's3://bucket-name/prefix/ の形式で S3 URI を入力してください。',
+      },
       maxRange: {
         message: '設定できる最大値は{{size}}です',
       },
       minRange: {
         message: '設定できる最小値は{{size}}です',
-      },
-      chunkOverlapLessThanChunkSize: {
-        message:
-          'チャンクオーバーラップはチャンクサイズより小さく設定する必要があります',
       },
       parentTokenRange: {
         message:
@@ -1077,12 +1058,8 @@ const translation: typeof en = {
       },
     },
     guardrails: {
-      title: 'ガードレール',
-      label: 'Amazon Bedrockのガードレールを有効にする',
-      hint: 'Amazon Bedrockのガードレールは、ユースケースや責任あるAIポリシーに基づいてアプリケーション固有の保護機能を実装するために使用されます。',
       harmfulCategories: {
         label: '有害カテゴリー',
-        hint: 'コンテンツフィルタを構成して、ユーザー入力やモデル応答が使用ポリシーに違反する有害な内容を検出してブロックするフィルタリングの度合いを調整します。0: 無効, 1: 低, 2: 中, 3: 高',
         hate: {
           label: '憎悪',
           hint: '人種、民族、性別、宗教、性的指向、能力、国籍などのアイデンティティに基づいて、個人やグループを差別、批判、侮辱、非難、または非人間化する入力やモデル応答を示します。0: 無効, 1: 低, 2: 中, 3: 高',
@@ -1106,7 +1083,6 @@ const translation: typeof en = {
       },
       contextualGroundingCheck: {
         label: 'コンテキストベースの根拠確認',
-        hint: 'このポリシーを使用して、モデル応答が参照ソースに基づいており、ユーザーの質問に関連しているかどうかを検証し、モデルの幻覚をフィルタリングします。',
         groundingThreshold: {
           label: '根拠',
           hint: 'モデル応答が参照ソースに基づいて事実に即しているかどうかを確認し、定義された根拠の閾値を下回る応答をブロックします。0: 何もブロックしない, 1: ほぼすべてをブロックする',

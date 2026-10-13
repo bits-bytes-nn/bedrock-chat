@@ -20,6 +20,8 @@ const translation: typeof en = {
       adminConsoles: '관리자 패널',
       backChat: '채팅으로 돌아가기',
       userGroups: '사용자 그룹',
+      loading: '불러오는 중...',
+      currentModel: '모델: {{model}}',
     },
     model: {
       'claude-v4.8-opus': {
@@ -179,11 +181,6 @@ const translation: typeof en = {
       progressCard: {
         toolInput: '입력: ',
         toolOutput: '출력: ',
-        status: {
-          running: '실행 중...',
-          success: '성공',
-          error: '오류',
-        },
       },
       tools: {
         get_weather: {
@@ -257,9 +254,7 @@ const translation: typeof en = {
         knowledge: '지식',
         url: 'URL',
         s3url: 'S3 데이터 소스',
-        sitemap: '사이트맵 URL',
         file: '파일',
-        loadingBot: '불러오는 중...',
         normalChat: '채팅',
         notAvailableBot: '[사용 불가]',
         notAvailableBotInputMessage: '이 봇은 사용할 수 없습니다.',
@@ -291,7 +286,6 @@ const translation: typeof en = {
           example: '대화 예시',
         },
         citeRetrievedContexts: '검색된 컨텍스트 인용',
-        unsupported: '지원되지 않음, 읽기 전용',
       },
       titleSubmenu: {
         edit: '편집',
@@ -312,8 +306,6 @@ const translation: typeof en = {
           url: '지정한 URL의 정보를 지식으로 사용합니다.',
           s3url:
             'S3 URI를 입력해 S3를 데이터 소스로 추가할 수 있습니다. 최대 4개까지 추가할 수 있으며, Bedrock 리전과 같은 계정, 같은 리전에 있는 버킷만 지원합니다.',
-          sitemap:
-            '사이트맵 URL을 지정하면 사이트맵에 포함된 웹사이트를 자동으로 수집한 정보를 지식으로 사용합니다.',
           file: '업로드한 파일을 지식으로 사용합니다.',
           citeRetrievedContexts:
             '사용자 질문에 답하기 위해 검색한 컨텍스트를 인용 정보로 표시할지 설정합니다.\n활성화하면 사용자가 원본 URL이나 파일에 접근할 수 있습니다.',
@@ -405,7 +397,6 @@ const translation: typeof en = {
           rateLimit: '속도',
           quota: '할당량',
           requestLimit: '요청 수',
-          offset: '오프셋',
         },
         help: {
           overview:
@@ -497,18 +488,12 @@ const translation: typeof en = {
           memberManagement: '구성원 편집',
           sharing: {
             not_shared: '공유된 그룹이나 사용자가 없습니다',
-            shared_only_users: '사용자 {{count}}명과 공유됨',
-            shared_only_users_plural: '사용자 {{count}}명과 공유됨',
-            shared_only_groups: '그룹 {{count}}개와 공유됨',
-            shared_only_groups_plural: '그룹 {{count}}개와 공유됨',
-            shared_both:
-              '그룹 {{groupCount}}개, 사용자 {{userCount}}명과 공유됨',
-            shared_both_user_plural:
-              '그룹 {{groupCount}}개, 사용자 {{userCount}}명과 공유됨',
-            shared_both_group_plural:
-              '그룹 {{groupCount}}개, 사용자 {{userCount}}명과 공유됨',
-            shared_both_plural:
-              '그룹 {{groupCount}}개, 사용자 {{userCount}}명과 공유됨',
+            shared_with: '공유 대상: {{target}}',
+            shared_both: '공유 대상: {{groups}}, {{users}}',
+            user_count_one: '사용자 {{count}}명',
+            user_count_other: '사용자 {{count}}명',
+            group_count_one: '그룹 {{count}}개',
+            group_count_other: '그룹 {{count}}개',
           },
           user: '사용자',
           group: '그룹',
@@ -535,6 +520,12 @@ const translation: typeof en = {
         failDelete: '봇을 삭제하지 못했습니다.',
         failPublish: 'API를 게시하지 못했습니다.',
         failSave: '봇을 저장하지 못했습니다.',
+        failDeleteInProgress:
+          '지식을 동기화하거나 API를 게시하는 동안에는 봇을 삭제할 수 없습니다. 작업이 끝난 뒤 다시 시도하세요.',
+        failShare: '공유 설정을 변경하지 못했습니다.',
+        failAddApiKey: 'API 키를 추가하지 못했습니다.',
+        failDeleteApiKey: 'API 키를 삭제하지 못했습니다.',
+        removeFailedFiles: '봇을 저장하려면 업로드에 실패한 파일을 삭제하세요.',
       },
       activeModels: {
         title: '모델 활성화',
@@ -656,7 +647,6 @@ const translation: typeof en = {
         results: '"{{query}}"와(과) 일치하는 대화 {{count}}개',
         noResults: '"{{query}}"와(과) 일치하는 대화가 없습니다',
         tryDifferentKeywords: '다른 키워드로 검색해 보세요',
-        resultsCount: '검색 결과 {{count}}개',
       },
     },
     deleteDialog: {
@@ -713,10 +703,6 @@ const translation: typeof en = {
       rename: '이름 변경',
       newChat: '새 채팅',
       backToConversationHistory: '대화 기록으로 돌아가기',
-      botConsole: '봇 콘솔',
-      botAnalytics: '공유 봇 분석',
-      apiManagement: 'API 관리',
-      userUsages: '사용자별 사용량',
       SaveAndSubmit: '저장 후 전송',
       resend: '다시 보내기',
       regenerate: '다시 생성',
@@ -737,6 +723,7 @@ const translation: typeof en = {
       botManagement: '봇 관리',
       mode: '모드',
       drawerOption: '사이드 메뉴 옵션',
+      startChat: '채팅 시작',
     },
     input: {
       hint: {
@@ -748,22 +735,6 @@ const translation: typeof en = {
       },
     },
     embeddingSettings: {
-      title: '임베딩 설정',
-      description:
-        '벡터 임베딩 파라미터를 설정할 수 있습니다. 파라미터를 조정해 문서 검색 정확도를 바꿀 수 있습니다.',
-      chunkSize: {
-        label: '청크 크기',
-        hint: '문서를 작은 조각으로 나눌 때의 크기입니다',
-      },
-      chunkOverlap: {
-        label: '청크 중첩',
-        hint: '인접한 청크 사이에 겹치는 문자 수를 지정할 수 있습니다.',
-      },
-      enablePartitionPdf: {
-        label:
-          'PDF 상세 분석을 사용합니다. 활성화하면 시간을 들여 PDF를 자세히 분석합니다.',
-        hint: '검색 정확도를 높이고 싶을 때 효과적입니다. 처리 시간이 늘어나므로 컴퓨팅 비용이 증가합니다.',
-      },
       help: {
         chunkSize:
           '청크 크기가 너무 작으면 맥락 정보가 사라질 수 있고, 너무 크면 서로 다른 맥락이 같은 청크에 섞여 검색 정확도가 떨어질 수 있습니다.',
@@ -928,11 +899,9 @@ const translation: typeof en = {
       },
       advancedParsing: {
         label: '고급 파싱',
-        description: '고급 문서 파싱에 사용할 모델을 선택하세요.',
         hint: '지원되는 문서 형식에서 일반 텍스트 외에도 PDF 안의 표를 구조 그대로 파싱하는 데 적합합니다. 생성형 AI를 사용한 파싱에는 추가 비용이 발생합니다.',
       },
       parsingModel: {
-        label: '고급 파싱 모델',
         none: {
           label: '사용 안 함',
           hint: '고급 파싱을 적용하지 않습니다.',
@@ -998,7 +967,14 @@ const translation: typeof en = {
         restore: '첫 페이지로 이동',
       },
       predict: {
-        general: '예측 중 오류가 발생했습니다.',
+        general: '답변을 생성하는 중 오류가 발생했습니다.',
+        throttled: '모델에 요청이 너무 많습니다. 잠시 후 다시 시도하세요.',
+        model_unavailable:
+          '선택한 모델을 사용할 수 없습니다. 다른 모델을 선택하세요.',
+        model_error: '모델이 요청을 처리하지 못했습니다: {{reason}}',
+        bot_not_found: '봇을 찾을 수 없습니다. 삭제되었을 수 있습니다.',
+        invalid_request: '요청이 올바르지 않습니다: {{reason}}',
+        generation_failed: '답변을 생성하지 못했습니다. 다시 시도하세요.',
         invalidResponse:
           '예상치 못한 응답을 받았습니다. 응답 형식이 예상 형식과 일치하지 않습니다.',
         connectionClosed:
@@ -1031,9 +1007,16 @@ const translation: typeof en = {
         },
       },
       invalidMermaidFormat: '다이어그램을 그리는 중 오류가 발생했습니다',
+      deleteConversation: '대화를 삭제하지 못했습니다.',
+      clearConversations: '대화를 모두 삭제하지 못했습니다.',
+      loadFailed:
+        '데이터를 불러오지 못했습니다. 페이지를 새로 고친 뒤 다시 시도하세요.',
+      searchFailed: '검색하지 못했습니다. 다시 시도하세요.',
     },
     validation: {
-      title: '유효성 검사 오류',
+      s3Url: {
+        message: 's3://bucket-name/prefix/ 형식의 S3 URI를 입력하세요.',
+      },
       maxRange: {
         message: '설정할 수 있는 최댓값은 {{size}}입니다',
       },
@@ -1042,9 +1025,6 @@ const translation: typeof en = {
       },
       maxBudgetTokens: {
         message: '추론 예산 토큰은 최대 토큰 수({{size}})를 넘을 수 없습니다',
-      },
-      chunkOverlapLessThanChunkSize: {
-        message: '청크 중첩은 청크 크기보다 작아야 합니다',
       },
       parentTokenRange: {
         message: '상위 토큰 크기는 하위 토큰 크기보다 커야 합니다',
@@ -1067,12 +1047,8 @@ const translation: typeof en = {
       },
     },
     guardrails: {
-      title: 'Guardrails',
-      label: 'Guardrails for Amazon Bedrock 사용',
-      hint: 'Guardrails for Amazon Bedrock은 사용 사례와 책임 있는 AI 정책에 따라 애플리케이션별 보호 장치를 구현하는 데 사용합니다.',
       harmfulCategories: {
         label: '유해 카테고리',
-        hint: '필터링 강도를 조정해 사용 정책을 위반하는 유해한 사용자 입력과 모델 응답을 감지하고 차단하도록 콘텐츠 필터를 설정합니다. 0: 사용 안 함, 1: 낮음, 2: 중간, 3: 높음',
         hate: {
           label: '혐오',
           hint: '정체성(인종, 민족, 성별, 종교, 성적 지향, 장애, 출신 국가 등)을 이유로 개인이나 집단을 차별, 비판, 모욕, 비난하거나 비인간화하는 입력 프롬프트와 모델 응답입니다. 0: 사용 안 함, 1: 낮음, 2: 중간, 3: 높음',
@@ -1096,7 +1072,6 @@ const translation: typeof en = {
       },
       contextualGroundingCheck: {
         label: '맥락 기반 근거 검사',
-        hint: '이 정책을 사용하면 모델 응답이 참조 소스에 근거하는지, 사용자 질문과 관련이 있는지 검증해 모델 환각을 걸러 낼 수 있습니다.',
         groundingThreshold: {
           label: '근거성',
           hint: '참조 소스에 제공된 정보를 바탕으로 모델 응답이 근거가 있고 사실에 부합하는지 검증하고, 정의한 근거성 임곗값보다 낮은 응답을 차단합니다. 0: 아무것도 차단하지 않음, 1: 거의 모두 차단',

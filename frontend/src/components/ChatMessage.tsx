@@ -36,6 +36,8 @@ type Props = BaseProps & {
   reasoning?: string;
   chatContent?: DisplayMessageContent;
   isStreaming?: boolean;
+  // Disables editing and switching branches while an answer is being posted.
+  disabled?: boolean;
   relatedDocuments?: RelatedDocument[];
   onChangeMessageId?: (messageId: string) => void;
   onSubmit?: (messageId: string, content: string) => void;
@@ -134,9 +136,9 @@ const ChatMessage: React.FC<Props> = (props) => {
   );
 
   const onSubmit = useCallback(() => {
-    props.onSubmit?.(chatContent?.sibling[0] ?? '', changedContent);
+    props.onSubmit?.(chatContent?.id ?? '', changedContent);
     setIsEdit(false);
-  }, [changedContent, chatContent?.sibling, props]);
+  }, [changedContent, chatContent?.id, props]);
 
   const handleFeedbackSubmit = useCallback(
     (messageId: string, feedback: PutFeedbackRequest) => {
@@ -162,7 +164,7 @@ const ChatMessage: React.FC<Props> = (props) => {
             <ButtonIcon
               className="text-xs"
               label={t('button.previous')}
-              disabled={nodeIndex === 0}
+              disabled={props.disabled || nodeIndex === 0}
               onClick={() => {
                 onClickChange(nodeIndex - 1);
               }}>
@@ -174,7 +176,10 @@ const ChatMessage: React.FC<Props> = (props) => {
             <ButtonIcon
               className="text-xs"
               label={t('button.next')}
-              disabled={nodeIndex >= (chatContent?.sibling.length ?? 0) - 1}
+              disabled={
+                props.disabled ||
+                nodeIndex >= (chatContent?.sibling.length ?? 0) - 1
+              }
               onClick={() => {
                 onClickChange(nodeIndex + 1);
               }}>
@@ -331,7 +336,9 @@ const ChatMessage: React.FC<Props> = (props) => {
                 onChange={(v) => setChangedContent(v)}
               />
               <div className="flex justify-center gap-3">
-                <Button onClick={onSubmit}>{t('button.SaveAndSubmit')}</Button>
+                <Button disabled={props.disabled} onClick={onSubmit}>
+                  {t('button.SaveAndSubmit')}
+                </Button>
                 <Button
                   outlined
                   onClick={() => {
@@ -369,6 +376,7 @@ const ChatMessage: React.FC<Props> = (props) => {
             <ButtonIcon
               className="text-dark-gray dark:text-light-gray"
               label={t('button.edit')}
+              disabled={props.disabled}
               onClick={() => {
                 const textContent = chatContent.content[
                   firstTextContent

@@ -23,3 +23,6 @@ dev-dist
 *.njsproj
 *.sln
 *.sw?
+
+# Copied by Ladle for the msw addon.
+public/mockServiceWorker.js

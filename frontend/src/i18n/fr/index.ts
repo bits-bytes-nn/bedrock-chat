@@ -15,9 +15,7 @@ const translation = {
         recentlyUsedBots: 'Bots partagés utilisés récemment',
         knowledge: 'Connaissance',
         url: 'URL',
-        sitemap: 'Sitemap URL',
         file: 'Fichier',
-        loadingBot: 'Chargement...',
         normalChat: 'Chat',
         notAvailableBot: '[Indisponible]',
         notAvailableBotInputMessage: "Ce Bot n'est pas disponible.",
@@ -55,8 +53,6 @@ const translation = {
           overview:
             "En fournissant des connaissances externes au bot, celui-ci devient capable de gérer des données sur lesquelles il n'a pas été pré-entraîné.",
           url: "Les informations de l'URL spécifiée seront utilisées comme connaissances.",
-          sitemap:
-            "En spécifiant l'URL du plan du site, les informations obtenues en grattant automatiquement les sites Web qu'il contient seront utilisées comme connaissances.",
           file: 'Les fichiers téléchargés seront utilisés comme connaissances.',
         },
       },
@@ -157,7 +153,6 @@ Comment catégoriseriez-vous cet e-mail ?`,
     },
     button: {
       newChat: 'Nouvelle session',
-      botConsole: 'Bot Console',
       SaveAndSubmit: 'Enregistrer et soumettre',
       resend: 'Renvoyer',
       regenerate: 'Regénerer',
