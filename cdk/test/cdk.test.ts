@@ -293,6 +293,30 @@ describe("Bedrock Chat Stack Test", () => {
         }),
       }),
     });
+    // Browsers revalidate index.html, so a deployment does not leave them with
+    // references to removed chunks. Hashed assets stay cached.
+    template.hasResourceProperties("AWS::CloudFront::ResponseHeadersPolicy", {
+      ResponseHeadersPolicyConfig: Match.objectLike({
+        CustomHeadersConfig: {
+          Items: [{ Header: "Cache-Control", Value: "no-cache", Override: true }],
+        },
+        SecurityHeadersConfig: Match.objectLike({
+          ContentSecurityPolicy: Match.anyValue(),
+          StrictTransportSecurity: Match.anyValue(),
+        }),
+      }),
+    });
+    template.hasResourceProperties("AWS::CloudFront::Distribution", {
+      DistributionConfig: Match.objectLike({
+        CacheBehaviors: [
+          Match.objectLike({
+            PathPattern: "/assets/*",
+            CachePolicyId: "658327ea-f89d-4fab-a63d-7e88639e58f6",
+            ResponseHeadersPolicyId: Match.anyValue(),
+          }),
+        ],
+      }),
+    });
     template.hasResourceProperties("AWS::ApiGatewayV2::Stage", {
       StageName: "dev",
       DefaultRouteSettings: Match.objectLike({ ThrottlingRateLimit: 500 }),
@@ -303,6 +327,17 @@ describe("Bedrock Chat Stack Test", () => {
       AccessLogSettings: Match.objectLike({ DestinationArn: Match.anyValue() }),
     });
     expect(actions).toContain("bedrock:InvokeModelWithResponseStream");
+
+    // The main API accepts requests from the app and the local development server only.
+    const httpApi = Object.values(
+      template.findResources("AWS::ApiGatewayV2::Api", {
+        Properties: { ProtocolType: "HTTP" },
+      })
+    )[0] as any;
+    const apiOrigins = httpApi.Properties.CorsConfiguration.AllowOrigins;
+    expect(apiOrigins).not.toContain("*");
+    expect(apiOrigins).toContain("http://localhost:5173");
+    expect(JSON.stringify(apiOrigins)).toContain("DomainName");
   });
 
   test("custom domain configuration", () => {

@@ -41,7 +41,7 @@ export interface ApiProps {
   readonly database: Database;
   readonly envName: string;
   readonly envPrefix: string;
-  readonly corsAllowOrigins?: string[];
+  readonly corsAllowOrigins: string[];
   readonly throttle: ThrottleSettings;
   readonly auth: Auth;
   readonly bedrockRegion: string;
@@ -68,7 +68,7 @@ export class Api extends Construct {
   constructor(scope: Construct, id: string, props: ApiProps) {
     super(scope, id);
 
-    const { database, corsAllowOrigins: allowOrigins = ["*"] } = props;
+    const { database, corsAllowOrigins: allowOrigins } = props;
     const { tableAccessRole } = database;
 
     const usageAnalysisOutputLocation =

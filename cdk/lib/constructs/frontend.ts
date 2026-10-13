@@ -12,6 +12,7 @@ import {
   HeadersFrameOption,
   HeadersReferrerPolicy,
   ResponseHeadersPolicy,
+  ResponseSecurityHeadersBehavior,
   ViewerProtocolPolicy,
   GeoRestriction,
 } from "aws-cdk-lib/aws-cloudfront";
@@ -92,35 +93,56 @@ export class Frontend extends Construct {
     const logoOrigin = /^https?:\/\//.test(props.logoPath ?? "")
       ? ` ${new URL(props.logoPath!).origin}`
       : "";
+    const securityHeadersBehavior: ResponseSecurityHeadersBehavior = {
+      contentSecurityPolicy: {
+        contentSecurityPolicy: `img-src 'self' data: blob:${logoOrigin}; object-src 'none'; base-uri 'self'; frame-ancestors 'none'`,
+        override: true,
+      },
+      strictTransportSecurity: {
+        accessControlMaxAge: Duration.days(365),
+        includeSubdomains: true,
+        override: true,
+      },
+      contentTypeOptions: { override: true },
+      frameOptions: { frameOption: HeadersFrameOption.DENY, override: true },
+      referrerPolicy: {
+        referrerPolicy: HeadersReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN,
+        override: true,
+      },
+      xssProtection: { protection: true, modeBlock: true, override: true },
+    };
     const responseHeadersPolicy = new ResponseHeadersPolicy(this, "SecurityHeaders", {
-      securityHeadersBehavior: {
-        contentSecurityPolicy: {
-          contentSecurityPolicy: `img-src 'self' data: blob:${logoOrigin}; object-src 'none'; base-uri 'self'; frame-ancestors 'none'`,
-          override: true,
-        },
-        strictTransportSecurity: {
-          accessControlMaxAge: Duration.days(365),
-          includeSubdomains: true,
-          override: true,
-        },
-        contentTypeOptions: { override: true },
-        frameOptions: { frameOption: HeadersFrameOption.DENY, override: true },
-        referrerPolicy: {
-          referrerPolicy: HeadersReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN,
-          override: true,
-        },
-        xssProtection: { protection: true, modeBlock: true, override: true },
+      securityHeadersBehavior,
+    });
+    // index.html, the service worker and the SPA fallback must be revalidated, or a
+    // browser keeps an old index.html that references chunks removed by the deployment.
+    const revalidateHeadersPolicy = new ResponseHeadersPolicy(this, "RevalidateHeaders", {
+      securityHeadersBehavior,
+      customHeadersBehavior: {
+        customHeaders: [
+          { header: "Cache-Control", value: "no-cache", override: true },
+        ],
       },
     });
 
+    const origin = S3BucketOrigin.withOriginAccessControl(assetBucket);
     const distribution = new Distribution(this, "Distribution", {
       defaultRootObject: "index.html",
       defaultBehavior: {
-        origin: S3BucketOrigin.withOriginAccessControl(assetBucket),
+        origin,
         viewerProtocolPolicy: ViewerProtocolPolicy.HTTPS_ONLY,
         cachePolicy: CachePolicy.CACHING_OPTIMIZED,
         // The app keeps Cognito tokens in the browser.
-        responseHeadersPolicy,
+        responseHeadersPolicy: revalidateHeadersPolicy,
+      },
+      additionalBehaviors: {
+        // Vite adds a content hash to these file names, so they can stay cached.
+        "/assets/*": {
+          origin,
+          viewerProtocolPolicy: ViewerProtocolPolicy.HTTPS_ONLY,
+          cachePolicy: CachePolicy.CACHING_OPTIMIZED,
+          responseHeadersPolicy,
+        },
       },
       // Apply geo restriction allowlist only when countries are provided
       ...(this.allowedCountries.length

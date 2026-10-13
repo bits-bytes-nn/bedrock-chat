@@ -240,9 +240,20 @@ export class BedrockChatStack extends cdk.Stack {
       enableRagReplicas: props.enableRagReplicas,
     });
 
+    // The distribution domain also serves the app when an alternate domain is set.
+    // Local development runs the frontend against the deployed API.
+    const appOrigins = [
+      `https://${frontend.cloudFrontWebDistribution.distributionDomainName}`,
+      ...(props.alternateDomainName
+        ? [`https://${props.alternateDomainName}`]
+        : []),
+      "http://localhost:5173",
+    ];
+
     const backendApi = new Api(this, "BackendApi", {
       envName: props.envName,
       envPrefix: props.envPrefix,
+      corsAllowOrigins: appOrigins,
       database,
       auth,
       bedrockRegion: props.bedrockRegion,
@@ -339,9 +350,9 @@ export class BedrockChatStack extends cdk.Stack {
 
     props.documentBucket.addCorsRule({
       allowedMethods: [HttpMethods.PUT],
-      // Browsers upload documents with presigned URLs from the app origins only.
-      // The bucket is in another stack that the distribution depends on, so its
-      // domain name cannot be referenced here.
+      // Browsers upload documents with presigned URLs from the app origins only,
+      // including the local development server. The bucket is in another stack
+      // that the distribution depends on, so its domain name cannot be referenced here.
       allowedOrigins: [
         "https://*.cloudfront.net",
         ...(props.alternateDomainName
