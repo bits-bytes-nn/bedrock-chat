@@ -18,7 +18,10 @@ import useConversation from './useConversation';
 import { create } from 'zustand';
 import usePostMessageStreaming from './usePostMessageStreaming';
 import { ulid } from 'ulid';
-import { convertMessageMapToArray } from '../utils/MessageUtils';
+import {
+  NEW_MESSAGE_ID,
+  convertMessageMapToArray,
+} from '../utils/MessageUtils';
 import useModel from './useModel';
 import useFeedbackApi from './useFeedbackApi';
 import { useActorRef, useSelector } from '@xstate/react';
@@ -74,10 +77,6 @@ export type AttachmentType = {
   extractedContent: string;
 };
 
-const NEW_MESSAGE_ID = {
-  USER: 'new-message',
-  ASSISTANT: 'new-message-assistant',
-};
 const USE_STREAMING: boolean =
   import.meta.env.VITE_APP_USE_STREAMING === 'true';
 
@@ -702,11 +701,6 @@ const useChat = () => {
       }
     });
 
-    // Stateを書き換え後の内容に更新
-    if (props?.content) {
-      editMessage(conversationId, parentMessage.id, props.content);
-    }
-
     const input: PostMessageRequest = {
       conversationId: conversationId,
       message: {
@@ -725,6 +719,10 @@ const useChat = () => {
 
     // 画面に即時反映するために、Stateを更新する
     if (isRetryError) {
+      // The failed message is sent again, so show its edited content.
+      if (props?.content) {
+        editMessage(conversationId, parentMessage.id, props.content);
+      }
       pushMessage(
         conversationId ?? '',
         parentMessage.id,
@@ -763,7 +761,10 @@ const useChat = () => {
       })
       .catch((e) => {
         console.error(e);
-        setCurrentMessageId(NEW_MESSAGE_ID.USER);
+        // The user may have opened another conversation in the meantime.
+        if (useChatState.getState().conversationId === conversationId) {
+          setCurrentMessageId(NEW_MESSAGE_ID.USER);
+        }
         removeMessage(conversationId, NEW_MESSAGE_ID.ASSISTANT);
       })
       .finally(() => {

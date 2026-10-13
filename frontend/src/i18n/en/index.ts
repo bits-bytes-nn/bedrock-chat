@@ -997,6 +997,8 @@ How would you categorize this email?`,
       },
       maxTokensReached:
         'The answer was cut off because it reached the maximum output length. Increase Max Tokens in the bot generation settings.',
+      maxTokensReachedWithoutSettings:
+        'The answer was cut off because it reached the maximum output length. Ask for the rest in a new message.',
       notSupportedImage: 'The selected model does not support images.',
       unsupportedFileFormat: 'The selected file format is not supported.',
       emptyAnswer:
@@ -1026,6 +1028,7 @@ How would you categorize this email?`,
       clearConversations: 'Failed to delete the chats.',
       loadFailed: 'Failed to load the data. Reload the page and try again.',
       searchFailed: 'Failed to search. Try again.',
+      feedbackFailed: 'Failed to send the feedback. Try again.',
     },
     validation: {
       s3Url: {

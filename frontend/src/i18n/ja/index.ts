@@ -998,6 +998,8 @@ const translation: typeof en = {
       },
       maxTokensReached:
         '最大出力長に達したため回答が途中で終了しました。ボットの生成設定で最大トークン数を増やしてください。',
+      maxTokensReachedWithoutSettings:
+        '最大出力長に達したため回答が途中で終了しました。続きは新しいメッセージで依頼してください。',
       notSupportedImage: '選択しているモデルは、画像を利用できません。',
       unsupportedFileFormat: '選択したファイル形式はサポートされていません。',
       emptyAnswer:
@@ -1029,6 +1031,7 @@ const translation: typeof en = {
       loadFailed:
         'データを読み込めませんでした。ページを再読み込みしてもう一度お試しください。',
       searchFailed: '検索できませんでした。もう一度お試しください。',
+      feedbackFailed: 'フィードバックを送信できませんでした。もう一度お試しください。',
     },
     validation: {
       s3Url: {

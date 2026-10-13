@@ -992,6 +992,8 @@ const translation: typeof en = {
       },
       maxTokensReached:
         '최대 출력 길이에 도달해 답변이 중간에 끝났습니다. 봇 생성 설정에서 최대 토큰 수를 늘려 주세요.',
+      maxTokensReachedWithoutSettings:
+        '최대 출력 길이에 도달해 답변이 중간에 끝났습니다. 나머지 내용은 새 메시지로 요청하세요.',
       notSupportedImage: '선택한 모델은 이미지를 지원하지 않습니다.',
       unsupportedFileFormat: '선택한 파일 형식은 지원되지 않습니다.',
       emptyAnswer:
@@ -1022,6 +1024,7 @@ const translation: typeof en = {
       loadFailed:
         '데이터를 불러오지 못했습니다. 페이지를 새로 고친 뒤 다시 시도하세요.',
       searchFailed: '검색하지 못했습니다. 다시 시도하세요.',
+      feedbackFailed: '피드백을 보내지 못했습니다. 다시 시도하세요.',
     },
     validation: {
       s3Url: {

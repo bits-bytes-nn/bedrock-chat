@@ -28,7 +28,11 @@ import { TEXT_FILE_EXTENSIONS } from '../constants/supportedAttachedFiles';
 import AgentToolList from '../features/agent/components/AgentToolList';
 import { AgentToolsProps } from '../features/agent/types';
 import { convertThinkingLogToAgentToolProps } from '../features/agent/utils/AgentUtils';
-import { convertUsedChunkToRelatedDocument } from '../utils/MessageUtils';
+import {
+  canSubmitEditedContent,
+  convertUsedChunkToRelatedDocument,
+  isTemporaryMessageId,
+} from '../utils/MessageUtils';
 import ReasoningCard from '../features/reasoning/components/ReasoningCard';
 
 type Props = BaseProps & {
@@ -38,6 +42,7 @@ type Props = BaseProps & {
   isStreaming?: boolean;
   // Disables editing and switching branches while an answer is being posted.
   disabled?: boolean;
+  disabledEdit?: boolean;
   relatedDocuments?: RelatedDocument[];
   onChangeMessageId?: (messageId: string) => void;
   onSubmit?: (messageId: string, content: string) => void;
@@ -336,7 +341,17 @@ const ChatMessage: React.FC<Props> = (props) => {
                 onChange={(v) => setChangedContent(v)}
               />
               <div className="flex justify-center gap-3">
-                <Button disabled={props.disabled} onClick={onSubmit}>
+                <Button
+                  disabled={
+                    props.disabled ||
+                    props.disabledEdit ||
+                    !canSubmitEditedContent(
+                      (chatContent?.content[firstTextContent] as TextContent)
+                        ?.body ?? '',
+                      changedContent
+                    )
+                  }
+                  onClick={onSubmit}>
                   {t('button.SaveAndSubmit')}
                 </Button>
                 <Button
@@ -376,7 +391,7 @@ const ChatMessage: React.FC<Props> = (props) => {
             <ButtonIcon
               className="text-dark-gray dark:text-light-gray"
               label={t('button.edit')}
-              disabled={props.disabled}
+              disabled={props.disabled || props.disabledEdit}
               onClick={() => {
                 const textContent = chatContent.content[
                   firstTextContent
@@ -392,6 +407,8 @@ const ChatMessage: React.FC<Props> = (props) => {
               <ButtonIcon
                 className="text-dark-gray dark:text-light-gray"
                 label={t('button.feedback')}
+                // The backend has not saved a temporary message yet.
+                disabled={props.disabled || isTemporaryMessageId(chatContent.id)}
                 onClick={() => setIsFeedbackOpen(true)}>
                 {chatContent.feedback && !chatContent.feedback.thumbsUp ? (
                   <PiThumbsDownFill />

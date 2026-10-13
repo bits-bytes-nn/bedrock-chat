@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { convertMessageMapToArray } from '../MessageUtils';
+import {
+  NEW_MESSAGE_ID,
+  canSubmitEditedContent,
+  convertMessageMapToArray,
+  isTemporaryMessageId,
+} from '../MessageUtils';
 import { DisplayMessageContent, MessageMap } from '../../@types/conversation';
 
 describe('convertMessageMapToArray', () => {
@@ -1776,5 +1781,22 @@ describe('convertMessageMapToArray', () => {
 
     const actual = convertMessageMapToArray(data, '99');
     expect(actual).toEqual(expected);
+  });
+});
+
+describe('isTemporaryMessageId', () => {
+  it('detects the IDs of messages that are not saved yet', () => {
+    expect(isTemporaryMessageId(NEW_MESSAGE_ID.USER)).toBe(true);
+    expect(isTemporaryMessageId(NEW_MESSAGE_ID.ASSISTANT)).toBe(true);
+    expect(isTemporaryMessageId('01J0000000000000000000000')).toBe(false);
+  });
+});
+
+describe('canSubmitEditedContent', () => {
+  it('requires changed text that is not empty', () => {
+    expect(canSubmitEditedContent('hello', 'hello!')).toBe(true);
+    expect(canSubmitEditedContent('hello', 'hello')).toBe(false);
+    expect(canSubmitEditedContent('hello', ' hello \n')).toBe(false);
+    expect(canSubmitEditedContent('hello', '   ')).toBe(false);
   });
 });
