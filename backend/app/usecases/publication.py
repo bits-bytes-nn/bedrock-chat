@@ -4,7 +4,7 @@ import os
 from app.repositories.api_publication import (
     create_api_key,
     delete_api_key,
-    delete_stack_by_bot_id,
+    delete_published_api,
     find_api_key_by_id,
     find_build_status_by_build_id,
     find_stack_by_bot_id,
@@ -181,24 +181,8 @@ def remove_bot_publication(user: User, bot_id: str):
                 f"Bot {bot_id} publication is requested (build id: {bot.published_api_codebuild_id}) but not completed. Wait until the publication is completed."
             )
 
-    # Before delete cfn stack, delete all api keys
-    try:
-        stack = find_stack_by_bot_id(bot_id)
-    except RecordNotFoundError:
-        delete_bot_publication(bot.owner_user_id, bot_id)
-        return
-
-    if stack.api_usage_plan_id:
-        usage_plan = find_usage_plan_by_id(stack.api_usage_plan_id)
-        for key_id in usage_plan.key_ids:
-            delete_api_key(key_id)
-
-    # Delete `ApiPublishmentStack` by CloudFormation
-    delete_stack_by_bot_id(bot_id)
-
-    # Delete bot attribute
+    delete_published_api(bot_id)
     delete_bot_publication(bot.owner_user_id, bot_id)
-    return
 
 
 def fetch_api_key(user: User, bot_id: str, api_key: str) -> ApiKeyOutput:

@@ -22,7 +22,7 @@ class TestBotRemoval(unittest.TestCase):
             "delete_custom_bot_stack_by_bot_id",
             side_effect=RuntimeError("throttled"),
         ) as delete_kb_stack, patch.object(
-            bot_remove, "_delete_published_api"
+            bot_remove, "delete_published_api"
         ) as delete_api, patch.object(
             bot_remove, "delete_from_s3"
         ) as delete_files, patch.object(
