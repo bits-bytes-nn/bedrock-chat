@@ -21,7 +21,7 @@ from app.routes.schemas.bot_kb import (
     BedrockKnowledgeBaseInput,
     BedrockKnowledgeBaseOutput,
 )
-from app.routes.schemas.conversation import type_model_name
+from app.routes.schemas.conversation import active_model_field_name, type_model_name
 from pydantic import (
     Discriminator,
     Field,
@@ -54,7 +54,7 @@ type_shared_scope = Literal["partial", "all", "private"]
 
 def _create_model_activate_input(model_names: List[str]) -> Type[BaseSchema]:
     fields: Dict[str, Any] = {
-        name.replace("-", "_").replace(".", "_"): (bool, True) for name in model_names
+        active_model_field_name(name): (bool, True) for name in model_names
     }
     return create_model("ActiveModelsInput", **fields, __base__=BaseSchema)
 
@@ -64,7 +64,7 @@ ActiveModelsInput = _create_model_activate_input(list(get_args(type_model_name))
 
 def create_model_activate_output(model_names: List[str]) -> Type[BaseSchema]:
     fields: Dict[str, Any] = {
-        name.replace("-", "_").replace(".", "_"): (bool, True) for name in model_names
+        active_model_field_name(name): (bool, True) for name in model_names
     }
     return create_model("ActiveModelsOutput", **fields, __base__=BaseSchema)
 

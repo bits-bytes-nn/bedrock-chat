@@ -1,6 +1,8 @@
 import unittest
 from unittest.mock import patch
 
+import botocore.session
+
 from embedding_statemachine.bedrock_knowledge_base import synchronize_data_source
 
 EVENT = {
@@ -74,3 +76,17 @@ class TestHandleIngest(unittest.TestCase):
         self.assertNotEqual(
             first["clientToken"], self.start("arn:execution:2")["clientToken"]
         )
+
+
+class TestDocumentsPerRequest(unittest.TestCase):
+    def test_matches_the_api_limit(self):
+        model = botocore.session.get_session().get_service_model("bedrock-agent")
+        for operation, member in (
+            ("GetKnowledgeBaseDocuments", "documentIdentifiers"),
+            ("IngestKnowledgeBaseDocuments", "documents"),
+            ("DeleteKnowledgeBaseDocuments", "documentIdentifiers"),
+        ):
+            shape = model.operation_model(operation).input_shape.members[member]
+            self.assertEqual(
+                synchronize_data_source.DOCUMENTS_PER_REQUEST, shape.metadata["max"]
+            )

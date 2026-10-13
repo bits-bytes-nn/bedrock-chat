@@ -2,8 +2,14 @@ import logging
 import os
 
 import boto3
+from app.repositories.common import RecordNotFoundError
 from app.repositories.conversation import find_failed_message
-from app.routes.schemas.conversation import ChatInput, Conversation, MessageInput
+from app.routes.schemas.conversation import (
+    ChatInput,
+    Conversation,
+    MessageInput,
+    MessageOutput,
+)
 from app.routes.schemas.published_api import (
     ChatInputWithoutBotId,
     ChatOutputWithoutBotId,
@@ -21,6 +27,8 @@ router = APIRouter(tags=["published_api"])
 
 sqs_client = boto3.client("sqs")
 QUEUE_URL = os.environ.get("QUEUE_URL", "")
+# app.main includes this router only when PUBLISHED_API_ID is set.
+PUBLISHED_API_ID = os.environ.get("PUBLISHED_API_ID", "")
 
 
 @router.get("/health")
@@ -32,13 +40,16 @@ def health():
 @router.post("/conversation", response_model=MessageRequestedResponse)
 def post_message(request: Request, message_input: ChatInputWithoutBotId):
     """Send chat message"""
-    current_user: User = request.state.current_user
+    if message_input.continue_generate:
+        # The continued answer replaces the previous one instead of answering the
+        # returned message id, so clients would poll for it forever.
+        raise HTTPException(
+            status_code=400,
+            detail="continueGenerate is not supported by the published API.",
+        )
 
-    # Extract bot_id from `current_user.id`
-    # NOTE: user_id naming rule is implemented on `add_current_user_to_request` method
-    bot_id = (
-        current_user.id.split("#")[1] if "#" in current_user.id else current_user.id
-    )
+    # The published API serves one bot; its id is the published API id.
+    bot_id = PUBLISHED_API_ID
 
     # Generate conversation id if not provided
     conversation_id = (
@@ -88,6 +99,13 @@ def get_conversation(request: Request, conversation_id: str):
     return output
 
 
+def _find_answer(conversation: Conversation, message_id: str) -> MessageOutput | None:
+    input_message = conversation.message_map.get(message_id)
+    if input_message is None or not input_message.children:
+        return None
+    return conversation.message_map.get(input_message.children[0])
+
+
 @router.get(
     "/conversation/{conversation_id}/{message_id}",
     response_model=ChatOutputWithoutBotId,
@@ -96,32 +114,35 @@ def get_message(request: Request, conversation_id: str, message_id: str):
     """Get specified message in a conversation. If the message does not exist, it will return 404."""
     current_user: User = request.state.current_user
 
+    try:
+        conversation = fetch_conversation(current_user.id, conversation_id)
+    except RecordNotFoundError:
+        # The first message of a conversation can fail before anything is stored.
+        conversation = None
+
+    # A stored answer wins over a failure that was recorded after storing it.
+    if conversation is not None:
+        answer = _find_answer(conversation, message_id)
+        if answer is not None:
+            return ChatOutputWithoutBotId(
+                conversation_id=conversation_id,
+                message=answer,
+                create_time=conversation.create_time,
+            )
+
     reason = find_failed_message(current_user.id, conversation_id, message_id)
     if reason is not None:
         raise HTTPException(status_code=500, detail=reason)
 
-    conversation = fetch_conversation(current_user.id, conversation_id)
-    input_message = conversation.message_map.get(message_id, None)
-    if input_message is None:
+    if conversation is None:
+        raise RecordNotFoundError(f"No conversation found with id: {conversation_id}")
+    input_message = conversation.message_map.get(message_id)
+    if input_message is None or input_message.children:
         raise HTTPException(
             status_code=404,
             detail=f"Message {message_id} not found in conversation {conversation_id}",
         )
-    if not input_message.children:
-        raise HTTPException(
-            status_code=404,
-            detail=f"The response to message {message_id} is not ready yet",
-        )
-    output_message_id = input_message.children[0]
-    output_message = conversation.message_map.get(output_message_id, None)
-    if output_message is None:
-        raise HTTPException(
-            status_code=404,
-            detail=f"Message {message_id} not found in conversation {conversation_id}",
-        )
-
-    return ChatOutputWithoutBotId(
-        conversation_id=conversation_id,
-        message=output_message,
-        create_time=conversation.create_time,
+    raise HTTPException(
+        status_code=404,
+        detail=f"The response to message {message_id} is not ready yet",
     )

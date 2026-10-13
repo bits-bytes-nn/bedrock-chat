@@ -10,11 +10,12 @@ on:
       - "frontend/src/constants/index.ts"
       - "frontend/src/hooks/useModel.ts"
       - "frontend/src/i18n/en/index.ts"
+      # tests/test_error_codes.py checks the error codes that the frontend translates.
+      - "frontend/src/hooks/usePostMessageStreaming.ts"
       # tests/test_usecases/test_file_conversion.py checks the convertible files.
       - "frontend/src/constants/supportedAttachedFiles.ts"
       # tests/test_alarm_log_terms.py checks the log lines that alarms count.
       - "cdk/lib/constructs/monitoring.ts"
-      - "cdk/lib/api-publishment-stack.ts"
       # tests/test_cognito_trigger_resource.py runs this handler.
       - "cdk/custom-resources/cognito-trigger/**"
       - ".github/workflows/backend.yml"
@@ -27,11 +28,12 @@ on:
       - "frontend/src/constants/index.ts"
       - "frontend/src/hooks/useModel.ts"
       - "frontend/src/i18n/en/index.ts"
+      # tests/test_error_codes.py checks the error codes that the frontend translates.
+      - "frontend/src/hooks/usePostMessageStreaming.ts"
       # tests/test_usecases/test_file_conversion.py checks the convertible files.
       - "frontend/src/constants/supportedAttachedFiles.ts"
       # tests/test_alarm_log_terms.py checks the log lines that alarms count.
       - "cdk/lib/constructs/monitoring.ts"
-      - "cdk/lib/api-publishment-stack.ts"
       # tests/test_cognito_trigger_resource.py runs this handler.
       - "cdk/custom-resources/cognito-trigger/**"
       - ".github/workflows/backend.yml"

@@ -222,8 +222,12 @@ def calculate_price(
 
 
 @functools.cache
-def _list_system_inference_profile_ids(region: str) -> frozenset[str]:
-    """Return the IDs of the system-defined inference profiles in the region."""
+def _list_system_inference_profiles(region: str) -> dict[str, frozenset[str]]:
+    """Return the system-defined inference profiles in the region.
+
+    Returns:
+        The ARNs of the models that each profile routes to, by profile ID.
+    """
     client = boto3.client(
         "bedrock",
         region_name=region,
@@ -233,16 +237,19 @@ def _list_system_inference_profile_ids(region: str) -> frozenset[str]:
             retries={"mode": "standard", "max_attempts": 3},
         ),
     )
-    profile_ids: set[str] = set()
+    profiles: dict[str, frozenset[str]] = {}
     kwargs: dict[str, Any] = {"typeEquals": "SYSTEM_DEFINED"}
     while True:
         response = client.list_inference_profiles(**kwargs)
-        profile_ids.update(
-            profile["inferenceProfileId"]
+        profiles.update(
+            (
+                profile["inferenceProfileId"],
+                frozenset(model["modelArn"] for model in profile["models"]),
+            )
             for profile in response["inferenceProfileSummaries"]
         )
         if "nextToken" not in response:
-            return frozenset(profile_ids)
+            return profiles
         kwargs["nextToken"] = response["nextToken"]
 
 
@@ -264,7 +271,7 @@ def get_model_id(
 
     global_profile_id = f"global.{base_model_id}"
     try:
-        profile_ids = _list_system_inference_profile_ids(bedrock_region)
+        profiles = _list_system_inference_profiles(bedrock_region)
     except (BotoCoreError, ClientError):
         # Most current models are offered through a global profile, so try it rather
         # than failing every request while the lookup is unavailable.
@@ -273,17 +280,21 @@ def get_model_id(
         )
         return global_profile_id if enable_global else base_model_id
 
+    # Profiles route to foundation models in several regions, so their model ARNs
+    # differ in the region but end with the same model ID.
+    model_arn_suffix = f"foundation-model/{base_model_id}"
+    profile_ids = {
+        profile_id
+        for profile_id, model_arns in profiles.items()
+        if any(arn.endswith(model_arn_suffix) for arn in model_arns)
+    }
+
     if enable_global and global_profile_id in profile_ids:
         return global_profile_id
 
     if enable_cross_region:
-        # Geographic profiles are named "<geo>.<base model id>", for example "us." or "apac.".
-        regional_profile_ids = sorted(
-            profile_id
-            for profile_id in profile_ids
-            if profile_id.split(".", 1)[-1] == base_model_id
-            and profile_id != global_profile_id
-        )
+        # Geographic profiles, such as "us." or "apac.".
+        regional_profile_ids = sorted(profile_ids - {global_profile_id})
         if regional_profile_ids:
             return regional_profile_ids[0]
 

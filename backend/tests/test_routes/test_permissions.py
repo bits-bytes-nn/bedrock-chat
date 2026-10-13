@@ -1,4 +1,4 @@
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from app import main
@@ -121,3 +121,14 @@ def test_get_private_bot_checks_owner(client_as, user, status):
     assert response.status_code == status
     if status == 200:
         assert response.json()["id"] == "bot1"
+
+
+def test_unpublished_bot_returns_a_coded_404(client_as):
+    # The frontend translates error.api.<code>.
+    bot = MagicMock(published_api_codebuild_id=None)
+    with patch("app.usecases.publication.find_bot_by_id", return_value=bot):
+        response = client_as(ADMIN).get("/bot/bot1/publication")
+
+    assert response.status_code == 404
+    assert response.json()["code"] == "bot_not_published"
+    assert "is not published" in response.json()["errors"][0]

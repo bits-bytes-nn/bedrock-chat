@@ -6,7 +6,7 @@ from typing import Any
 
 import boto3
 from app.repositories.common import (
-    TRANSACTION_BATCH_WRITE_SIZE,
+    REGION,
     RecordNotFoundError,
     ResourceConflictError,
     compose_conv_id,
@@ -35,8 +35,8 @@ logger = logging.getLogger(__name__)
 THRESHOLD_LARGE_MESSAGE = 300 * 1024  # 300KB
 LARGE_MESSAGE_BUCKET = os.environ.get("LARGE_MESSAGE_BUCKET", "")
 
-BEDROCK_REGION = os.environ.get("BEDROCK_REGION", "us-east-1")
-s3_client = boto3.client("s3", BEDROCK_REGION)
+# The bucket is in the stack's region, which can differ from BEDROCK_REGION.
+s3_client = boto3.client("s3", REGION)
 
 
 # Concurrent writes to one conversation are rare, so a few merges are enough.
@@ -338,44 +338,20 @@ def delete_conversation_by_user_id(user_id: str):
         "ProjectionExpression": "SK, IsLargeMessage, LargeMessagePath",
     }
 
-    def delete_batch(batch):
-        with table.batch_writer() as writer:
-            for item in batch:
+    # The batch writer sends batches of the size that DynamoDB allows.
+    with table.batch_writer() as writer:
+        while True:
+            response = table.query(**query_params)
+            for item in response.get("Items", []):
+                if item.get("IsLargeMessage", False):
+                    _delete_large_messages(user_id, decompose_conv_id(item["SK"]))
                 writer.delete_item(Key={"PK": user_id, "SK": item["SK"]})
 
-    def delete_large_messages(items):
-        for item in items:
-            if item.get("IsLargeMessage", False):
-                _delete_large_messages(user_id, decompose_conv_id(item["SK"]))
-
-    try:
-        response = table.query(
-            **query_params,
-        )
-
-        while True:
-            items = response.get("Items", [])
-            delete_large_messages(items)
-
-            for i in range(0, len(items), TRANSACTION_BATCH_WRITE_SIZE):
-                batch = items[i : i + TRANSACTION_BATCH_WRITE_SIZE]
-                delete_batch(batch)
-
-            # Check if next page exists
             if "LastEvaluatedKey" not in response:
                 break
-
-            # Load next page
             query_params["ExclusiveStartKey"] = response["LastEvaluatedKey"]
-            response = table.query(
-                **query_params,
-            )
 
-        delete_related_documents(user_id=user_id)
-
-    except ClientError as e:
-        logger.error(f"An error occurred: {e.response['Error']['Message']}")
-        raise e
+    delete_related_documents(user_id=user_id)
 
 
 def change_conversation_title(user_id: str, conversation_id: str, new_title: str):

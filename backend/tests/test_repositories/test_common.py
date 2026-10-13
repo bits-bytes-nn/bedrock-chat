@@ -69,3 +69,11 @@ class TestAssumedRoleResourceCache(unittest.TestCase):
         for i in range(common.RESOURCE_CACHE_SIZE + 3):
             common._get_aws_resource("dynamodb", "table", f"user{i}")
         self.assertEqual(len(common._RESOURCE_CACHE), common.RESOURCE_CACHE_SIZE)
+
+
+class TestOpenSearchClient(unittest.TestCase):
+    def test_missing_endpoint_is_a_server_error(self):
+        # ValueError is returned to clients as a 400 with its text.
+        with patch.object(common, "OPENSEARCH_DOMAIN_ENDPOINT", ""):
+            with self.assertRaises(RuntimeError):
+                common.get_opensearch_client()

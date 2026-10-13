@@ -590,10 +590,28 @@ def fetch_all_pinned_bots(user: User) -> list[BotMetaOutput]:
     return bot_metas
 
 
+def _find_bot_or_delete_alias(user: User, bot_id: str) -> BotModel:
+    """Find the bot, deleting the user's alias if the bot no longer exists.
+
+    Otherwise a deleted shared bot stays starred and recently used for the user.
+
+    Raises:
+        RecordNotFoundError: If the bot does not exist.
+    """
+    try:
+        return find_bot_by_id(bot_id)
+    except RecordNotFoundError:
+        try:
+            delete_alias_by_id(user.id, bot_id)
+        except RecordNotFoundError:
+            pass
+        raise
+
+
 def fetch_bot_summary(user: User, bot_id: str) -> BotSummaryOutput:
     logger.info(f"Fetch bot summary: {bot_id} by user {user.id}")
 
-    bot = find_bot_by_id(bot_id)
+    bot = _find_bot_or_delete_alias(user, bot_id)
     if not bot.is_accessible_by_user(user):
         if alias_exists(user.id, bot_id):
             delete_alias_by_id(user.id, bot_id)
@@ -622,7 +640,7 @@ def fetch_bot_summary(user: User, bot_id: str) -> BotSummaryOutput:
 
 def modify_star_status(user: User, bot_id: str, starred: bool):
     """Modify bot pin status."""
-    bot = find_bot_by_id(bot_id)
+    bot = _find_bot_or_delete_alias(user, bot_id)
     if not bot.is_accessible_by_user(user):
         raise PermissionError(
             f"User {user.id} is not authorized to access bot {bot_id}"

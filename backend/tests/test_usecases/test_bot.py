@@ -415,6 +415,24 @@ class TestSharing(unittest.TestCase):
         # Assert that alias successfully created
         self.assertTrue(alias_exists(self.subscriber.id, self.bot.id))
 
+    def test_deleted_bot_drops_the_subscriber_alias(self):
+        for call in (
+            lambda: fetch_bot_summary(self.subscriber, self.bot.id),
+            lambda: modify_star_status(self.subscriber, self.bot.id, True),
+        ):
+            fetch_bot_summary(self.subscriber, self.bot.id)
+            delete_bot_by_id(self.publisher.id, self.bot.id)
+
+            with self.assertRaises(RecordNotFoundError):
+                call()
+            # Otherwise the bot stays starred and recently used.
+            self.assertFalse(alias_exists(self.subscriber.id, self.bot.id))
+            store_bot(self.bot)
+
+    def test_missing_bot_without_alias_is_not_found(self):
+        with self.assertRaises(RecordNotFoundError):
+            fetch_bot_summary(self.subscriber, "missing")
+
 
 class TestFetchAvailableAgentTools(unittest.TestCase):
     def test_fetch_available_agent_tools_types(self):

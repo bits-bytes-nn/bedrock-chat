@@ -3,12 +3,21 @@ import sys
 import time
 import unittest
 from types import SimpleNamespace
+from typing import get_args
 from unittest.mock import MagicMock, patch
 
 sys.path.insert(0, ".")
 
 from app import auth
 from app.repositories.models.conversation import MessageModel, TextContentModel
+from app.repositories.common import RecordNotFoundError
+from app.repositories.models.custom_bot import ActiveModelsModel
+from app.routes.schemas.api_publication import (
+    BotPublishInput,
+    PublishedApiQuota,
+    PublishedApiThrottle,
+)
+from app.routes.schemas.conversation import active_model_field_name, type_model_name
 from app.usecases import bot as bot_usecase
 from app.usecases import chat as chat_usecase
 from app.usecases import publication
@@ -45,6 +54,40 @@ class TestPublicationPermission(unittest.TestCase):
                 publication.fetch_api_key(USER, "bot", "api-key")
 
 
+class TestPublication(unittest.TestCase):
+    def test_unpublished_bot_is_reported_with_a_code(self):
+        bot = MagicMock(published_api_codebuild_id=None)
+        with patch.object(publication, "find_bot_by_id", return_value=bot):
+            for call in (
+                publication.fetch_bot_publication,
+                publication.remove_bot_publication,
+            ):
+                with self.assertRaises(RecordNotFoundError) as e:
+                    call(USER, "bot")
+                self.assertEqual(e.exception.code, "bot_not_published")
+
+    def test_passes_allowed_origins_as_json(self):
+        origins = ["https://a.example.com", "https://b.example.com:8443"]
+        bot = MagicMock(shared_scope="all", published_api_codebuild_id=None)
+        with patch.object(
+            publication, "find_bot_by_id", return_value=bot
+        ), patch.object(publication, "start_codebuild_project") as start, patch.object(
+            publication, "update_bot_publication"
+        ):
+            publication.create_bot_publication(
+                USER,
+                "bot",
+                BotPublishInput(
+                    stage="api",
+                    quota=PublishedApiQuota(limit=None, offset=None, period=None),
+                    throttle=PublishedApiThrottle(rate_limit=None, burst_limit=None),
+                    allowed_origins=origins,
+                ),
+            )
+        env = start.call_args.kwargs["environment_variables"]
+        self.assertEqual(json.loads(env["PUBLISHED_API_ALLOWED_ORIGINS"]), origins)
+
+
 class TestTraceToRoot(unittest.TestCase):
     def test_raises_on_cycle(self):
         message_map = {"a": message(parent="b"), "b": message(parent="a")}
@@ -68,6 +111,17 @@ class TestValidateModelIsAvailable(unittest.TestCase):
         with patch.object(chat_usecase, "get_global_available_models", return_value=[]):
             with self.assertRaises(PermissionError):
                 validate_model_is_available("claude-v4.7-opus", bot=bot)  # type: ignore[arg-type]
+
+    def test_rejects_model_without_a_field(self):
+        bot = SimpleNamespace(active_models=SimpleNamespace())
+        with patch.object(chat_usecase, "get_global_available_models", return_value=[]):
+            with self.assertRaises(PermissionError):
+                validate_model_is_available("claude-v4.7-opus", bot=bot)  # type: ignore[arg-type]
+
+    def test_every_model_has_an_active_models_field(self):
+        fields = ActiveModelsModel.model_fields
+        for model in get_args(type_model_name):
+            self.assertIn(active_model_field_name(model), fields)
 
     def test_accepts_active_model(self):
         bot = SimpleNamespace(active_models=SimpleNamespace(claude_v4_7_opus=True))

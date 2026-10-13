@@ -6,6 +6,7 @@ Browsers cannot set headers on a WebSocket, so the client passes its ID token in
 
 import logging
 
+import requests
 from app.auth import verify_token
 
 logger = logging.getLogger(__name__)
@@ -16,10 +17,13 @@ def handler(event: dict, context) -> dict:
     try:
         claims = verify_token(token)
         principal, effect = claims["sub"], "Allow"
+    except requests.RequestException as e:
+        # Rejects every connection until the keys can be fetched again. Only the
+        # exception type is logged; the token stays out of the logs.
+        logger.error("Failed to fetch the signing keys: %s", type(e).__name__)
+        principal, effect = "anonymous", "Deny"
     except Exception as e:
-        # Only the reason is logged; the token stays out of the logs.
-        # WARNING, because the runtime drops INFO; failing to fetch the signing keys
-        # would otherwise reject everyone without a trace.
+        # WARNING, because the runtime drops INFO.
         logger.warning("Rejected a connection: %s", type(e).__name__)
         principal, effect = "anonymous", "Deny"
     return {

@@ -1,6 +1,7 @@
 import unittest
 from unittest.mock import patch
 
+import requests
 from app import websocket_authorizer
 from jwt import InvalidTokenError
 
@@ -32,3 +33,23 @@ class TestWebSocketAuthorizer(unittest.TestCase):
         ):
             for query in ({"token": "bad"}, {}, None):
                 self.assertEqual(self.effect(authorize(query)), "Deny")
+
+    def test_logs_signing_key_fetch_failures_as_errors(self):
+        with patch.object(
+            websocket_authorizer,
+            "verify_token",
+            side_effect=requests.ConnectionError("secret-token-in-url"),
+        ), self.assertLogs(websocket_authorizer.logger, "WARNING") as logs:
+            response = authorize({"token": "id-token"})
+        self.assertEqual(self.effect(response), "Deny")
+        self.assertEqual([r.levelname for r in logs.records], ["ERROR"])
+        self.assertIn("Failed to fetch the signing keys", logs.output[0])
+        self.assertNotIn("secret-token-in-url", logs.output[0])
+        self.assertNotIn("id-token", logs.output[0])
+
+    def test_logs_invalid_tokens_as_warnings(self):
+        with patch.object(
+            websocket_authorizer, "verify_token", side_effect=InvalidTokenError()
+        ), self.assertLogs(websocket_authorizer.logger, "WARNING") as logs:
+            authorize({"token": "bad"})
+        self.assertEqual([r.levelname for r in logs.records], ["WARNING"])

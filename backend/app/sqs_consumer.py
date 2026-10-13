@@ -2,7 +2,7 @@ import json
 import logging
 import os
 
-from app.metrics import emit_chat_cost
+from app.metrics import emit_metric
 from app.repositories.common import RecordNotFoundError
 from app.repositories.conversation import store_failed_message
 from app.routes.schemas.conversation import ChatInput
@@ -16,6 +16,8 @@ logger = logging.getLogger(__name__)
 MAX_RECEIVE_COUNT = int(os.environ.get("MAX_RECEIVE_COUNT", "2"))
 # Retrying these would fail again and bill the model again.
 NON_RETRYABLE_ERRORS = (ValueError, PermissionError, RecordNotFoundError)
+# Set by cdk/lib/api-publishment-stack.ts; the failed answers alarm is per API.
+PUBLISHED_API_ID = os.environ.get("PUBLISHED_API_ID")
 
 
 def _failure_reason(error: Exception) -> str:
@@ -43,11 +45,7 @@ def handler(event, context):
         message_id = chat_input.message.message_id or ""
 
         try:
-            conversation, message = chat(
-                user=user,
-                chat_input=chat_input,
-                on_stop=lambda result: emit_chat_cost(result["price"]),
-            )
+            conversation, message = chat(user=user, chat_input=chat_input)
         except Exception as e:
             final = (
                 isinstance(e, NON_RETRYABLE_ERRORS)
@@ -63,6 +61,11 @@ def handler(event, context):
                 chat_input.conversation_id,
                 message_id,
                 _failure_reason(e),
+            )
+            emit_metric(
+                "FailedAnswers",
+                1,
+                {"PublishedApiId": PUBLISHED_API_ID} if PUBLISHED_API_ID else None,
             )
             continue
         logger.info(

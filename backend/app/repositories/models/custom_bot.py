@@ -28,7 +28,7 @@ from app.routes.schemas.bot import (
     type_shared_scope,
     type_sync_status,
 )
-from app.routes.schemas.conversation import type_model_name
+from app.routes.schemas.conversation import active_model_field_name, type_model_name
 from app.user import User
 from app.utils import (
     get_api_key_from_secret_manager,
@@ -50,7 +50,7 @@ logger = logging.getLogger(__name__)
 
 def _create_model_activate_model(model_names: List[str]) -> Type[DynamicBaseModel]:
     fields: Dict[str, Any] = {
-        name.replace("-", "_").replace(".", "_"): (bool, True) for name in model_names
+        active_model_field_name(name): (bool, True) for name in model_names
     }
     return create_model("ActiveModelsModel", __base__=DynamicBaseModel, **fields)
 
@@ -70,26 +70,6 @@ class KnowledgeModel(BaseModel):
     sitemap_urls: list[str]
     filenames: list[str]
     s3_urls: list[str]
-
-    def __str_in_claude_format__(self) -> str:
-        """Description of the knowledge in Claude format."""
-        _source_urls = "<source_urls>"
-        for url in self.source_urls:
-            _source_urls += f"<url>{url}</url>"
-        _source_urls += "</source_urls>"
-        _sitemap_urls = "<sitemap_urls>"
-        for url in self.sitemap_urls:
-            _sitemap_urls += f"<url>{url}</url>"
-        _sitemap_urls += "</sitemap_urls>"
-        _filenames = "<filenames>"
-        for filename in self.filenames:
-            _filenames += f"<filename>{filename}</filename>"
-        _filenames += "</filenames>"
-        _s3_urls = "<s3_urls>"
-        for url in self.s3_urls:
-            _s3_urls += f"<url>{url}</url>"
-        _s3_urls += "</s3_urls>"
-        return f"{_source_urls}{_sitemap_urls}{_filenames}{_s3_urls}"
 
 
 class ReasoningParamsModel(BaseModel):
@@ -151,10 +131,11 @@ class FirecrawlConfigModel(BaseModel):
                 api_key = get_api_key_from_secret_manager(data["secret_arn"])
                 data["api_key"] = api_key
             except Exception as e:
-                logger.error(f"Failed to retrieve secret from ARN: {e}")
-                raise ValueError(
+                # Not a ValueError: pydantic would return it to the client as a
+                # validation error, with the secret ARN.
+                raise RuntimeError(
                     f"Failed to retrieve secret from ARN: {data['secret_arn']}"
-                )
+                ) from e
 
         return data
 

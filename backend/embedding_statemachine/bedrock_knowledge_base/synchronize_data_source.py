@@ -9,6 +9,9 @@ from app.utils import (
 )
 
 DOCUMENT_BUCKET = os.environ.get("DOCUMENT_BUCKET")
+# The most documents that the Get, Ingest and Delete KnowledgeBaseDocuments APIs
+# accept in one request.
+DOCUMENTS_PER_REQUEST = 10
 bedrock_agent = get_bedrock_agent_client()
 
 
@@ -87,7 +90,7 @@ def handle_ingest(event):
             )
 
         # If an 'unchanged' document doesn't actually exist, treat it as an 'added' document.
-        for i in range(0, len(unchanged_documents), 10):
+        for i in range(0, len(unchanged_documents), DOCUMENTS_PER_REQUEST):
             get_documents_response = bedrock_agent.get_knowledge_base_documents(
                 knowledgeBaseId=knowledge_base_id,
                 dataSourceId=data_source_id,
@@ -98,7 +101,9 @@ def handle_ingest(event):
                             "uri": document_identifier,
                         },
                     }
-                    for document_identifier in islice(unchanged_documents, i, i + 10)
+                    for document_identifier in islice(
+                        unchanged_documents, i, i + DOCUMENTS_PER_REQUEST
+                    )
                 ],
             )
             added_documents.extend(
@@ -113,7 +118,7 @@ def handle_ingest(event):
         }
 
         # Ingest 'added' documents to the data source.
-        for i in range(0, len(added_documents), 10):
+        for i in range(0, len(added_documents), DOCUMENTS_PER_REQUEST):
             ingest_response = bedrock_agent.ingest_knowledge_base_documents(
                 knowledgeBaseId=knowledge_base_id,
                 dataSourceId=data_source_id,
@@ -128,7 +133,9 @@ def handle_ingest(event):
                             },
                         },
                     }
-                    for document_identifier in islice(added_documents, i, i + 10)
+                    for document_identifier in islice(
+                        added_documents, i, i + DOCUMENTS_PER_REQUEST
+                    )
                 ],
             )
             documents_diff["Added"].extend(
@@ -138,7 +145,7 @@ def handle_ingest(event):
             )
 
         # Delete 'deleted' documents from the data source.
-        for i in range(0, len(deleted_documents), 10):
+        for i in range(0, len(deleted_documents), DOCUMENTS_PER_REQUEST):
             delete_response = bedrock_agent.delete_knowledge_base_documents(
                 knowledgeBaseId=knowledge_base_id,
                 dataSourceId=data_source_id,
@@ -149,7 +156,9 @@ def handle_ingest(event):
                             "uri": document_identifier,
                         },
                     }
-                    for document_identifier in islice(deleted_documents, i, i + 10)
+                    for document_identifier in islice(
+                        deleted_documents, i, i + DOCUMENTS_PER_REQUEST
+                    )
                 ],
             )
             documents_diff["Deleted"].extend(
@@ -202,7 +211,7 @@ def handle_check(event):
     if documents_diff:
         # Check for the completion of indexing of 'added' documents.
         added_documents = documents_diff["Added"]
-        for i in range(0, len(added_documents), 10):
+        for i in range(0, len(added_documents), DOCUMENTS_PER_REQUEST):
             get_documents_response = bedrock_agent.get_knowledge_base_documents(
                 knowledgeBaseId=knowledge_base_id,
                 dataSourceId=data_source_id,
@@ -213,7 +222,9 @@ def handle_check(event):
                             "uri": document_identifier,
                         },
                     }
-                    for document_identifier in islice(added_documents, i, i + 10)
+                    for document_identifier in islice(
+                        added_documents, i, i + DOCUMENTS_PER_REQUEST
+                    )
                 ],
             )
             for document in get_documents_response["documentDetails"]:
@@ -231,7 +242,7 @@ def handle_check(event):
 
         # Check for the absence of 'deleted' documents.
         deleted_documents = documents_diff["Deleted"]
-        for i in range(0, len(deleted_documents), 10):
+        for i in range(0, len(deleted_documents), DOCUMENTS_PER_REQUEST):
             get_documents_response = bedrock_agent.get_knowledge_base_documents(
                 knowledgeBaseId=knowledge_base_id,
                 dataSourceId=data_source_id,
@@ -242,7 +253,9 @@ def handle_check(event):
                             "uri": document_identifier,
                         },
                     }
-                    for document_identifier in islice(deleted_documents, i, i + 10)
+                    for document_identifier in islice(
+                        deleted_documents, i, i + DOCUMENTS_PER_REQUEST
+                    )
                 ],
             )
             for document in get_documents_response["documentDetails"]:
