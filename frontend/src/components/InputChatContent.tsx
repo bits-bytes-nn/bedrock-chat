@@ -29,8 +29,6 @@ import ModalDialog from './ModalDialog';
 import UploadedAttachedFile from './UploadedAttachedFile';
 import useSnackbar from '../hooks/useSnackbar';
 import {
-  MAX_FILE_SIZE_BYTES,
-  MAX_FILE_SIZE_MB,
   SUPPORTED_FILE_EXTENSIONS,
   MAX_ATTACHED_FILES,
   MB,
@@ -343,12 +341,8 @@ const InputChatContent = forwardRef<HTMLElement, Props>(
 
     const handleAttachedFileRead = useCallback(
       (file: File) => {
-        if (file.size > MAX_FILE_SIZE_BYTES) {
-          open(
-            t('error.attachment.fileSizeExceeded', {
-              maxSize: `${MAX_FILE_SIZE_MB} MB`,
-            })
-          );
+        // Reject before reading a file whose base64 encoding cannot fit.
+        if (!fitsSendLimit(Math.ceil(file.size / 3) * 4)) {
           return;
         }
 
@@ -370,7 +364,7 @@ const InputChatContent = forwardRef<HTMLElement, Props>(
         };
         reader.readAsArrayBuffer(file);
       },
-      [pushTextFile, fitsSendLimit, open, t]
+      [pushTextFile, fitsSendLimit]
     );
 
     // Presentations and recordings are converted to text by the backend and

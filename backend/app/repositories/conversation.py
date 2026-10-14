@@ -22,6 +22,7 @@ from app.repositories.models.conversation import (
     FeedbackModel,
     MessageModel,
     RelatedDocumentModel,
+    TextToolResultModel,
     ToolResultModel,
     merge_conversations,
 )
@@ -37,6 +38,11 @@ LARGE_MESSAGE_BUCKET = os.environ.get("LARGE_MESSAGE_BUCKET", "")
 
 # The bucket is in the stack's region, which can differ from BEDROCK_REGION.
 s3_client = boto3.client("s3", REGION)
+
+
+# A DynamoDB item is limited to 400 KB, including the keys and the other attributes.
+MAX_RELATED_DOCUMENT_BYTES = 350 * 1024
+OMITTED_RELATED_DOCUMENT = "The content was omitted because it is too large to store."
 
 
 # Concurrent writes to one conversation are rare, so a few merges are enough.
@@ -399,6 +405,16 @@ def store_related_documents(
     table = get_conversation_table_client(user_id)
     with table.batch_writer() as writer:
         for related_document in related_documents:
+            content = related_document.content
+            if (
+                len(related_document.model_dump_json().encode("utf-8"))
+                > MAX_RELATED_DOCUMENT_BYTES
+            ):
+                logger.warning(
+                    "Omitting the content of related document %s that is too large",
+                    related_document.source_id,
+                )
+                content = TextToolResultModel(text=OMITTED_RELATED_DOCUMENT)
             item_params = {
                 "PK": user_id,
                 "SK": compose_related_document_source_id(
@@ -408,7 +424,7 @@ def store_related_documents(
                 ),
                 "SourceName": related_document.source_name,
                 "SourceLink": related_document.source_link,
-                "Content": related_document.content.model_dump(by_alias=True),
+                "Content": content.model_dump(by_alias=True),
             }
             if related_document.page_number is not None:
                 item_params["PageNumber"] = related_document.page_number

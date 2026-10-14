@@ -403,7 +403,7 @@ describe("Bedrock Chat Stack Test", () => {
     const pathTrusted = Object.values(template.findResources("AWS::IAM::Role")).filter(
       (role: any) => role.Properties.Path === "/bedrock-chat/test-/"
     );
-    expect(pathTrusted).toHaveLength(4);
+    expect(pathTrusted).toHaveLength(5);
     const tableTrust = JSON.stringify(
       Object.values(template.findResources("AWS::IAM::Role")).find((role: any) =>
         JSON.stringify(role.Properties.AssumeRolePolicyDocument).includes(
@@ -414,7 +414,7 @@ describe("Bedrock Chat Stack Test", () => {
     expect(tableTrust).toContain(":role/bedrock-chat/test-/*");
     expect(tableTrust).not.toContain("PrincipalTag");
 
-    template.resourceCountIs("AWS::CloudWatch::Alarm", 10);
+    template.resourceCountIs("AWS::CloudWatch::Alarm", 11);
     template.hasResourceProperties("AWS::CloudWatch::Alarm", {
       MetricName: "BotUsageUpdateFailures",
       Period: 3600,
@@ -567,12 +567,25 @@ describe("Bedrock Chat Stack Test", () => {
     expect(JSON.stringify(describeStackResources)).toContain(
       `:stack/${sharedStackName}/*`
     );
-    // The sync status handler deletes only knowledge base stacks of bots.
-    const deleteStackResources = statements
+    // Of the state machine handlers, only the sync status handler deletes stacks,
+    // and only the knowledge base stacks of bots.
+    const lambdaFunctions = Object.values(template.findResources("AWS::Lambda::Function"));
+    const syncStatusHandler = lambdaFunctions.find((fn: any) =>
+      JSON.stringify(fn.Properties.ImageConfig ?? {}).includes(".update_bot_status.")
+    );
+    const deleteStackResources = roleStatementsOf(template, syncStatusHandler)
       .filter((statement: any) => statement.Action === "cloudformation:DeleteStack")
       .flatMap((statement: any) => [statement.Resource].flat());
-    expect(deleteStackResources.length).toBeGreaterThan(0);
+    expect(JSON.stringify(deleteStackResources)).toContain("stack/BrChatKbStack*/*");
     expect(JSON.stringify(deleteStackResources)).not.toContain(sharedStackName);
+    const ingestionHandler = lambdaFunctions.find((fn: any) =>
+      JSON.stringify(fn.Properties.ImageConfig ?? {}).includes(
+        ".synchronize_data_source."
+      )
+    );
+    expect(actionsOf(roleStatementsOf(template, ingestionHandler))).not.toContain(
+      "cloudformation:DeleteStack"
+    );
 
     // The API handler starts the API publication build only. Knowledge base builds
     // are started by the state machine.
@@ -693,6 +706,19 @@ describe("Bedrock Chat Stack Test", () => {
     });
     // Longer than the 3 second default, for a cold start and SDK retries.
     expect((functions[exportHandlerId] as any).Properties.Timeout).toBe(30);
+
+    // The state machine catches the sync status handler's errors, so they alarm.
+    const [syncStatusHandlerId] = Object.entries(functions).find(([, fn]: [string, any]) =>
+      JSON.stringify(fn.Properties.ImageConfig?.Command ?? []).includes(
+        "update_bot_status.handler"
+      )
+    )!;
+    template.hasResourceProperties("AWS::CloudWatch::Alarm", {
+      Namespace: "AWS/Lambda",
+      MetricName: "Errors",
+      Threshold: 1,
+      Dimensions: [{ Name: "FunctionName", Value: { Ref: syncStatusHandlerId } }],
+    });
 
     // Bot removals have the memory of the other backend handlers, and a stuck
     // record goes to the dead-letter queue before the stream drops it.
@@ -1334,8 +1360,15 @@ describe("Api Publishment Stack", () => {
       FunctionResponseTypes: ["ReportBatchItemFailures"],
     });
     expect(consumer.Properties.Timeout).toBe(900);
+    // The API checks messages against the queue's maximum size before sending them.
     template.hasResourceProperties("AWS::SQS::Queue", {
       VisibilityTimeout: 900 * 6,
+      MaximumMessageSize: 1024 * 1024,
+    });
+    template.hasResourceProperties("AWS::Lambda::Function", {
+      Environment: {
+        Variables: Match.objectLike({ QUEUE_MAX_MESSAGE_BYTES: String(1024 * 1024) }),
+      },
     });
 
     // The WAF association names the stage, so it waits for the stage.

@@ -52,6 +52,8 @@ const CONSUMER_TIMEOUT = cdk.Duration.minutes(15);
 // taking the account's Lambda concurrency.
 const CONSUMER_MAX_CONCURRENCY = 10;
 
+const CHAT_QUEUE_MAX_MESSAGE_BYTES = 1024 * 1024;
+
 export class ApiPublishmentStack extends Stack {
   constructor(scope: Construct, id: string, props: ApiPublishmentStackProps) {
     super(scope, id, props);
@@ -67,6 +69,8 @@ export class ApiPublishmentStack extends Stack {
     // One retry; the consumer records a failure for the client on the last receive.
     const maxReceiveCount = 2;
     const chatQueue = new sqs.Queue(this, "ChatQueue", {
+      // The largest size SQS allows, for messages with attachments.
+      maxMessageSizeBytes: CHAT_QUEUE_MAX_MESSAGE_BYTES,
       visibilityTimeout: cdk.Duration.seconds(CONSUMER_TIMEOUT.toSeconds() * 6),
       enforceSSL: true,
       deadLetterQueue: {
@@ -142,6 +146,7 @@ export class ApiPublishmentStack extends Stack {
       environment: {
         PUBLISHED_API_ID: publishedApiId,
         QUEUE_URL: chatQueue.queueUrl,
+        QUEUE_MAX_MESSAGE_BYTES: CHAT_QUEUE_MAX_MESSAGE_BYTES.toString(),
         CONVERSATION_TABLE_NAME: props.conversationTableName,
         BOT_TABLE_NAME: props.botTableName,
         CORS_ALLOW_ORIGINS: (props.corsOptions?.allowOrigins ?? ["*"]).join(

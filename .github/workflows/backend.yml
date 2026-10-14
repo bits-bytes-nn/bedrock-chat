@@ -10,8 +10,11 @@ on:
       - "frontend/src/constants/index.ts"
       - "frontend/src/hooks/useModel.ts"
       - "frontend/src/i18n/en/index.ts"
-      # tests/test_error_codes.py checks the error codes that the frontend translates.
+      # tests/test_error_codes.py checks the error codes that the frontend translates,
+      # the attachment limits and the stack names.
       - "frontend/src/hooks/usePostMessageStreaming.ts"
+      - "frontend/src/components/InputChatContent.tsx"
+      - "cdk/lib/utils/stack-names.ts"
       # tests/test_usecases/test_file_conversion.py checks the convertible files.
       - "frontend/src/constants/supportedAttachedFiles.ts"
       # tests/test_alarm_log_terms.py checks the log lines that alarms count.
@@ -29,8 +32,11 @@ on:
       - "frontend/src/constants/index.ts"
       - "frontend/src/hooks/useModel.ts"
       - "frontend/src/i18n/en/index.ts"
-      # tests/test_error_codes.py checks the error codes that the frontend translates.
+      # tests/test_error_codes.py checks the error codes that the frontend translates,
+      # the attachment limits and the stack names.
       - "frontend/src/hooks/usePostMessageStreaming.ts"
+      - "frontend/src/components/InputChatContent.tsx"
+      - "cdk/lib/utils/stack-names.ts"
       # tests/test_usecases/test_file_conversion.py checks the convertible files.
       - "frontend/src/constants/supportedAttachedFiles.ts"
       # tests/test_alarm_log_terms.py checks the log lines that alarms count.

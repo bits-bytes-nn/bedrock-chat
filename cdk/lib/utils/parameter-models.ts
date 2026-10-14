@@ -28,16 +28,20 @@ const contextBoolean = z.union([
 ]);
 
 /**
- * A number from cdk.json or parameter.ts, or a numeric string from a `-c` option.
- * An empty or non-numeric string is rejected instead of becoming 0, which would
- * turn guards such as the cost alarm or the knowledge base limit off.
+ * A number from cdk.json or parameter.ts, or a numeric string from a `-c` option or
+ * an environment variable, which may use exponent notation (the backend writes a
+ * small rate limit as "1e-05"). An empty or non-numeric string is rejected instead
+ * of becoming 0, which would turn guards such as the cost alarm or the knowledge
+ * base limit off.
  */
 const contextNumber = z.union([
   z.number(),
   z
     .string()
-    .regex(/^-?\d+(\.\d+)?$/, "Expected a number")
-    .transform(Number),
+    .trim()
+    .min(1, "Expected a number")
+    .transform(Number)
+    .pipe(z.number().finite()),
 ]);
 
 /**

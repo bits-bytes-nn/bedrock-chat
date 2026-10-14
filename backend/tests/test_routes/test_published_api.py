@@ -101,6 +101,17 @@ def test_post_message_returns_500_when_queueing_fails(sqs, bot):
     assert "queue is down" not in str(e.value.detail)
 
 
+def test_post_message_rejects_a_message_too_large_for_the_queue(sqs, bot):
+    with patch.object(published_api, "validate_model_is_available"), patch.object(
+        published_api, "QUEUE_MAX_MESSAGE_BYTES", 100
+    ):
+        with pytest.raises(HTTPException) as e:
+            published_api.post_message(_request(), _chat_input())
+
+    assert e.value.status_code == 413
+    sqs.send_message.assert_not_called()
+
+
 def _message(children: list[str]) -> MessageOutput:
     return MessageOutput(
         role="user",

@@ -269,6 +269,7 @@ const KnowledgeFileUploader: React.FC<Props> = (props) => {
                 <div>
                   <ButtonIcon
                     className="text-red dark:text-red-400"
+                    label={t('button.delete')}
                     disabled={
                       file.status === 'UPLOADING' ||
                       file.status === 'CONVERTING' ||

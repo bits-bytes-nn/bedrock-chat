@@ -23,6 +23,8 @@ export interface MonitoringProps {
   readonly embeddingStateMachine: sfn.IStateMachine;
   /** Log group of the function that records sync results. */
   readonly syncStatusLogGroup: logs.ILogGroup;
+  /** The function that records sync results. */
+  readonly syncStatusHandler: IFunction;
   readonly botRemovalDeadLetterQueue: sqs.IQueue;
   /** Exports conversations for usage analysis. */
   readonly usageExportHandler: IFunction;
@@ -63,7 +65,7 @@ export class Monitoring extends Construct {
         "ApiServerErrors",
         props.api.metricServerError({ period, statistic: "Sum" }),
         errorThreshold,
-        `The REST API answered with a server error at least ${errorThreshold} times in ${minutes} minutes.`,
+        `The HTTP API answered with a server error at least ${errorThreshold} times in ${minutes} minutes.`,
       ],
       [
         "ChatErrors",
@@ -114,6 +116,13 @@ export class Monitoring extends Construct {
         ]),
         1,
         "A bot knowledge sync failed. The bot shows the reason on its edit page.",
+      ],
+      [
+        "SyncStatusHandlerErrors",
+        // The state machine catches its errors and the execution still succeeds.
+        props.syncStatusHandler.metricErrors({ period, statistic: "Sum" }),
+        1,
+        "Recording a knowledge sync result failed. A bot may stay RUNNING, or the knowledge base stack of a bot deleted during its sync may still be running and billing.",
       ],
       [
         "BotRemovalFailures",
