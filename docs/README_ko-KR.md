@@ -401,7 +401,7 @@ npx cdk deploy --all
 
 ### 리소스 제거
 
-애플리케이션이 실행 중에 만든 리소스를 먼저 삭제하세요. 비용이 계속 발생하고 `cdk destroy`로는 삭제되지 않습니다. 앱에서 지식 기반이 있는 봇과 게시한 API를 모두 삭제하거나, [CloudFormation](https://console.aws.amazon.com/cloudformation/home)에서 Bedrock 리전의 `BrChatKbStack*` 스택과 배포 리전의 `ApiPublishmentStack*` 스택을 삭제합니다. 어느 쪽이든 Bedrock 리전의 `BrChatSharedKbStack`(이름 있는 환경에서는 `<envPrefix>-BrChatSharedKbStack`) 스택도 따로 삭제하세요. 이 스택은 공유 지식 기반용으로 CodeBuild가 만들며, 봇을 삭제해도 남습니다.
+애플리케이션이 실행 중에 만든 리소스를 먼저 삭제하세요. 비용이 계속 발생하고 `cdk destroy`로는 삭제되지 않습니다. 앱에서 지식 기반이 있는 봇과 게시한 API를 모두 삭제하거나, [CloudFormation](https://console.aws.amazon.com/cloudformation/home)에서 Bedrock 리전의 `BrChatKbStack*` 스택과 배포 리전의 `ApiPublishmentStack*` 스택을 삭제합니다. 어느 쪽이든 Bedrock 리전의 `BrChatSharedKbStack`(이름 있는 환경에서는 `<envPrefix>-BrChatSharedKbStack`) 스택도 따로 삭제하세요. 이 스택은 공유 지식 기반용으로 CodeBuild가 만들며, 봇을 삭제해도 남습니다. 이전 버전에서 업그레이드한 이름 있는 환경은 `BrChatSharedKbStack`도 사용할 수 있으니 [기존 배포 업그레이드](#기존-배포-업그레이드)를 참고하세요.
 
 그다음 `cdk`에서 `npx cdk destroy --all`을 실행하세요. CDK를 사용하지 않는 경우 CloudFormation에서 `BedrockChatStack`, `BedrockRegionResourcesStack`, `FrontendWafStack`을 삭제하세요. `FrontendWafStack`은 `us-east-1` 리전에 있다는 점에 유의하세요.
 

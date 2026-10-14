@@ -471,7 +471,7 @@ See also [Upgrading](./docs/ADMINISTRATOR.md#upgrading) in the administrator gui
 
 ### Remove resources
 
-Delete the resources that the application created at runtime first, because they keep billing and `cdk destroy` does not know about them: delete every bot with a knowledge base and every published API in the app, or delete their stacks in [CloudFormation](https://console.aws.amazon.com/cloudformation/home): `BrChatKbStack*` in the Bedrock region and `ApiPublishmentStack*` in the deployment region. In either case, also delete `BrChatSharedKbStack` (`<envPrefix>-BrChatSharedKbStack` in a named environment) in the Bedrock region. CodeBuild creates it for shared knowledge bases, and deleting bots does not remove it.
+Delete the resources that the application created at runtime first, because they keep billing and `cdk destroy` does not know about them: delete every bot with a knowledge base and every published API in the app, or delete their stacks in [CloudFormation](https://console.aws.amazon.com/cloudformation/home): `BrChatKbStack*` in the Bedrock region and `ApiPublishmentStack*` in the deployment region. In either case, also delete `BrChatSharedKbStack` (`<envPrefix>-BrChatSharedKbStack` in a named environment) in the Bedrock region. CodeBuild creates it for shared knowledge bases, and deleting bots does not remove it. A named environment upgraded from an earlier version may also use `BrChatSharedKbStack`; see [Upgrading an Existing Deployment](#upgrading-an-existing-deployment).
 
 Then run `npx cdk destroy --all` in `cdk`. Without the CDK, delete `BedrockChatStack`, `BedrockRegionResourcesStack` and `FrontendWafStack` in CloudFormation. Please note that `FrontendWafStack` is in `us-east-1` region.
 

@@ -119,10 +119,11 @@ export class Monitoring extends Construct {
       ],
       [
         "SyncStatusHandlerErrors",
-        // The state machine catches its errors and the execution still succeeds.
+        // The state machine catches its errors on the bot paths, where the execution
+        // still succeeds; on the shared knowledge base paths it fails.
         props.syncStatusHandler.metricErrors({ period, statistic: "Sum" }),
         1,
-        "Recording a knowledge sync result failed. A bot may stay RUNNING, or the knowledge base stack of a bot deleted during its sync may still be running and billing.",
+        "Recording a knowledge sync result failed. A bot may stay QUEUED or RUNNING, or the knowledge base stack of a bot deleted during its sync may still be running and billing.",
       ],
       [
         "BotRemovalFailures",
