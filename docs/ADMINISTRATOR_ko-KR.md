@@ -120,6 +120,8 @@ ORDER BY
 
 ## 업그레이드
 
+README의 [Upgrading an Existing Deployment](../README.md#upgrading-an-existing-deployment)도 함께 참고하세요.
+
 `npx cdk deploy --all`로 기존 배포를 그대로 업데이트합니다. DynamoDB는 테이블을 한 번 업데이트할 때 보조 인덱스를 하나만 추가합니다. 대화 테이블에 글로벌 보조 인덱스가 없다면(DynamoDB 콘솔 > 인덱스) 커밋 `d095ec1`을 먼저 배포한 다음 v3를 배포하세요. upstream v3 배포에는 `SKIndex`가 있으므로 한 번에 업그레이드됩니다.
 
 upstream에서 업그레이드하는 경우:
@@ -128,6 +130,12 @@ upstream에서 업그레이드하는 경우:
 - `CreatingBotAllowed` 그룹의 기존 멤버는 그대로 남습니다. 이전에는 모든 사용자가 이 그룹에 자동으로 가입했으므로(`autoJoinUserGroups`의 기본값은 이제 `[]`) Cognito에서 그룹 멤버를 검토하세요.
 
 게시된 API는 게시할 때의 코드와 스택 설정(기본 스로틀링, 알람, 비용 지표와 지표 네임스페이스)을 그대로 씁니다. 업그레이드한 뒤 다시 게시하세요.
+
+## 지식 동기화 복구
+
+봇의 지식 동기화가 대기 중이거나 실행 중이면 소유자는 봇을 저장할 수 없습니다(오류 코드 `knowledge_base_syncing`과 함께 409). 동기화가 시간 초과되거나 중단되면 봇은 `RUNNING` 상태로 남습니다. 이때 관리자가 봇을 저장하면 새 동기화가 대기열에 들어가며, 소유자는 봇을 삭제할 수 있습니다. 동기화에 실패한 봇은 변경 사항이 없어도 저장하면 동기화를 다시 시도합니다.
+
+동기화 중에도 봇을 삭제할 수 있습니다. 동기화가 끝나면 삭제된 봇을 위해 만든 지식 기반 스택을 삭제합니다. 이 삭제가 실패하면 동기화 상태 업데이트 실패 알람이 울립니다([Alarms and API Throttling](../README.md#alarms-and-api-throttling)). Bedrock 리전에서 봇이 더 이상 없는 `BrChatKbStack*` 스택을 찾아 삭제하세요.
 
 ## 사용자 데이터 삭제
 
@@ -139,5 +147,7 @@ PYTHONPATH=. CONVERSATION_TABLE_NAME=... BOT_TABLE_NAME=... LARGE_MESSAGE_BUCKET
 ```
 
 사용자 ID는 Cognito의 `sub` 속성이며, 외부 ID 공급자로 로그인하는 사용자는 Username과 값이 다릅니다. `--yes`를 지정하지 않으면 삭제할 항목만 보여 줍니다. 봇을 삭제하면 지식 기반 스택, 문서, 게시된 API와 그 API 클라이언트의 대화도 함께 삭제되며, 이 사용자가 공유한 봇은 다른 사용자도 더 이상 쓸 수 없습니다.
+
+이 스크립트는 봇 항목을 직접 삭제하므로, API를 통해 삭제할 때처럼 게시 진행 여부를 확인하지 않습니다. 이 사용자의 봇이 게시 중이 아닐 때 실행하고, 실행한 뒤 CloudFormation에 이 사용자 봇의 `ApiPublishmentStack*` 스택이 남아 있지 않은지 확인하세요.
 
 삭제한 항목은 테이블의 특정 시점 복구(PITR) 백업에 최대 35일 동안 남고, 사용량 분석 내보내기는 `usageAnalysisRetentionDays`가 지나면 만료됩니다. API 게시를 취소해도 클라이언트의 대화는 남으며, 봇을 삭제할 때 함께 삭제됩니다.

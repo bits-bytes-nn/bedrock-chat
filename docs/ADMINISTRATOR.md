@@ -120,6 +120,8 @@ ORDER BY
 
 ## Upgrading
 
+See also [Upgrading an Existing Deployment](../README.md#upgrading-an-existing-deployment) in the README.
+
 `npx cdk deploy --all` updates a deployment in place. DynamoDB adds only one secondary index per table update. If the conversation table has no global secondary index (DynamoDB console > Indexes), deploy commit `d095ec1` first, then v3. Deployments of upstream v3 have `SKIndex` and upgrade in one step.
 
 When you upgrade from upstream:
@@ -128,6 +130,12 @@ When you upgrade from upstream:
 - `CreatingBotAllowed` keeps its members, who all joined automatically before (`autoJoinUserGroups` now defaults to `[]`). Review the group in Cognito.
 
 Published APIs keep the code and stack settings they were published with, including the default throttle, alarms, cost metric and metric namespace. Publish them again after upgrading.
+
+## Knowledge sync recovery
+
+While a bot's knowledge sync is queued or running, its owner cannot save the bot (409 with the error code `knowledge_base_syncing`). If the sync timed out or was aborted, the bot stays `RUNNING`: an administrator can save the bot, which queues a new sync, and the owner can delete it. Saving a bot whose sync failed retries the sync, even if nothing changed.
+
+A bot can be deleted during a sync. When the sync ends, it deletes the knowledge base stack it built for the deleted bot. If that fails, the alarm for failed sync status updates goes off ([Alarms and API Throttling](../README.md#alarms-and-api-throttling)); look for `BrChatKbStack*` stacks in the Bedrock region whose bot no longer exists and delete them.
 
 ## Deleting a user's data
 
@@ -139,5 +147,7 @@ PYTHONPATH=. CONVERSATION_TABLE_NAME=... BOT_TABLE_NAME=... LARGE_MESSAGE_BUCKET
 ```
 
 The user id is the user's `sub` attribute in Cognito, which differs from the Username for users who sign in with an external identity provider. The script lists what it would delete unless you pass `--yes`. Deleting the bots also removes their knowledge base stacks, documents, published APIs and the conversations of those APIs' clients, and other users lose access to the bots this user shared.
+
+The script deletes the bot items directly, without the API's check for publications in progress. Run it when none of the user's bots is being published, and afterwards check that no `ApiPublishmentStack*` stack of the user's bots is left in CloudFormation.
 
 Deleted items stay in the tables' point-in-time recovery backups for up to 35 days, and the usage analysis exports expire after `usageAnalysisRetentionDays`. Unpublishing an API keeps its clients' conversations; they are deleted when the bot is deleted.
