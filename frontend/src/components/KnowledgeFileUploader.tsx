@@ -15,12 +15,11 @@ import ButtonFileChoose from './ButtonFileChoose';
 import {
   CONVERTIBLE_FILE_EXTENSIONS,
   MB,
-  convertedFileName,
   isConvertibleFile,
   maxConvertibleFileSizeMb,
 } from '../constants/supportedAttachedFiles';
 import { getApiErrorMessage, isEnglishLanguage } from '../utils/ErrorUtils';
-import { removeBotFile } from '../utils/BotUtils';
+import { isDuplicateBotFile, removeBotFile } from '../utils/BotUtils';
 
 type Props = BaseProps & {
   botId: string;
@@ -89,14 +88,8 @@ const KnowledgeFileUploader: React.FC<Props> = (props) => {
             const isSupportedFile = SUPPORTED_FILES.includes(
               '.' + file.name.split('.').slice(-1)[0].toLowerCase()
             );
-            // A converted file is registered as `<filename>.txt`.
-            const registeredNames = isConvertibleFile(file.name)
-              ? [file.name, convertedFileName(file.name)]
-              : [file.name];
-            const isDuplicatedFile = props.files.some(
-              (botFile) =>
-                !botFile.rejected && registeredNames.includes(botFile.filename)
-            );
+            // The draft holds the files added before this one in the same drop.
+            const isDuplicatedFile = isDuplicateBotFile(file.name, draft);
             const maxSizeMb = isConvertibleFile(file.name)
               ? maxConvertibleFileSizeMb(file.name)
               : undefined;
