@@ -65,7 +65,7 @@ export class Monitoring extends Construct {
         "ApiServerErrors",
         props.api.metricServerError({ period, statistic: "Sum" }),
         errorThreshold,
-        `The REST API answered with a server error at least ${errorThreshold} times in ${minutes} minutes.`,
+        `The HTTP API answered with a server error at least ${errorThreshold} times in ${minutes} minutes.`,
       ],
       [
         "ChatErrors",

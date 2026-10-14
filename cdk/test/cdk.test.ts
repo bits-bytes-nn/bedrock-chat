@@ -707,6 +707,19 @@ describe("Bedrock Chat Stack Test", () => {
     // Longer than the 3 second default, for a cold start and SDK retries.
     expect((functions[exportHandlerId] as any).Properties.Timeout).toBe(30);
 
+    // The state machine catches the sync status handler's errors, so they alarm.
+    const [syncStatusHandlerId] = Object.entries(functions).find(([, fn]: [string, any]) =>
+      JSON.stringify(fn.Properties.ImageConfig?.Command ?? []).includes(
+        "update_bot_status.handler"
+      )
+    )!;
+    template.hasResourceProperties("AWS::CloudWatch::Alarm", {
+      Namespace: "AWS/Lambda",
+      MetricName: "Errors",
+      Threshold: 1,
+      Dimensions: [{ Name: "FunctionName", Value: { Ref: syncStatusHandlerId } }],
+    });
+
     // Bot removals have the memory of the other backend handlers, and a stuck
     // record goes to the dead-letter queue before the stream drops it.
     const removalHandler = Object.values(functions).find((fn: any) =>

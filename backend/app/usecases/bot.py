@@ -453,14 +453,20 @@ def modify_owned_bot(
     )
 
     if sync_status == "QUEUED":
+        # Without file changes, the state machine starts an ingestion job, which
+        # also removes files deleted before a failed sync. It does so only for a
+        # dedicated knowledge base: the data source of a shared one spans the
+        # documents of every bot.
+        full_sync = is_retry and not (
+            updated_kb is not None and updated_kb.type == "shared"
+        )
         # If necessary, start the Embedding state machine.
         start_embedding_state_machine(
             user_id=bot.owner_user_id,
             bot_id=bot.id,
-            # Without file changes, the state machine starts an ingestion job.
-            added_filenames=[] if is_retry else added_filenames,
-            unchanged_filenames=[] if is_retry else unchanged_filenames,
-            deleted_filenames=[] if is_retry else deleted_filenames,
+            added_filenames=[] if full_sync else added_filenames,
+            unchanged_filenames=[] if full_sync else unchanged_filenames,
+            deleted_filenames=[] if full_sync else deleted_filenames,
             # A bot on a shared knowledge base gets its data sources only from the
             # shared flow, so file changes and retries need it even when the
             # knowledge base itself is unchanged.

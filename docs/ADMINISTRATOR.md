@@ -133,9 +133,9 @@ Published APIs keep the code and stack settings they were published with, includ
 
 ## Knowledge sync recovery
 
-While a bot's knowledge sync is queued or running, its owner cannot save the bot (409 with the error code `knowledge_base_syncing`). If the sync timed out or was aborted, the bot stays `RUNNING`: an administrator can save the bot, which queues a new sync, and the owner can delete it. Saving a bot whose sync failed retries the sync, even if nothing changed.
+While a bot's knowledge sync is queued or running, its owner cannot save the bot (409 with the error code `knowledge_base_syncing`). If the sync timed out or was aborted, the bot stays `RUNNING`: an administrator can save the bot, which queues a new sync, and the owner can delete it. Saving a bot whose sync failed retries the sync, even if nothing changed. For a dedicated knowledge base the retry synchronizes the whole data source, which also removes files deleted before the failure; for a shared knowledge base it ingests the bot's files again.
 
-A bot can be deleted during a sync. When the sync ends, it deletes the knowledge base stack it built for the deleted bot. If that fails, the alarm for failed sync status updates goes off ([Alarms and API Throttling](../README.md#alarms-and-api-throttling)); look for `BrChatKbStack*` stacks in the Bedrock region whose bot no longer exists and delete them.
+A bot can be deleted during a sync. When the sync ends, it deletes the knowledge base stack it built for the deleted bot. If the delete request fails, the alarm for failed sync status updates goes off; a stack whose deletion fails later (`DELETE_FAILED`) raises no alarm ([Alarms and API Throttling](../README.md#alarms-and-api-throttling)); look for `BrChatKbStack*` stacks in the Bedrock region whose bot no longer exists and delete them.
 
 ## Deleting a user's data
 
