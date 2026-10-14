@@ -18,7 +18,6 @@ from app.routes.schemas.published_api import (
 from app.repositories.custom_bot import find_bot_by_id
 from app.usecases.chat import fetch_conversation, validate_model_is_available
 from app.user import User
-from botocore.exceptions import ClientError
 from fastapi import APIRouter, HTTPException, Request
 from ulid import ULID
 
@@ -28,6 +27,8 @@ router = APIRouter(tags=["published_api"])
 
 sqs_client = boto3.client("sqs")
 QUEUE_URL = os.environ.get("QUEUE_URL", "")
+# The maximum message size of the queue, set by cdk/lib/api-publishment-stack.ts.
+QUEUE_MAX_MESSAGE_BYTES = int(os.environ.get("QUEUE_MAX_MESSAGE_BYTES", 1024 * 1024))
 # app.main includes this router only when PUBLISHED_API_ID is set.
 PUBLISHED_API_ID = os.environ.get("PUBLISHED_API_ID", "")
 
@@ -78,20 +79,15 @@ def post_message(request: Request, message_input: ChatInputWithoutBotId):
         enable_reasoning=message_input.enable_reasoning,
     )
 
-    try:
-        _ = sqs_client.send_message(
-            QueueUrl=QUEUE_URL, MessageBody=chat_input.model_dump_json()
+    body = chat_input.model_dump_json()
+    if len(body.encode("utf-8")) > QUEUE_MAX_MESSAGE_BYTES:
+        raise HTTPException(
+            status_code=413,
+            detail="The message is too large to queue. Send smaller attachments.",
         )
-    except Exception as e:
-        error = e.response.get("Error", {}) if isinstance(e, ClientError) else {}
-        # SQS rejects a body over the queue's maximum message size with this error.
-        if error.get("Code") == "InvalidParameterValue" and (
-            "Message must be shorter than" in error.get("Message", "")
-        ):
-            raise HTTPException(
-                status_code=413,
-                detail="The message is too large to queue. Send smaller attachments.",
-            )
+    try:
+        _ = sqs_client.send_message(QueueUrl=QUEUE_URL, MessageBody=body)
+    except Exception:
         logger.exception("Failed to queue the message")
         raise HTTPException(status_code=500, detail="Failed to queue the message.")
 

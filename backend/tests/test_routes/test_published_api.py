@@ -21,7 +21,6 @@ from app.routes.schemas.published_api import (
 )
 from app.repositories.common import RecordNotFoundError
 from app.user import User
-from botocore.exceptions import ClientError
 from fastapi import HTTPException
 
 MODEL = "claude-v4.5-sonnet"
@@ -102,29 +101,15 @@ def test_post_message_returns_500_when_queueing_fails(sqs, bot):
     assert "queue is down" not in str(e.value.detail)
 
 
-@pytest.mark.parametrize(
-    "message, status_code",
-    [
-        (
-            "One or more parameters are invalid. Reason: Message must be shorter "
-            "than 1048576 bytes.",
-            413,
-        ),
-        ("Value 1000 for parameter DelaySeconds is invalid.", 500),
-    ],
-)
-def test_post_message_rejects_a_message_too_large_for_the_queue(
-    sqs, bot, message, status_code
-):
-    sqs.send_message.side_effect = ClientError(
-        {"Error": {"Code": "InvalidParameterValue", "Message": message}},
-        "SendMessage",
-    )
-    with patch.object(published_api, "validate_model_is_available"):
+def test_post_message_rejects_a_message_too_large_for_the_queue(sqs, bot):
+    with patch.object(published_api, "validate_model_is_available"), patch.object(
+        published_api, "QUEUE_MAX_MESSAGE_BYTES", 100
+    ):
         with pytest.raises(HTTPException) as e:
             published_api.post_message(_request(), _chat_input())
 
-    assert e.value.status_code == status_code
+    assert e.value.status_code == 413
+    sqs.send_message.assert_not_called()
 
 
 def _message(children: list[str]) -> MessageOutput:

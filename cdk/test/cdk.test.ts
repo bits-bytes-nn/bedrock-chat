@@ -1347,8 +1347,15 @@ describe("Api Publishment Stack", () => {
       FunctionResponseTypes: ["ReportBatchItemFailures"],
     });
     expect(consumer.Properties.Timeout).toBe(900);
+    // The API checks messages against the queue's maximum size before sending them.
     template.hasResourceProperties("AWS::SQS::Queue", {
       VisibilityTimeout: 900 * 6,
+      MaximumMessageSize: 1024 * 1024,
+    });
+    template.hasResourceProperties("AWS::Lambda::Function", {
+      Environment: {
+        Variables: Match.objectLike({ QUEUE_MAX_MESSAGE_BYTES: String(1024 * 1024) }),
+      },
     });
 
     // The WAF association names the stage, so it waits for the stage.
