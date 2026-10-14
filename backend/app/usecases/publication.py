@@ -221,7 +221,7 @@ def _find_created_stack(bot_id: str) -> PublishedApiStackModel:
 
 
 def fetch_api_key(user: User, bot_id: str, api_key: str) -> ApiKeyOutput:
-    bot = _fetch_bot_with_permission_check(user, bot_id)
+    _fetch_bot_with_permission_check(user, bot_id)
 
     stack = _find_created_stack(bot_id)
     usage_plan = find_usage_plan_by_id(stack.api_usage_plan_id)  # type: ignore
@@ -244,7 +244,7 @@ def fetch_api_key(user: User, bot_id: str, api_key: str) -> ApiKeyOutput:
 def create_new_api_key(
     user: User, bot_id: str, api_key_input: ApiKeyInput
 ) -> ApiKeyOutput:
-    bot = _fetch_bot_with_permission_check(user, bot_id)
+    _fetch_bot_with_permission_check(user, bot_id)
 
     stack = _find_created_stack(bot_id)
     usage_plan = find_usage_plan_by_id(stack.api_usage_plan_id)  # type: ignore
@@ -261,7 +261,7 @@ def create_new_api_key(
 
 
 def remove_api_key(user: User, bot_id: str, api_key_id: str):
-    bot = _fetch_bot_with_permission_check(user, bot_id)
+    _fetch_bot_with_permission_check(user, bot_id)
 
     stack = _find_created_stack(bot_id)
     usage_plan = find_usage_plan_by_id(stack.api_usage_plan_id)  # type: ignore

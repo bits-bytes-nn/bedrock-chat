@@ -230,6 +230,18 @@ class TestDeleteDuringBuild(unittest.TestCase):
         _, start = self.save_unchanged("FAILED", "dedicated")
         self.assertFalse(start.call_args.kwargs["sync_shared_knowledge_bases_required"])
 
+    def test_a_retry_synchronizes_the_whole_data_source(self):
+        # Without file lists the state machine starts an ingestion job, which also
+        # removes the files deleted before the failed sync.
+        for knowledge_base_type in ("dedicated", "shared"):
+            _, start = self.save_unchanged("FAILED", knowledge_base_type, ["new.pdf"])
+            kwargs = start.call_args.kwargs
+            self.assertEqual(kwargs["added_filenames"], [])
+            self.assertEqual(kwargs["unchanged_filenames"], [])
+            self.assertEqual(kwargs["deleted_filenames"], [])
+        _, start = self.save_unchanged("SUCCEEDED", added_filenames=["new.pdf"])
+        self.assertEqual(start.call_args.kwargs["added_filenames"], ["new.pdf"])
+
 
 class TestIsBuildRunning(unittest.TestCase):
     def test_treats_every_terminal_status_as_finished(self):

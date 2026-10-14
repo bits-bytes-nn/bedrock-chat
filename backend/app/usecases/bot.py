@@ -380,7 +380,9 @@ def modify_owned_bot(
     # 'sync_status = "QUEUED"' will execute embeding process and update dynamodb record.
     # 'sync_status= "SUCCEEDED"' will update only dynamodb record.
     # A failed or stuck sync is retried even if nothing changed, or saving would
-    # hide it. Only admins can save a bot whose sync is queued or running.
+    # hide it. Only admins can save a bot whose sync is queued or running. A retry
+    # synchronizes the whole data source with S3, as ingesting only this save's
+    # file changes would keep the files deleted before the failed sync.
     is_retry = bot.sync_status != "SUCCEEDED"
     sync_status: type_sync_status = (
         "QUEUED"
@@ -455,9 +457,10 @@ def modify_owned_bot(
         start_embedding_state_machine(
             user_id=bot.owner_user_id,
             bot_id=bot.id,
-            added_filenames=added_filenames,
-            unchanged_filenames=unchanged_filenames,
-            deleted_filenames=deleted_filenames,
+            # Without file changes, the state machine starts an ingestion job.
+            added_filenames=[] if is_retry else added_filenames,
+            unchanged_filenames=[] if is_retry else unchanged_filenames,
+            deleted_filenames=[] if is_retry else deleted_filenames,
             # A bot on a shared knowledge base gets its data sources only from the
             # shared flow, so file changes and retries need it even when the
             # knowledge base itself is unchanged.
@@ -688,11 +691,7 @@ def remove_bot_by_id(user: User, bot_id: str):
             code="api_publishing",
         )
 
-    if bot.is_editable_by_user(user):
-        owner_user_id = bot.owner_user_id
-        delete_bot_by_id(owner_user_id, bot_id)
-    else:
-        delete_alias_by_id(user.id, bot_id)
+    delete_bot_by_id(bot.owner_user_id, bot_id)
 
 
 def modify_bot_visibility(
@@ -890,7 +889,7 @@ def remove_bot_from_recently_used(user: User, bot_id: str):
     """Remove bot from recently used bots by removing LastUsedTime attribute."""
     try:
         bot = find_bot_by_id(bot_id)
-    except RecordNotFoundError as e:
+    except RecordNotFoundError:
         # NOTE: If the bot is not found, delete alias
         logger.info(f"Bot {bot_id} is not found. Delete alias.")
         return delete_alias_by_id(user.id, bot_id)
