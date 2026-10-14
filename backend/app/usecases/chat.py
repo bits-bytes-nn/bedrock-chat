@@ -431,30 +431,50 @@ def chat(
     )
 
 
+def _conversation_bytes(conversation: ConversationModel) -> int:
+    return len(conversation.model_dump_json().encode("utf-8"))
+
+
 def fit_answer(
     conversation: ConversationModel,
     message: MessageModel,
     related_documents: list[RelatedDocumentModel],
 ) -> None:
-    """Drop the tool results of the answer if they make the conversation too large.
+    """Drop the largest tool results of the answer until the conversation fits.
 
     Messages are checked before the model is called, but the answer is not: its
     text is bounded by the output tokens and fits the headroom below the response
     limit, while tool results such as fetched pages are not bounded. The related
-    documents of the answer hold the same results, so their content is dropped too.
+    documents of a dropped result (source id `<tool use id>` or
+    `<tool use id>@<rank>`) hold the same content, so theirs is dropped too.
     """
-    if (
-        not message.thinking_log
-        or len(conversation.model_dump_json().encode("utf-8")) <= MAX_CONVERSATION_BYTES
+    if not message.thinking_log or _conversation_bytes(conversation) <= (
+        MAX_CONVERSATION_BYTES
     ):
         return
-    logger.warning("Omitting the tool results of an answer that is too large to load")
-    for log in message.thinking_log:
-        for content in log.content:
-            if isinstance(content, ToolResultContentModel):
-                content.body.content = [TextToolResultModel(text=OMITTED_TOOL_RESULT)]
+    tool_results = sorted(
+        (
+            content.body
+            for log in message.thinking_log
+            for content in log.content
+            if isinstance(content, ToolResultContentModel)
+        ),
+        key=lambda body: len(body.model_dump_json()),
+        reverse=True,
+    )
+    omitted: set[str] = set()
+    for body in tool_results:
+        if _conversation_bytes(conversation) <= MAX_CONVERSATION_BYTES:
+            break
+        body.content = [TextToolResultModel(text=OMITTED_TOOL_RESULT)]
+        omitted.add(body.tool_use_id)
+    logger.warning(
+        "Omitted %d tool results of an answer that was too large to load",
+        len(omitted),
+    )
     for related_document in related_documents:
-        related_document.content = TextToolResultModel(text=OMITTED_TOOL_RESULT)
+        if related_document.source_id.split("@")[0] in omitted:
+            related_document.content = TextToolResultModel(text=OMITTED_TOOL_RESULT)
 
 
 def post_process_result(
