@@ -12,7 +12,11 @@ from app import auth
 from app.repositories.models.conversation import (
     ConversationModel,
     MessageModel,
+    SimpleMessageModel,
     TextContentModel,
+    TextToolResultModel,
+    ToolResultContentModel,
+    ToolResultContentModelBody,
 )
 from app.repositories.common import RecordNotFoundError, ResourceConflictError
 from app.repositories.models.custom_bot import ActiveModelsModel
@@ -442,6 +446,52 @@ class TestPrepareConversation(unittest.TestCase):
                         body="x" * (chat_usecase.MAX_CONVERSATION_BYTES - overhead - 50)
                     ),
                 )
+
+
+class TestFitAnswer(unittest.TestCase):
+    def answer(self, result_chars: int) -> MessageModel:
+        tool_result = ToolResultContentModel(
+            content_type="toolResult",
+            body=ToolResultContentModelBody(
+                tool_use_id="t",
+                content=[TextToolResultModel(text="x" * result_chars)],
+                status="success",
+            ),
+        )
+        answer = message("q")
+        answer.thinking_log = [SimpleMessageModel(role="user", content=[tool_result])]
+        return answer
+
+    def conversation(self, answer: MessageModel) -> ConversationModel:
+        return ConversationModel(
+            id="c",
+            create_time=0,
+            title="t",
+            total_price=0,
+            message_map={"q": message(None), "a": answer},
+            last_message_id="a",
+            bot_id=None,
+            should_continue=False,
+        )
+
+    def tool_result_text(self, answer: MessageModel) -> str:
+        return answer.thinking_log[0].content[0].body.content[0].text  # type: ignore
+
+    def test_keeps_the_tool_results_of_an_answer_that_fits(self):
+        answer = self.answer(1000)
+        chat_usecase.fit_answer(self.conversation(answer), answer)
+        self.assertEqual(self.tool_result_text(answer), "x" * 1000)
+
+    def test_omits_the_tool_results_of_an_answer_too_large_to_load(self):
+        answer = self.answer(chat_usecase.MAX_CONVERSATION_BYTES)
+        conversation = self.conversation(answer)
+        chat_usecase.fit_answer(conversation, answer)
+        self.assertEqual(
+            self.tool_result_text(answer), chat_usecase.OMITTED_TOOL_RESULT
+        )
+        self.assertLess(
+            len(conversation.model_dump_json()), chat_usecase.MAX_CONVERSATION_BYTES
+        )
 
 
 class TestFetchBot(unittest.TestCase):

@@ -33,6 +33,7 @@ from app.repositories.models.conversation import (
     RelatedDocumentModel,
     SimpleMessageModel,
     TextContentModel,
+    TextToolResultModel,
     ToolResultContentModel,
     ToolUseContentModel,
 )
@@ -71,6 +72,11 @@ TITLE_CONTEXT_CHARS = 4000
 # Loading a conversation returns it whole, so it must stay within the Lambda response
 # limit (6 MB). The margin leaves room for the answer and the response envelope.
 MAX_CONVERSATION_BYTES = 5 * 1024 * 1024
+
+
+OMITTED_TOOL_RESULT = (
+    "The result was omitted because the conversation became too large."
+)
 
 
 class ConversationTooLargeError(ValueError):
@@ -425,6 +431,25 @@ def chat(
     )
 
 
+def fit_answer(conversation: ConversationModel, message: MessageModel) -> None:
+    """Drop the tool results of the answer if they make the conversation too large.
+
+    Messages are checked before the model is called, but the answer is not: its
+    text is bounded by the output tokens and fits the headroom below the response
+    limit, while tool results such as fetched pages are not bounded.
+    """
+    if (
+        not message.thinking_log
+        or len(conversation.model_dump_json().encode("utf-8")) <= MAX_CONVERSATION_BYTES
+    ):
+        return
+    logger.warning("Omitting the tool results of an answer that is too large to load")
+    for log in message.thinking_log:
+        for content in log.content:
+            if isinstance(content, ToolResultContentModel):
+                content.body.content = [TextToolResultModel(text=OMITTED_TOOL_RESULT)]
+
+
 def post_process_result(
     result: OnStopInput,
     message_for_continue_generate: SimpleMessageModel | None,
@@ -492,6 +517,7 @@ def post_process_result(
         # Store RAG results in ToolResultCapture for citation support
         related_documents.extend(search_results_as_related_documents)
 
+    fit_answer(conversation, message)
     # Store conversation before finish streaming so that front-end can avoid 404 issue
     store_conversation(user.id, conversation)
     if related_documents:
