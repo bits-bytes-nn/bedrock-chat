@@ -438,6 +438,7 @@ const BotKbEditPage: React.FC = () => {
   const {
     errorMessages,
     setErrorMessage: setErrorMessages,
+    clear: clearErrorMessage,
     clearAll: clearErrorMessages,
   } = useErrorMessage();
 
@@ -456,6 +457,12 @@ const BotKbEditPage: React.FC = () => {
   const isSyncing =
     botSummary?.syncStatus === SyncStatus.QUEUED ||
     botSummary?.syncStatus === SyncStatus.RUNNING;
+
+  useEffect(() => {
+    if (botSummary && botSummary.syncStatus !== SyncStatus.FAILED) {
+      clearErrorMessage('syncError');
+    }
+  }, [botSummary, clearErrorMessage]);
 
   // Show a sync that fails while the page is open. The summary has no reason,
   // so the bot is fetched again.
@@ -556,6 +563,9 @@ const BotKbEditPage: React.FC = () => {
   );
 
   useEffect(() => {
+    // The error messages are shared by all pages, so drop those of the bot
+    // shown before.
+    clearErrorMessages();
     if (!isNewBot) {
       setIsLoading(true);
       getMyBot(botId)
@@ -792,22 +802,11 @@ const BotKbEditPage: React.FC = () => {
     [urls]
   );
 
-  const removeUnchangedFilenames = useCallback(
-    (filename: string) => {
-      const idx = unchangedFilenames.findIndex(
-        (unchangedFilename) => unchangedFilename === filename
-      );
-      if (idx > -1) {
-        setUnchangedFilenames(
-          produce(unchangedFilenames, (draft) => {
-            draft.splice(idx, 1);
-            return;
-          })
-        );
-      }
-    },
-    [unchangedFilenames]
-  );
+  const removeUnchangedFilenames = useCallback((filename: string) => {
+    setUnchangedFilenames((unchanged) =>
+      unchanged.filter((unchangedFilename) => unchangedFilename !== filename)
+    );
+  }, []);
 
   const removeAddedFilenames = useCallback(
     (filename: string) => {
@@ -826,21 +825,11 @@ const BotKbEditPage: React.FC = () => {
     [addedFilenames]
   );
 
-  const removeDeletedFilenames = useCallback(
-    (filename: string) => {
-      const idx = deletedFilenames.findIndex(
-        (deletedFilename) => deletedFilename === filename
-      );
-      if (idx > -1) {
-        setDeletedFilenames(
-          produce(deletedFilenames, (draft) => {
-            draft.splice(idx, 1);
-          })
-        );
-      }
-    },
-    [deletedFilenames]
-  );
+  const removeDeletedFilenames = useCallback((filename: string) => {
+    setDeletedFilenames((deleted) =>
+      deleted.filter((deletedFilename) => deletedFilename !== filename)
+    );
+  }, []);
 
   const onAddFiles = useCallback(
     (botFiles: BotFile[]) => {

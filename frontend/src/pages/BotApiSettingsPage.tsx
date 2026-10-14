@@ -276,11 +276,16 @@ const BotApiSettingsPage: React.FC = () => {
     setIsOpenDeleteApiDialog(false);
     deleteBotPublication()
       .then(() => mutateBotPublication())
-      .catch(() => {
-        fillApiSettings();
-        open(t('bot.error.failDeleteApi'));
+      .catch((e) => {
+        if (botPublication && hasDeployFailed(botPublication)) {
+          setHasFailedDeploy(true);
+        } else {
+          fillApiSettings();
+        }
+        open(getApiErrorMessage(e) ?? t('bot.error.failDeleteApi'));
       });
   }, [
+    botPublication,
     clearApiSettings,
     deleteBotPublication,
     fillApiSettings,
