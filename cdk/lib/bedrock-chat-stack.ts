@@ -345,6 +345,7 @@ export class BedrockChatStack extends cdk.Stack {
       webSocketLogGroup: websocket.handlerLogGroup,
       embeddingStateMachine: embedding.stateMachine,
       syncStatusLogGroup: embedding.syncStatusLogGroup,
+      syncStatusHandler: embedding.syncStatusHandler,
       botRemovalDeadLetterQueue: embedding.removalDeadLetterQueue,
       usageExportHandler: usageAnalysis.exportHandler,
     });

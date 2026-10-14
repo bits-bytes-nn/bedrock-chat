@@ -335,6 +335,41 @@ class TestRelatedDocuments(unittest.TestCase):
         with self.assertRaises(RecordNotFoundError):
             find_related_document_by_id("user", "c", "missing")
 
+    def test_omits_the_content_of_a_document_too_large_to_store(self):
+        from app.repositories.conversation import (
+            MAX_RELATED_DOCUMENT_BYTES,
+            OMITTED_RELATED_DOCUMENT,
+            find_related_document_by_id,
+            store_related_documents,
+        )
+        from app.repositories.models.conversation import (
+            RelatedDocumentModel,
+            TextToolResultModel,
+        )
+
+        store_related_documents(
+            "user",
+            "c",
+            [
+                RelatedDocumentModel(
+                    content=TextToolResultModel(text=text), source_id=source_id
+                )
+                for source_id, text in (
+                    ("large", "x" * MAX_RELATED_DOCUMENT_BYTES),
+                    ("small", "body"),
+                )
+            ],
+        )
+
+        self.assertEqual(
+            find_related_document_by_id("user", "c", "large").content,
+            TextToolResultModel(text=OMITTED_RELATED_DOCUMENT),
+        )
+        self.assertEqual(
+            find_related_document_by_id("user", "c", "small").content,
+            TextToolResultModel(text="body"),
+        )
+
 
 @pytest.mark.usefixtures("dynamodb_tables")
 class TestFailedMessages(unittest.TestCase):

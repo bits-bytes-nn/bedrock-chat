@@ -18,6 +18,7 @@ from app.routes.schemas.published_api import (
 from app.repositories.custom_bot import find_bot_by_id
 from app.usecases.chat import fetch_conversation, validate_model_is_available
 from app.user import User
+from botocore.exceptions import ClientError
 from fastapi import APIRouter, HTTPException, Request
 from ulid import ULID
 
@@ -81,7 +82,16 @@ def post_message(request: Request, message_input: ChatInputWithoutBotId):
         _ = sqs_client.send_message(
             QueueUrl=QUEUE_URL, MessageBody=chat_input.model_dump_json()
         )
-    except Exception:
+    except Exception as e:
+        error = e.response.get("Error", {}) if isinstance(e, ClientError) else {}
+        # SQS rejects a body over the queue's maximum message size with this error.
+        if error.get("Code") == "InvalidParameterValue" and (
+            "Message must be shorter than" in error.get("Message", "")
+        ):
+            raise HTTPException(
+                status_code=413,
+                detail="The message is too large to queue. Send smaller attachments.",
+            )
         logger.exception("Failed to queue the message")
         raise HTTPException(status_code=500, detail="Failed to queue the message.")
 

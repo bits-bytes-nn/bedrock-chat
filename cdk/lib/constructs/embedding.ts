@@ -86,6 +86,11 @@ export class Embedding extends Construct {
     return this._updateSyncStatusHandler.logGroup;
   }
 
+  /** The handler that records sync results. The state machine catches its errors. */
+  get syncStatusHandler(): IFunction {
+    return this._updateSyncStatusHandler;
+  }
+
   private setupStateMachineHandlers(props: EmbeddingProps) {
     const sharedStackName = sharedKnowledgeBasesStackName(props.envPrefix);
     const handlerRole = new iam.Role(this, "HandlerRole", {
@@ -119,7 +124,25 @@ export class Embedding extends Construct {
         ),
       })
     );
-    handlerRole.addToPolicy(
+    handlerRole.addToPolicy(lambdaLogsPolicyStatement(Stack.of(this)));
+    props.documentBucket.grantReadWrite(handlerRole);
+
+    const updateSyncStatusHandlerRole = new iam.Role(
+      this,
+      "UpdateSyncStatusHandlerRole",
+      {
+        path: props.database.tableAccessRolePath,
+        assumedBy: new iam.ServicePrincipal("lambda.amazonaws.com"),
+      }
+    );
+    updateSyncStatusHandlerRole.addToPolicy(
+      // Assume the table access role for row-level access control.
+      new iam.PolicyStatement({
+        actions: ["sts:AssumeRole"],
+        resources: [props.database.tableAccessRole.roleArn],
+      })
+    );
+    updateSyncStatusHandlerRole.addToPolicy(
       // The status handler deletes the knowledge base stack of a bot deleted during
       // its sync. The stack's own role deletes its resources.
       new iam.PolicyStatement({
@@ -131,8 +154,9 @@ export class Embedding extends Construct {
         ],
       })
     );
-    handlerRole.addToPolicy(lambdaLogsPolicyStatement(Stack.of(this)));
-    props.documentBucket.grantReadWrite(handlerRole);
+    updateSyncStatusHandlerRole.addToPolicy(
+      lambdaLogsPolicyStatement(Stack.of(this))
+    );
 
     this._updateSyncStatusHandler = new DockerImageFunction(
       this,
@@ -159,7 +183,7 @@ export class Embedding extends Construct {
           TABLE_ACCESS_ROLE_ARN: props.database.tableAccessRole.roleArn,
           BEDROCK_REGION: props.bedrockRegion,
         },
-        role: handlerRole,
+        role: updateSyncStatusHandlerRole,
         logRetention: logs.RetentionDays.THREE_MONTHS,
       }
     );

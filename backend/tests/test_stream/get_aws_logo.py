@@ -23,8 +23,3 @@ def get_png_bytes_from_url(url: str) -> bytes:
 def get_aws_logo() -> bytes:
     URL = "https://a0.awsstatic.com/libra-css/images/logos/aws_logo_smile_179x109.png"
     return get_png_bytes_from_url(URL)
-
-
-def get_cdk_logo() -> bytes:
-    URL = "https://docs.aws.amazon.com/cdk/api/v2/img/cdk-logo-small.png"
-    return get_png_bytes_from_url(URL)

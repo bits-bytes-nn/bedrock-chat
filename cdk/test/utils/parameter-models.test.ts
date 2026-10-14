@@ -627,6 +627,24 @@ describe("resolveApiPublishParameters", () => {
       }
     });
 
+    // The backend passes the rate with Python's str(float).
+    test("accepts a rate limit in exponent notation", () => {
+      const originalEnv = process.env;
+      process.env = {
+        ...originalEnv,
+        PUBLISHED_API_THROTTLE_RATE_LIMIT: "1e-05",
+        PUBLISHED_API_THROTTLE_BURST_LIMIT: "1",
+      };
+
+      try {
+        expect(resolveApiPublishParameters().publishedApiThrottleRateLimit).toBe(
+          0.00001
+        );
+      } finally {
+        process.env = originalEnv;
+      }
+    });
+
     test("should correctly parse all parameters when specified", () => {
       // Given
       // Mock environment variables
@@ -862,7 +880,7 @@ describe("CDK context values from the command line", () => {
   });
 
   // An empty value (`-c name=`) must not silently become 0 and turn a guard off.
-  test.each(["ninety", "", " "])("rejects %p as a number", (value) => {
+  test.each(["ninety", "", " ", "Infinity", "1e400"])("rejects %p as a number", (value) => {
     expect(() =>
       resolveBedrockChatParameters(
         createTestApp({ dailyChatCostAlarmUsd: value })

@@ -12,6 +12,7 @@ from app import auth
 from app.repositories.models.conversation import (
     ConversationModel,
     MessageModel,
+    RelatedDocumentModel,
     SimpleMessageModel,
     TextContentModel,
     TextToolResultModel,
@@ -477,20 +478,78 @@ class TestFitAnswer(unittest.TestCase):
     def tool_result_text(self, answer: MessageModel) -> str:
         return answer.thinking_log[0].content[0].body.content[0].text  # type: ignore
 
+    def related_document(self, result_chars: int) -> RelatedDocumentModel:
+        return RelatedDocumentModel(
+            content=TextToolResultModel(text="x" * result_chars), source_id="a@t"
+        )
+
     def test_keeps_the_tool_results_of_an_answer_that_fits(self):
         answer = self.answer(1000)
-        chat_usecase.fit_answer(self.conversation(answer), answer)
+        document = self.related_document(1000)
+        chat_usecase.fit_answer(self.conversation(answer), answer, [document])
         self.assertEqual(self.tool_result_text(answer), "x" * 1000)
+        self.assertEqual(document.content, TextToolResultModel(text="x" * 1000))
 
     def test_omits_the_tool_results_of_an_answer_too_large_to_load(self):
         answer = self.answer(chat_usecase.MAX_CONVERSATION_BYTES)
         conversation = self.conversation(answer)
-        chat_usecase.fit_answer(conversation, answer)
+        document = self.related_document(chat_usecase.MAX_CONVERSATION_BYTES)
+        chat_usecase.fit_answer(conversation, answer, [document])
         self.assertEqual(
             self.tool_result_text(answer), chat_usecase.OMITTED_TOOL_RESULT
         )
+        self.assertEqual(
+            document.content,
+            TextToolResultModel(text=chat_usecase.OMITTED_TOOL_RESULT),
+        )
         self.assertLess(
             len(conversation.model_dump_json()), chat_usecase.MAX_CONVERSATION_BYTES
+        )
+
+    def test_stores_the_answer_with_the_results_omitted(self):
+        answer = self.answer(chat_usecase.MAX_CONVERSATION_BYTES)
+        conversation = self.conversation(answer)
+        conversation.message_map["a"] = message(None)
+        chat_input = MagicMock(continue_generate=False)
+        with patch.multiple(
+            chat_usecase,
+            emit_chat_cost=MagicMock(),
+            is_prefill_supported=MagicMock(return_value=False),
+            store_conversation=MagicMock(),
+            store_related_documents=MagicMock(),
+        ):
+            chat_usecase.post_process_result(
+                result={
+                    "message": answer,
+                    "stop_reason": "end_turn",
+                    "input_token_count": 0,
+                    "output_token_count": 0,
+                    "cache_read_input_count": 0,
+                    "cache_write_input_count": 0,
+                    "price": 0,
+                },
+                message_for_continue_generate=None,
+                conversation=conversation,
+                user_msg_id="a",
+                bot=None,
+                user=USER,
+                chat_input=chat_input,
+                search_results=[],
+                related_documents=[
+                    self.related_document(chat_usecase.MAX_CONVERSATION_BYTES)
+                ],
+            )
+            stored = chat_usecase.store_conversation.call_args.args[1]
+            documents = chat_usecase.store_related_documents.call_args.kwargs[
+                "related_documents"
+            ]
+        stored_answer = stored.message_map[stored.last_message_id]
+        self.assertEqual(
+            self.tool_result_text(stored_answer), chat_usecase.OMITTED_TOOL_RESULT
+        )
+        self.assertEqual(
+            documents[0].content,
+            TextToolResultModel(text=chat_usecase.OMITTED_TOOL_RESULT),
         )
 
 

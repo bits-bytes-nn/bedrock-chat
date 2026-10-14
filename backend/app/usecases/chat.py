@@ -431,12 +431,17 @@ def chat(
     )
 
 
-def fit_answer(conversation: ConversationModel, message: MessageModel) -> None:
+def fit_answer(
+    conversation: ConversationModel,
+    message: MessageModel,
+    related_documents: list[RelatedDocumentModel],
+) -> None:
     """Drop the tool results of the answer if they make the conversation too large.
 
     Messages are checked before the model is called, but the answer is not: its
     text is bounded by the output tokens and fits the headroom below the response
-    limit, while tool results such as fetched pages are not bounded.
+    limit, while tool results such as fetched pages are not bounded. The related
+    documents of the answer hold the same results, so their content is dropped too.
     """
     if (
         not message.thinking_log
@@ -448,6 +453,8 @@ def fit_answer(conversation: ConversationModel, message: MessageModel) -> None:
         for content in log.content:
             if isinstance(content, ToolResultContentModel):
                 content.body.content = [TextToolResultModel(text=OMITTED_TOOL_RESULT)]
+    for related_document in related_documents:
+        related_document.content = TextToolResultModel(text=OMITTED_TOOL_RESULT)
 
 
 def post_process_result(
@@ -517,7 +524,7 @@ def post_process_result(
         # Store RAG results in ToolResultCapture for citation support
         related_documents.extend(search_results_as_related_documents)
 
-    fit_answer(conversation, message)
+    fit_answer(conversation, message, related_documents)
     # Store conversation before finish streaming so that front-end can avoid 404 issue
     store_conversation(user.id, conversation)
     if related_documents:
