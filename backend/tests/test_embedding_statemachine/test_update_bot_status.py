@@ -74,6 +74,15 @@ class TestUpdateSyncStatus(unittest.TestCase):
         # The sync may have built the stack again after the bot was deleted.
         delete_stack.assert_called_once_with("deleted")
 
+    def test_does_not_report_the_failed_sync_of_a_deleted_bot(self):
+        with patch.object(
+            update_bot_status, "delete_custom_bot_stack_by_bot_id"
+        ), self.assertNoLogs(update_bot_status.logger, level="ERROR"):
+            update_bot_status.handler(
+                {"OwnerUserId": "user", "BotId": "deleted", "SyncStatus": "FAILED"},
+                None,
+            )
+
 
 if __name__ == "__main__":
     unittest.main()

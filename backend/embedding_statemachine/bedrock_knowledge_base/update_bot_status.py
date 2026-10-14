@@ -18,10 +18,12 @@ class SyncStatus(TypedDict):
     last_exec_id: str
 
 
-def update_sync_status(sync_status: SyncStatus):
+def update_sync_status(sync_status: SyncStatus) -> bool:
+    """Store the sync status. Returns whether the bot still exists."""
     table = get_bot_table_client()
     try:
         _update(table, sync_status)
+        return True
     except ClientError as e:
         if e.response["Error"]["Code"] != "ConditionalCheckFailedException":
             raise
@@ -32,6 +34,7 @@ def update_sync_status(sync_status: SyncStatus):
             sync_status["bot_id"],
         )
         delete_custom_bot_stack_by_bot_id(sync_status["bot_id"])
+        return False
 
 
 def _update(table, sync_status: SyncStatus):
@@ -114,9 +117,11 @@ def handler(event, context):
         )
 
     for sync_status_update in sync_status_updates:
-        if sync_status_update["status"] == "FAILED":
+        # The sync of a deleted bot fails as expected, so it is not reported.
+        if update_sync_status(sync_status_update) and (
+            sync_status_update["status"] == "FAILED"
+        ):
             # Counted by the BotKnowledgeSyncFailures alarm (cdk/lib/constructs/monitoring.ts).
             logger.error(
                 "Knowledge sync failed for bot %s", sync_status_update["bot_id"]
             )
-        update_sync_status(sync_status_update)
