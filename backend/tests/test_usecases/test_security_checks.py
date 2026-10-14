@@ -450,17 +450,21 @@ class TestPrepareConversation(unittest.TestCase):
 
 
 class TestFitAnswer(unittest.TestCase):
-    def answer(self, result_chars: int) -> MessageModel:
-        tool_result = ToolResultContentModel(
-            content_type="toolResult",
-            body=ToolResultContentModelBody(
-                tool_use_id="t",
-                content=[TextToolResultModel(text="x" * result_chars)],
-                status="success",
-            ),
-        )
+    def answer(self, *result_chars: int) -> MessageModel:
+        """An answer with one tool result per size, from tools t0, t1, ..."""
+        tool_results = [
+            ToolResultContentModel(
+                content_type="toolResult",
+                body=ToolResultContentModelBody(
+                    tool_use_id=f"t{i}",
+                    content=[TextToolResultModel(text="x" * chars)],
+                    status="success",
+                ),
+            )
+            for i, chars in enumerate(result_chars)
+        ]
         answer = message("q")
-        answer.thinking_log = [SimpleMessageModel(role="user", content=[tool_result])]
+        answer.thinking_log = [SimpleMessageModel(role="user", content=tool_results)]
         return answer
 
     def conversation(self, answer: MessageModel) -> ConversationModel:
@@ -475,12 +479,14 @@ class TestFitAnswer(unittest.TestCase):
             should_continue=False,
         )
 
-    def tool_result_text(self, answer: MessageModel) -> str:
-        return answer.thinking_log[0].content[0].body.content[0].text  # type: ignore
+    def tool_result_text(self, answer: MessageModel, index: int = 0) -> str:
+        return answer.thinking_log[0].content[index].body.content[0].text  # type: ignore
 
-    def related_document(self, result_chars: int) -> RelatedDocumentModel:
+    def related_document(
+        self, result_chars: int, source_id: str = "t0@0"
+    ) -> RelatedDocumentModel:
         return RelatedDocumentModel(
-            content=TextToolResultModel(text="x" * result_chars), source_id="a@t"
+            content=TextToolResultModel(text="x" * result_chars), source_id=source_id
         )
 
     def test_keeps_the_tool_results_of_an_answer_that_fits(self):
@@ -505,6 +511,22 @@ class TestFitAnswer(unittest.TestCase):
         self.assertLess(
             len(conversation.model_dump_json()), chat_usecase.MAX_CONVERSATION_BYTES
         )
+
+    def test_omits_only_the_largest_results(self):
+        # A fetched page caused the overflow; the search chunks of another tool stay.
+        answer = self.answer(chat_usecase.MAX_CONVERSATION_BYTES, 1000)
+        conversation = self.conversation(answer)
+        page = self.related_document(1000, "t0")
+        chunk = self.related_document(1000, "t1@0")
+        chat_usecase.fit_answer(conversation, answer, [page, chunk])
+        self.assertEqual(
+            self.tool_result_text(answer, 0), chat_usecase.OMITTED_TOOL_RESULT
+        )
+        self.assertEqual(self.tool_result_text(answer, 1), "x" * 1000)
+        self.assertEqual(
+            page.content, TextToolResultModel(text=chat_usecase.OMITTED_TOOL_RESULT)
+        )
+        self.assertEqual(chunk.content, TextToolResultModel(text="x" * 1000))
 
     def test_stores_the_answer_with_the_results_omitted(self):
         answer = self.answer(chat_usecase.MAX_CONVERSATION_BYTES)
