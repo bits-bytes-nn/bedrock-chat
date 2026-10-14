@@ -27,7 +27,7 @@ This fork of [aws-samples/bedrock-chat](https://github.com/aws-samples/bedrock-c
 - A per-user limit on bots with dedicated knowledge bases, `maxDedicatedKnowledgeBasesPerUser` ([limit](#limit-dedicated-knowledge-bases)).
 - CloudWatch alarms, including a daily chat cost alarm, and API throttling ([alarms](#alarms-and-api-throttling)).
 - WebSocket connections need a valid ID token at `$connect` ([alarms and throttling](#alarms-and-api-throttling)).
-- The REST API allows CORS only from the app origins and `http://localhost:5173` ([local development](./docs/LOCAL_DEVELOPMENT.md#frontend-development)).
+- The HTTP API allows CORS only from the app origins and `http://localhost:5173` ([local development](./docs/LOCAL_DEVELOPMENT.md#frontend-development)).
 - Published APIs default to 10 requests per second with a burst of 20, and alarm on failed answers ([API publication](./docs/PUBLISH_API.md#architecture)).
 - Usage analysis exports expire after `usageAnalysisRetentionDays` (default 90) ([retention](#usage-analysis-retention)).
 - A script that deletes a user's conversations and bots ([deleting a user's data](./docs/ADMINISTRATOR.md#deleting-a-users-data)).
@@ -112,6 +112,10 @@ Chat attachments and bot knowledge files can also be PowerPoint presentations (`
 - Recordings are transcribed with Amazon Transcribe (up to 500 MB). The spoken language is identified among Korean, English, Japanese and Chinese, and speakers are labeled.
 
 A knowledge file is registered as `<filename>.txt`. A chat attachment is sent as text. Transcription runs in the Bedrock Region and is billed per minute of audio; see [Amazon Transcribe pricing](https://aws.amazon.com/transcribe/pricing/).
+
+### Size limits
+
+The attachments of one message may total 3 MB, counting the text of converted presentations and recordings, so the transcript of a long recording may not fit; add such files to a bot's knowledge instead. A conversation may grow to 5 MiB. Beyond these limits, remove attachments or start a new conversation.
 
 ### Knowledge base parsing
 
@@ -243,7 +247,7 @@ aws cognito-idp admin-add-user-to-group --user-pool-id <user-pool-id> --username
 > Self sign-up is disabled by default. If you enable it with `--enable-self-register`, anyone who knows the URL can sign up, so also restrict IP addresses (`--ipv4-ranges`, `--ipv6-ranges`) and email domains (`--allowed-signup-email-domains`).
 
 > [!TIP]
-> If the `Frontend URL` does not appear or Bedrock Chat does not work properly, it may be a problem with the latest version. In this case, please add `--version "v3.0.0"` to the parameters and try deployment again.
+> If `bin.sh` reports a build status other than `SUCCEEDED` or prints no `Frontend URL`, find the failed command in the build log whose group and stream `bin.sh` prints. Fix the cause and run `bin.sh` again with the same parameters. `--version` selects the branch or tag of `--repo-url` to deploy (default `v3`).
 
 ## Architecture
 
@@ -356,7 +360,7 @@ The traditional way to configure parameters is by editing the `cdk.json` file. T
 }
 ```
 
-To keep deployment-specific values out of Git, pass them with `-c` when you deploy, or put keys that `cdk.json` does not define (such as `alarmEmail`) in `cdk/cdk.context.json`, which Git ignores. Command-line context overrides `cdk.json`; `cdk.context.json` applies only to keys that are not in `cdk.json`:
+To keep deployment-specific values out of Git, pass them with `-c` when you deploy, or put keys that `cdk.json` does not define (such as `alarmEmail`) in `cdk/cdk.context.json`, which Git ignores. Command-line context overrides `cdk.json`; `cdk.context.json` applies only to keys that are not in `cdk.json`. None of these context values apply when the parameters come from `parameter.ts` (see below):
 
 ```sh
 npx cdk deploy --all -c bedrockRegion=ap-northeast-2
@@ -458,6 +462,8 @@ npx cdk deploy --all
 
 ### Upgrading an Existing Deployment
 
+See also [Upgrading](./docs/ADMINISTRATOR.md#upgrading) in the administrator guide.
+
 - **Shared knowledge bases of named environments**: An environment other than `default` now has its own shared knowledge base stack, `<envPrefix>-BrChatSharedKbStack`, in the Bedrock region. Before, every environment used `BrChatSharedKbStack`, and the bots of a named environment keep its knowledge base IDs until they sync again. To move them, set `SyncStatus='QUEUED'` on the environment's bots with a shared knowledge base and start its state machine (output `EmbeddingStateMachineArn`), as in [Multi-Tenant Usage of Knowledge Base](#multi-tenant-usage-of-knowledge-base). The old `BrChatSharedKbStack` is not removed. Delete it in CloudFormation only if no `default` environment is deployed in the same account and Bedrock region (it uses this stack), and no item in the bot table (output `BotTableNameV3`) of any environment has a `BedrockKnowledgeBase.knowledge_base_id` equal to one of the stack's `KnowledgeBaseId*` outputs.
 - **Values in `cdk.context.json`**: `cdk.json` now defines `defaultModel`, `titleModel`, `logoPath`, `dailyChatCostAlarmUsd`, `maxDedicatedKnowledgeBasesPerUser`, `usageAnalysisRetentionDays`, `apiThrottleRateLimit` and `apiThrottleBurstLimit`. Values for these keys in `cdk/cdk.context.json` are ignored because `cdk.json` wins; move them into `cdk.json` or pass them with `-c`.
 
@@ -465,7 +471,7 @@ npx cdk deploy --all
 
 ### Remove resources
 
-Delete the resources that the application created at runtime first, because they keep billing and `cdk destroy` does not know about them: delete every bot with a knowledge base and every published API in the app, or delete the stacks in [CloudFormation](https://console.aws.amazon.com/cloudformation/home): `BrChatKbStack*` and `BrChatSharedKbStack` (`<envPrefix>-BrChatSharedKbStack` in a named environment) in the Bedrock region, and `ApiPublishmentStack*` in the deployment region.
+Delete the resources that the application created at runtime first, because they keep billing and `cdk destroy` does not know about them: delete every bot with a knowledge base and every published API in the app, or delete their stacks in [CloudFormation](https://console.aws.amazon.com/cloudformation/home): `BrChatKbStack*` in the Bedrock region and `ApiPublishmentStack*` in the deployment region. In either case, also delete `BrChatSharedKbStack` (`<envPrefix>-BrChatSharedKbStack` in a named environment) in the Bedrock region. CodeBuild creates it for shared knowledge bases, and deleting bots does not remove it.
 
 Then run `npx cdk destroy --all` in `cdk`. Without the CDK, delete `BedrockChatStack`, `BedrockRegionResourcesStack` and `FrontendWafStack` in CloudFormation. Please note that `FrontendWafStack` is in `us-east-1` region.
 
@@ -617,20 +623,21 @@ bedrockChatParams.set("default", {
 
 CloudWatch alarms notify an SNS topic (output `AlarmTopicArn`) when:
 
-- the REST API answers with server errors (5xx);
+- the HTTP API answers with server errors (5xx);
 - generating chat answers fails repeatedly;
 - the WebSocket chat Lambda fails, for example with a timeout or out of memory;
 - Lambda concurrency limits throttle chat requests (these are not the API Gateway 429 responses caused by `apiThrottleRateLimit`);
 - the knowledge sync state machine fails, times out or is aborted, or a bot's knowledge sync fails;
+- the knowledge base sync status update fails. This can mean that the knowledge base stack of a deleted bot was left behind; look for `BrChatKbStack*` stacks without a bot;
 - the resources of a deleted bot could not be removed;
 - the hourly conversation export for usage analysis fails;
 - updating the usage counts of bots fails at least 5 times in an hour (the answers are still saved);
 - a day of chat answers costs at least `dailyChatCostAlarmUsd` (default 100 USD; 0 turns it off). The cost is computed with the model prices in the backend and includes published APIs;
 - a published API fails to answer or its Lambda functions fail. These alarms are in each `ApiPublishmentStack*` stack ([API publication](./docs/PUBLISH_API.md#architecture)).
 
-Set `alarmEmail` to subscribe an email address; AWS sends a confirmation email first.
+Set `alarmEmail` to subscribe an email address; AWS sends a confirmation email first. To recover a bot from a failed or stuck sync, see [Knowledge sync recovery](./docs/ADMINISTRATOR.md#knowledge-sync-recovery).
 
-The REST and WebSocket APIs are limited to `apiThrottleRateLimit` requests per second (default 500) with a burst of `apiThrottleBurstLimit` (default 1000). Raise them for large deployments. The WebSocket API rejects connections at `$connect` unless they pass a valid Cognito ID token.
+The HTTP and WebSocket APIs are limited to `apiThrottleRateLimit` requests per second (default 500) with a burst of `apiThrottleBurstLimit` (default 1000). Raise them for large deployments. The WebSocket API rejects connections at `$connect` unless they pass a valid Cognito ID token.
 
 ```typescript
 bedrockChatParams.set("default", {
@@ -641,7 +648,13 @@ bedrockChatParams.set("default", {
 ```
 
 > [!Important]
-> Defining the `default` environment in `parameter.ts` replaces every setting in `cdk.json`, including IP restrictions. To change a single setting, add it to `cdk.json` instead. Keep `alarmEmail` in `cdk/cdk.context.json` (ignored by Git), for example `{"alarmEmail": "ops@example.com"}`: values given with `-c` or `--cdk-json-override` apply to that deployment only, and deploying again without them removes the email subscription. `-c` works for strings, numbers and `true`/`false`; set lists and objects in `cdk.json` or with `--cdk-json-override`.
+> Defining the `default` environment in `parameter.ts` replaces every setting in `cdk.json`, including IP restrictions. To change a single setting, add it to `cdk.json` instead. Where to keep `alarmEmail` depends on where the parameters come from:
+>
+> - `parameter.ts` (a `default` entry, or an environment selected with `-c envName=...`): set it in the entry. Values in `cdk.json`, `cdk.context.json` and `-c` are ignored.
+> - `cdk.json`: keep it in `cdk/cdk.context.json` (ignored by Git), for example `{"alarmEmail": "ops@example.com"}`.
+> - `bin.sh`: CodeBuild deploys a fresh clone of `--repo-url`, which has no `cdk.context.json`. Pass `--cdk-json-override '{"context": {"alarmEmail": "ops@example.com"}}'` on every run, or commit the value in your fork.
+>
+> Values given with `-c` or `--cdk-json-override` apply to that deployment only, and deploying again without them removes the email subscription. `-c` works for strings, numbers and `true`/`false`; set lists and objects in `cdk.json` or with `--cdk-json-override`.
 
 ### Limit dedicated knowledge bases
 

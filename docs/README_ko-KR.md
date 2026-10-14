@@ -1,5 +1,5 @@
 > [!NOTE]
-> 이 번역은 upstream aws-samples 프로젝트 기준이며, 배포 절차와 보안 기본값만 이 포크에 맞게 고쳤습니다. 모델 목록과 그 밖의 최신 내용은 [영어 README](../README.md)를 기준으로 합니다. 이 포크에서 바뀐 점은 [Changes from upstream](../README.md#changes-from-upstream), 프레젠테이션·녹음 변환은 [Presentations and recordings](../README.md#presentations-and-recordings), 지식 기반 파싱 모델은 [Knowledge base parsing](../README.md#knowledge-base-parsing), 알람과 API 요청 제한은 [Alarms and API Throttling](../README.md#alarms-and-api-throttling), 사용자별 전용 지식 기반 수 제한은 [Limit dedicated knowledge bases](../README.md#limit-dedicated-knowledge-bases)를 참고하세요. 업그레이드 시 주의 사항은 [업그레이드](./ADMINISTRATOR_ko-KR.md#업그레이드), 사용자 데이터 삭제 방법은 [사용자 데이터 삭제](./ADMINISTRATOR_ko-KR.md#사용자-데이터-삭제)에 정리되어 있습니다.
+> 이 번역은 upstream aws-samples 프로젝트 기준이며, 배포 절차와 보안 기본값만 이 포크에 맞게 고쳤습니다. 모델 목록과 그 밖의 최신 내용은 [영어 README](../README.md)를 기준으로 합니다. 이 포크에서 바뀐 점은 [Changes from upstream](../README.md#changes-from-upstream), 프레젠테이션·녹음 변환은 [Presentations and recordings](../README.md#presentations-and-recordings), 첨부 파일과 대화 크기 제한은 [Size limits](../README.md#size-limits), 지식 기반 파싱 모델은 [Knowledge base parsing](../README.md#knowledge-base-parsing), 알람과 API 요청 제한은 [Alarms and API Throttling](../README.md#alarms-and-api-throttling), 사용자별 전용 지식 기반 수 제한은 [Limit dedicated knowledge bases](../README.md#limit-dedicated-knowledge-bases)를 참고하세요. 업그레이드 시 주의 사항은 [업그레이드](./ADMINISTRATOR_ko-KR.md#업그레이드), 사용자 데이터 삭제 방법은 [사용자 데이터 삭제](./ADMINISTRATOR_ko-KR.md#사용자-데이터-삭제)에 정리되어 있습니다.
 
 <h1 align="center">Bedrock Chat (BrChat)</h1>
 
@@ -99,7 +99,7 @@ chmod +x bin.sh
 ```
 
 > [!IMPORTANT]
-> `bin.sh`는 `--repo-url`의 저장소를 배포하며 기본값은 upstream aws-samples/bedrock-chat입니다. 이 포크를 배포하려면 `./bin.sh --repo-url https://github.com/bits-bytes-nn/bedrock-chat.git`처럼 URL을 지정하세요.
+> `bin.sh`는 `--repo-url`의 저장소를 배포하며 기본값은 upstream aws-samples/bedrock-chat입니다. 이 포크를 배포하려면 `./bin.sh --repo-url https://github.com/bits-bytes-nn/bedrock-chat.git`처럼 URL을 지정하세요. 배포가 끝나면 `bin.sh`는 관리자 권한을 가진 CodeBuild 프로젝트가 들어 있는 `CodeBuildForDeploy` 스택을 삭제합니다.
 
 - 새로운 사용자인지 v3 사용자인지 묻는 메시지가 표시됩니다. v0 이전 버전의 기존 사용자가 아닌 경우 `y`를 입력하세요.
 
@@ -183,7 +183,7 @@ aws cognito-idp admin-add-user-to-group --user-pool-id <user-pool-id> --username
 > 자체 가입은 기본적으로 꺼져 있습니다. `--enable-self-register`로 켜면 URL을 아는 누구나 가입할 수 있으므로 IP 주소 제한(`--ipv4-ranges`, `--ipv6-ranges`)과 이메일 도메인 제한(`--allowed-signup-email-domains`)을 함께 설정하세요.
 
 > [!TIP]
-> `Frontend URL`이 나타나지 않으면 CodeBuild 로그에서 실패한 단계를 확인한 뒤 배포를 다시 시도하세요.
+> `bin.sh`가 보고한 빌드 상태가 `SUCCEEDED`가 아니거나 `Frontend URL`이 출력되지 않으면, `bin.sh`가 출력한 로그 그룹과 로그 스트림에서 실패한 명령을 찾으세요. 원인을 해결한 뒤 같은 파라미터로 `bin.sh`를 다시 실행합니다. `--version`은 `--repo-url` 저장소에서 배포할 브랜치나 태그를 지정합니다(기본값 `v3`).
 
 ## 아키텍처
 
@@ -207,12 +207,12 @@ AWS 관리형 서비스를 기반으로 구축된 아키텍처로, 인프라 관
 
 Super-easy Deployment는 내부적으로 CDK를 사용하여 배포를 수행하기 위해 [AWS CodeBuild](https://aws.amazon.com/codebuild/)를 사용합니다. 이 섹션에서는 CDK를 직접 사용하여 배포하는 절차를 설명합니다.
 
-- UNIX, Docker 및 Node.js 런타임 환경이 필요합니다.
+- UNIX, Docker와 Node.js 22 런타임 환경이 필요합니다.
 
 > [!Important]
 > 배포 중 로컬 환경에 저장 공간이 부족한 경우 CDK 부트스트래핑에서 오류가 발생할 수 있습니다. 배포 전에 인스턴스의 볼륨 크기를 확장하는 것을 권장합니다.
 
-- 이 저장소를 복제합니다
+- 이 저장소를 복제합니다. 아래 URL은 upstream 프로젝트이므로, 이 포크를 배포하려면 포크의 URL을 사용하세요.
 
 ```
 git clone https://github.com/aws-samples/bedrock-chat
@@ -256,7 +256,7 @@ npx cdk deploy --require-approval never --all
 ```
 
 > [!NOTE]
-> 배포 환경별 값은 `-c`로 넘기세요(예: `npx cdk deploy --all -c bedrockRegion=ap-northeast-2`). 명령행 컨텍스트는 `cdk.json`보다 우선하지만, `cdk.context.json`의 값은 `cdk.json`에 같은 키가 있으면 적용되지 않습니다. 숫자와 `true`/`false` 값은 `-c`로 넘길 수 있지만, 목록과 객체(예: `allowedIpV4AddressRanges`)는 `cdk.json`이나 `--cdk-json-override`로 지정해야 합니다.
+> 배포 환경별 값은 `-c`로 넘기세요(예: `npx cdk deploy --all -c bedrockRegion=ap-northeast-2`). 명령행 컨텍스트는 `cdk.json`보다 우선하지만, `cdk.context.json`의 값은 `cdk.json`에 같은 키가 있으면 적용되지 않습니다. 숫자와 `true`/`false` 값은 `-c`로 넘길 수 있지만, 목록과 객체(예: `allowedIpV4AddressRanges`)는 `cdk.json`이나 `--cdk-json-override`로 지정해야 합니다. 파라미터를 `parameter.ts`에서 가져오는 경우(`default` 항목이 있거나 `-c envName=...`을 지정한 경우)에는 `cdk.json`, `cdk.context.json`, `-c` 값이 모두 무시됩니다. `alarmEmail`을 어디에 둘지는 [Alarms and API Throttling](../README.md#alarms-and-api-throttling)을 참고하세요.
 
 - 다음과 같은 출력이 표시됩니다. 웹 앱의 URL은 `BedrockChatStack.FrontendURL`에 출력되므로 브라우저에서 접속하시기 바랍니다.
 
@@ -392,6 +392,8 @@ npx cdk deploy --all
 
 ### 기존 배포 업그레이드
 
+관리자 가이드의 [업그레이드](./ADMINISTRATOR_ko-KR.md#업그레이드)도 함께 참고하세요.
+
 - **이름 있는 환경의 공유 지식 기반**: `default`가 아닌 환경은 이제 Bedrock 리전에 자체 공유 지식 기반 스택 `<envPrefix>-BrChatSharedKbStack`을 사용합니다. 이전에는 모든 환경이 `BrChatSharedKbStack`을 사용했으며, 이름 있는 환경의 봇은 다시 동기화될 때까지 이 스택의 지식 기반 ID를 그대로 가집니다. 옮기려면 해당 환경에서 공유 지식 기반을 쓰는 봇에 `SyncStatus='QUEUED'`를 지정하고, 그 환경의 상태 머신(출력 `EmbeddingStateMachineArn`)을 시작하세요. 명령은 [README의 Multi-Tenant Usage of Knowledge Base](../README.md#multi-tenant-usage-of-knowledge-base)를 참고하세요. 기존 `BrChatSharedKbStack`은 자동으로 삭제되지 않습니다. 같은 계정과 Bedrock 리전에 `default` 환경이 배포되어 있지 않고(이 환경이 이 스택을 사용합니다), 모든 환경의 봇 테이블(출력 `BotTableNameV3`)에서 `BedrockKnowledgeBase.knowledge_base_id`가 이 스택의 `KnowledgeBaseId*` 출력값과 같은 항목이 없을 때만 CloudFormation에서 삭제하세요.
 - **`cdk.context.json`의 값**: 이제 `cdk.json`에 `defaultModel`, `titleModel`, `logoPath`, `dailyChatCostAlarmUsd`, `maxDedicatedKnowledgeBasesPerUser`, `usageAnalysisRetentionDays`, `apiThrottleRateLimit`, `apiThrottleBurstLimit`가 정의되어 있습니다. `cdk/cdk.context.json`에 둔 이 키의 값은 `cdk.json`이 우선하므로 적용되지 않습니다. `cdk.json`으로 옮기거나 `-c`로 넘기세요.
 
@@ -399,7 +401,7 @@ npx cdk deploy --all
 
 ### 리소스 제거
 
-애플리케이션이 실행 중에 만든 리소스를 먼저 삭제하세요. 비용이 계속 발생하고 `cdk destroy`로는 삭제되지 않습니다. 앱에서 지식 기반이 있는 봇과 게시한 API를 모두 삭제하거나, [CloudFormation](https://console.aws.amazon.com/cloudformation/home)에서 Bedrock 리전의 `BrChatKbStack*`, `BrChatSharedKbStack`(이름 있는 환경에서는 `<envPrefix>-BrChatSharedKbStack`) 스택과 배포 리전의 `ApiPublishmentStack*` 스택을 삭제합니다.
+애플리케이션이 실행 중에 만든 리소스를 먼저 삭제하세요. 비용이 계속 발생하고 `cdk destroy`로는 삭제되지 않습니다. 앱에서 지식 기반이 있는 봇과 게시한 API를 모두 삭제하거나, [CloudFormation](https://console.aws.amazon.com/cloudformation/home)에서 Bedrock 리전의 `BrChatKbStack*` 스택과 배포 리전의 `ApiPublishmentStack*` 스택을 삭제합니다. 어느 쪽이든 Bedrock 리전의 `BrChatSharedKbStack`(이름 있는 환경에서는 `<envPrefix>-BrChatSharedKbStack`) 스택도 따로 삭제하세요. 이 스택은 공유 지식 기반용으로 CodeBuild가 만들며, 봇을 삭제해도 남습니다.
 
 그다음 `cdk`에서 `npx cdk destroy --all`을 실행하세요. CDK를 사용하지 않는 경우 CloudFormation에서 `BedrockChatStack`, `BedrockRegionResourcesStack`, `FrontendWafStack`을 삭제하세요. `FrontendWafStack`은 `us-east-1` 리전에 있다는 점에 유의하세요.
 
