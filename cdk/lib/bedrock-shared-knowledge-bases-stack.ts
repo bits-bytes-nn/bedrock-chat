@@ -8,7 +8,6 @@ import {
 } from "@cdklabs/generative-ai-cdk-constructs/lib/cdk-lib/opensearch-vectorindex";
 import { VectorCollectionStandbyReplicas } from "@cdklabs/generative-ai-cdk-constructs/lib/cdk-lib/opensearchserverless";
 import * as s3 from "aws-cdk-lib/aws-s3";
-import * as logs from "aws-cdk-lib/aws-logs";
 import {
   BedrockFoundationModel,
   CustomTransformation,
@@ -23,6 +22,7 @@ import {
 } from "@cdklabs/generative-ai-cdk-constructs/lib/cdk-lib/bedrock";
 
 import * as path from "path";
+import { lambdaLogGroup } from "./utils/lambda-log-group";
 
 interface BedrockSharedKnowledgeBasesStackProps extends StackProps {
   // Base configuration
@@ -130,7 +130,7 @@ class SharedKnowledgeBase extends Construct {
       depsLockFilePath: path.resolve(__dirname, '../lambda/knowledge-base-custom-transformation/package-lock.json'),
 
       timeout: Duration.minutes(15),
-      logRetention: logs.RetentionDays.THREE_MONTHS,
+      logGroup: lambdaLogGroup(this, "TransformationFunctionLogGroup"),
     });
     props.documentBucket.grantReadWrite(transformationFunction);
     tempBucket.grantReadWrite(transformationFunction);

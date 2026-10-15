@@ -984,7 +984,7 @@ How would you categorize this email?`,
         'The total file size must be no more than {{maxSize}}.',
       attachment: {
         fileSizeExceeded:
-          'Each document size must be no more than {{maxSize}}.',
+          'Each file must be no more than {{maxSize}}.',
         fileCountExceeded: 'Could not upload more than {{maxCount}} files.',
         conversionFailed: 'Could not convert {{fileName}} to text.',
       },

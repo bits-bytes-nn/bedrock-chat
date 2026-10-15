@@ -380,9 +380,7 @@ def modify_owned_bot(
     # 'sync_status = "QUEUED"' will execute embeding process and update dynamodb record.
     # 'sync_status= "SUCCEEDED"' will update only dynamodb record.
     # A failed or stuck sync is retried even if nothing changed, or saving would
-    # hide it. Only admins can save a bot whose sync is queued or running. A retry
-    # synchronizes the whole data source with S3, as ingesting only this save's
-    # file changes would keep the files deleted before the failed sync.
+    # hide it. Only admins can save a bot whose sync is queued or running.
     is_retry = bot.sync_status != "SUCCEEDED"
     sync_status: type_sync_status = (
         "QUEUED"
@@ -453,20 +451,14 @@ def modify_owned_bot(
     )
 
     if sync_status == "QUEUED":
-        # Without file changes, the state machine starts an ingestion job, which
-        # also removes files deleted before a failed sync. It does so only for a
-        # dedicated knowledge base: the data source of a shared one spans the
-        # documents of every bot.
-        full_sync = is_retry and not (
-            updated_kb is not None and updated_kb.type == "shared"
-        )
-        # If necessary, start the Embedding state machine.
+        # If necessary, start the Embedding state machine. Its ingestion also
+        # removes the files deleted before a failed sync.
         start_embedding_state_machine(
             user_id=bot.owner_user_id,
             bot_id=bot.id,
-            added_filenames=[] if full_sync else added_filenames,
-            unchanged_filenames=[] if full_sync else unchanged_filenames,
-            deleted_filenames=[] if full_sync else deleted_filenames,
+            added_filenames=added_filenames,
+            unchanged_filenames=unchanged_filenames,
+            deleted_filenames=deleted_filenames,
             # A bot on a shared knowledge base gets its data sources only from the
             # shared flow, so file changes and retries need it even when the
             # knowledge base itself is unchanged.

@@ -16,7 +16,6 @@ import {
 } from "aws-cdk-lib/aws-cognito";
 import * as iam from "aws-cdk-lib/aws-iam";
 import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
-import * as logs from "aws-cdk-lib/aws-logs";
 import { Runtime, Code, SingletonFunction } from "aws-cdk-lib/aws-lambda";
 import { PythonFunction } from "@aws-cdk/aws-lambda-python-alpha";
 import { Construct } from "constructs";
@@ -24,6 +23,7 @@ import * as path from "path";
 import * as fs from "fs";
 import { Idp, TIdentityProvider } from "../utils/identity-provider";
 import * as wafv2 from "aws-cdk-lib/aws-wafv2";
+import { lambdaLogGroup } from "../utils/lambda-log-group";
 
 export interface AuthProps {
   readonly origin: string;
@@ -182,7 +182,7 @@ export class Auth extends Construct {
               props.allowedSignUpEmailDomains
             ),
           },
-          logRetention: logs.RetentionDays.THREE_MONTHS,
+          logGroup: lambdaLogGroup(this, "CheckEmailDomainLogGroup"),
         }
       );
 
@@ -239,7 +239,7 @@ export class Auth extends Construct {
             USER_POOL_ID: userPool.userPoolId,
             AUTO_JOIN_USER_GROUPS: JSON.stringify(props.autoJoinUserGroups),
           },
-          logRetention: logs.RetentionDays.THREE_MONTHS,
+          logGroup: lambdaLogGroup(this, "AddUserToGroupsLogGroup"),
         }
       );
       addUserToGroupsFunction.addPermission("CognitoTrigger", {
@@ -275,7 +275,7 @@ export class Auth extends Construct {
           },
 
           timeout: Duration.minutes(1),
-          logRetention: logs.RetentionDays.THREE_MONTHS,
+          logGroup: lambdaLogGroup(this, "CognitoTriggerRegistrationFunctionLogGroup"),
         }
       );
       userPool.grant(

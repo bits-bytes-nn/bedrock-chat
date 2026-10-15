@@ -21,7 +21,6 @@ import { WebAclForCognito } from "./constructs/webacl-for-cognito";
 import { WebAclForPublishedApi } from "./constructs/webacl-for-published-api";
 import * as s3deploy from "aws-cdk-lib/aws-s3-deployment";
 import * as iam from "aws-cdk-lib/aws-iam";
-import * as logs from "aws-cdk-lib/aws-logs";
 import * as path from "path";
 import { BedrockCustomBotCodebuild } from "./constructs/bedrock-custom-bot-codebuild";
 import { BedrockSharedKnowledgeBasesCodebuild } from "./constructs/bedrock-shared-knowledge-bases-codebuild";
@@ -30,6 +29,7 @@ import { Duration } from "aws-cdk-lib";
 import { metricsNamespace } from "./utils/metrics";
 import { Monitoring } from "./constructs/monitoring";
 import { ThrottleSettings } from "aws-cdk-lib/aws-apigatewayv2";
+import { lambdaLogGroup } from "./utils/lambda-log-group";
 
 export interface BedrockChatStackProps extends StackProps {
   readonly envName: string;
@@ -128,7 +128,7 @@ export class BedrockChatStack extends cdk.Stack {
         }),
       ],
       destinationBucket: sourceBucket,
-      logRetention: logs.RetentionDays.THREE_MONTHS,
+      logGroup: lambdaLogGroup(this, "SourceDeployLogGroup"),
     });
     // CodeBuild used for api publication
     const apiPublishCodebuild = new ApiPublishCodebuild(

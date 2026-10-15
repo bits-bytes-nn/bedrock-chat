@@ -207,10 +207,11 @@ const InputChatContent = forwardRef<HTMLElement, Props>(
         if (getTotalFileSizeToSend() + size <= MAX_FILE_SIZE_TO_SEND_BYTES) {
           return true;
         }
+        const maxSize = `${MAX_FILE_SIZE_TO_SEND_MB} MB`;
         open(
-          t('error.totalFileSizeToSendExceeded', {
-            maxSize: `${MAX_FILE_SIZE_TO_SEND_MB} MB`,
-          })
+          size > MAX_FILE_SIZE_TO_SEND_BYTES
+            ? t('error.attachment.fileSizeExceeded', { maxSize })
+            : t('error.totalFileSizeToSendExceeded', { maxSize })
         );
         return false;
       },

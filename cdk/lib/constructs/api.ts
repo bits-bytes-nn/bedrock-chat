@@ -43,6 +43,7 @@ import {
   firecrawlSecretPolicyStatement,
 } from "../utils/bedrock-policies";
 import { CfnStage, ThrottleSettings } from "aws-cdk-lib/aws-apigatewayv2";
+import { lambdaLogGroup } from "../utils/lambda-log-group";
 
 export interface ApiProps {
   readonly database: Database;
@@ -248,7 +249,7 @@ export class Api extends Construct {
         PORT: "8000",
       },
       role: handlerRole,
-      logRetention: logs.RetentionDays.THREE_MONTHS,
+      logGroup: lambdaLogGroup(this, "HandlerV2LogGroup"),
       snapStart: props.enableLambdaSnapStart
         ? SnapStartConf.ON_PUBLISHED_VERSIONS
         : undefined,
