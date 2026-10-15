@@ -13,13 +13,13 @@ import { Platform } from "aws-cdk-lib/aws-ecr-assets";
 import * as wafv2 from "aws-cdk-lib/aws-wafv2";
 import * as sqs from "aws-cdk-lib/aws-sqs";
 import * as s3 from "aws-cdk-lib/aws-s3";
-import * as logs from "aws-cdk-lib/aws-logs";
 import { excludeDockerImage } from "./constants/docker";
 import { apiPublishmentStackPrefix } from "./utils/stack-names";
 import {
   bedrockChatPolicyStatement,
   firecrawlSecretPolicyStatement,
 } from "./utils/bedrock-policies";
+import { lambdaLogGroup } from "./utils/lambda-log-group";
 
 interface ApiPublishmentStackProps extends StackProps {
   readonly bedrockRegion: string;
@@ -160,7 +160,7 @@ export class ApiPublishmentStack extends Stack {
         TABLE_ACCESS_ROLE_ARN: props.tableAccessRoleArn,
       },
       role: apiHandlerRole,
-      logRetention: logs.RetentionDays.THREE_MONTHS,
+      logGroup: lambdaLogGroup(this, "ApiHandlerLogGroup"),
     });
 
     // Handler for SQS consumer
@@ -201,7 +201,7 @@ export class ApiPublishmentStack extends Stack {
           ...props.modelEnvironment,
         },
         role: handlerRole,
-        logRetention: logs.RetentionDays.THREE_MONTHS,
+        logGroup: lambdaLogGroup(this, "SqsConsumeHandlerLogGroup"),
       }
     );
     // Failures that the consumer records for the client end the message normally,

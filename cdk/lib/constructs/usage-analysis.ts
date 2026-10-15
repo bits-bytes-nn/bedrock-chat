@@ -11,7 +11,7 @@ import { IFunction, Runtime } from "aws-cdk-lib/aws-lambda";
 import { aws_glue } from "aws-cdk-lib";
 import { Database } from "./database";
 import * as iam from "aws-cdk-lib/aws-iam";
-import * as logs from "aws-cdk-lib/aws-logs";
+import { lambdaLogGroup } from "../utils/lambda-log-group";
 
 export interface UsageAnalysisProps {
   envPrefix: string;
@@ -258,7 +258,7 @@ export class UsageAnalysis extends Construct {
         BUCKET_NAME: ddbBucket.bucketName,
         TABLE_ARN: props.sourceDatabase.conversationTable.tableArn,
       },
-      logRetention: logs.RetentionDays.THREE_MONTHS,
+      logGroup: lambdaLogGroup(this, "ExportHandlerLogGroup"),
     });
     exportHandler.role?.addToPrincipalPolicy(
       new iam.PolicyStatement({

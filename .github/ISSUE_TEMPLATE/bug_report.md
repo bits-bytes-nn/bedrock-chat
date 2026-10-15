@@ -31,8 +31,10 @@ If applicable, add screenshots to help explain your problem.
 
 If the issue occurs during a chat interaction, please check the following logs on Amazon Cloudwatch Logs and include the relevant entries in your issue:
 
-- `/aws/lambda/BedrockChatStack-BackendApiHandlerXXXX`
-- `/aws/lambda/BedrockChatStack-WebSocketHandlerXXXX`
+- The log group whose name contains `BackendApiHandlerV2LogGroup`
+- The log group whose name contains `WebSocketHandlerV2LogGroup`
+
+Deployments before the log groups were defined in the stack also have the `/aws/lambda/BedrockChatStack-*` log groups, which keep the earlier logs.
 
 ## 🔎 Logs for Bot Creation/Update Issues
 

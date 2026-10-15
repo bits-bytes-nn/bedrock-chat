@@ -18,6 +18,7 @@ import {
   bedrockChatPolicyStatement,
   firecrawlSecretPolicyStatement,
 } from "../utils/bedrock-policies";
+import { lambdaLogGroup } from "../utils/lambda-log-group";
 
 export interface WebSocketProps {
   readonly database: Database;
@@ -111,7 +112,7 @@ export class WebSocket extends Construct {
       snapStart: props.enableLambdaSnapStart
         ? SnapStartConf.ON_PUBLISHED_VERSIONS
         : undefined,
-      logRetention: logs.RetentionDays.THREE_MONTHS,
+      logGroup: lambdaLogGroup(this, "HandlerV2LogGroup"),
     });
 
     // Rejects connections without a valid ID token. Browsers cannot set headers on
@@ -131,7 +132,7 @@ export class WebSocket extends Construct {
         USER_POOL_ID: props.auth.userPool.userPoolId,
         CLIENT_ID: props.auth.client.userPoolClientId,
       },
-      logRetention: logs.RetentionDays.THREE_MONTHS,
+      logGroup: lambdaLogGroup(this, "ConnectAuthorizerLogGroup"),
     });
 
     const webSocketApi = new apigwv2.WebSocketApi(this, "WebSocketApi", {

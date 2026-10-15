@@ -36,6 +36,37 @@ const roleStatementsOf = (template: Template, fn: any): any[] => {
 const actionsOf = (statements: any[]): string[] =>
   statements.flatMap((statement: any) => [statement.Action].flat());
 
+/**
+ * Checks that a function sends its logs to the log group of this ID prefix, kept
+ * for 90 days, and that its role can write to the group.
+ */
+const expectFunctionLogsExpire = (template: Template, logGroupPrefix: string) => {
+  const logGroups = Object.entries(
+    template.findResources("AWS::Logs::LogGroup")
+  ).filter(([id]) => id.startsWith(logGroupPrefix));
+  expect(logGroups).toHaveLength(1);
+  const [logGroupId, logGroup] = logGroups[0] as [string, any];
+  expect(logGroup.Properties.RetentionInDays).toBe(90);
+  const functions = Object.values(
+    template.findResources("AWS::Lambda::Function", {
+      Properties: { LoggingConfig: { LogGroup: { Ref: logGroupId } } },
+    })
+  );
+  expect(functions).toHaveLength(1);
+  const roleId = (functions[0] as any).Properties.Role["Fn::GetAtt"][0];
+  const managedPolicies = JSON.stringify(
+    template.findResources("AWS::IAM::Role")[roleId].Properties.ManagedPolicyArns ?? []
+  );
+  const writesToGroup = roleStatementsOf(template, functions[0]).some(
+    (statement) =>
+      [statement.Action].flat().includes("logs:PutLogEvents") &&
+      JSON.stringify(statement.Resource).includes(logGroupId)
+  );
+  expect(
+    managedPolicies.includes("AWSLambdaBasicExecutionRole") || writesToGroup
+  ).toBe(true);
+};
+
 /** Chat stack with the settings of the default stack test, changed by `overrides`. */
 const newChatStack = (
   overrides: Partial<BedrockChatStackProps> = {}
@@ -366,17 +397,22 @@ describe("Bedrock Chat Stack Test", () => {
       })
     );
     expect(deployProjects).toHaveLength(3);
+    const logGroups = template.findResources("AWS::Logs::LogGroup");
     for (const project of deployProjects as any[]) {
-      expect(
-        project.Properties.LogsConfig.CloudWatchLogs.GroupName
-      ).toBeDefined();
+      const groupName = project.Properties.LogsConfig.CloudWatchLogs.GroupName;
+      expect(logGroups[groupName.Ref].Properties.RetentionInDays).toBe(90);
     }
-    template.resourcePropertiesCountIs(
-      "AWS::Logs::LogGroup",
-      { RetentionInDays: 90 },
-      // The three deploy projects, the API access logs and the state machine logs.
-      5
-    );
+    // The function logs expire as well.
+    for (const id of [
+      "WebSocketHandlerV2LogGroup",
+      "BackendApiHandlerV2LogGroup",
+      "EmbeddingSynchronizeDataSourceHandlerLogGroup",
+      "EmbeddingBotRemovalHandlerLogGroup",
+      "EmbeddingUpdateSyncStatusHandlerLogGroup",
+      "SourceDeployLogGroup",
+    ]) {
+      expectFunctionLogsExpire(template, id);
+    }
 
     // Secrets, bot store search and stack lookups are scoped to the resources that
     // the backend calls.
@@ -782,16 +818,10 @@ describe("Bedrock Chat Stack Test", () => {
     expect(actions).toContain("cognito-idp:AdminAddUserToGroup");
 
     // The registration function's logs expire as well.
-    const registrationFunctionId = Object.keys(
-      template.findResources("AWS::Lambda::Function")
-    ).find((id) => id.startsWith("CognitoTriggerRegistrationFunctiona84c6122"));
-    expect(registrationFunctionId).toBeDefined();
-    template.hasResourceProperties("Custom::LogRetention", {
-      LogGroupName: {
-        "Fn::Join": ["", ["/aws/lambda/", { Ref: registrationFunctionId }]],
-      },
-      RetentionInDays: 90,
-    });
+    expectFunctionLogsExpire(
+      template,
+      "AuthCognitoTriggerRegistrationFunctionLogGroup"
+    );
   });
 
   test("the Cognito trigger code fits in an inline CloudFormation function", () => {
@@ -1260,9 +1290,7 @@ describe("Bedrock Shared Knowledge Bases Stack", () => {
         Rules: [{ ExpirationInDays: 7, Status: "Enabled" }],
       },
     });
-    template.hasResourceProperties("Custom::LogRetention", {
-      RetentionInDays: 90,
-    });
+    expectFunctionLogsExpire(template, "KnowledgeBasehashTransformationFunctionLogGroup");
   });
 });
 
