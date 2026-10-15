@@ -978,7 +978,7 @@ const translation: typeof en = {
       totalFileSizeToSendExceeded:
         '전체 파일 크기는 {{maxSize}} 이하여야 합니다.',
       attachment: {
-        fileSizeExceeded: '각 문서 크기는 {{maxSize}} 이하여야 합니다.',
+        fileSizeExceeded: '각 파일 크기는 {{maxSize}} 이하여야 합니다.',
         fileCountExceeded:
           '파일은 최대 {{maxCount}}개까지 업로드할 수 있습니다.',
         conversionFailed: '{{fileName}}을(를) 텍스트로 변환하지 못했습니다.',
