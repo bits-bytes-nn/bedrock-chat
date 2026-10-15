@@ -256,7 +256,7 @@ def handle_check(event):
                     case "INDEXED":
                         pass
 
-                    case "PENDING" | "STARTING" | "IN_PROGRESS" | "PARTIALLY_INDEXED":
+                    case _ if status in INDEXING_STATUSES:
                         raise RetryException()
 
                     case _:
@@ -287,7 +287,7 @@ def handle_check(event):
                     case "NOT_FOUND":
                         pass
 
-                    case "PENDING" | "DELETING" | "DELETE_IN_PROGRESS":
+                    case _ if status == "PENDING" or status in DELETING_STATUSES:
                         raise RetryException()
 
                     case _:

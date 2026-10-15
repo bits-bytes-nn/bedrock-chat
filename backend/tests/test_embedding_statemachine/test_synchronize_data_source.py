@@ -47,6 +47,33 @@ class TestHandleCheck(unittest.TestCase):
         with self.assertRaises(synchronize_data_source.RetryException):
             self.check(job("IN_PROGRESS"))
 
+    def check_documents(self, status: str):
+        with patch.object(synchronize_data_source, "bedrock_agent") as agent:
+            agent.get_knowledge_base_documents.return_value = {
+                "documentDetails": [
+                    {"status": status, "identifier": {"s3": {"uri": "s3://b/k"}}}
+                ]
+            }
+            return synchronize_data_source.handle_check(
+                {
+                    "IngestionJob": {
+                        "KnowledgeBaseId": "kb",
+                        "DataSourceId": "ds",
+                        "DocumentsDiff": {"Added": ["s3://b/k"], "Deleted": []},
+                    }
+                }
+            )
+
+    def test_waits_for_documents_being_indexed(self):
+        with self.assertRaises(synchronize_data_source.RetryException):
+            self.check_documents("IN_PROGRESS")
+        self.assertIsNone(self.check_documents("INDEXED"))
+
+    def test_fails_when_a_document_is_partially_indexed(self):
+        # Waiting would not change the status: the sync must fail to be retried.
+        with self.assertRaisesRegex(Exception, "PARTIALLY_INDEXED"):
+            self.check_documents("PARTIALLY_INDEXED")
+
 
 class TestHandleIngest(unittest.TestCase):
     def start(self, execution_id: str) -> dict:

@@ -523,6 +523,17 @@ describe("Bedrock Chat Stack Test", () => {
     // Handlers answer errors without failing, so chat errors and failed bot syncs
     // are counted from their logs.
     template.resourceCountIs("AWS::Logs::MetricFilter", 2);
+    const logGroupIds = Object.keys(template.findResources("AWS::Logs::LogGroup"));
+    for (const prefix of [
+      "WebSocketHandlerV2LogGroup",
+      "EmbeddingUpdateSyncStatusHandlerLogGroup",
+    ]) {
+      const logGroupId = logGroupIds.find((id) => id.startsWith(prefix));
+      expect(logGroupId).toBeDefined();
+      template.hasResourceProperties("AWS::Logs::MetricFilter", {
+        LogGroupName: { Ref: logGroupId },
+      });
+    }
     // Failed bot removals are kept for investigation instead of being dropped.
     template.hasResourceProperties("AWS::Lambda::EventSourceMapping", {
       DestinationConfig: Match.objectLike({ OnFailure: Match.anyValue() }),
