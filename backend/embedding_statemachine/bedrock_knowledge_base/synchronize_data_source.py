@@ -37,12 +37,44 @@ def compose_upload_document_s3_uri(user_id: str, bot_id: str, filename: str) -> 
     return f"s3://{DOCUMENT_BUCKET}/{compose_upload_document_s3_path(user_id, bot_id, filename)}"
 
 
-def get_data_source_type(knowledge_base_id: str, data_source_id: str):
-    get_data_source_response = bedrock_agent.get_data_source(
+# Statuses of a document that a sync must ingest again.
+REINGEST_STATUSES = (
+    "NOT_FOUND",
+    "FAILED",
+    "PARTIALLY_INDEXED",
+    "METADATA_UPDATE_FAILED",
+    "METADATA_PARTIALLY_INDEXED",
+)
+# Statuses of a document that an earlier sync is still indexing or deleting.
+INDEXING_STATUSES = ("PENDING", "STARTING", "IN_PROGRESS")
+DELETING_STATUSES = ("DELETING", "DELETE_IN_PROGRESS")
+
+
+def reads_document_bucket(knowledge_base_id: str, data_source_id: str) -> bool:
+    """Whether the data source reads the bucket of the files uploaded to bots."""
+    data_source = bedrock_agent.get_data_source(
         knowledgeBaseId=knowledge_base_id,
         dataSourceId=data_source_id,
-    )
-    return get_data_source_response["dataSource"]["dataSourceConfiguration"]["type"]
+    )["dataSource"]
+    s3_configuration = data_source["dataSourceConfiguration"].get("s3Configuration", {})
+    return s3_configuration.get("bucketArn", "").endswith(f":::{DOCUMENT_BUCKET}")
+
+
+def list_document_statuses(
+    knowledge_base_id: str, data_source_id: str
+) -> dict[str, str]:
+    """Return the status of each S3 document in the data source by its URI."""
+    paginator = bedrock_agent.get_paginator("list_knowledge_base_documents")
+    return {
+        document["identifier"]["s3"]["uri"]: document["status"]
+        for page in paginator.paginate(
+            knowledgeBaseId=knowledge_base_id,
+            dataSourceId=data_source_id,
+            PaginationConfig={"PageSize": 1000},
+        )
+        for document in page["documentDetails"]
+        if "s3" in document["identifier"]
+    }
 
 
 def handle_ingest(event):
@@ -59,72 +91,53 @@ def handle_ingest(event):
     data_source_id = event["DataSourceId"]
 
     bot_files_diffs = event.get("FilesDiffs")
-    if (
-        bot_files_diffs
-        and get_data_source_type(
-            knowledge_base_id=knowledge_base_id,
-            data_source_id=data_source_id,
-        )
-        == "S3"
+    if bot_files_diffs and reads_document_bucket(
+        knowledge_base_id=knowledge_base_id,
+        data_source_id=data_source_id,
     ):
         # If the bot specifies which files should be ingested, perform direct ingestion.
+        statuses = list_document_statuses(knowledge_base_id, data_source_id)
         added_documents: list[str] = []
-        unchanged_documents: list[str] = []
         deleted_documents: list[str] = []
+        # The Check action also waits for the documents of an earlier sync.
+        documents_diff: DocumentsDiff = {
+            "Added": [],
+            "Deleted": [],
+        }
 
         for bot_files_diff in bot_files_diffs:
             user_id = bot_files_diff["OwnerUserId"]
             bot_id = bot_files_diff["BotId"]
+            files = [*bot_files_diff["Added"], *bot_files_diff["Unchanged"]]
+            bot_documents = {
+                compose_upload_document_s3_uri(user_id, bot_id, file) for file in files
+            }
 
             added_documents.extend(
                 compose_upload_document_s3_uri(user_id, bot_id, added_file)
                 for added_file in bot_files_diff["Added"]
             )
-            unchanged_documents.extend(
-                compose_upload_document_s3_uri(user_id, bot_id, unchanged_file)
-                for unchanged_file in bot_files_diff["Unchanged"]
-            )
-            deleted_documents.extend(
-                compose_upload_document_s3_uri(user_id, bot_id, deleted_file)
-                for deleted_file in bot_files_diff["Deleted"]
-            )
-
-        # If an 'unchanged' document doesn't actually exist or failed in an earlier
-        # sync, treat it as an 'added' document.
-        for i in range(0, len(unchanged_documents), DOCUMENTS_PER_REQUEST):
-            get_documents_response = bedrock_agent.get_knowledge_base_documents(
-                knowledgeBaseId=knowledge_base_id,
-                dataSourceId=data_source_id,
-                documentIdentifiers=[
-                    {
-                        "dataSourceType": "S3",
-                        "s3": {
-                            "uri": document_identifier,
-                        },
-                    }
-                    for document_identifier in islice(
-                        unchanged_documents, i, i + DOCUMENTS_PER_REQUEST
-                    )
-                ],
-            )
-            added_documents.extend(
-                document["identifier"]["s3"]["uri"]
-                for document in get_documents_response["documentDetails"]
-                if document["status"]
-                in (
-                    "NOT_FOUND",
-                    "FAILED",
-                    "PARTIALLY_INDEXED",
-                    "METADATA_UPDATE_FAILED",
-                    "METADATA_PARTIALLY_INDEXED",
+            for unchanged_file in bot_files_diff["Unchanged"]:
+                document = compose_upload_document_s3_uri(
+                    user_id, bot_id, unchanged_file
                 )
-                and "s3" in document["identifier"]
-            )
-
-        documents_diff: DocumentsDiff = {
-            "Added": [],
-            "Deleted": [],
-        }
+                status = statuses.get(document, "NOT_FOUND")
+                # If an 'unchanged' document doesn't actually exist or failed in an
+                # earlier sync, treat it as an 'added' document.
+                if status in REINGEST_STATUSES:
+                    added_documents.append(document)
+                elif status in INDEXING_STATUSES:
+                    documents_diff["Added"].append(document)
+            # Delete every document of the bot that it no longer has, not only the
+            # 'deleted' files of this save: the files deleted before a failed sync
+            # are still in the data source.
+            bot_prefix = compose_upload_document_s3_uri(user_id, bot_id, "")
+            for document, status in statuses.items():
+                if document.startswith(bot_prefix) and document not in bot_documents:
+                    if status in DELETING_STATUSES:
+                        documents_diff["Deleted"].append(document)
+                    else:
+                        deleted_documents.append(document)
 
         # Ingest 'added' documents to the data source.
         for i in range(0, len(added_documents), DOCUMENTS_PER_REQUEST):

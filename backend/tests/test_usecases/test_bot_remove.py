@@ -230,18 +230,11 @@ class TestDeleteDuringBuild(unittest.TestCase):
         _, start = self.save_unchanged("FAILED", "dedicated")
         self.assertFalse(start.call_args.kwargs["sync_shared_knowledge_bases_required"])
 
-    def test_a_retry_synchronizes_the_whole_dedicated_data_source(self):
-        # Without file lists the state machine starts an ingestion job, which also
-        # removes the files deleted before the failed sync.
-        _, start = self.save_unchanged("FAILED", "dedicated", ["new.pdf"])
-        kwargs = start.call_args.kwargs
-        self.assertEqual(kwargs["added_filenames"], [])
-        self.assertEqual(kwargs["unchanged_filenames"], [])
-        self.assertEqual(kwargs["deleted_filenames"], [])
-        # A shared data source holds the documents of every bot, so a retry ingests
-        # the files of this bot only.
-        for status in ("FAILED", "SUCCEEDED"):
-            _, start = self.save_unchanged(status, "shared", ["new.pdf"])
+    def test_a_retry_ingests_the_files_of_this_save(self):
+        # The ingestion removes the documents of files deleted before the failed
+        # sync, so a retry needs only the file lists of this save.
+        for knowledge_base in ("dedicated", "shared"):
+            _, start = self.save_unchanged("FAILED", knowledge_base, ["new.pdf"])
             self.assertEqual(start.call_args.kwargs["added_filenames"], ["new.pdf"])
 
 

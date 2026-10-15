@@ -30,6 +30,7 @@ export const bedrockIngestionPolicyStatement = (): iam.PolicyStatement =>
       "bedrock:StartIngestionJob",
       "bedrock:GetIngestionJob",
       "bedrock:GetKnowledgeBaseDocuments",
+      "bedrock:ListKnowledgeBaseDocuments",
       "bedrock:IngestKnowledgeBaseDocuments",
       "bedrock:DeleteKnowledgeBaseDocuments",
     ],
