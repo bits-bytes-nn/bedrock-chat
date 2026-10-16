@@ -36,7 +36,10 @@ import * as codebuild from "aws-cdk-lib/aws-codebuild";
 import * as sfn from "aws-cdk-lib/aws-stepfunctions";
 import { UsageAnalysis } from "./usage-analysis";
 import { excludeDockerImage, POETRY_VERSION } from "../constants/docker";
-import { PythonFunction } from "@aws-cdk/aws-lambda-python-alpha";
+import {
+  ICommandHooks,
+  PythonFunction,
+} from "@aws-cdk/aws-lambda-python-alpha";
 import { Database } from "./database";
 import {
   bedrockChatPolicyStatement,
@@ -75,6 +78,28 @@ export interface ApiProps {
   readonly maxDedicatedKnowledgeBasesPerUser: number;
   readonly metricsNamespace: string;
   readonly logoPath?: string;
+}
+
+// Lambda Web Adapter execs run.sh. Copy it to the zip root, strip CR, and mark
+// it executable so a Windows checkout cannot publish a CRLF non-executable script.
+export function backendHandlerBundlingHooks(): ICommandHooks {
+  return {
+    beforeBundling(): string[] {
+      return [];
+    },
+    afterBundling(inputDir: string, outputDir: string): string[] {
+      const source = `'${inputDir}/run.sh'`;
+      const target = `'${outputDir}/run.sh'`;
+      const normalized = `'${outputDir}/run.sh.lf'`;
+      return [
+        `test -f ${source}`,
+        `cp -f ${source} ${target}`,
+        `tr -d '\\r' < ${target} > ${normalized}`,
+        `mv ${normalized} ${target}`,
+        `chmod 755 ${target}`,
+      ];
+    },
+  };
 }
 
 export class Api extends Construct {
@@ -209,6 +234,7 @@ export class Api extends Construct {
       bundling: {
         assetExcludes: [...excludeDockerImage],
         buildArgs: { POETRY_VERSION },
+        commandHooks: backendHandlerBundlingHooks(),
       },
       runtime: Runtime.PYTHON_3_13,
       architecture: Architecture.X86_64,
