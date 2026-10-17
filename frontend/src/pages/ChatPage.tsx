@@ -569,7 +569,7 @@ const ChatPage: React.FC = () => {
 
             {isAvailabilityBot && !isLoadingBot && (
               <div className="absolute -top-1 right-0 flex h-full items-center">
-                <div className="h-full w-12 bg-gradient-to-r from-transparent to-aws-paper-light dark:to-aws-paper-dark"></div>
+                <div className="h-full w-12 bg-linear-to-r from-transparent to-aws-paper-light dark:to-aws-paper-dark"></div>
                 <div className="flex items-center bg-aws-paper-light dark:bg-aws-paper-dark">
                   {bot?.owned && (
                     <StatusSyncBot
@@ -722,7 +722,7 @@ const ChatPage: React.FC = () => {
                   </div>
 
                   <Button
-                    className="mt-2 shadow "
+                    className="mt-2 shadow-sm "
                     icon={<PiArrowsCounterClockwise />}
                     outlined
                     disabled={postingMessage}

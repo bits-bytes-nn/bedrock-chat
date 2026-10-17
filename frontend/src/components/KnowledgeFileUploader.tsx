@@ -211,7 +211,7 @@ const KnowledgeFileUploader: React.FC<Props> = (props) => {
         onDragOver={onDragOver}
         onDrop={onDrop}
         className={twMerge(
-          'flex h-full w-full flex-col items-center justify-center gap-3 rounded border-4 border-gray text-dark-gray dark:text-light-gray',
+          'flex flex-col items-center justify-center gap-3 rounded-sm border-4 border-gray text-dark-gray dark:text-light-gray size-full',
           props.disabled && 'opacity-50 cursor-not-allowed',
           props.className
         )}>
@@ -235,7 +235,7 @@ const KnowledgeFileUploader: React.FC<Props> = (props) => {
 
       <div className="flex flex-col gap-1">
         {props.files.map((file) => (
-          <div key={file.uid} className="rounded border border-gray bg-white p-1 ">
+          <div key={file.uid} className="rounded-sm border border-gray bg-white p-1 ">
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2 break-all px-1">
                 <PiFile className="w-5" />
@@ -284,7 +284,7 @@ const KnowledgeFileUploader: React.FC<Props> = (props) => {
               </div>
             </div>
             {file.errorMessage && (
-              <div className="rounded border border-dark-gray bg-light-gray px-2 py-1 text-sm ">
+              <div className="rounded-sm border border-dark-gray bg-light-gray px-2 py-1 text-sm ">
                 <div className="font-bold text-red dark:text-red-400">
                   {t('bot.label.uploadError')}
                 </div>

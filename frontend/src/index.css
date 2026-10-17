@@ -1,6 +1,104 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/*
+  The Amplify UI CSS goes into a cascade layer before the Tailwind utilities. CSS
+  outside a layer beats layered CSS regardless of specificity, so loaded as is,
+  Amplify's `input, button, textarea, select { font: inherit; }` would override
+  utilities such as text-* on buttons and inputs. After base, Amplify still wins
+  over Preflight, as in v3.
+*/
+@layer theme, base, amplify, components, utilities;
+
+@import 'tailwindcss';
+@import '@aws-amplify/ui-react/styles.css' layer(amplify);
+
+@plugin '@tailwindcss/typography';
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+  In Tailwind CSS v4, hover applies only on devices that can hover. Some pages
+  (ConversationHistoryPage and others) show buttons on tap through group-hover, so
+  keep the v3 behaviour.
+*/
+@custom-variant hover (&:hover);
+
+@theme {
+  --font-*: initial;
+
+  /* v3 replaced the red, gray and yellow palettes with single colors, so drop the defaults. */
+  --color-red-*: initial;
+  --color-gray-*: initial;
+  --color-yellow-*: initial;
+
+  --transition-property-width: width;
+  --transition-property-height: height;
+
+  --animate-fastPulse: pulse 0.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  --animate-liner-progress: liner-progress 1s linear infinite;
+
+  @keyframes liner-progress {
+    0% {
+      transform: translateX(-100%);
+    }
+    100% {
+      transform: translateX(100%);
+    }
+  }
+
+  --color-aws-squid-ink-light: #232f3e;
+  --color-aws-squid-ink-dark: #171717;
+
+  --color-aws-sea-blue-light: #005276;
+  --color-aws-sea-blue-dark: #757575;
+
+  --color-aws-sea-blue-hover-light: #003550;
+  --color-aws-sea-blue-hover-dark: #5b5b5b;
+
+  --color-aws-aqua: #007faa;
+  --color-aws-lab: #38ef7d;
+  --color-aws-mist: #9ffcea;
+
+  --color-aws-font-color-light: #232f3e;
+  --color-aws-font-color-dark: #cacaca;
+  --color-aws-font-color-gray: #909193;
+  --color-aws-font-color-blue: #276cc6;
+
+  --color-aws-font-color-white-light: #ffffff;
+  --color-aws-font-color-white-dark: #ececec;
+
+  --color-aws-ui-color-dark: #151515;
+
+  --color-aws-paper-light: #f1f3f3;
+  --color-aws-paper-dark: #212121;
+
+  --color-red: #dc2626;
+  /* Red text and links in dark mode, readable on the dark backgrounds (4.5:1). */
+  --color-red-400: #f87171;
+  --color-aws-link-dark: #89bdee;
+  --color-light-red: #fee2e2;
+  --color-yellow: #f59e0b;
+  --color-light-yellow: #fef9c3;
+  --color-dark-gray: #6b7280;
+  --color-gray: #9ca3af;
+  --color-light-gray: #e5e7eb;
+}
+
+/*
+  Base styles that keep the look of Tailwind CSS v3. The default border color needs
+  nothing: gray-200 was undefined in v3 too, so it was currentColor.
+*/
+@layer base {
+  /* v4 gives buttons the default cursor. */
+  button:not(:disabled),
+  [role='button']:not(:disabled) {
+    cursor: pointer;
+  }
+
+  /* v4 makes placeholders 50% of the text color; v3 used #9ca3af. */
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--color-gray);
+  }
+}
 
 /* Tailwind overrides this color otherwise, so it needs !important. */
 .amplify-button--primary {
@@ -9,18 +107,11 @@
   ) !important;
 }
 
-@keyframes liner-progress {
-  0% {
-    transform: translateX(-100%);
-  }
-  100% {
-    transform: translateX(100%);
-  }
+/* Replaces the scrollbar-thin utility of the tailwind-scrollbar plugin. */
+@utility scrollbar-thin {
+  scrollbar-width: thin;
 }
 
-.animate-liner-progress {
-  animation: liner-progress 1s linear infinite;
-}
 /* Wide display math scrolls instead of overflowing the message. */
 .prose .katex-display {
   overflow-x: auto;

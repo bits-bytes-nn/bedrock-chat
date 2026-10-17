@@ -36,7 +36,7 @@ const SnackbarProvider: React.FC<Props> = ({ children }) => {
           <div className="">
             <div
               role="alert"
-              className="mx-4 mt-4 flex justify-between rounded bg-red p-3  text-sm text-aws-font-color-white-light shadow-lg">
+              className="mx-4 mt-4 flex justify-between rounded-sm bg-red p-3  text-sm text-aws-font-color-white-light shadow-lg">
               <div className="mr-3 text-3xl">
                 <PiWarningFill />
               </div>

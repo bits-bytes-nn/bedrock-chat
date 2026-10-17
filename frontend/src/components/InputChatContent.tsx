@@ -590,7 +590,7 @@ const InputChatContent = forwardRef<HTMLElement, Props>(
           <div className="flex w-full">
             <Textarea
               key={`textarea-${props.isNewChat}`} // Add a key to force re-render
-              className="m-1 bg-transparent pr-12 scrollbar-thin scrollbar-thumb-light-gray"
+              className="m-1 bg-transparent pr-12 scrollbar-thin"
               placeholder={props.placeholder ?? t('app.inputMessage')}
               disabled={props.disabled}
               noBorder
@@ -631,7 +631,7 @@ const InputChatContent = forwardRef<HTMLElement, Props>(
                 <div key={idx} className="relative">
                   <img
                     src={imageFile}
-                    className="h-16 rounded border border-aws-squid-ink-light dark:border-aws-squid-ink-dark"
+                    className="h-16 rounded-sm border border-aws-squid-ink-light dark:border-aws-squid-ink-dark"
                     onClick={() => {
                       setPreviewImageUrl(imageFile);
                       setIsOpenPreviewImage(true);

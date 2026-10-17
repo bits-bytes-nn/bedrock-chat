@@ -95,7 +95,7 @@ const SwitchBedrockModel: React.FC<Props> = (props) => {
         <Listbox.Button
           className={`${
             props.className ?? ''
-          } group inline-flex w-auto whitespace-nowrap rounded border-aws-squid-ink-light/50 bg-aws-paper-light p-2 px-3 text-base hover:brightness-75 focus-visible:ring-2 focus-visible:ring-aws-sea-blue-light dark:border-aws-squid-ink-dark/50 dark:bg-aws-paper-dark`}>
+          } group inline-flex w-auto whitespace-nowrap rounded-sm border-aws-squid-ink-light/50 bg-aws-paper-light p-2 px-3 text-base hover:brightness-75 focus-visible:ring-2 focus-visible:ring-aws-sea-blue-light dark:border-aws-squid-ink-dark/50 dark:bg-aws-paper-dark`}>
           <div className="flex items-center justify-between text-xl font-bold text-dark-gray dark:text-light-gray">
             <span>{modelName}</span>
             <PiCaretDown className="ml-2" />
@@ -109,7 +109,7 @@ const SwitchBedrockModel: React.FC<Props> = (props) => {
           leave="transition ease-in duration-150"
           leaveFrom="opacity-100 translate-y-0"
           leaveTo="opacity-0 translate-y-1">
-          <Listbox.Options className="absolute left-0 top-14 z-10 mt-0.5 max-h-96 w-[min(24rem,calc(100vw-2rem))] overflow-y-auto rounded border border-aws-font-color-light/50 bg-white text-sm shadow-lg focus:outline-none dark:border-aws-font-color-dark/50 dark:bg-aws-ui-color-dark">
+          <Listbox.Options className="absolute left-0 top-14 z-10 mt-0.5 max-h-96 w-[min(24rem,calc(100vw-2rem))] overflow-y-auto rounded-sm border border-aws-font-color-light/50 bg-white text-sm shadow-lg focus:outline-hidden dark:border-aws-font-color-dark/50 dark:bg-aws-ui-color-dark">
             {groupedModels.map(([provider, models]) => (
               <div key={provider} role="group" aria-label={provider}>
                 <div className="sticky top-0 bg-white px-3 pb-1 pt-2 text-xs font-semibold uppercase tracking-wide text-dark-gray dark:bg-aws-ui-color-dark dark:text-aws-font-color-dark">
@@ -120,7 +120,7 @@ const SwitchBedrockModel: React.FC<Props> = (props) => {
                     key={model.modelId}
                     value={model.modelId}
                     className={({ active }) =>
-                      `m-1 flex cursor-pointer rounded p-1 px-2 ${
+                      `m-1 flex cursor-pointer rounded-sm p-1 px-2 ${
                         active ? 'bg-light-gray dark:bg-aws-paper-dark' : ''
                       }`
                     }>
