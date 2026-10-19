@@ -40,6 +40,7 @@ from app.repositories.models.custom_bot import (
     BotModel,
     ConversationQuickStarterModel,
     GenerationParamsModel,
+    InternetToolModel,
     KnowledgeModel,
     ReasoningParamsModel,
 )
@@ -83,6 +84,7 @@ from app.usecases.file_conversion import (
     start_conversion,
 )
 from app.utils import (
+    delete_api_key_from_secret_manager,
     compose_upload_document_s3_path,
     compose_upload_temp_s3_path,
     compose_upload_temp_s3_prefix,
@@ -293,6 +295,31 @@ def create_new_bot(user: User, bot_input: BotInput) -> BotOutput:
     return new_bot.to_output()
 
 
+def _search_engine_with_key(agent: AgentModel) -> str | None:
+    for tool in agent.tools:
+        if isinstance(tool, InternetToolModel) and tool.search_api_config:
+            return tool.search_engine
+    return None
+
+
+def _delete_replaced_search_api_key(
+    owner_user_id: str, bot_id: str, before: AgentModel, after: AgentModel
+) -> None:
+    """Delete the search API key that the saved bot no longer uses.
+
+    The bot is saved already, so a failure only keeps the key until the bot is deleted.
+    """
+    engine = _search_engine_with_key(before)
+    if engine is None or engine == _search_engine_with_key(after):
+        return
+    try:
+        delete_api_key_from_secret_manager(owner_user_id, bot_id, engine)
+    except Exception:
+        logger.exception(
+            "Failed to delete the replaced %s key of bot %s", engine, bot_id
+        )
+
+
 def modify_owned_bot(
     user: User, bot_id: str, modify_input: BotModifyInput
 ) -> BotModifyOutput:
@@ -408,6 +435,7 @@ def modify_owned_bot(
     else:
         updated_kb = current_bot_kb
 
+    agent = AgentModel.from_agent_input(modify_input.agent, bot.owner_user_id, bot_id)
     update_bot(
         bot.owner_user_id,
         bot_id,
@@ -415,9 +443,7 @@ def modify_owned_bot(
         instruction=modify_input.instruction,
         description=modify_input.description if modify_input.description else "",
         generation_params=generation_params,
-        agent=AgentModel.from_agent_input(
-            modify_input.agent, bot.owner_user_id, bot_id
-        ),
+        agent=agent,
         knowledge=KnowledgeModel(
             source_urls=source_urls,
             sitemap_urls=sitemap_urls,
@@ -449,6 +475,7 @@ def modify_owned_bot(
             modify_input.active_models.model_dump()  # type: ignore
         ),
     )
+    _delete_replaced_search_api_key(bot.owner_user_id, bot_id, bot.agent, agent)
 
     if sync_status == "QUEUED":
         # If necessary, start the Embedding state machine. Its ingestion also

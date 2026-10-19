@@ -217,6 +217,7 @@ const translation: typeof en = {
         searchApi: {
           apiKey: 'API 키',
           maxResults: '최대 결과 수',
+          showApiKey: 'API 키 보기',
         },
         bedrockAgent: {
           agentId: {

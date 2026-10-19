@@ -40,7 +40,7 @@ To enable the Agent functionality with Tool Use for your customized chatbot, fol
 
 4. For example, "Internet Search" tool allows the Agent to fetch information from the internet to answer user questions.
 
-   In the search settings, choose the search engine. DuckDuckGo needs no API key but has low rate limits. Firecrawl, [Tavily](https://www.tavily.com/) and [Brave Search](https://brave.com/search/api/) need an API key of the bot owner, which is stored in AWS Secrets Manager as `<engine>/<user id>/<bot id>` and deleted with the bot. Each engine has its own key, so switching the engine asks for the key again.
+   In the search settings, choose the search engine. DuckDuckGo needs no API key but has low rate limits. Firecrawl, [Tavily](https://www.tavily.com/) and [Brave Search](https://brave.com/search/api/) need an API key of the bot owner, which is stored in AWS Secrets Manager as `<engine>/<user id>/<bot id>` and deleted when the bot stops using it or is deleted. Each engine has its own key, so switching the engine asks for the key again.
 
 ![](./imgs/agent1.png)
 ![](./imgs/agent2.png)

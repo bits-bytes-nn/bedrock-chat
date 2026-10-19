@@ -216,6 +216,7 @@ const translation = {
         searchApi: {
           apiKey: 'API Key',
           maxResults: 'Maximum Results',
+          showApiKey: 'Show API key',
         },
         bedrockAgent: {
           agentId: {
