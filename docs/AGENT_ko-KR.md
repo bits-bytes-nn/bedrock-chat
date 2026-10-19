@@ -40,6 +40,8 @@ Agent 기능을 사용하는 두 가지 방법이 있습니다:
 
 4. 예를 들어, "인터넷 검색" 도구를 사용하면 Agent가 사용자 질문에 답변하기 위해 인터넷에서 정보를 가져올 수 있습니다.
 
+   검색 설정에서 검색 엔진을 고릅니다. DuckDuckGo는 API 키가 필요 없지만 요청 한도가 낮습니다. Firecrawl, [Tavily](https://www.tavily.com/), [Brave Search](https://brave.com/search/api/)는 봇 소유자의 API 키가 필요합니다. 키는 AWS Secrets Manager에 `<엔진>/<사용자 ID>/<봇 ID>`로 저장되고 봇과 함께 삭제됩니다. 엔진마다 키가 다르므로 엔진을 바꾸면 키를 다시 입력해야 합니다.
+
 ![](./imgs/agent1.png)
 ![](./imgs/agent2.png)
 

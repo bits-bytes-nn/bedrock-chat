@@ -24,7 +24,7 @@ import { Platform } from "aws-cdk-lib/aws-ecr-assets";
 import { Database } from "./database";
 import {
   bedrockIngestionPolicyStatement,
-  firecrawlSecretPolicyStatement,
+  searchApiKeySecretPolicyStatement,
 } from "../utils/bedrock-policies";
 import {
   apiPublishmentStackPrefix,
@@ -94,8 +94,8 @@ export class Embedding extends Construct {
     );
     handlerRole.addToPolicy(bedrockIngestionPolicyStatement());
     handlerRole.addToPolicy(
-      // Loading a bot with the internet search tool reads its Firecrawl API key.
-      firecrawlSecretPolicyStatement(Stack.of(this), [
+      // Loading a bot with the internet search tool reads its search API key.
+      searchApiKeySecretPolicyStatement(Stack.of(this), [
         "secretsmanager:GetSecretValue",
       ])
     );
@@ -679,7 +679,7 @@ export class Embedding extends Construct {
     );
     removeHandlerRole.addToPolicy(publishedApiKeyPolicyStatement(Stack.of(this)));
     removeHandlerRole.addToPolicy(
-      firecrawlSecretPolicyStatement(Stack.of(this), [
+      searchApiKeySecretPolicyStatement(Stack.of(this), [
         "secretsmanager:DeleteSecret",
       ])
     );

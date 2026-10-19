@@ -3,15 +3,21 @@ import { useCallback, useState } from 'react';
 import { PiEyeLight, PiEyeSlashLight } from 'react-icons/pi';
 import InputText from '../../../components/InputText';
 import { Slider } from '../../../components/Slider';
-import { FirecrawlConfig as FirecrawlConfigType } from '../types';
-import { EDGE_FIRECRAWL_CONFIG } from '../constants';
+import { SearchApiConfig as SearchApiConfigType } from '../types';
 
 type Props = {
-  config: FirecrawlConfigType;
-  onChange: (config: FirecrawlConfigType) => void;
+  config: SearchApiConfigType;
+  maxResults: number;
+  errorMessage?: string;
+  onChange: (config: SearchApiConfigType) => void;
 };
 
-export const FirecrawlConfig = ({ config, onChange }: Props) => {
+export const SearchApiConfig = ({
+  config,
+  maxResults,
+  errorMessage,
+  onChange,
+}: Props) => {
   const { t } = useTranslation();
   const [showPassword, setShowPassword] = useState(false);
 
@@ -40,9 +46,10 @@ export const FirecrawlConfig = ({ config, onChange }: Props) => {
       <div className="flex items-end gap-2">
         <InputText
           className="flex-1"
-          label={t('agent.tools.firecrawl.apiKey')}
+          label={t('agent.tools.searchApi.apiKey')}
           type={showPassword ? 'text' : 'password'}
           value={config.apiKey || ''}
+          errorMessage={errorMessage}
           onChange={handleApiKeyChange}
         />
         <button
@@ -57,13 +64,13 @@ export const FirecrawlConfig = ({ config, onChange }: Props) => {
         </button>
       </div>
       <Slider
-        label={t('agent.tools.firecrawl.maxResults')}
+        label={t('agent.tools.searchApi.maxResults')}
         value={config.maxResults}
         onChange={handleMaxResultsChange}
         range={{
-          min: EDGE_FIRECRAWL_CONFIG.maxResults.MIN,
-          max: EDGE_FIRECRAWL_CONFIG.maxResults.MAX,
-          step: EDGE_FIRECRAWL_CONFIG.maxResults.STEP,
+          min: 1,
+          max: maxResults,
+          step: 1,
         }}
       />
     </div>

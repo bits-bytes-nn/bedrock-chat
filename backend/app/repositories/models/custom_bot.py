@@ -18,13 +18,15 @@ from app.routes.schemas.bot import (
     BotOutput,
     BotSummaryOutput,
     ConversationQuickStarter,
-    FirecrawlConfig,
     GenerationParams,
     InternetTool,
     Knowledge,
+    SEARCH_API_MAX_RESULTS,
     PlainTool,
     ReasoningParams,
+    SearchApiConfig,
     Tool,
+    type_search_engine,
     type_shared_scope,
     type_sync_status,
 )
@@ -97,18 +99,18 @@ class GenerationParamsModel(BaseModel):
     )
 
 
-class FirecrawlConfigModel(BaseModel):
+class SearchApiConfigModel(BaseModel):
     secret_arn: str
     api_key: SecureString
     max_results: int = 10
 
     @classmethod
-    def from_firecrawl_config(
-        cls, config: FirecrawlConfig, user_id: str, bot_id: str
+    def from_search_api_config(
+        cls, config: SearchApiConfig, search_engine: str, user_id: str, bot_id: str
     ) -> Self:
         """Create a configuration model from the input and save the API key to Secrets Manager"""
         secret_arn = store_api_key_to_secret_manager(
-            user_id, bot_id, "firecrawl", config.api_key
+            user_id, bot_id, search_engine, config.api_key
         )
 
         return cls(
@@ -160,35 +162,36 @@ class InternetToolModel(BaseModel):
     )
     name: str
     description: str
-    search_engine: Optional[Literal["duckduckgo", "firecrawl"]]
-    firecrawl_config: Optional[FirecrawlConfigModel] | None = None
+    search_engine: type_search_engine
+    search_api_config: Optional[SearchApiConfigModel] | None = None
 
     @model_validator(mode="before")
     @classmethod
-    def load_firecrawl_secret(cls, data):
-        """Ensures validation of nested `FirecrawlConfigModel` with secret loading.
+    def load_search_api_secret(cls, data):
+        """Ensures validation of nested `SearchApiConfigModel` with secret loading.
 
-        This validator is specifically for InternetToolModel and handles the nested `FirecrawlConfigModel` validation.
-        Without this explicit validation, the `load_secret_from_arn` validator in `FirecrawlConfigModel`
+        Without this explicit validation, the `load_secret_from_arn` validator in `SearchApiConfigModel`
         would not be triggered during the normal nested model validation process and
         `model_validate` would not load the API key from Secrets Manager.
+        Items saved before Tavily and Brave were added keep the key as `firecrawl_config`.
         """
-        if (
-            isinstance(data, dict)
-            and data.get("firecrawl_config")
-            and isinstance(data["firecrawl_config"], dict)
-        ):
-            data["firecrawl_config"] = FirecrawlConfigModel.model_validate(
-                data["firecrawl_config"]
+        if not isinstance(data, dict):
+            return data
+        data = dict(data)
+        if "firecrawl_config" in data:
+            data.setdefault("search_api_config", data.pop("firecrawl_config"))
+        if isinstance(data.get("search_api_config"), dict):
+            data["search_api_config"] = SearchApiConfigModel.model_validate(
+                data["search_api_config"]
             )
         return data
 
     @classmethod
     def from_tool_input(cls, tool: InternetTool, user_id: str, bot_id: str) -> Self:
-        firecrawl_config = None
-        if tool.search_engine == "firecrawl" and tool.firecrawl_config:
-            firecrawl_config = FirecrawlConfigModel.from_firecrawl_config(
-                tool.firecrawl_config, user_id, bot_id
+        search_api_config = None
+        if tool.search_engine in SEARCH_API_MAX_RESULTS and tool.search_api_config:
+            search_api_config = SearchApiConfigModel.from_search_api_config(
+                tool.search_api_config, tool.search_engine, user_id, bot_id
             )
 
         return cls(
@@ -196,7 +199,7 @@ class InternetToolModel(BaseModel):
             name=tool.name,
             description=tool.description,
             search_engine=tool.search_engine,
-            firecrawl_config=firecrawl_config,
+            search_api_config=search_api_config,
         )
 
 
@@ -281,13 +284,12 @@ class AgentModel(BaseModel):
         tools: List[Tool] = []
         for tool in self.tools:
             if isinstance(tool, InternetToolModel):
-                # Special handling for FirecrawlConfigModel
-                firecrawl_config = None
-                if tool.firecrawl_config:
-                    firecrawl_config = FirecrawlConfig(
-                        # return the secret ARN as the API key
-                        api_key=tool.firecrawl_config.api_key,
-                        max_results=tool.firecrawl_config.max_results,
+                # The owner gets the API key back to edit the bot.
+                search_api_config = None
+                if tool.search_api_config:
+                    search_api_config = SearchApiConfig(
+                        api_key=tool.search_api_config.api_key,
+                        max_results=tool.search_api_config.max_results,
                     )
 
                 tools.append(
@@ -296,7 +298,7 @@ class AgentModel(BaseModel):
                         name=tool.name,
                         description=tool.description,
                         search_engine=tool.search_engine,
-                        firecrawl_config=firecrawl_config,
+                        search_api_config=search_api_config,
                     )
                 )
             elif isinstance(tool, BedrockAgentToolModel):

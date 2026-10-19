@@ -38,16 +38,23 @@ export const bedrockIngestionPolicyStatement = (): iam.PolicyStatement =>
   });
 
 /**
- * Secrets Manager actions on the Firecrawl API keys of bots with the internet
- * search tool, which the backend stores as `firecrawl/<user id>/<bot id>`.
+ * The internet search engines that need an API key, as in SEARCH_API_MAX_RESULTS
+ * of backend/app/routes/schemas/bot.py.
  */
-export const firecrawlSecretPolicyStatement = (
+const SEARCH_API_ENGINES = ["firecrawl", "tavily", "brave"];
+
+/**
+ * Secrets Manager actions on the search API keys of bots with the internet
+ * search tool, which the backend stores as `<engine>/<user id>/<bot id>`.
+ */
+export const searchApiKeySecretPolicyStatement = (
   stack: Stack,
   actions: string[]
 ): iam.PolicyStatement =>
   new iam.PolicyStatement({
     actions,
-    resources: [
-      `arn:${stack.partition}:secretsmanager:${stack.region}:${stack.account}:secret:firecrawl/*/*`,
-    ],
+    resources: SEARCH_API_ENGINES.map(
+      (engine) =>
+        `arn:${stack.partition}:secretsmanager:${stack.region}:${stack.account}:secret:${engine}/*/*`
+    ),
   });

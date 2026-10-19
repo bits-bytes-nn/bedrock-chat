@@ -195,6 +195,14 @@ const translation = {
               label: 'Firecrawl (For Business)',
               hint: 'Rate limits can be expanded. Designed for business use. API key is required. https://www.firecrawl.dev/',
             },
+            tavily: {
+              label: 'Tavily',
+              hint: 'Search API built for LLMs. Results come with the page content relevant to the question. API key is required. https://www.tavily.com/',
+            },
+            brave: {
+              label: 'Brave Search',
+              hint: "Search API on Brave's own web index. API key is required. https://brave.com/search/api/",
+            },
           },
         },
         knowledge_base_tool: {
@@ -205,8 +213,8 @@ const translation = {
           name: 'Bedrock Agent',
           description: 'Ask a question to the configured Bedrock Agent',
         },
-        firecrawl: {
-          apiKey: 'Firecrawl API Key',
+        searchApi: {
+          apiKey: 'API Key',
           maxResults: 'Maximum Results',
         },
         bedrockAgent: {

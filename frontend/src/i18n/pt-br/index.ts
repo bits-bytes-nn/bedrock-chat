@@ -98,6 +98,14 @@ const translation = {
               label: 'Firecrawl (Para Negócios)',
               hint: 'Os limites de taxa podem ser expandidos. Projetado para uso comercial. É necessária uma chave de API. https://www.firecrawl.dev/',
             },
+            tavily: {
+              label: 'Tavily',
+              hint: 'API de busca feita para LLMs. Os resultados trazem o conteúdo da página relacionado à pergunta. É necessária uma chave de API. https://www.tavily.com/',
+            },
+            brave: {
+              label: 'Brave Search',
+              hint: 'API de busca sobre o índice web próprio do Brave. É necessária uma chave de API. https://brave.com/search/api/',
+            },
           },
         },
         knowledge_base_tool: {
@@ -108,8 +116,8 @@ const translation = {
           name: 'Agente Bedrock',
           description: 'Faça uma pergunta ao Agente Bedrock configurado',
         },
-        firecrawl: {
-          apiKey: 'Chave de API do Firecrawl',
+        searchApi: {
+          apiKey: 'Chave de API',
           maxResults: 'Máximo de Resultados',
         },
         bedrockAgent: {

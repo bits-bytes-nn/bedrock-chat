@@ -16,7 +16,7 @@ import { PythonFunction } from "@aws-cdk/aws-lambda-python-alpha";
 import { Database } from "./database";
 import {
   bedrockChatPolicyStatement,
-  firecrawlSecretPolicyStatement,
+  searchApiKeySecretPolicyStatement,
 } from "../utils/bedrock-policies";
 import { lambdaLogGroup } from "../utils/lambda-log-group";
 
@@ -66,9 +66,9 @@ export class WebSocket extends Construct {
     );
     handlerRole.addToPolicy(bedrockChatPolicyStatement());
 
-    // Bots with the internet search tool keep their Firecrawl API key here.
+    // Bots with the internet search tool keep their search API key here.
     handlerRole.addToPolicy(
-      firecrawlSecretPolicyStatement(Stack.of(this), [
+      searchApiKeySecretPolicyStatement(Stack.of(this), [
         "secretsmanager:GetSecretValue",
       ])
     );

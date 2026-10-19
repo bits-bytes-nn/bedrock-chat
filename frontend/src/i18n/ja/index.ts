@@ -196,6 +196,14 @@ const translation: typeof en = {
               label: 'Firecrawl (For Business)',
               hint: 'レートリミットの拡張可能。ビジネス利用向け。APIキーが必要. https://www.firecrawl.dev/',
             },
+            tavily: {
+              label: 'Tavily',
+              hint: 'LLM向けの検索API。質問に関連する本文を結果とともに返します。APIキーが必要です。https://www.tavily.com/',
+            },
+            brave: {
+              label: 'Brave Search',
+              hint: 'Brave独自のウェブインデックスを使う検索API。APIキーが必要です。https://brave.com/search/api/',
+            },
           },
         },
         knowledge_base_tool: {
@@ -206,8 +214,8 @@ const translation: typeof en = {
           name: 'Bedrock Agent',
           description: '設定されたBedrock Agentに質問を送信します。',
         },
-        firecrawl: {
-          apiKey: 'Firecrawl APIキー',
+        searchApi: {
+          apiKey: 'APIキー',
           maxResults: '最大結果数',
         },
         bedrockAgent: {

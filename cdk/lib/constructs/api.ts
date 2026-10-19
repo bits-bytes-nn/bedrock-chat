@@ -40,7 +40,7 @@ import { PythonFunction } from "@aws-cdk/aws-lambda-python-alpha";
 import { Database } from "./database";
 import {
   bedrockChatPolicyStatement,
-  firecrawlSecretPolicyStatement,
+  searchApiKeySecretPolicyStatement,
 } from "../utils/bedrock-policies";
 import { CfnStage, ThrottleSettings } from "aws-cdk-lib/aws-apigatewayv2";
 import { lambdaLogGroup } from "../utils/lambda-log-group";
@@ -168,10 +168,10 @@ export class Api extends Construct {
         })
       );
     }
-    // Bots with the internet search tool keep their Firecrawl API key here.
+    // Bots with the internet search tool keep their search API key here.
     // CreateSecret sets a tag, which needs TagResource.
     handlerRole.addToPolicy(
-      firecrawlSecretPolicyStatement(Stack.of(this), [
+      searchApiKeySecretPolicyStatement(Stack.of(this), [
         "secretsmanager:CreateSecret",
         "secretsmanager:UpdateSecret",
         "secretsmanager:GetSecretValue",
