@@ -178,7 +178,8 @@ def _search_with_brave(
 ) -> list[dict[str, str]]:
     """Search with the Brave Search API, using the result snippets as the content."""
     params: dict = {"q": query, "count": max_results}
-    country = locale.split("-", 1)[-1]
+    # The locale is `{language}-{country}`; Brave takes the country code only.
+    _, _, country = locale.partition("-")
     if len(country) == 2:
         params["country"] = country.upper()
     if time_limit in _BRAVE_FRESHNESS:

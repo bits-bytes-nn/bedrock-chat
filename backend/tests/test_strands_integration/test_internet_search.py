@@ -90,6 +90,13 @@ def test_brave():
     ]
 
 
+@pytest.mark.parametrize("locale", ["en", "en-", "zh-hans"])
+def test_brave_sends_no_country_that_the_locale_does_not_give(locale):
+    _, request = search("brave", {}, locale=locale)
+
+    assert "country" not in request.call_args.kwargs["params"]
+
+
 @pytest.mark.parametrize("engine", ["tavily", "brave"])
 def test_a_failed_request_is_a_tool_error_without_the_query(engine, caplog):
     response = MagicMock(ok=False, status_code=429)
