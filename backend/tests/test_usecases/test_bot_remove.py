@@ -37,13 +37,20 @@ class TestBotRemoval(unittest.TestCase):
         steps.delete_custom_bot_stack_by_bot_id.assert_called_once_with("bot")
         steps.delete_published_api.assert_called_once_with("bot")
         steps.delete_from_s3.assert_called_once_with("user", "bot")
-        steps.delete_api_key_from_secret_manager.assert_called_once()
+        # The key of every search engine, whichever the bot used.
+        self.assertEqual(
+            steps.delete_api_key_from_secret_manager.call_args_list,
+            [
+                call("user", "bot", engine)
+                for engine in ("firecrawl", "tavily", "brave")
+            ],
+        )
         # The published API's conversations can take long, so they go last.
         self.assertEqual(
             steps.method_calls[-1],
             call.delete_conversation_by_user_id("PUBLISHED_API#bot"),
         )
-        self.assertEqual(len(steps.method_calls), 5)
+        self.assertEqual(len(steps.method_calls), 7)
 
     def test_ignores_items_other_than_bots(self):
         for keys in (

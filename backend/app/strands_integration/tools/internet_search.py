@@ -1,5 +1,8 @@
+import html
 import logging
+import re
 
+import requests
 from app.bedrock import call_converse_api, get_model_id, get_text_from_converse_response
 from app.repositories.models.custom_bot import BotModel
 from app.usecases.global_config import get_title_model
@@ -122,6 +125,91 @@ def _search_with_firecrawl_standalone(
         return []
 
 
+# (connect, read) seconds for the search APIs.
+_SEARCH_API_TIMEOUT = (5, 20)
+_TAVILY_TIME_RANGES = {"d": "day", "w": "week", "m": "month", "y": "year"}
+_BRAVE_FRESHNESS = {"d": "pd", "w": "pw", "m": "pm", "y": "py"}
+
+
+def _call_search_api(engine: str, method: str, url: str, **kwargs) -> dict:
+    """Call a search API. The errors name only the engine and the status, because
+    the request URL can hold the query."""
+    try:
+        response = requests.request(method, url, timeout=_SEARCH_API_TIMEOUT, **kwargs)
+    except requests.RequestException as e:
+        raise RuntimeError(f"{engine} search failed: {type(e).__name__}") from None
+    if not response.ok:
+        raise RuntimeError(f"{engine} search returned HTTP {response.status_code}")
+    return response.json()
+
+
+def _search_with_tavily(
+    query: str, api_key: str, time_limit: str, max_results: int
+) -> list[dict[str, str]]:
+    """Search with Tavily, whose results already carry the content relevant to the query."""
+    body: dict = {"query": query, "max_results": max_results}
+    if time_limit in _TAVILY_TIME_RANGES:
+        body["time_range"] = _TAVILY_TIME_RANGES[time_limit]
+    results = _call_search_api(
+        "Tavily",
+        "POST",
+        "https://api.tavily.com/search",
+        headers={"Authorization": f"Bearer {api_key}"},
+        json=body,
+    ).get("results", [])
+    logger.info("Tavily search completed. Found %d results", len(results))
+    return [
+        {
+            "content": result.get("content", ""),
+            "source_name": result.get("title", ""),
+            "source_link": result.get("url", ""),
+        }
+        for result in results
+    ]
+
+
+def _plain_text(snippet: str) -> str:
+    """Brave marks the matched words in its snippets with HTML tags."""
+    return html.unescape(re.sub(r"<[^>]+>", "", snippet))
+
+
+def _search_with_brave(
+    query: str, api_key: str, time_limit: str, locale: str, max_results: int
+) -> list[dict[str, str]]:
+    """Search with the Brave Search API, using the result snippets as the content."""
+    params: dict = {"q": query, "count": max_results}
+    country = locale.split("-", 1)[-1]
+    if len(country) == 2:
+        params["country"] = country.upper()
+    if time_limit in _BRAVE_FRESHNESS:
+        params["freshness"] = _BRAVE_FRESHNESS[time_limit]
+    results = (
+        _call_search_api(
+            "Brave",
+            "GET",
+            "https://api.search.brave.com/res/v1/web/search",
+            headers={"Accept": "application/json", "X-Subscription-Token": api_key},
+            params=params,
+        )
+        .get("web", {})
+        .get("results", [])
+    )
+    logger.info("Brave search completed. Found %d results", len(results))
+    return [
+        {
+            "content": "\n".join(
+                _plain_text(snippet)
+                for snippet in [result.get("description", "")]
+                + result.get("extra_snippets", [])
+                if snippet
+            ),
+            "source_name": result.get("title", ""),
+            "source_link": result.get("url", ""),
+        }
+        for result in results
+    ]
+
+
 def _summarize_content_standalone(
     content: str, title: str, url: str, query: str
 ) -> str:
@@ -206,20 +294,24 @@ def create_internet_search_tool(bot: BotModel | None) -> StrandsAgentTool:
                 results = _search_with_duckduckgo_standalone(query, time_limit, locale)
             else:
                 internet_tool = _get_internet_tool_config(current_bot)
+                engine = internet_tool.search_engine if internet_tool else None
+                config = internet_tool.search_api_config if internet_tool else None
 
-                if (
-                    internet_tool
-                    and internet_tool.search_engine == "firecrawl"
-                    and internet_tool.firecrawl_config
-                    and internet_tool.firecrawl_config.api_key
-                ):
-
+                if engine == "tavily" and config:
+                    results = _search_with_tavily(
+                        query, config.api_key, time_limit, config.max_results
+                    )
+                elif engine == "brave" and config:
+                    results = _search_with_brave(
+                        query, config.api_key, time_limit, locale, config.max_results
+                    )
+                elif engine == "firecrawl" and config and config.api_key:
                     logger.debug("[INTERNET_SEARCH_V3] Using Firecrawl search")
                     results = _search_with_firecrawl_standalone(
                         query=query,
-                        api_key=internet_tool.firecrawl_config.api_key,
+                        api_key=config.api_key,
                         locale=locale,
-                        max_results=internet_tool.firecrawl_config.max_results,
+                        max_results=config.max_results,
                     )
 
                     # If no results from Firecrawl, fallback to DuckDuckGo

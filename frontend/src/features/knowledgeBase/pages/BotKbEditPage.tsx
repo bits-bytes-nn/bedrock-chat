@@ -41,6 +41,7 @@ import {
   isBedrockAgentTool,
 } from '../../../features/agent/utils/typeGuards';
 import { AvailableTools } from '../../../features/agent/components/AvailableTools';
+import { SEARCH_API_MAX_RESULTS } from '../../../features/agent/constants';
 import {
   DEFAULT_FIXED_CHUNK_PARAMS,
   DEFAULT_HIERARCHICAL_CHUNK_PARAMS,
@@ -1034,14 +1035,13 @@ const BotKbEditPage: React.FC = () => {
         return true;
       }
 
-      // Firecrawl tool validation
       if (
         isInternetTool(tool) &&
-        tool.searchEngine === 'firecrawl' &&
-        (!tool.firecrawlConfig || !tool.firecrawlConfig.apiKey)
+        tool.searchEngine in SEARCH_API_MAX_RESULTS &&
+        !tool.searchApiConfig?.apiKey
       ) {
         setErrorMessages(
-          `tools-${idx}-firecrawlConfig.apiKey`,
+          `tools-${idx}-searchApiConfig.apiKey`,
           t('input.validationError.required')
         );
         return true;
@@ -1662,6 +1662,7 @@ const BotKbEditPage: React.FC = () => {
                 availableTools={availableTools}
                 tools={tools}
                 setTools={setTools}
+                errorMessages={errorMessages}
               />
 
               <div className="mt-3">

@@ -17,7 +17,7 @@ import { excludeDockerImage } from "./constants/docker";
 import { apiPublishmentStackPrefix } from "./utils/stack-names";
 import {
   bedrockChatPolicyStatement,
-  firecrawlSecretPolicyStatement,
+  searchApiKeySecretPolicyStatement,
 } from "./utils/bedrock-policies";
 import { lambdaLogGroup } from "./utils/lambda-log-group";
 
@@ -94,7 +94,7 @@ export class ApiPublishmentStack extends Stack {
     }).addAlarmAction(alarmAction);
 
     // Both handlers read bots and conversations through the table access role. Loading
-    // a bot with the internet search tool reads its Firecrawl API key.
+    // a bot with the internet search tool reads its search API key.
     const newHandlerRole = (roleId: string): iam.Role => {
       const role = new iam.Role(this, roleId, {
         path: props.tableAccessRolePath,
@@ -113,7 +113,7 @@ export class ApiPublishmentStack extends Stack {
         })
       );
       role.addToPolicy(
-        firecrawlSecretPolicyStatement(this, ["secretsmanager:GetSecretValue"])
+        searchApiKeySecretPolicyStatement(this, ["secretsmanager:GetSecretValue"])
       );
       return role;
     };

@@ -196,6 +196,14 @@ const translation: typeof en = {
               label: 'Firecrawl (비즈니스용)',
               hint: '요청 한도를 늘릴 수 있습니다. 비즈니스용으로 적합하며 API 키가 필요합니다. https://www.firecrawl.dev/',
             },
+            tavily: {
+              label: 'Tavily',
+              hint: 'LLM용 검색 API입니다. 질문과 관련된 본문을 결과와 함께 돌려줍니다. API 키가 필요합니다. https://www.tavily.com/',
+            },
+            brave: {
+              label: 'Brave Search',
+              hint: 'Brave의 자체 웹 인덱스를 쓰는 검색 API입니다. API 키가 필요합니다. https://brave.com/search/api/',
+            },
           },
         },
         knowledge_base_tool: {
@@ -206,8 +214,8 @@ const translation: typeof en = {
           name: 'Bedrock Agent',
           description: '구성된 Bedrock Agent에 질문합니다.',
         },
-        firecrawl: {
-          apiKey: 'Firecrawl API 키',
+        searchApi: {
+          apiKey: 'API 키',
           maxResults: '최대 결과 수',
         },
         bedrockAgent: {

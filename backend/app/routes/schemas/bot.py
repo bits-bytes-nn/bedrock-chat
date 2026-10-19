@@ -8,6 +8,7 @@ from typing import (
     List,
     Literal,
     Optional,
+    Self,
     Type,
     get_args,
 )
@@ -27,6 +28,7 @@ from pydantic import (
     Field,
     create_model,
     field_validator,
+    model_validator,
     validator,
 )
 
@@ -85,14 +87,22 @@ class GenerationParams(BaseSchema):
     reasoning_params: ReasoningParams
 
 
-class FirecrawlConfig(BaseSchema):
+type_search_engine = Literal["duckduckgo", "firecrawl", "tavily", "brave"]
+
+# The search engines that need an API key, with the most results that each one
+# returns for a request. The backend stores a key as `<engine>/<user id>/<bot id>`,
+# and cdk/lib/utils/bedrock-policies.ts grants access to the same engine prefixes.
+SEARCH_API_MAX_RESULTS: dict[str, int] = {"firecrawl": 100, "tavily": 20, "brave": 20}
+
+
+class SearchApiConfig(BaseSchema):
     api_key: str
     max_results: int = Field(default=10, ge=1, le=100)
 
     @field_validator("api_key")
     def validate_api_key(cls, v):
         if v == "":
-            raise ValueError("Firecrawl API key is empty")
+            raise ValueError("Search API key is empty")
         return v
 
 
@@ -111,22 +121,21 @@ class InternetTool(BaseSchema):
     tool_type: Literal["internet"]
     name: str
     description: str
-    search_engine: Optional[Literal["duckduckgo", "firecrawl"]]
-    firecrawl_config: Optional[FirecrawlConfig] | None = None
+    search_engine: type_search_engine
+    search_api_config: Optional[SearchApiConfig] = None
 
-    @field_validator("search_engine")
-    def validate_search_engine(cls, v):
-        if v not in ["duckduckgo", "firecrawl"]:
-            raise ValueError(f"Invalid search engine: {v}")
-        return v
-
-    @validator("firecrawl_config")
-    def validate_firecrawl_config(cls, v, values):
-        if values.get("search_engine") == "firecrawl" and v is None:
+    @model_validator(mode="after")
+    def validate_search_api_config(self) -> Self:
+        max_results = SEARCH_API_MAX_RESULTS.get(self.search_engine)
+        if max_results is None:
+            return self
+        if self.search_api_config is None:
+            raise ValueError(f"An API key is required for {self.search_engine}")
+        if self.search_api_config.max_results > max_results:
             raise ValueError(
-                "Firecrawl config is required when search engine is firecrawl"
+                f"{self.search_engine} returns at most {max_results} results"
             )
-        return v
+        return self
 
 
 class BedrockAgentTool(BaseSchema):

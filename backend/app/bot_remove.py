@@ -6,6 +6,7 @@ import boto3
 from app.repositories.api_publication import delete_published_api
 from app.repositories.common import compose_sk, decompose_sk
 from app.repositories.conversation import delete_conversation_by_user_id
+from app.routes.schemas.bot import SEARCH_API_MAX_RESULTS
 from app.user import User
 from app.utils import (
     CUSTOM_BOT_STACK_PREFIX,
@@ -33,11 +34,17 @@ def delete_from_s3(user_id: str, bot_id: str):
     logger.info("Deleted the S3 files of bot %s", bot_id)
 
 
+def delete_search_api_keys(user_id: str, bot_id: str):
+    """Delete the API key of every search engine, whichever the bot used last."""
+    for engine in SEARCH_API_MAX_RESULTS:
+        delete_api_key_from_secret_manager(user_id, bot_id, engine)
+
+
 def handler(event: dict, context: Any) -> None:
     """Bot removal handler, triggered by the DynamoDB stream when a bot is deleted.
 
     Deletes the knowledge base stack, the published API stack and its API keys, the
-    bot's S3 files and its Firecrawl secret.
+    bot's S3 files and its search API key secrets.
     """
 
     # NOTE: batch size is 1
@@ -61,7 +68,7 @@ def handler(event: dict, context: Any) -> None:
         lambda: delete_custom_bot_stack_by_bot_id(bot_id),
         lambda: delete_published_api(bot_id),
         lambda: delete_from_s3(user_id, bot_id),
-        lambda: delete_api_key_from_secret_manager(user_id, bot_id, "firecrawl"),
+        lambda: delete_search_api_keys(user_id, bot_id),
         # Last, because it can take long: the conversations of the API's clients,
         # stored under the API's own user. A retry continues where it stopped.
         lambda: delete_conversation_by_user_id(User.from_published_api_id(bot_id).id),

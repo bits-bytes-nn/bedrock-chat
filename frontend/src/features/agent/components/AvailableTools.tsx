@@ -3,8 +3,8 @@ import {
   AgentTool,
   BedrockAgentConfig,
   BedrockAgentTool,
-  FirecrawlConfig,
   InternetAgentTool,
+  SearchApiConfig,
   SearchEngine,
   ToolType,
 } from '../types';
@@ -15,20 +15,37 @@ import { formatDescription } from '../functions/formatDescription';
 import Help from '../../../components/Help';
 import Skeleton from '../../../components/Skeleton';
 import { TooltipDirection } from '../../../constants';
-import { FirecrawlConfig as FirecrawlConfigComponent } from './FirecrawlConfig';
+import { SearchApiConfig as SearchApiConfigComponent } from './SearchApiConfig';
 import { BedrockAgentConfig as BedrockAgentConfigComponent } from './BedrockAgentConfig';
 import ExpandableDrawerGroup from '../../../components/ExpandableDrawerGroup';
 import RadioButton from '../../../components/RadioButton';
 import useLoginUser from '../../../hooks/useLoginUser';
-import { DEFAULT_FIRECRAWL_CONFIG } from '../constants';
+import {
+  DEFAULT_SEARCH_API_CONFIG,
+  SEARCH_API_MAX_RESULTS,
+} from '../constants';
+
+const SEARCH_ENGINES: SearchEngine[] = [
+  'duckduckgo',
+  'firecrawl',
+  'tavily',
+  'brave',
+];
 
 type Props = {
   availableTools: AgentTool[] | undefined;
   tools: AgentTool[];
   setTools: Dispatch<React.SetStateAction<AgentTool[]>>;
+  /** Validation errors keyed as `tools-<index>-<field>`. */
+  errorMessages?: { [key: string]: string };
 };
 
-export const AvailableTools = ({ availableTools, tools, setTools }: Props) => {
+export const AvailableTools = ({
+  availableTools,
+  tools,
+  setTools,
+  errorMessages,
+}: Props) => {
   const { t } = useTranslation();
   // Bedrock agents run with the application's role, so only admins can add them.
   const { isAdmin } = useLoginUser();
@@ -90,8 +107,8 @@ export const AvailableTools = ({ availableTools, tools, setTools }: Props) => {
     [setTools, searchEngine]
   );
 
-  const handleFirecrawlConfigChange = useCallback(
-    (config: FirecrawlConfig) => {
+  const handleSearchApiConfigChange = useCallback(
+    (config: SearchApiConfig) => {
       setTools((prevTools) =>
         prevTools.map((tool) => {
           if (tool.name === 'internet_search') {
@@ -102,7 +119,7 @@ export const AvailableTools = ({ availableTools, tools, setTools }: Props) => {
               searchEngine: isInternetTool(tool)
                 ? tool.searchEngine
                 : 'duckduckgo',
-              firecrawlConfig: config,
+              searchApiConfig: config,
             } as AgentTool;
           }
           return tool;
@@ -152,11 +169,8 @@ export const AvailableTools = ({ availableTools, tools, setTools }: Props) => {
                 toolType: 'internet' as ToolType,
                 name: 'internet_search',
                 searchEngine: newEngine as SearchEngine,
-                // Reset firecrawlConfig when switching away from firecrawl
-                firecrawlConfig:
-                  newEngine === 'firecrawl' && isInternetTool(tool)
-                    ? tool.firecrawlConfig
-                    : undefined,
+                // Each engine has its own API key.
+                searchApiConfig: undefined,
               }
             : tool
         );
@@ -177,6 +191,14 @@ export const AvailableTools = ({ availableTools, tools, setTools }: Props) => {
       setSearchEngine(internetSearchTool.searchEngine);
     }
   }, [tools]);
+
+  const internetSearchToolIndex = tools.findIndex(
+    (tool) => tool.name === 'internet_search'
+  );
+  const internetSearchTool = tools.find(
+    (tool): tool is InternetAgentTool =>
+      tool.name === 'internet_search' && isInternetTool(tool)
+  );
 
   return (
     <>
@@ -231,57 +253,44 @@ export const AvailableTools = ({ availableTools, tools, setTools }: Props) => {
                 isDefaultShow={false}
                 label={t('agent.tools.internet_search.settings')}>
                 <div className="space-y-4">
-                  <div className="space-y-4">
-                    <div className="flex flex-col gap-2">
-                      <RadioButton
-                        name="searchEngine"
-                        value="duckduckgo"
-                        checked={searchEngine === 'duckduckgo'}
-                        label={t(
-                          'agent.tools.internet_search.engines.duckduckgo.label'
-                        )}
-                        onChange={handleSearchEngineChange}
-                      />
-                      <div className="ml-6 text-sm text-aws-font-color-light/70 dark:text-aws-font-color-dark">
-                        {t(
-                          'agent.tools.internet_search.engines.duckduckgo.hint'
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex flex-col gap-2">
-                      <RadioButton
-                        name="searchEngine"
-                        value="firecrawl"
-                        checked={searchEngine === 'firecrawl'}
-                        label={t(
-                          'agent.tools.internet_search.engines.firecrawl.label'
-                        )}
-                        onChange={handleSearchEngineChange}
-                      />
-                      <div className="ml-6 text-sm text-aws-font-color-light/70 dark:text-aws-font-color-dark">
-                        {t(
-                          'agent.tools.internet_search.engines.firecrawl.hint'
-                        )}
-                      </div>
-                      <div className="ml-6 text-sm">
-                        {searchEngine === 'firecrawl' && (
-                          <FirecrawlConfigComponent
-                            config={
-                              tools.find(
-                                (t): t is InternetAgentTool =>
-                                  t.name === 'internet_search' &&
-                                  isInternetTool(t)
-                              )?.firecrawlConfig || {
-                                apiKey: DEFAULT_FIRECRAWL_CONFIG.apiKey,
-                                maxResults: DEFAULT_FIRECRAWL_CONFIG.maxResults,
+                  {SEARCH_ENGINES.map((engine) => {
+                    const maxResults = SEARCH_API_MAX_RESULTS[engine];
+                    return (
+                      <div key={engine} className="flex flex-col gap-2">
+                        <RadioButton
+                          name="searchEngine"
+                          value={engine}
+                          checked={searchEngine === engine}
+                          label={t(
+                            `agent.tools.internet_search.engines.${engine}.label`
+                          )}
+                          onChange={handleSearchEngineChange}
+                        />
+                        <div className="ml-6 text-sm text-aws-font-color-light/70 dark:text-aws-font-color-dark">
+                          {t(
+                            `agent.tools.internet_search.engines.${engine}.hint`
+                          )}
+                        </div>
+                        {searchEngine === engine && maxResults && (
+                          <div className="ml-6 text-sm">
+                            <SearchApiConfigComponent
+                              config={
+                                internetSearchTool?.searchApiConfig ??
+                                DEFAULT_SEARCH_API_CONFIG
                               }
-                            }
-                            onChange={handleFirecrawlConfigChange}
-                          />
+                              maxResults={maxResults}
+                              errorMessage={
+                                errorMessages?.[
+                                  `tools-${internetSearchToolIndex}-searchApiConfig.apiKey`
+                                ]
+                              }
+                              onChange={handleSearchApiConfigChange}
+                            />
+                          </div>
                         )}
                       </div>
-                    </div>
-                  </div>
+                    );
+                  })}
                 </div>
               </ExpandableDrawerGroup>
             )}
