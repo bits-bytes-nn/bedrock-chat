@@ -1,6 +1,9 @@
 import html
 import logging
+import random
 import re
+import time
+from concurrent.futures import ThreadPoolExecutor
 
 import requests
 from app.bedrock import call_converse_api, get_model_id, get_text_from_converse_response
@@ -12,135 +15,145 @@ from strands.types.tools import AgentTool as StrandsAgentTool
 logger = logging.getLogger(__name__)
 
 
+def _split_locale(locale: str) -> tuple[str, str]:
+    """Split `{language}-{country}`; the country is empty when the model gives none."""
+    language, _, country = (locale or "en-us").lower().partition("-")
+    return language, country
+
+
 def _search_with_duckduckgo_standalone(
     query: str, time_limit: str, locale: str
 ) -> list[dict[str, str]]:
-    """Standalone DuckDuckGo search implementation."""
-    try:
-        from duckduckgo_search import DDGS
+    """Search with DuckDuckGo, using the result snippets as the content."""
+    from duckduckgo_search import DDGS
 
-        language, country = locale.split("-", 1)
-        REGION = f"{country}-{language}".lower()
-        SAFE_SEARCH = "moderate"
-        MAX_RESULTS = 20
-        BACKEND = "api"
-
-        logger.info(
-            f"Executing DuckDuckGo search: query_chars={len(query)}, region={REGION}, time_limit={time_limit}"
+    language, country = _split_locale(locale)
+    # DuckDuckGo regions are `{country}-{language}`; `wt-wt` is no region.
+    region = f"{country}-{language}" if country else "wt-wt"
+    logger.info(
+        "Executing DuckDuckGo search: query_chars=%d, region=%s, time_limit=%s",
+        len(query),
+        region,
+        time_limit,
+    )
+    with DDGS() as ddgs:
+        results = ddgs.text(
+            keywords=query,
+            region=region,
+            safesearch="moderate",
+            timelimit=time_limit or None,
+            max_results=20,
+            backend="api",
         )
-
-        with DDGS() as ddgs:
-            results = list(
-                ddgs.text(
-                    keywords=query,
-                    region=REGION,
-                    safesearch=SAFE_SEARCH,
-                    timelimit=time_limit,
-                    max_results=MAX_RESULTS,
-                    backend=BACKEND,
-                )
-            )
-
-        # Format results for citation support
-        formatted_results = []
-        for result in results:
-            formatted_results.append(
-                {
-                    "content": _summarize_content_standalone(
-                        result["body"], result["title"], result["href"], query
-                    ),
-                    "source_name": result["title"],
-                    "source_link": result["href"],
-                }
-            )
-
-        logger.info(
-            f"DuckDuckGo search completed. Found {len(formatted_results)} results"
-        )
-        return formatted_results
-
-    except Exception as e:
-        logger.error(f"DuckDuckGo search error: {e}")
-        raise e
+    logger.info("DuckDuckGo search completed. Found %d results", len(results))
+    return [
+        {
+            "content": result["body"],
+            "source_name": result["title"],
+            "source_link": result["href"],
+        }
+        for result in results
+    ]
 
 
 def _search_with_firecrawl_standalone(
     query: str, api_key: str, locale: str, max_results: int = 10
 ) -> list[dict[str, str]]:
-    """Standalone Firecrawl search implementation."""
-    try:
-        from firecrawl import FirecrawlApp, ScrapeOptions
+    """Search with Firecrawl, which returns whole pages, and summarize each page."""
+    from firecrawl import FirecrawlApp, ScrapeOptions
 
-        logger.info(
-            f"Searching with Firecrawl: query_chars={len(query)}, max_results={max_results} locale={locale}"
+    logger.info(
+        "Searching with Firecrawl: query_chars=%d, max_results=%d, locale=%s",
+        len(query),
+        max_results,
+        locale,
+    )
+    language, country = _split_locale(locale)
+    response = FirecrawlApp(api_key=api_key).search(
+        query,
+        limit=max_results,
+        lang=language,
+        location=country or None,
+        scrape_options=ScrapeOptions(formats=["markdown"], onlyMainContent=True),
+    )
+    pages = [
+        (
+            page.get("title", ""),
+            page.get("url", "") or page.get("metadata", {}).get("sourceURL", ""),
+            page.get("markdown", "") or page.get("content", ""),
         )
-
-        app = FirecrawlApp(api_key=api_key)
-
-        # Incoming locale is language-country (e.g. 'en-us').
-        language, country = locale.split("-", 1)
-        results = app.search(
-            query,
-            limit=max_results,
-            lang=language,
-            location=country,
-            scrape_options=ScrapeOptions(formats=["markdown"], onlyMainContent=True),
+        for page in response.data
+    ]
+    pages = [(title, url, content) for title, url, content in pages if title or content]
+    # The summaries are independent model calls, so they run at once.
+    with ThreadPoolExecutor(max_workers=_MAX_PARALLEL_SUMMARIES) as executor:
+        summaries = list(
+            executor.map(
+                lambda page: _summarize_content_standalone(
+                    page[2], page[0], page[1], query
+                ),
+                pages,
+            )
         )
-
-        if not results or not hasattr(results, "data") or not results.data:
-            logger.warning("No results found from Firecrawl")
-            return []
-
-        # Format results
-        formatted_results = []
-        for data in results.data:
-            if isinstance(data, dict):
-                title = data.get("title", "")
-                url = data.get("url", "") or (
-                    data.get("metadata", {}).get("sourceURL", "")
-                    if isinstance(data.get("metadata"), dict)
-                    else ""
-                )
-                content = data.get("markdown", "") or data.get("content", "")
-
-                if title or content:
-                    formatted_results.append(
-                        {
-                            "content": _summarize_content_standalone(
-                                content, title, url, query
-                            ),
-                            "source_name": title,
-                            "source_link": url,
-                        }
-                    )
-
-        logger.info(
-            f"Firecrawl search completed. Found {len(formatted_results)} results"
-        )
-        return formatted_results
-
-    except Exception as e:
-        logger.error(f"Firecrawl search error: {e}")
-        # Instead of raising, return empty list to allow fallback
-        return []
+    logger.info("Firecrawl search completed. Found %d results", len(pages))
+    return [
+        {"content": summary, "source_name": title, "source_link": url}
+        for (title, url, _), summary in zip(pages, summaries)
+    ]
 
 
 # (connect, read) seconds for the search APIs.
 _SEARCH_API_TIMEOUT = (5, 20)
+_MAX_ATTEMPTS = 3
+_MAX_PARALLEL_SUMMARIES = 8
+_MAX_RETRY_DELAY = 5.0
+_RETRYABLE_STATUSES = {429, 500, 502, 503, 504}
 _TAVILY_TIME_RANGES = {"d": "day", "w": "week", "m": "month", "y": "year"}
 _BRAVE_FRESHNESS = {"d": "pd", "w": "pw", "m": "pm", "y": "py"}
 
 
+def _retry_delay(response: requests.Response, attempt: int) -> float:
+    """Seconds to wait before the next attempt: `Retry-After` if the API sends it."""
+    retry_after = response.headers.get("Retry-After", "")
+    if retry_after.isdigit():
+        return float(retry_after)
+    return min(2**attempt, _MAX_RETRY_DELAY) * random.uniform(0.5, 1)
+
+
 def _call_search_api(engine: str, method: str, url: str, **kwargs) -> dict:
-    """Call a search API. The errors name only the engine and the status, because
-    the request URL can hold the query."""
-    try:
-        response = requests.request(method, url, timeout=_SEARCH_API_TIMEOUT, **kwargs)
-    except requests.RequestException as e:
-        raise RuntimeError(f"{engine} search failed: {type(e).__name__}") from None
-    if not response.ok:
-        raise RuntimeError(f"{engine} search returned HTTP {response.status_code}")
-    return response.json()
+    """Call a search API, retrying rate limits and server errors a few times.
+
+    A search is a read, so a retry is safe. Timeouts are not retried: the request
+    timeout already bounds the wait, and a retry would double it. The model often searches several queries
+    at once, which exceeds per-second plans such as Brave's free one. The errors name
+    only the engine and the status, because the request URL can hold the query.
+    """
+    for attempt in range(_MAX_ATTEMPTS):
+        try:
+            response = requests.request(
+                method, url, timeout=_SEARCH_API_TIMEOUT, **kwargs
+            )
+        except requests.RequestException as e:
+            raise RuntimeError(f"{engine} search failed: {type(e).__name__}") from None
+        if response.ok:
+            return response.json()
+        if (
+            response.status_code not in _RETRYABLE_STATUSES
+            or attempt == _MAX_ATTEMPTS - 1
+        ):
+            break
+        delay = _retry_delay(response, attempt)
+        if delay > _MAX_RETRY_DELAY:
+            # The limit lasts longer than a chat turn should wait.
+            break
+        logger.warning(
+            "%s search returned HTTP %d, retrying in %.1f s",
+            engine,
+            response.status_code,
+            delay,
+        )
+        time.sleep(delay)
+    raise RuntimeError(f"{engine} search returned HTTP {response.status_code}")
 
 
 def _search_with_tavily(
@@ -263,6 +276,32 @@ def _get_internet_tool_config(bot: BotModel | None):
     return None
 
 
+def _search(
+    bot: BotModel | None, query: str, locale: str, time_limit: str
+) -> list[dict[str, str]]:
+    """Search with the engine of the bot; DuckDuckGo without a bot or a setting."""
+    internet_tool = _get_internet_tool_config(bot)
+    engine = internet_tool.search_engine if internet_tool else "duckduckgo"
+    if engine == "duckduckgo":
+        return _search_with_duckduckgo_standalone(query, time_limit, locale)
+
+    config = internet_tool.search_api_config if internet_tool else None
+    if config is None:
+        # The bot schema requires the key, so only a broken item gets here.
+        raise RuntimeError(f"The bot has no API key for {engine}")
+    if engine == "tavily":
+        return _search_with_tavily(
+            query, config.api_key, time_limit, config.max_results
+        )
+    if engine == "brave":
+        return _search_with_brave(
+            query, config.api_key, time_limit, locale, config.max_results
+        )
+    return _search_with_firecrawl_standalone(
+        query, config.api_key, locale, config.max_results
+    )
+
+
 def create_internet_search_tool(bot: BotModel | None) -> StrandsAgentTool:
     """Create an internet search tool with bot context captured in closure."""
 
@@ -276,59 +315,13 @@ def create_internet_search_tool(bot: BotModel | None) -> StrandsAgentTool:
         Args:
             query: The query to search for on the internet.
             locale: The country code and language code for the search. Must be `{language}-{country}` for example `jp-jp` (Japanese - Japan), `zh-cn` (Chinese - China), `en-ca` (English - Canada), `fr-ca` (French - Canada), `en-nz` (English - New Zealand), etc. If empty the default is `en-us`.
-            time_limit: Retrieve only the most recent results, for example `1w` only returns the results from the last week. Units are 'd' (day), 'w' (week), 'm' (month), 'y' (year). Use empty string to retrieve all results.
+            time_limit: Retrieve only the most recent results, for example `w` only returns the results from the last week. Units are 'd' (day), 'w' (week), 'm' (month), 'y' (year). Use empty string to retrieve all results.
 
         Returns:
             dict: ToolResult format with search results in json field
         """
-        logger.debug(
-            f"[INTERNET_SEARCH_V3] Starting search: query={query}, locale={locale}, time_limit={time_limit}"
-        )
-
         try:
-            # # Bot is captured on closure
-            current_bot = bot
-
-            # Use DuckDuckGo if no bot context
-            if not current_bot:
-                logger.debug("[INTERNET_SEARCH_V3] No bot context, using DuckDuckGo")
-                results = _search_with_duckduckgo_standalone(query, time_limit, locale)
-            else:
-                internet_tool = _get_internet_tool_config(current_bot)
-                engine = internet_tool.search_engine if internet_tool else None
-                config = internet_tool.search_api_config if internet_tool else None
-
-                if engine == "tavily" and config:
-                    results = _search_with_tavily(
-                        query, config.api_key, time_limit, config.max_results
-                    )
-                elif engine == "brave" and config:
-                    results = _search_with_brave(
-                        query, config.api_key, time_limit, locale, config.max_results
-                    )
-                elif engine == "firecrawl" and config and config.api_key:
-                    logger.debug("[INTERNET_SEARCH_V3] Using Firecrawl search")
-                    results = _search_with_firecrawl_standalone(
-                        query=query,
-                        api_key=config.api_key,
-                        locale=locale,
-                        max_results=config.max_results,
-                    )
-
-                    # If no results from Firecrawl, fallback to DuckDuckGo
-                    if not results:
-                        logger.warning(
-                            "[INTERNET_SEARCH_V3] Firecrawl returned no results, falling back to DuckDuckGo"
-                        )
-                        results = _search_with_duckduckgo_standalone(
-                            query, time_limit, locale
-                        )
-                else:
-                    logger.debug("[INTERNET_SEARCH_V3] Using DuckDuckGo search")
-                    results = _search_with_duckduckgo_standalone(
-                        query, time_limit, locale
-                    )
-
+            results = _search(bot, query, locale, time_limit)
             # Return in ToolResult format to prevent Strands from converting to string
             return {
                 "status": "success",
@@ -338,7 +331,7 @@ def create_internet_search_tool(bot: BotModel | None) -> StrandsAgentTool:
         except Exception:
             # Error texts can name internal resources; the model and the
             # conversation get a fixed text.
-            logger.exception("[INTERNET_SEARCH_V3] Internet search failed")
+            logger.exception("Internet search failed")
             return {
                 "status": "error",
                 "content": [{"text": "The internet search failed."}],
