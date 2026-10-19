@@ -7,8 +7,13 @@ from concurrent.futures import ThreadPoolExecutor
 
 import requests
 from app.bedrock import call_converse_api, get_model_id, get_text_from_converse_response
-from app.repositories.models.custom_bot import BotModel
-from app.usecases.global_config import get_title_model
+from app.repositories.models.custom_bot import BotModel, SearchApiConfigModel
+from app.routes.schemas.bot import SEARCH_API_MAX_RESULTS
+from app.usecases.global_config import (
+    get_default_chat_search_api_key_secret_arn,
+    get_default_chat_search_engine,
+    get_title_model,
+)
 from strands import tool
 from strands.types.tools import AgentTool as StrandsAgentTool
 
@@ -277,16 +282,39 @@ def _get_internet_tool_config(bot: BotModel | None):
     return None
 
 
+def _search_settings(
+    bot: BotModel | None,
+) -> tuple[str, SearchApiConfigModel | None]:
+    """Return the engine and its API settings for a bot, or for chats without one."""
+    if bot is None:
+        engine = get_default_chat_search_engine()
+        if engine is None:
+            raise RuntimeError("Chats without a bot have no internet search")
+        if engine not in SEARCH_API_MAX_RESULTS:
+            return engine, None
+        secret_arn = get_default_chat_search_api_key_secret_arn()
+        if not secret_arn:
+            raise RuntimeError(f"No API key secret is configured for {engine}")
+        # An empty key makes the model load it from the secret.
+        config = SearchApiConfigModel(secret_arn=secret_arn, api_key="")
+        if not config.api_key:
+            raise RuntimeError(f"The API key secret for {engine} is empty")
+        return engine, config
+
+    internet_tool = _get_internet_tool_config(bot)
+    if internet_tool is None:
+        return "duckduckgo", None
+    return internet_tool.search_engine, internet_tool.search_api_config
+
+
 def _search(
     bot: BotModel | None, query: str, locale: str, time_limit: str
 ) -> list[dict[str, str]]:
-    """Search with the engine of the bot; DuckDuckGo without a bot or a setting."""
-    internet_tool = _get_internet_tool_config(bot)
-    engine = internet_tool.search_engine if internet_tool else "duckduckgo"
+    """Search with the engine of the bot, or of the deployment without a bot."""
+    engine, config = _search_settings(bot)
     if engine == "duckduckgo":
         return _search_with_duckduckgo_standalone(query, time_limit, locale)
 
-    config = internet_tool.search_api_config if internet_tool else None
     if config is None:
         # The bot schema requires the key, so only a broken item gets here.
         raise RuntimeError(f"The bot has no API key for {engine}")

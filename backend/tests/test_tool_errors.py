@@ -22,7 +22,10 @@ def knowledge_search():
 
 
 def internet():
-    tool = internet_search.create_internet_search_tool(None)
+    # A bot without search settings searches with DuckDuckGo.
+    tool = internet_search.create_internet_search_tool(
+        MagicMock(agent=MagicMock(tools=[]))
+    )
     with patch.object(
         internet_search,
         "_search_with_duckduckgo_standalone",

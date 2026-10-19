@@ -19,6 +19,10 @@ import {
   searchApiKeySecretPolicyStatement,
 } from "../utils/bedrock-policies";
 import { lambdaLogGroup } from "../utils/lambda-log-group";
+import {
+  DefaultChatSearch,
+  defaultChatSearchEnvironment,
+} from "../utils/default-chat-search";
 
 export interface WebSocketProps {
   readonly database: Database;
@@ -32,6 +36,7 @@ export interface WebSocketProps {
   readonly globalAvailableModels?: string[];
   readonly defaultModel?: string;
   readonly titleModel?: string;
+  readonly defaultChatSearch: DefaultChatSearch;
   readonly throttle: apigwv2.ThrottleSettings;
   readonly metricsNamespace: string;
 }
@@ -107,6 +112,7 @@ export class WebSocket extends Construct {
         DEFAULT_MODEL: props.defaultModel || "",
         TITLE_MODEL: props.titleModel || "",
         METRICS_NAMESPACE: props.metricsNamespace,
+        ...defaultChatSearchEnvironment(props.defaultChatSearch, handlerRole),
       },
       role: handlerRole,
       snapStart: props.enableLambdaSnapStart

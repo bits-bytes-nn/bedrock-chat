@@ -44,6 +44,10 @@ import {
 } from "../utils/bedrock-policies";
 import { CfnStage, ThrottleSettings } from "aws-cdk-lib/aws-apigatewayv2";
 import { lambdaLogGroup } from "../utils/lambda-log-group";
+import {
+  DefaultChatSearch,
+  defaultChatSearchEnvironment,
+} from "../utils/default-chat-search";
 
 export interface ApiProps {
   readonly database: Database;
@@ -67,6 +71,7 @@ export interface ApiProps {
   readonly globalAvailableModels?: string[];
   readonly defaultModel?: string;
   readonly titleModel?: string;
+  readonly defaultChatSearch: DefaultChatSearch;
   readonly maxDedicatedKnowledgeBasesPerUser: number;
   readonly metricsNamespace: string;
   readonly logoPath?: string;
@@ -245,6 +250,7 @@ export class Api extends Construct {
         METRICS_NAMESPACE: props.metricsNamespace,
         OPENSEARCH_DOMAIN_ENDPOINT: props.openSearchEndpoint || "",
         LOGO_PATH: props.logoPath || "",
+        ...defaultChatSearchEnvironment(props.defaultChatSearch, handlerRole),
         AWS_LAMBDA_EXEC_WRAPPER: "/opt/bootstrap",
         PORT: "8000",
       },

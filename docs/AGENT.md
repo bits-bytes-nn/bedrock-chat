@@ -42,6 +42,8 @@ To enable the Agent functionality with Tool Use for your customized chatbot, fol
 
    In the search settings, choose the search engine. DuckDuckGo needs no API key but has low rate limits. Firecrawl, [Tavily](https://www.tavily.com/) and [Brave Search](https://brave.com/search/api/) need an API key of the bot owner, which is stored in AWS Secrets Manager as `<engine>/<user id>/<bot id>` and deleted when the bot stops using it or is deleted. Each engine has its own key, so switching the engine asks for the key again.
 
+   Chats without a bot can search too when the deployment sets `defaultChatSearchEngine` ([configuration](../README.md#internet-search-in-chats-without-a-bot)).
+
 ![](./imgs/agent1.png)
 ![](./imgs/agent2.png)
 

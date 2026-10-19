@@ -39,9 +39,9 @@ def create_strands_agent(
     guardrail: BedrockGuardrailsModel | None = None,
     enable_reasoning: bool = False,
     prompt_caching_enabled: bool = False,
-    has_tools: bool = False,
     hooks: list[HookProvider] | None = None,
 ) -> Agent:
+    tools = get_strands_tools(bot, model_name)
     model_config = get_bedrock_model_config(
         model_name=model_name,
         instructions=instructions,
@@ -49,7 +49,7 @@ def create_strands_agent(
         guardrail=guardrail,
         enable_reasoning=enable_reasoning,
         prompt_caching_enabled=prompt_caching_enabled,
-        has_tools=has_tools,
+        has_tools=bool(tools),
     )
     logger.debug(f"[AGENT_FACTORY] Model config: {model_config}")
     model = BedrockModel(
@@ -64,7 +64,7 @@ def create_strands_agent(
     agent_hooks: list[HookProvider | HookCallback] = list(hooks or [])
     agent = Agent(
         model=model,
-        tools=get_strands_tools(bot, model_name),  # type: ignore
+        tools=tools,  # type: ignore
         hooks=agent_hooks,
         system_prompt=system_prompt,
         retry_strategy=None,

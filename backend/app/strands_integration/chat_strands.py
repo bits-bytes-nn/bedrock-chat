@@ -83,7 +83,6 @@ def converse_with_strands(
     )
 
     prompt_caching_enabled = bot.prompt_caching_enabled if bot is not None else True
-    has_tools = bot is not None and bot.is_agent_enabled()
 
     agent = create_strands_agent(
         bot=bot,
@@ -93,7 +92,6 @@ def converse_with_strands(
         guardrail=guardrail,
         enable_reasoning=chat_input.enable_reasoning,
         prompt_caching_enabled=prompt_caching_enabled,
-        has_tools=has_tools,
         hooks=[tool_capture],
     )
 
@@ -119,6 +117,7 @@ def converse_with_strands(
         guardrail=guardrail,
         search_results=search_results,
         prompt_caching_enabled=prompt_caching_enabled,
+        has_tools=bool(agent.tool_names),
     )
 
     def run_agent(agent: Agent) -> tuple[StopReason, Message, EventLoopMetrics]:

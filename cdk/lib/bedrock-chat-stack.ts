@@ -21,6 +21,7 @@ import { WebAclForCognito } from "./constructs/webacl-for-cognito";
 import { WebAclForPublishedApi } from "./constructs/webacl-for-published-api";
 import * as s3deploy from "aws-cdk-lib/aws-s3-deployment";
 import * as iam from "aws-cdk-lib/aws-iam";
+import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
 import * as path from "path";
 import { BedrockCustomBotCodebuild } from "./constructs/bedrock-custom-bot-codebuild";
 import { BedrockSharedKnowledgeBasesCodebuild } from "./constructs/bedrock-shared-knowledge-bases-codebuild";
@@ -30,6 +31,7 @@ import { metricsNamespace } from "./utils/metrics";
 import { Monitoring } from "./constructs/monitoring";
 import { ThrottleSettings } from "aws-cdk-lib/aws-apigatewayv2";
 import { lambdaLogGroup } from "./utils/lambda-log-group";
+import { SEARCH_API_ENGINES } from "./utils/bedrock-policies";
 
 export interface BedrockChatStackProps extends StackProps {
   readonly envName: string;
@@ -57,6 +59,8 @@ export interface BedrockChatStackProps extends StackProps {
   readonly globalAvailableModels?: string[];
   readonly defaultModel?: string;
   readonly titleModel?: string;
+  /** The internet search engine of chats without a bot; empty for none. */
+  readonly defaultChatSearchEngine?: string;
   readonly tokenValidMinutes: number;
   readonly alternateDomainName?: string;
   readonly hostedZoneId?: string;
@@ -255,6 +259,28 @@ export class BedrockChatStack extends cdk.Stack {
       "http://localhost:5173",
     ];
 
+    // The search API key of chats without a bot. The stack creates it empty, and
+    // the admin puts the key in; deploys keep it as long as this initial value does
+    // not change. One secret per engine, so that a changed engine does not send the
+    // key of another one.
+    const defaultChatSearchEngine = props.defaultChatSearchEngine ?? "";
+    const defaultChatSearchApiKey = (
+      SEARCH_API_ENGINES as readonly string[]
+    ).includes(defaultChatSearchEngine)
+      ? new secretsmanager.Secret(
+          this,
+          `DefaultChatSearchApiKey-${defaultChatSearchEngine}`,
+          {
+            description: `API key of ${defaultChatSearchEngine} for the internet search of chats without a bot`,
+            secretObjectValue: { api_key: cdk.SecretValue.unsafePlainText("") },
+          }
+        )
+      : undefined;
+    const defaultChatSearch = {
+      engine: defaultChatSearchEngine,
+      apiKey: defaultChatSearchApiKey,
+    };
+
     const backendApi = new Api(this, "BackendApi", {
       envName: props.envName,
       envPrefix: props.envPrefix,
@@ -277,6 +303,7 @@ export class BedrockChatStack extends cdk.Stack {
       globalAvailableModels: props.globalAvailableModels,
       defaultModel: props.defaultModel,
       titleModel: props.titleModel,
+      defaultChatSearch,
       maxDedicatedKnowledgeBasesPerUser: props.maxDedicatedKnowledgeBasesPerUser,
       metricsNamespace: metricsNamespace(props.envPrefix),
       logoPath: props.logoPath,
@@ -332,6 +359,7 @@ export class BedrockChatStack extends cdk.Stack {
       globalAvailableModels: props.globalAvailableModels,
       defaultModel: props.defaultModel,
       titleModel: props.titleModel,
+      defaultChatSearch,
       throttle: props.apiThrottle,
       metricsNamespace: metricsNamespace(props.envPrefix),
     });
@@ -385,6 +413,11 @@ export class BedrockChatStack extends cdk.Stack {
       }
     );
 
+    if (defaultChatSearchApiKey) {
+      new CfnOutput(this, "DefaultChatSearchApiKeySecretName", {
+        value: defaultChatSearchApiKey.secretName,
+      });
+    }
     new CfnOutput(this, "FrontendURL", {
       value: frontend.getOrigin(),
     });

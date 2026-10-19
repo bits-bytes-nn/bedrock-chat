@@ -54,14 +54,25 @@ def _to_guardrails_grounding_source(
     )
 
 
+def _is_tool_step(message: SimpleMessageModel) -> bool:
+    """Whether a message is a tool call or a tool result of the thinking log."""
+    return any(c.content_type in ("toolUse", "toolResult") for c in message.content)
+
+
 def simple_message_models_to_strands_messages(
     simple_messages: list[SimpleMessageModel],
     model: type_model_name,
     guardrail: BedrockGuardrailsModel | None = None,
     search_results: list[SearchResult] | None = None,
     prompt_caching_enabled: bool = True,
+    has_tools: bool = True,
 ) -> Messages:
-    """Convert SimpleMessageModel list to Strands Messages format."""
+    """Convert SimpleMessageModel list to Strands Messages format.
+
+    Without tools, the tool steps of earlier answers are left out: Bedrock rejects
+    tool blocks without a tool configuration, which happens when the search was
+    turned off or the chat moved to a model without tool use.
+    """
 
     grounding_source = None
     if search_results and guardrail and guardrail.is_guardrail_enabled:
@@ -105,6 +116,7 @@ def simple_message_models_to_strands_messages(
         }
         for message in simple_messages
         if _is_conversation_role(message.role)
+        and (has_tools or not _is_tool_step(message))
     ]
 
     # Add message cache points

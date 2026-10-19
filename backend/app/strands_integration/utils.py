@@ -7,6 +7,7 @@ import logging
 from app.bedrock import is_tooluse_supported
 from app.repositories.models.custom_bot import BotModel
 from app.routes.schemas.conversation import type_model_name
+from app.usecases.global_config import get_default_chat_search_engine
 from strands.types.tools import AgentTool as StrandsAgentTool
 
 logger = logging.getLogger(__name__)
@@ -35,8 +36,17 @@ def get_strands_tools(
         )
         return []
 
-    # Return empty list if bot is None or agent is not enabled
-    if not bot or not bot.is_agent_enabled():
+    if bot is None:
+        # Chats without a bot get the internet search of the deployment, if any.
+        if get_default_chat_search_engine() is None:
+            return []
+        from app.strands_integration.tools.internet_search import (
+            create_internet_search_tool,
+        )
+
+        return [create_internet_search_tool(None)]
+
+    if not bot.is_agent_enabled():
         return []
 
     registered_tools = get_strands_registered_tools(bot)

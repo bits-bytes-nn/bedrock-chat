@@ -619,6 +619,20 @@ bedrockChatParams.set("default", {
 > [!Note]
 > The `titleModel` is only used internally for generating short conversation titles. Using a smaller, cheaper model for this purpose is recommended as it reduces costs without affecting the user's chat experience.
 
+### Internet Search in Chats Without a Bot
+
+Chats without a bot have no tools by default. Set `defaultChatSearchEngine` to give them the [internet search tool](./docs/AGENT.md) with one engine for the whole deployment: `duckduckgo` (no API key), `tavily`, `brave` or `firecrawl`. This parameter is not in `cdk.json`, so set it in `parameter.ts`, `cdk/cdk.context.json` or with `-c defaultChatSearchEngine=tavily`. With `bin.sh`, pass `--cdk-json-override '{"context": {"defaultChatSearchEngine": "tavily"}}'` on every run. A deploy without the value turns the search off and deletes the secret with the key.
+
+For an engine with an API key, the stack creates an empty secret and shows its name in the output `DefaultChatSearchApiKeySecretName`. Put the key in after the deploy; later deploys keep it. Write the key to a file instead of the command line, so that it stays out of the shell history:
+
+```bash
+# key.json contains {"api_key": "<your API key>"}
+aws secretsmanager put-secret-value --secret-id <DefaultChatSearchApiKeySecretName> --secret-string file://key.json
+rm key.json
+```
+
+Until the key is set, searches fail and the model answers without them. Changing the engine replaces the secret, so put the key of the new engine in again. Models without tool use get no search. Answers of chats without a bot do not cite their sources inline; the search results are shown with the answer.
+
 ### Alarms and API Throttling
 
 CloudWatch alarms notify an SNS topic (output `AlarmTopicArn`) when:
