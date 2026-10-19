@@ -1,4 +1,4 @@
-import React, { ReactNode, useEffect, useState } from 'react';
+import React, { ReactNode, useState } from 'react';
 import { PiCaretDown } from 'react-icons/pi';
 import { twMerge } from 'tailwind-merge';
 
@@ -7,7 +7,7 @@ type Props = {
   label: string;
   children: ReactNode;
   isDefaultShow?: boolean;
-  /** Opens the drawer whenever it turns true, for example to show an error inside. */
+  /** Keeps the drawer open, for example while it holds an error. */
   isForcedShow?: boolean;
 };
 
@@ -16,20 +16,15 @@ const ExpandableDrawerGroup: React.FC<Props> = ({
   isForcedShow = false,
   ...props
 }) => {
-  const [isShow, setIsShow] = useState(isDefaultShow || isForcedShow);
-
-  useEffect(() => {
-    if (isForcedShow) {
-      setIsShow(true);
-    }
-  }, [isForcedShow]);
+  const [isOpen, setIsOpen] = useState(isDefaultShow);
+  const isShow = isOpen || isForcedShow;
 
   return (
     <div className={twMerge(props.className)}>
       <div
         className="flex w-full cursor-pointer items-center transition hover:brightness-75"
         onClick={() => {
-          setIsShow(!isShow);
+          setIsOpen(!isShow);
         }}>
         <PiCaretDown className={`mx-1 text-sm ${isShow ? '' : 'rotate-180'}`} />
 

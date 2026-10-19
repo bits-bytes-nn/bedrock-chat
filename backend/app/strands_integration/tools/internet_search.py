@@ -105,7 +105,8 @@ def _search_with_firecrawl_standalone(
 # (connect, read) seconds for the search APIs.
 _SEARCH_API_TIMEOUT = (5, 20)
 _MAX_ATTEMPTS = 3
-_MAX_PARALLEL_SUMMARIES = 8
+# Bedrock throttles the title model when many pages are summarized at once.
+_MAX_PARALLEL_SUMMARIES = 4
 _MAX_RETRY_DELAY = 5.0
 _RETRYABLE_STATUSES = {429, 500, 502, 503, 504}
 _TAVILY_TIME_RANGES = {"d": "day", "w": "week", "m": "month", "y": "year"}

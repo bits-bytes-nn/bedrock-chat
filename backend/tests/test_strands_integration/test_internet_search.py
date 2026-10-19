@@ -236,3 +236,13 @@ def test_duckduckgo_uses_the_snippets_without_model_calls():
     ]
     kwargs = ddgs.__enter__.return_value.text.call_args.kwargs
     assert kwargs["region"] == "wt-wt" and kwargs["timelimit"] is None
+
+
+def test_duckduckgo_regions_are_country_then_language():
+    ddgs = MagicMock()
+    ddgs.__enter__.return_value.text.return_value = []
+    with patch("duckduckgo_search.DDGS", return_value=ddgs):
+        internet_search._search_with_duckduckgo_standalone("q", "w", "ko-kr")
+
+    kwargs = ddgs.__enter__.return_value.text.call_args.kwargs
+    assert kwargs["region"] == "kr-ko" and kwargs["timelimit"] == "w"

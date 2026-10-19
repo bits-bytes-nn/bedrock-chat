@@ -164,6 +164,7 @@ export const AvailableTools = ({
       tool.name === 'internet_search' && isInternetTool(tool)
   );
   const searchEngine = internetSearchTool?.searchEngine ?? 'duckduckgo';
+  const maxResults = SEARCH_API_MAX_RESULTS[searchEngine];
   const apiKeyError =
     errorMessages?.[`tools-${internetSearchToolIndex}-searchApiConfig.apiKey`];
 
@@ -221,42 +222,39 @@ export const AvailableTools = ({
                 // The missing API key is inside, so open it to show the error.
                 isForcedShow={!!apiKeyError}
                 label={t('agent.tools.internet_search.settings')}>
-                <div
-                  role="radiogroup"
-                  aria-label={t('agent.tools.internet_search.settings')}
-                  className="space-y-4">
-                  {SEARCH_ENGINES.map((engine) => {
-                    const maxResults = SEARCH_API_MAX_RESULTS[engine];
-                    return (
-                      <div key={engine} className="flex flex-col gap-2">
-                        <RadioButton
-                          name="searchEngine"
-                          value={engine}
-                          checked={searchEngine === engine}
-                          label={t(
-                            `agent.tools.internet_search.engines.${engine}.label`
-                          )}
-                          hint={t(
-                            `agent.tools.internet_search.engines.${engine}.hint`
-                          )}
-                          onChange={handleSearchEngineChange}
-                        />
-                        {searchEngine === engine && maxResults && (
-                          <div className="ml-6 text-sm">
-                            <SearchApiConfigComponent
-                              config={
-                                internetSearchTool?.searchApiConfig ??
-                                DEFAULT_SEARCH_API_CONFIG
-                              }
-                              maxResults={maxResults}
-                              errorMessage={apiKeyError}
-                              onChange={handleSearchApiConfigChange}
-                            />
-                          </div>
+                <div className="space-y-4">
+                  <div
+                    role="radiogroup"
+                    aria-label={t('agent.tools.internet_search.settings')}>
+                    {SEARCH_ENGINES.map((engine) => (
+                      <RadioButton
+                        key={engine}
+                        name="searchEngine"
+                        value={engine}
+                        checked={searchEngine === engine}
+                        label={t(
+                          `agent.tools.internet_search.engines.${engine}.label`
                         )}
-                      </div>
-                    );
-                  })}
+                        hint={t(
+                          `agent.tools.internet_search.engines.${engine}.hint`
+                        )}
+                        onChange={handleSearchEngineChange}
+                      />
+                    ))}
+                  </div>
+                  {maxResults && (
+                    <div className="ml-8 text-sm">
+                      <SearchApiConfigComponent
+                        config={
+                          internetSearchTool?.searchApiConfig ??
+                          DEFAULT_SEARCH_API_CONFIG
+                        }
+                        maxResults={maxResults}
+                        errorMessage={apiKeyError}
+                        onChange={handleSearchApiConfigChange}
+                      />
+                    </div>
+                  )}
                 </div>
               </ExpandableDrawerGroup>
             )}
