@@ -1,8 +1,10 @@
 import json
 import logging
 import os
+from typing import get_args
 
 from app.model_registry import MODELS
+from app.routes.schemas.bot import type_search_engine
 from app.routes.schemas.conversation import type_model_name
 
 logger = logging.getLogger(__name__)
@@ -11,6 +13,10 @@ GLOBAL_AVAILABLE_MODELS = os.environ.get("GLOBAL_AVAILABLE_MODELS")
 DEFAULT_MODEL = os.environ.get("DEFAULT_MODEL")
 TITLE_MODEL = os.environ.get("TITLE_MODEL")
 LOGO_PATH = os.environ.get("LOGO_PATH", "")
+DEFAULT_CHAT_SEARCH_ENGINE = os.environ.get("DEFAULT_CHAT_SEARCH_ENGINE", "")
+DEFAULT_CHAT_SEARCH_API_KEY_SECRET_ARN = os.environ.get(
+    "DEFAULT_CHAT_SEARCH_API_KEY_SECRET_ARN", ""
+)
 
 
 def get_global_available_models() -> list[str]:
@@ -62,3 +68,26 @@ def get_title_model() -> type_model_name:
 def get_logo_path() -> str:
     """Return the configured drawer logo path."""
     return LOGO_PATH
+
+
+def get_default_chat_search_engine() -> type_search_engine | None:
+    """Return the internet search engine of chats without a bot.
+
+    Returns:
+        The engine, or None when chats without a bot have no internet search.
+
+    Raises:
+        ValueError: If the configured engine is unknown.
+    """
+    if not DEFAULT_CHAT_SEARCH_ENGINE:
+        return None
+    if DEFAULT_CHAT_SEARCH_ENGINE not in get_args(type_search_engine):
+        raise ValueError(
+            f"Unknown DEFAULT_CHAT_SEARCH_ENGINE: {DEFAULT_CHAT_SEARCH_ENGINE}"
+        )
+    return DEFAULT_CHAT_SEARCH_ENGINE  # type: ignore[return-value]
+
+
+def get_default_chat_search_api_key_secret_arn() -> str:
+    """Return the secret with the API key of the default chat search engine."""
+    return DEFAULT_CHAT_SEARCH_API_KEY_SECRET_ARN
