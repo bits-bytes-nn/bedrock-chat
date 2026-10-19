@@ -500,6 +500,20 @@ bedrockChatParams.set("default", {
 - **enableBotStoreReplicas**: 봇 스토어가 사용하는 OpenSearch Serverless 컬렉션의 대기 복제본 활성화 여부를 제어합니다(기본값: `false`). `true`로 설정하면 가용성이 향상되지만 비용이 증가하며, `false`로 설정하면 비용이 감소하지만 가용성에 영향을 미칠 수 있습니다.
   > **중요**: 컬렉션이 이미 생성된 후에는 이 속성을 업데이트할 수 없습니다. 이 속성을 수정하려고 시도해도 컬렉션은 원래 값을 계속 사용합니다.
 
+### 봇 없는 대화의 인터넷 검색
+
+봇 없이 시작한 대화에는 기본으로 도구가 없습니다. `defaultChatSearchEngine`을 설정하면 배포 전체에서 엔진 하나를 쓰는 [인터넷 검색 도구](./AGENT_ko-KR.md)가 켜집니다. 값은 `duckduckgo`(API 키 불필요), `tavily`, `brave`, `firecrawl` 중 하나입니다. 이 파라미터는 `cdk.json`에 없으므로 `parameter.ts`, `cdk/cdk.context.json` 또는 `-c defaultChatSearchEngine=tavily`로 지정합니다. `bin.sh`를 쓰면 실행할 때마다 `--cdk-json-override '{"context": {"defaultChatSearchEngine": "tavily"}}'`를 넘깁니다. 값 없이 배포하면 검색이 꺼지고 키가 든 시크릿도 삭제됩니다.
+
+API 키가 필요한 엔진이면 스택이 빈 시크릿을 만들고 그 이름을 스택 출력 `DefaultChatSearchApiKeySecretName`으로 알려 줍니다. 배포 후 키를 넣으면 이후 배포에서도 유지됩니다. 셸 기록에 남지 않도록 키는 명령행 대신 파일로 넘깁니다.
+
+```bash
+# key.json 내용: {"api_key": "<API 키>"}
+aws secretsmanager put-secret-value --secret-id <DefaultChatSearchApiKeySecretName> --secret-string file://key.json
+rm key.json
+```
+
+키를 넣기 전에는 검색이 실패하고 모델은 검색 없이 답합니다. 엔진을 바꾸면 시크릿도 바뀌므로 새 엔진의 키를 다시 넣어야 합니다. 도구를 지원하지 않는 모델에는 검색이 붙지 않습니다. 봇 없는 대화의 답변에는 본문 인용 표시가 없고, 검색 결과는 답변과 함께 표시됩니다.
+
 ### 교차 리전 추론과 글로벌 추론
 
 [교차 리전 추론과 글로벌 추론](https://docs.aws.amazon.com/bedrock/latest/userguide/inference-profiles-support.html)을 사용하면 Amazon Bedrock이 모델 추론 요청을 여러 AWS 리전으로 동적으로 라우팅해 수요가 몰릴 때의 처리량과 복원력을 높입니다. 글로벌 추론은 전 세계 리전 중 지연 시간과 가용성이 가장 좋은 곳으로, 교차 리전 추론은 미국 안처럼 같은 지역 안의 리전으로 요청을 보냅니다. SCP가 둘 중 하나나 둘 다를 막을 수 있으므로 각각 따로 설정할 수 있으며, 기본값은 둘 다 사용입니다.
