@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { TIdentityProvider } from "./identity-provider";
 import { App } from "aws-cdk-lib";
+import { SEARCH_API_ENGINES } from "./bedrock-policies";
 
 export const BotStoreLanguageSchema = z.enum([
   "en",
@@ -155,6 +156,12 @@ const BedrockChatParametersSchema = BaseParametersSchema.extend({
   // Model used for generating conversation titles
   // (defaults to defaultModel, then a hardcoded default in get_title_model())
   titleModel: z.string().optional(),
+
+  // Internet search of chats without a bot. Empty turns it off. An engine with an
+  // API key gets a secret in the stack, which the admin fills in after the deploy.
+  defaultChatSearchEngine: z
+    .enum(["", "duckduckgo", ...SEARCH_API_ENGINES])
+    .default(""),
 
   // Frontend branding
   logoPath: z.string().default(""),
@@ -338,6 +345,7 @@ export function resolveBedrockChatParameters(
     globalAvailableModels: app.node.tryGetContext("globalAvailableModels"),
     defaultModel: app.node.tryGetContext("defaultModel"),
     titleModel: app.node.tryGetContext("titleModel"),
+    defaultChatSearchEngine: app.node.tryGetContext("defaultChatSearchEngine"),
     logoPath: app.node.tryGetContext("logoPath"),
     devAccessIamRoleArn: app.node.tryGetContext("devAccessIamRoleArn"),
     tokenValidMinutes: app.node.tryGetContext("tokenValidMinutes"),

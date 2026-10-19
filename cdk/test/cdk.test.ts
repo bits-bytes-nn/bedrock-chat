@@ -836,7 +836,7 @@ describe("Bedrock Chat Stack Test", () => {
     );
   });
 
-  test("the search API key policy covers every engine of the backend", () => {
+  test("the search engines of the CDK match the backend", () => {
     // A missing engine fails only at run time, with AccessDenied on its key.
     const schema = fs.readFileSync(
       path.join(__dirname, "../../backend/app/routes/schemas/bot.py"),
@@ -846,6 +846,67 @@ describe("Bedrock Chat Stack Test", () => {
     expect(limits).not.toBeNull();
     const engines = [...limits![1].matchAll(/"(\w+)":/g)].map((m) => m[1]);
     expect([...SEARCH_API_ENGINES].sort()).toEqual(engines.sort());
+
+    // defaultChatSearchEngine takes the keyed engines and DuckDuckGo.
+    const allEngines = schema.match(/^type_search_engine = Literal\[([^\]]*)\]/m);
+    expect(allEngines).not.toBeNull();
+    expect(
+      [...allEngines![1].matchAll(/"(\w+)"/g)].map((m) => m[1]).sort()
+    ).toEqual(["duckduckgo", ...SEARCH_API_ENGINES].sort());
+  });
+
+  test("chats without a bot search with the engine and key of the deployment", () => {
+    const chatHandlers = (template: Template) =>
+      Object.values(
+        template.findResources("AWS::Lambda::Function", {
+          Properties: {
+            Environment: {
+              Variables: { DEFAULT_CHAT_SEARCH_ENGINE: Match.anyValue() },
+            },
+          },
+        })
+      );
+
+    // Off by default, without a secret.
+    const off = newChatStack();
+    off.resourceCountIs("AWS::SecretsManager::Secret", 0);
+    expect(chatHandlers(off)).toHaveLength(2);
+    for (const fn of chatHandlers(off) as any[]) {
+      expect(fn.Properties.Environment.Variables.DEFAULT_CHAT_SEARCH_ENGINE).toBe("");
+    }
+
+    const template = newChatStack({ defaultChatSearchEngine: "tavily" });
+    const secrets = Object.keys(
+      template.findResources("AWS::SecretsManager::Secret")
+    );
+    expect(secrets).toHaveLength(1);
+    // The backend reads `api_key`. A changed value would reset the key on deploy.
+    template.hasResourceProperties("AWS::SecretsManager::Secret", {
+      SecretString: '{"api_key":""}',
+    });
+    // The REST API and the WebSocket handler.
+    const handlers = chatHandlers(template) as any[];
+    expect(handlers).toHaveLength(2);
+    for (const fn of handlers) {
+      const variables = fn.Properties.Environment.Variables;
+      expect(variables.DEFAULT_CHAT_SEARCH_ENGINE).toBe("tavily");
+      expect(variables.DEFAULT_CHAT_SEARCH_API_KEY_SECRET_ARN).toEqual({
+        Ref: secrets[0],
+      });
+      const readsKey = roleStatementsOf(template, fn).some(
+        (statement) =>
+          [statement.Action].flat().includes("secretsmanager:GetSecretValue") &&
+          JSON.stringify(statement.Resource).includes(secrets[0])
+      );
+      expect(readsKey).toBe(true);
+    }
+    template.hasOutput("DefaultChatSearchApiKeySecretName", {});
+
+    // DuckDuckGo needs no key.
+    newChatStack({ defaultChatSearchEngine: "duckduckgo" }).resourceCountIs(
+      "AWS::SecretsManager::Secret",
+      0
+    );
   });
 
   test("the Cognito trigger code fits in an inline CloudFormation function", () => {

@@ -41,7 +41,7 @@ export const bedrockIngestionPolicyStatement = (): iam.PolicyStatement =>
  * The internet search engines that need an API key, as in SEARCH_API_MAX_RESULTS
  * of backend/app/routes/schemas/bot.py.
  */
-export const SEARCH_API_ENGINES = ["firecrawl", "tavily", "brave"];
+export const SEARCH_API_ENGINES = ["firecrawl", "tavily", "brave"] as const;
 
 /**
  * Secrets Manager actions on the search API keys of bots with the internet

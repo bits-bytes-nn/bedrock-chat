@@ -965,3 +965,26 @@ describe("published API usage plan", () => {
     expect(result.publishedApiQuotaLimit).toBeUndefined();
   });
 });
+
+describe("defaultChatSearchEngine", () => {
+  test("is off by default and takes a search engine of the backend", () => {
+    const app = createTestApp();
+    const params = { bedrockRegion: "us-east-1" };
+
+    expect(
+      resolveBedrockChatParameters(app, params).defaultChatSearchEngine
+    ).toBe("");
+    expect(
+      resolveBedrockChatParameters(app, {
+        ...params,
+        defaultChatSearchEngine: "tavily",
+      }).defaultChatSearchEngine
+    ).toBe("tavily");
+    expect(() =>
+      resolveBedrockChatParameters(app, {
+        ...params,
+        defaultChatSearchEngine: "bing" as any,
+      })
+    ).toThrow(ZodError);
+  });
+});
