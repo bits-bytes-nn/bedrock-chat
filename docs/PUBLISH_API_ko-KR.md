@@ -40,7 +40,7 @@ WAF는 IP 주소 제한에 사용됩니다. 주소는 `cdk.json`의 `publishedAp
 
 클라이언트는 요청 헤더에 `x-api-key`를 설정해야 합니다.
 
-게시된 API는 게시할 때의 백엔드 버전과 스택 설정을 그대로 씁니다. Bedrock Chat을 업그레이드한 뒤에는 API를 다시 게시해야 반영됩니다.
+게시된 API는 게시할 때의 백엔드 버전과 스택 설정을 그대로 씁니다. Bedrock Chat을 업그레이드한 뒤에는 API를 다시 게시해야 반영됩니다. 예를 들어 Tavily와 Brave Search가 추가되기 전에 게시한 API는 이 엔진을 쓰는 봇을 불러오지 못하고, 봇의 Firecrawl 설정을 다시 저장하면 DuckDuckGo로 검색합니다.
 
 `GET /conversation/{conversationId}/{messageId}`는 답변이 준비되지 않았으면 404를, 답변을 생성하지 못했으면 이유와 함께 500을 반환합니다. API 스택에는 이런 실패를 알리는 `FailedAnswers`·`ChatQueueDlqMessages` 알람과 Lambda 함수 오류 알람이 있으며, 채팅 스택의 `AlarmTopicArn` 토픽으로 알림을 보냅니다. `continueGenerate`를 지정한 요청은 400으로, 큐 한도(1 MiB)를 넘는 메시지는 413으로 거부됩니다. 답변 생성의 동시 실행 수에 상한이 있어 요청이 몰리면 큐에서 대기합니다. 답변 생성에 실패하면 약 30초 뒤 한 번 다시 시도합니다. 잘못된 요청, 존재하지 않는 봇, 너무 큰 메시지나 대화, 모델의 컨텍스트 길이를 넘는 대화는 재시도 없이 바로 실패합니다.
 

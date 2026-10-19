@@ -13,6 +13,7 @@ import {
   getAnalyzer,
   getKnowledgeBaseType,
 } from "../lib/utils/bedrock-knowledge-base-args";
+import { SEARCH_API_ENGINES } from "../lib/utils/bedrock-policies";
 import { BedrockCustomBotStack } from "../lib/bedrock-custom-bot-stack";
 import { BedrockRegionResourcesStack } from "../lib/bedrock-region-resources";
 import { ApiPublishmentStack } from "../lib/api-publishment-stack";
@@ -833,6 +834,18 @@ describe("Bedrock Chat Stack Test", () => {
       template,
       "AuthCognitoTriggerRegistrationFunctionLogGroup"
     );
+  });
+
+  test("the search API key policy covers every engine of the backend", () => {
+    // A missing engine fails only at run time, with AccessDenied on its key.
+    const schema = fs.readFileSync(
+      path.join(__dirname, "../../backend/app/routes/schemas/bot.py"),
+      "utf8"
+    );
+    const limits = schema.match(/^SEARCH_API_MAX_RESULTS[^{]*\{([^}]*)\}/m);
+    expect(limits).not.toBeNull();
+    const engines = [...limits![1].matchAll(/"(\w+)":/g)].map((m) => m[1]);
+    expect([...SEARCH_API_ENGINES].sort()).toEqual(engines.sort());
   });
 
   test("the Cognito trigger code fits in an inline CloudFormation function", () => {

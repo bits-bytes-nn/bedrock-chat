@@ -40,7 +40,7 @@ Once a user click publish the bot, [AWS CodeBuild](https://aws.amazon.com/codebu
 
 Client needs to set `x-api-key` on the request header.
 
-Published APIs keep the backend version and stack settings they were published with. After upgrading Bedrock Chat, publish each API again to update it.
+Published APIs keep the backend version and stack settings they were published with. After upgrading Bedrock Chat, publish each API again to update it. For example, an API published before Tavily and Brave Search were added fails to load a bot that uses them, and searches with DuckDuckGo once the bot's Firecrawl settings are saved again.
 
 `GET /conversation/{conversationId}/{messageId}` returns 404 while the answer is not ready, and 500 with the reason when it could not be generated. The API stack has `FailedAnswers` and `ChatQueueDlqMessages` alarms for such failures and alarms for errors of its Lambda functions; they notify the chat stack's `AlarmTopicArn` topic. Requests with `continueGenerate` are rejected with 400, and a message larger than the queue limit of 1 MiB with 413. Answers are generated with limited concurrency, so a burst of requests waits in the queue. A failed answer is retried once, about 30 seconds later; invalid requests, missing bots, messages or conversations that are too large and conversations too long for the model fail at once.
 
