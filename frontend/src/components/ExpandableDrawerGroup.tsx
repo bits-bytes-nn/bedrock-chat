@@ -1,4 +1,4 @@
-import React, { ReactNode, useState } from 'react';
+import React, { ReactNode, useEffect, useState } from 'react';
 import { PiCaretDown } from 'react-icons/pi';
 import { twMerge } from 'tailwind-merge';
 
@@ -7,13 +7,22 @@ type Props = {
   label: string;
   children: ReactNode;
   isDefaultShow?: boolean;
+  /** Opens the drawer whenever it turns true, for example to show an error inside. */
+  isForcedShow?: boolean;
 };
 
 const ExpandableDrawerGroup: React.FC<Props> = ({
   isDefaultShow = true,
+  isForcedShow = false,
   ...props
 }) => {
-  const [isShow, setIsShow] = useState(isDefaultShow);
+  const [isShow, setIsShow] = useState(isDefaultShow || isForcedShow);
+
+  useEffect(() => {
+    if (isForcedShow) {
+      setIsShow(true);
+    }
+  }, [isForcedShow]);
 
   return (
     <div className={twMerge(props.className)}>

@@ -10,7 +10,7 @@ import {
 } from '../types';
 import { isInternetTool, isBedrockAgentTool } from '../utils/typeGuards';
 import Toggle from '../../../components/Toggle';
-import { Dispatch, useCallback, useState, useEffect } from 'react';
+import { Dispatch, useCallback } from 'react';
 import { formatDescription } from '../functions/formatDescription';
 import Help from '../../../components/Help';
 import Skeleton from '../../../components/Skeleton';
@@ -49,7 +49,6 @@ export const AvailableTools = ({
   const { t } = useTranslation();
   // Bedrock agents run with the application's role, so only admins can add them.
   const { isAdmin } = useLoginUser();
-  const [searchEngine, setSearchEngine] = useState<SearchEngine>('duckduckgo');
 
   const handleChangeTool = useCallback(
     (tool: AgentTool) => () => {
@@ -66,8 +65,7 @@ export const AvailableTools = ({
                 {
                   ...tool,
                   toolType: 'internet' as ToolType,
-                  name: 'internet_search',
-                  searchEngine: searchEngine || 'duckduckgo',
+                  searchEngine: 'duckduckgo',
                 } as AgentTool,
               ];
 
@@ -104,7 +102,7 @@ export const AvailableTools = ({
         );
       }
     },
-    [setTools, searchEngine]
+    [setTools]
   );
 
   const handleSearchApiConfigChange = useCallback(
@@ -112,15 +110,7 @@ export const AvailableTools = ({
       setTools((prevTools) =>
         prevTools.map((tool) => {
           if (tool.name === 'internet_search') {
-            return {
-              ...tool,
-              toolType: 'internet' as ToolType,
-              name: 'internet_search',
-              searchEngine: isInternetTool(tool)
-                ? tool.searchEngine
-                : 'duckduckgo',
-              searchApiConfig: config,
-            } as AgentTool;
+            return { ...tool, searchApiConfig: config };
           }
           return tool;
         })
@@ -150,47 +140,21 @@ export const AvailableTools = ({
 
   const handleSearchEngineChange = useCallback(
     (value: string) => {
-      const newEngine = value as SearchEngine;
-      setSearchEngine(newEngine);
-
-      // Update existing internet_search tool if it exists
-      setTools((prevTools) => {
-        const internetSearchTool = prevTools.find(
-          (t) => t.name === 'internet_search'
-        );
-        if (!internetSearchTool) {
-          return prevTools;
-        }
-
-        const updatedTools = prevTools.map((tool) =>
+      setTools((prevTools) =>
+        prevTools.map((tool) =>
           tool.name === 'internet_search'
             ? {
                 ...tool,
-                toolType: 'internet' as ToolType,
-                name: 'internet_search',
-                searchEngine: newEngine as SearchEngine,
+                searchEngine: value as SearchEngine,
                 // Each engine has its own API key.
                 searchApiConfig: undefined,
               }
             : tool
-        );
-        return updatedTools;
-      });
+        )
+      );
     },
     [setTools]
   );
-
-  // Initialize searchEngine from existing tool if present
-  useEffect(() => {
-    const internetSearchTool = tools.find((t) => t.name === 'internet_search');
-    if (
-      internetSearchTool &&
-      isInternetTool(internetSearchTool) &&
-      internetSearchTool.searchEngine
-    ) {
-      setSearchEngine(internetSearchTool.searchEngine);
-    }
-  }, [tools]);
 
   const internetSearchToolIndex = tools.findIndex(
     (tool) => tool.name === 'internet_search'
@@ -199,6 +163,9 @@ export const AvailableTools = ({
     (tool): tool is InternetAgentTool =>
       tool.name === 'internet_search' && isInternetTool(tool)
   );
+  const searchEngine = internetSearchTool?.searchEngine ?? 'duckduckgo';
+  const apiKeyError =
+    errorMessages?.[`tools-${internetSearchToolIndex}-searchApiConfig.apiKey`];
 
   return (
     <>
@@ -251,8 +218,13 @@ export const AvailableTools = ({
               <ExpandableDrawerGroup
                 className="ml-8 mt-2"
                 isDefaultShow={false}
+                // The missing API key is inside, so open it to show the error.
+                isForcedShow={!!apiKeyError}
                 label={t('agent.tools.internet_search.settings')}>
-                <div className="space-y-4">
+                <div
+                  role="radiogroup"
+                  aria-label={t('agent.tools.internet_search.settings')}
+                  className="space-y-4">
                   {SEARCH_ENGINES.map((engine) => {
                     const maxResults = SEARCH_API_MAX_RESULTS[engine];
                     return (
@@ -264,13 +236,11 @@ export const AvailableTools = ({
                           label={t(
                             `agent.tools.internet_search.engines.${engine}.label`
                           )}
-                          onChange={handleSearchEngineChange}
-                        />
-                        <div className="ml-6 text-sm text-aws-font-color-light/70 dark:text-aws-font-color-dark">
-                          {t(
+                          hint={t(
                             `agent.tools.internet_search.engines.${engine}.hint`
                           )}
-                        </div>
+                          onChange={handleSearchEngineChange}
+                        />
                         {searchEngine === engine && maxResults && (
                           <div className="ml-6 text-sm">
                             <SearchApiConfigComponent
@@ -279,11 +249,7 @@ export const AvailableTools = ({
                                 DEFAULT_SEARCH_API_CONFIG
                               }
                               maxResults={maxResults}
-                              errorMessage={
-                                errorMessages?.[
-                                  `tools-${internetSearchToolIndex}-searchApiConfig.apiKey`
-                                ]
-                              }
+                              errorMessage={apiKeyError}
                               onChange={handleSearchApiConfigChange}
                             />
                           </div>

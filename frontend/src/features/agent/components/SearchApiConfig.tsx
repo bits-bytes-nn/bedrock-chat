@@ -55,6 +55,8 @@ export const SearchApiConfig = ({
         <button
           type="button"
           className="size-9 rounded border border-aws-font-color-light/50 p-2 text-sm dark:border-aws-font-color-dark/50"
+          aria-label={t('agent.tools.searchApi.showApiKey')}
+          aria-pressed={showPassword}
           onClick={() => setShowPassword(!showPassword)}>
           {showPassword ? (
             <PiEyeLight className="size-5" />

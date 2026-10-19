@@ -42,6 +42,8 @@ const InputText = React.forwardRef<HTMLInputElement, Props>((props, ref) => {
           props.icon ? 'pl-8' : ''
         )}
         disabled={props.disabled}
+        aria-invalid={!!props.errorMessage}
+        aria-describedby={props.errorMessage ? `${id}-error` : undefined}
         value={props.value}
         placeholder={props.placeholder}
         onChange={(e) => {
@@ -68,7 +70,9 @@ const InputText = React.forwardRef<HTMLInputElement, Props>((props, ref) => {
         </div>
       )}
       {props.errorMessage && (
-        <div className="mt-0.5 text-xs text-red dark:text-red-400">{props.errorMessage}</div>
+        <div id={`${id}-error`} className="mt-0.5 text-xs text-red dark:text-red-400">
+          {props.errorMessage}
+        </div>
       )}
     </div>
   );
