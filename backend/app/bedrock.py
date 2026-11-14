@@ -58,6 +58,13 @@ def is_prompt_caching_supported(
     return target in get_model_spec(model).prompt_caching
 
 
+def is_prompt_caching_automatic(model: type_model_name) -> bool:
+    """Strands places the cache points of Anthropic models itself: after the system
+    prompt, after the tools and on the last user message, moving it forward as the
+    agent loop adds tool results."""
+    return get_model_spec(model).provider == "anthropic"
+
+
 def is_unsigned_reasoning_content_supported(model: type_model_name) -> bool:
     return get_model_spec(model).accepts_unsigned_reasoning
 

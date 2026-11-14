@@ -85,6 +85,10 @@ const translation = {
         label: 'GPT-6.1 Sol',
         description: 'Latest OpenAI GPT-6.1 model for complex reasoning.',
       },
+      'gpt-6.1-terra': {
+        label: 'GPT-6.1 Terra',
+        description: 'OpenAI GPT-6.1 model balancing capability and cost.',
+      },
       'amazon-nova-2-lite': {
         label: 'Amazon Nova 2 Lite',
         description:

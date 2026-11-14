@@ -86,6 +86,10 @@ const translation: typeof en = {
         label: 'GPT-6.1 Sol',
         description: '複雑な推論向けの最新OpenAI GPT-6.1モデル。',
       },
+      'gpt-6.1-terra': {
+        label: 'GPT-6.1 Terra',
+        description: '性能とコストのバランスに優れたOpenAI GPT-6.1モデル。',
+      },
       'amazon-nova-2-lite': {
         label: 'Amazon Nova 2 Lite',
         description:

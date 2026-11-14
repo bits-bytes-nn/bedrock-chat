@@ -300,7 +300,7 @@ npm ci
     The following model IDs are supported (please make sure that they are also enabled in the Bedrock console under Model access in your deployment region):
 
 - **Claude Models:** `claude-v4.5-opus`, `claude-v4.6-opus`, `claude-v4.7-opus`, `claude-v4.8-opus`, `claude-v5-opus`, `claude-v5.5-opus`, `claude-v4.5-sonnet`, `claude-v4.6-sonnet`, `claude-v5-sonnet`, `claude-v5.5-sonnet`, `claude-v4.5-haiku`, `claude-v5.5-haiku`
-- **OpenAI Models:** `gpt-5.5`, `gpt-5.6-luna`, `gpt-5.6-sol`, `gpt-5.6-terra`, `gpt-6-astra`, `gpt-6-luna`, `gpt-6-sol`, `gpt-6.1-sol`, `gpt-oss-20b`, `gpt-oss-120b`
+- **OpenAI Models:** `gpt-5.5`, `gpt-5.6-luna`, `gpt-5.6-sol`, `gpt-5.6-terra`, `gpt-6-astra`, `gpt-6-luna`, `gpt-6-sol`, `gpt-6.1-sol`, `gpt-6.1-terra`, `gpt-oss-20b`, `gpt-oss-120b`
 - **Amazon Nova Models:** `amazon-nova-pro`, `amazon-nova-lite`, `amazon-nova-micro`, `amazon-nova-2-lite`
 - **Mistral Models:** `mistral-large`, `mistral-large-2`
 - **DeepSeek Models:** `deepseek-r1`

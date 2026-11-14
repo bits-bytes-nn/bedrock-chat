@@ -235,7 +235,7 @@ npm ci
   - `logoPath`: 애플리케이션 드로어 상단에 표시되는 이미지를 가리키는 `frontend/public` 아래의 상대 경로.
 다음 모델 ID가 지원됩니다(배포 리전의 Bedrock 콘솔의 Model access에서 활성화되어 있는지 확인하세요):
 - **Claude 모델:** `claude-v4.5-opus`, `claude-v4.6-opus`, `claude-v4.7-opus`, `claude-v4.8-opus`, `claude-v5-opus`, `claude-v5.5-opus`, `claude-v4.5-sonnet`, `claude-v4.6-sonnet`, `claude-v5-sonnet`, `claude-v5.5-sonnet`, `claude-v4.5-haiku`, `claude-v5.5-haiku`
-- **OpenAI 모델:** `gpt-5.5`, `gpt-5.6-luna`, `gpt-5.6-sol`, `gpt-5.6-terra`, `gpt-6-astra`, `gpt-6-luna`, `gpt-6-sol`, `gpt-6.1-sol`, `gpt-oss-20b`, `gpt-oss-120b`
+- **OpenAI 모델:** `gpt-5.5`, `gpt-5.6-luna`, `gpt-5.6-sol`, `gpt-5.6-terra`, `gpt-6-astra`, `gpt-6-luna`, `gpt-6-sol`, `gpt-6.1-sol`, `gpt-6.1-terra`, `gpt-oss-20b`, `gpt-oss-120b`
 - **Amazon Nova 모델:** `amazon-nova-pro`, `amazon-nova-lite`, `amazon-nova-micro`, `amazon-nova-2-lite`
 - **Mistral 모델:** `mistral-large`, `mistral-large-2`
 - **DeepSeek 모델:** `deepseek-r1`

@@ -95,6 +95,11 @@ const MODELS: Omit<ModelItem, 'label' | 'description'>[] = [
     ...ALWAYS_REASONING,
   },
   {
+    modelId: 'gpt-6.1-terra',
+    supportMediaType: IMAGE_MEDIA_TYPES,
+    ...ALWAYS_REASONING,
+  },
+  {
     modelId: 'gpt-6-astra',
     supportMediaType: IMAGE_MEDIA_TYPES,
     ...ALWAYS_REASONING,

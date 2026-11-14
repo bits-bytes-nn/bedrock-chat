@@ -102,6 +102,7 @@ export const AVAILABLE_MODEL_KEYS = [
   'gpt-6-luna',
   'gpt-6-sol',
   'gpt-6.1-sol',
+  'gpt-6.1-terra',
   'gpt-oss-20b',
   'gpt-oss-120b',
   'amazon-nova-pro',
