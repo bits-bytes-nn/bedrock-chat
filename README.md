@@ -119,7 +119,7 @@ The attachments of one message may total 3 MB, counting the text of converted pr
 
 ### Knowledge base parsing
 
-The bot's knowledge settings offer an advanced parsing model that reads figures, charts and tables in PDF files and images. Claude Haiku 4.5 is called through a global cross-Region inference profile, so documents may be processed in other Regions. Claude 3 Haiku is kept as a legacy option and is not available in every Region. Bots saved with Claude 3 or 3.5 Sonnet, which Bedrock no longer offers, use the default parser.
+The bot's knowledge settings offer an advanced parsing model that reads figures, charts and tables in PDF files and images. Claude Haiku 4.5 is called through a global cross-Region inference profile, so documents may be processed in other Regions. This does not follow `enableBedrockGlobalInference`: where a policy blocks global inference, use the default parser. Claude 3 Haiku is kept as a legacy option and is not available in every Region. Bots saved with Claude 3 or 3.5 Sonnet, which Bedrock no longer offers, use the default parser.
 
 > [!NOTE]
 > OpenSearch Serverless returns newly indexed documents about a minute after ingestion, so a sync is marked as succeeded a minute after its ingestion completes.
@@ -137,14 +137,8 @@ A comprehensive workshop is available [here](https://catalog.us-east-1.prod.work
 
 ## 🚀 Super-easy Deployment
 
-- In the us-east-1 region, open [Bedrock Model access](https://us-east-1.console.aws.amazon.com/bedrock/home?region=us-east-1#/modelaccess) > `Manage model access` > Check all of models you wish to use and then `Save changes`.
+- In the Bedrock region (`--bedrock-region`, default us-east-1), open each model you want to offer once in the playground of the [Amazon Bedrock console](https://console.aws.amazon.com/bedrock/home) > `Model catalog`. The first call enables a model sold through AWS Marketplace (Claude, GPT) for the account, which needs AWS Marketplace permissions that the application's roles do not have. For Anthropic models earlier than Claude Opus 4.7, also submit the one-time use case form. See [Access Amazon Bedrock foundation models](https://docs.aws.amazon.com/bedrock/latest/userguide/model-access.html).
 
-<details>
-<summary>Screenshot</summary>
-
-![](./docs/imgs/model_screenshot.png)
-
-</details>
 
 ### Supported regions
 
@@ -165,7 +159,7 @@ chmod +x bin.sh
 > [!IMPORTANT]
 > `bin.sh` runs the deployment from the repository in `--repo-url`, which defaults to upstream aws-samples/bedrock-chat. To deploy this fork, pass its URL, for example `./bin.sh --repo-url https://github.com/bits-bytes-nn/bedrock-chat.git`. When the deployment finishes, `bin.sh` deletes the `CodeBuildForDeploy` stack, whose CodeBuild project has administrator access.
 
-- You will be asked if a new user or using v3. If you are not a continuing user from v0, please enter `y`.
+- You will be asked whether this is a new deployment or one that already runs v3. Enter `y` in those cases; if you come from v2 or earlier, read the [migration guide](./docs/migration/V2_TO_V3.md) first.
 
 ### Optional Parameters
 
@@ -175,12 +169,15 @@ You can specify the following parameters during deployment to enhance security a
 - **--enable-lambda-snapstart**: Enable [Lambda SnapStart](https://docs.aws.amazon.com/lambda/latest/dg/snapstart.html) (default: disabled). If this flag is set, improves cold start times for Lambda functions, providing faster response times for better user experience.
 - **--ipv4-ranges**: Comma-separated list of allowed IPv4 ranges. (default: allow all ipv4 addresses)
 - **--ipv6-ranges**: Comma-separated list of allowed IPv6 ranges. (default: allow all ipv6 addresses)
-- **--disable-ipv6**: Disable connections over IPv6. (default: enabled)
+- **--disable-ipv6**: Serve the frontend over IPv4 only and allow no IPv6 address in the WAF. (default: IPv6 enabled)
 - **--allowed-signup-email-domains**: Comma-separated list of allowed email domains for sign-up. (default: no domain restriction)
 - **--bedrock-region**: Define the region where bedrock is available. (default: us-east-1)
 - **--repo-url**: The custom repo of Bedrock Chat to deploy, if forked or custom source control. (default: https://github.com/aws-samples/bedrock-chat.git)
-- **--version**: The version of Bedrock Chat to deploy. (default: latest version in development)
+- **--version**: The branch or tag of `--repo-url` to deploy. (default: `v3`)
 - **--cdk-json-override**: You can override any CDK context values during deployment using the override JSON block. This allows you to modify the configuration without editing the cdk.json file directly.
+
+> [!IMPORTANT]
+> The IPv4 and IPv6 lists are separate: restricting only `--ipv4-ranges` (or `allowedIpV4AddressRanges`) leaves every IPv6 address allowed. Also pass `--ipv6-ranges` or `--disable-ipv6`. In the CDK context, an empty `allowedIpV6AddressRanges` blocks IPv6 clients, so set `enableFrontendIpv6` to `false` with it, as `--disable-ipv6` does. These lists cover the frontend and Cognito only; published APIs use `publishedApiAllowedIpV4AddressRanges` and `publishedApiAllowedIpV6AddressRanges`, which you can set with `--cdk-json-override`.
 
 Example usage:
 
@@ -190,6 +187,8 @@ Example usage:
     "selfSignUpEnabled": false,
     "enableLambdaSnapStart": true,
     "allowedIpV4AddressRanges": ["192.168.1.0/24"],
+    "allowedIpV6AddressRanges": [],
+    "enableFrontendIpv6": false,
     "allowedCountries": ["US", "CA"],
     "allowedSignUpEmailDomains": ["example.com"],
     "globalAvailableModels": [
@@ -214,6 +213,7 @@ The override JSON must follow the same structure as cdk.json. You can override a
 - `bedrockRegion`
 - `enableRagReplicas`
 - `enableBedrockCrossRegionInference`
+- `enableBedrockGlobalInference`
 - `globalAvailableModels`: accepts a list of model IDs to enable. The default value is an empty list, which enables all models.
 - `logoPath`: relative path to the logo asset within the frontend `public/` directory that appears at the top of the navigation drawer.
 - And other context values defined in cdk.json
@@ -260,7 +260,7 @@ It's an architecture built on AWS managed services, eliminating the need for inf
 - [Amazon Cognito](https://aws.amazon.com/cognito/): User authentication
 - [Amazon Bedrock](https://aws.amazon.com/bedrock/): Managed service to utilize foundational models via APIs
 - [Amazon Bedrock Knowledge Bases](https://aws.amazon.com/bedrock/knowledge-bases/): Provides a managed interface for Retrieval-Augmented Generation ([RAG](https://aws.amazon.com/what-is/retrieval-augmented-generation/)), offering services for embedding and parsing documents
-- [Amazon EventBridge Pipes](https://aws.amazon.com/eventbridge/pipes/): Receiving deletion event of bots from DynamoDB stream and delete CloudFormation stack related to the bot
+- [AWS Lambda](https://aws.amazon.com/lambda/) with [DynamoDB Streams](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Streams.html): Receiving deletion events of bots and deleting the resources and CloudFormation stacks related to them
 - [AWS Step Functions](https://aws.amazon.com/step-functions/): Orchestrating ingestion pipeline to embed external knowledge into Bedrock Knowledge Bases
 - [Amazon OpenSearch Serverless](https://aws.amazon.com/opensearch-service/features/serverless/): Serves as the backend database for Bedrock Knowledge Bases, providing full-text search and vector search capabilities, enabling accurate retrieval of relevant information
 - [Amazon Athena](https://aws.amazon.com/athena/): Query service to analyze S3 bucket
@@ -377,6 +377,8 @@ For better type safety and developer experience, you can use the `parameter.ts` 
 bedrockChatParams.set("default", {
   bedrockRegion: "us-east-1",
   allowedIpV4AddressRanges: ["192.168.0.0/16"],
+  allowedIpV6AddressRanges: [],
+  enableFrontendIpv6: false,
   selfSignUpEnabled: false,
   globalAvailableModels: [
     "claude-v5.5-sonnet",
@@ -391,6 +393,8 @@ bedrockChatParams.set("default", {
 bedrockChatParams.set("dev", {
   bedrockRegion: "us-west-2",
   allowedIpV4AddressRanges: ["10.0.0.0/8"],
+  allowedIpV6AddressRanges: [],
+  enableFrontendIpv6: false,
   enableRagReplicas: false, // Cost-saving for dev environment
   enableBotStoreReplicas: false, // Cost-saving for dev environment
 });
@@ -398,6 +402,8 @@ bedrockChatParams.set("dev", {
 bedrockChatParams.set("prod", {
   bedrockRegion: "us-east-1",
   allowedIpV4AddressRanges: ["172.16.0.0/12"],
+  allowedIpV6AddressRanges: [],
+  enableFrontendIpv6: false,
   enableLambdaSnapStart: true,
   enableRagReplicas: true, // Enhanced availability for production
   enableBotStoreReplicas: true, // Enhanced availability for production
@@ -473,7 +479,7 @@ See also [Upgrading](./docs/ADMINISTRATOR.md#upgrading) in the administrator gui
 
 Delete the resources that the application created at runtime first, because they keep billing and `cdk destroy` does not know about them: delete every bot with a knowledge base and every published API in the app, or delete their stacks in [CloudFormation](https://console.aws.amazon.com/cloudformation/home): `BrChatKbStack*` in the Bedrock region and `ApiPublishmentStack*` in the deployment region. In either case, also delete `BrChatSharedKbStack` (`<envPrefix>-BrChatSharedKbStack` in a named environment) in the Bedrock region. CodeBuild creates it for shared knowledge bases, and deleting bots does not remove it. A named environment upgraded from an earlier version may also use `BrChatSharedKbStack`; see [Upgrading an Existing Deployment](#upgrading-an-existing-deployment).
 
-Then run `npx cdk destroy --all` in `cdk`. Without the CDK, delete `BedrockChatStack`, `BedrockRegionResourcesStack` and `FrontendWafStack` in CloudFormation. Please note that `FrontendWafStack` is in `us-east-1` region.
+Then run `npx cdk destroy --all` in `cdk`. Without the CDK, delete `BedrockChatStack`, `BedrockRegionResourcesStack` and `FrontendWafStack` (`<envPrefix>-BedrockChatStack` and so on in a named environment) in CloudFormation. Please note that `FrontendWafStack` is in `us-east-1` region.
 
 The conversation and bot tables, the Cognito user pool, the document bucket and the large message bucket are retained so that user data is not lost. To delete them as well, turn off deletion protection on the tables and the user pool, empty the buckets, and delete them in the console or with the AWS CLI.
 
@@ -517,6 +523,9 @@ bedrockChatParams.set("default", {
   enableFrontendWaf: false,
 });
 ```
+
+> [!WARNING]
+> A `default` entry in `parameter.ts` replaces every setting in `cdk.json`, including IP restrictions. Copy your other settings into it, or set only this key in `cdk.json`.
 
 Or if using the legacy `cdk/cdk.json` set the following:
 
@@ -605,6 +614,9 @@ bedrockChatParams.set("default", {
   titleModel: "claude-v5.5-haiku",
 });
 ```
+
+> [!WARNING]
+> A `default` entry in `parameter.ts` replaces every setting in `cdk.json`, including IP restrictions. Copy your other settings into it, or set only this key in `cdk.json`.
 
 - **defaultModel** (optional): The model pre-selected in the chat UI when users start a new conversation. If not set, defaults to `claude-v5.5-sonnet`.
 - **titleModel** (optional): The model used to automatically generate conversation titles. If not set, falls back to `defaultModel`, then to `claude-v5.5-haiku`.
@@ -738,6 +750,9 @@ bedrockChatParams.set("default", {
   allowedCountries: ["NZ", "AU"],
 });
 ```
+
+> [!WARNING]
+> A `default` entry in `parameter.ts` replaces every setting in `cdk.json`, including IP restrictions. Copy your other settings into it, or set only this key in `cdk.json`.
 
 ### Disable IPv6 support
 

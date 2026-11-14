@@ -1,5 +1,5 @@
 > [!NOTE]
-> 이 번역은 upstream aws-samples 프로젝트 기준이며, 배포 절차와 보안 기본값만 이 포크에 맞게 고쳤습니다. 모델 목록과 그 밖의 최신 내용은 [영어 README](../README.md)를 기준으로 합니다. 이 포크에서 바뀐 점은 [Changes from upstream](../README.md#changes-from-upstream), 프레젠테이션·녹음 변환은 [Presentations and recordings](../README.md#presentations-and-recordings), 첨부 파일과 대화 크기 제한은 [Size limits](../README.md#size-limits), 지식 기반 파싱 모델은 [Knowledge base parsing](../README.md#knowledge-base-parsing), 알람과 API 요청 제한은 [Alarms and API Throttling](../README.md#alarms-and-api-throttling), 사용자별 전용 지식 기반 수 제한은 [Limit dedicated knowledge bases](../README.md#limit-dedicated-knowledge-bases)를 참고하세요. 업그레이드 시 주의 사항은 [업그레이드](./ADMINISTRATOR_ko-KR.md#업그레이드), 사용자 데이터 삭제 방법은 [사용자 데이터 삭제](./ADMINISTRATOR_ko-KR.md#사용자-데이터-삭제)에 정리되어 있습니다.
+> 이 번역은 upstream aws-samples 프로젝트 기준이며, 배포 절차와 보안 기본값만 이 포크에 맞게 고쳤습니다. 모델 목록과 그 밖의 최신 내용은 [영어 README](../README.md)를 기준으로 합니다. 이 포크에서 바뀐 점은 [Changes from upstream](../README.md#changes-from-upstream), 프레젠테이션·녹음 변환은 [Presentations and recordings](../README.md#presentations-and-recordings), 첨부 파일과 대화 크기 제한은 [Size limits](../README.md#size-limits), 지식 기반 파싱 모델은 [Knowledge base parsing](../README.md#knowledge-base-parsing), 알람과 API 요청 제한은 [Alarms and API Throttling](../README.md#alarms-and-api-throttling), 사용자별 전용 지식 기반 수 제한은 [Limit dedicated knowledge bases](../README.md#limit-dedicated-knowledge-bases), 기본 모델 설정은 [Configure Default Models](../README.md#configure-default-models), 사용 분석 내보내기 보존 기간은 [Usage analysis retention](../README.md#usage-analysis-retention)을 참고하세요. 업그레이드 시 주의 사항은 [업그레이드](./ADMINISTRATOR_ko-KR.md#업그레이드), 사용자 데이터 삭제 방법은 [사용자 데이터 삭제](./ADMINISTRATOR_ko-KR.md#사용자-데이터-삭제)에 정리되어 있습니다.
 
 <h1 align="center">Bedrock Chat (BrChat)</h1>
 
@@ -73,14 +73,7 @@ API 관리, 필수 봇 표시, 봇 사용량 분석 [자세히 보기](./ADMINIS
 
 ## 🚀 간편한 배포
 
-- us-east-1 리전에서 [Bedrock Model access](https://us-east-1.console.aws.amazon.com/bedrock/home?region=us-east-1#/modelaccess)를 열고 > `Manage model access` > 사용하고자 하는 모든 모델을 선택한 후 `Save changes`를 클릭하세요.
-
-<details>
-<summary>스크린샷</summary>
-
-![](./imgs/model_screenshot.png)
-
-</details>
+- Bedrock 리전(`--bedrock-region`, 기본값 us-east-1)의 [Amazon Bedrock 콘솔](https://console.aws.amazon.com/bedrock/home) > `Model catalog`에서 제공할 모델을 하나씩 플레이그라운드로 한 번 호출하세요. AWS Marketplace로 판매되는 모델(Claude, GPT)은 첫 호출 때 계정에서 활성화되는데, 이때 필요한 AWS Marketplace 권한이 애플리케이션 역할에는 없습니다. Claude Opus 4.7보다 이전 Anthropic 모델은 처음 한 번 사용 사례 양식도 제출해야 합니다. 자세한 내용은 [Access Amazon Bedrock foundation models](https://docs.aws.amazon.com/bedrock/latest/userguide/model-access.html)를 참고하세요.
 
 ### 지원되는 리전
 
@@ -101,7 +94,7 @@ chmod +x bin.sh
 > [!IMPORTANT]
 > `bin.sh`는 `--repo-url`의 저장소를 배포하며 기본값은 upstream aws-samples/bedrock-chat입니다. 이 포크를 배포하려면 `./bin.sh --repo-url https://github.com/bits-bytes-nn/bedrock-chat.git`처럼 URL을 지정하세요. 배포가 끝나면 `bin.sh`는 관리자 권한을 가진 CodeBuild 프로젝트가 들어 있는 `CodeBuildForDeploy` 스택을 삭제합니다.
 
-- 새로운 사용자인지 v3 사용자인지 묻는 메시지가 표시됩니다. v0 이전 버전의 기존 사용자가 아닌 경우 `y`를 입력하세요.
+- 새 배포인지, 이미 v3를 쓰는 배포인지 묻습니다. 이 경우 `y`를 입력하세요. v2 이하에서 올라오는 경우 먼저 [마이그레이션 가이드](./migration/V2_TO_V3_ko-KR.md)를 읽으세요.
 
 ### 선택적 파라미터
 
@@ -111,12 +104,15 @@ chmod +x bin.sh
 - **--enable-lambda-snapstart**: [Lambda SnapStart](https://docs.aws.amazon.com/lambda/latest/dg/snapstart.html) 활성화 (기본값: 비활성화). 이 플래그가 설정되면 Lambda 함수의 콜드 스타트 시간이 개선되어 더 나은 사용자 경험을 위한 빠른 응답 시간을 제공합니다.
 - **--ipv4-ranges**: 허용된 IPv4 범위의 쉼표로 구분된 목록. (기본값: 모든 ipv4 주소 허용)
 - **--ipv6-ranges**: 허용된 IPv6 범위의 쉼표로 구분된 목록. (기본값: 모든 ipv6 주소 허용)
-- **--disable-ipv6**: IPv6 연결 비활성화. (기본값: 활성화)
+- **--disable-ipv6**: 프론트엔드를 IPv4로만 제공하고 WAF에서 IPv6 주소를 모두 차단합니다. (기본값: IPv6 사용)
 - **--allowed-signup-email-domains**: 가입이 허용된 이메일 도메인의 쉼표로 구분된 목록. (기본값: 도메인 제한 없음)
 - **--bedrock-region**: bedrock이 사용 가능한 리전 정의. (기본값: us-east-1)
 - **--repo-url**: 포크되었거나 사용자 지정 소스 컨트롤의 경우, 배포할 Bedrock Chat의 사용자 지정 리포지토리. (기본값: https://github.com/aws-samples/bedrock-chat.git)
-- **--version**: 배포할 Bedrock Chat의 버전. (기본값: 개발 중인 최신 버전)
+- **--version**: `--repo-url`에서 배포할 브랜치나 태그. (기본값: `v3`)
 - **--cdk-json-override**: CDK 컨텍스트 값을 배포 중에 재정의하기 위해 override JSON 블록을 사용할 수 있습니다. 이를 통해 cdk.json 파일을 직접 수정하지 않고도 구성을 수정할 수 있습니다.
+
+> [!IMPORTANT]
+> IPv4와 IPv6 목록은 따로 적용됩니다. `--ipv4-ranges`(또는 `allowedIpV4AddressRanges`)만 제한하면 모든 IPv6 주소가 계속 허용되므로 `--ipv6-ranges`나 `--disable-ipv6`도 함께 지정하세요. CDK 컨텍스트에서 `allowedIpV6AddressRanges`를 빈 목록으로 두면 IPv6 클라이언트가 차단되므로, `--disable-ipv6`처럼 `enableFrontendIpv6`도 `false`로 설정하세요. 이 목록은 프론트엔드와 Cognito에만 적용됩니다. 게시된 API에는 `publishedApiAllowedIpV4AddressRanges`, `publishedApiAllowedIpV6AddressRanges`가 적용되며 `--cdk-json-override`로 설정할 수 있습니다.
 
 사용 예시:
 
@@ -126,6 +122,8 @@ chmod +x bin.sh
     "selfSignUpEnabled": false,
     "enableLambdaSnapStart": true,
     "allowedIpV4AddressRanges": ["192.168.1.0/24"],
+    "allowedIpV6AddressRanges": [],
+    "enableFrontendIpv6": false,
     "allowedCountries": ["US", "CA"],
     "allowedSignUpEmailDomains": ["example.com"],
     "globalAvailableModels": [
@@ -196,7 +194,7 @@ AWS 관리형 서비스를 기반으로 구축된 아키텍처로, 인프라 관
 - [Amazon Cognito](https://aws.amazon.com/cognito/): 사용자 인증
 - [Amazon Bedrock](https://aws.amazon.com/bedrock/): API를 통해 기반 모델을 활용할 수 있는 관리형 서비스
 - [Amazon Bedrock Knowledge Bases](https://aws.amazon.com/bedrock/knowledge-bases/): 검색 증강 생성(Retrieval-Augmented Generation, [RAG](https://aws.amazon.com/what-is/retrieval-augmented-generation/))을 위한 관리형 인터페이스를 제공하며, 문서 임베딩 및 구문 분석 서비스 제공
-- [Amazon EventBridge Pipes](https://aws.amazon.com/eventbridge/pipes/): DynamoDB 스트림에서 이벤트를 수신하고 외부 지식을 임베딩하기 위한 Step Functions 실행
+- [AWS Lambda](https://aws.amazon.com/lambda/)와 [DynamoDB Streams](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Streams.html): 봇 삭제 이벤트를 받아 봇의 리소스와 CloudFormation 스택 삭제
 - [AWS Step Functions](https://aws.amazon.com/step-functions/): Bedrock Knowledge Bases에 외부 지식을 임베딩하기 위한 수집 파이프라인 오케스트레이션
 - [Amazon OpenSearch Serverless](https://aws.amazon.com/opensearch-service/features/serverless/): Bedrock Knowledge Bases의 백엔드 데이터베이스로 작동하며, 전체 텍스트 검색과 벡터 검색 기능을 제공하여 관련 정보를 정확하게 검색 가능
 - [Amazon Athena](https://aws.amazon.com/athena/): S3 버킷을 분석하기 위한 쿼리 서비스
@@ -307,6 +305,8 @@ BedrockChatStack.FrontendURL = https://xxxxx.cloudfront.net
 bedrockChatParams.set("default", {
   bedrockRegion: "us-east-1",
   allowedIpV4AddressRanges: ["192.168.0.0/16"],
+  allowedIpV6AddressRanges: [],
+  enableFrontendIpv6: false,
   selfSignUpEnabled: false,
   globalAvailableModels: [
       "claude-v5.5-sonnet",
@@ -321,6 +321,8 @@ bedrockChatParams.set("default", {
 bedrockChatParams.set("dev", {
   bedrockRegion: "us-west-2",
   allowedIpV4AddressRanges: ["10.0.0.0/8"],
+  allowedIpV6AddressRanges: [],
+  enableFrontendIpv6: false,
   enableRagReplicas: false, // 개발 환경을 위한 비용 절감
   enableBotStoreReplicas: false, // 개발 환경을 위한 비용 절감
 });
@@ -328,6 +330,8 @@ bedrockChatParams.set("dev", {
 bedrockChatParams.set("prod", {
   bedrockRegion: "us-east-1",
   allowedIpV4AddressRanges: ["172.16.0.0/12"],
+  allowedIpV6AddressRanges: [],
+  enableFrontendIpv6: false,
   enableLambdaSnapStart: true,
   enableRagReplicas: true, // 프로덕션을 위한 가용성 향상
   enableBotStoreReplicas: true, // 프로덕션을 위한 가용성 향상
@@ -403,7 +407,7 @@ npx cdk deploy --all
 
 애플리케이션이 실행 중에 만든 리소스를 먼저 삭제하세요. 비용이 계속 발생하고 `cdk destroy`로는 삭제되지 않습니다. 앱에서 지식 기반이 있는 봇과 게시한 API를 모두 삭제하거나, [CloudFormation](https://console.aws.amazon.com/cloudformation/home)에서 Bedrock 리전의 `BrChatKbStack*` 스택과 배포 리전의 `ApiPublishmentStack*` 스택을 삭제합니다. 어느 쪽이든 Bedrock 리전의 `BrChatSharedKbStack`(이름 있는 환경에서는 `<envPrefix>-BrChatSharedKbStack`) 스택도 따로 삭제하세요. 이 스택은 공유 지식 기반용으로 CodeBuild가 만들며, 봇을 삭제해도 남습니다. 이전 버전에서 업그레이드한 이름 있는 환경은 `BrChatSharedKbStack`도 사용할 수 있으니 [기존 배포 업그레이드](#기존-배포-업그레이드)를 참고하세요.
 
-그다음 `cdk`에서 `npx cdk destroy --all`을 실행하세요. CDK를 사용하지 않는 경우 CloudFormation에서 `BedrockChatStack`, `BedrockRegionResourcesStack`, `FrontendWafStack`을 삭제하세요. `FrontendWafStack`은 `us-east-1` 리전에 있다는 점에 유의하세요.
+그다음 `cdk`에서 `npx cdk destroy --all`을 실행하세요. CDK를 사용하지 않는 경우 CloudFormation에서 `BedrockChatStack`, `BedrockRegionResourcesStack`, `FrontendWafStack`(이름 있는 환경에서는 `<envPrefix>-BedrockChatStack` 등)을 삭제하세요. `FrontendWafStack`은 `us-east-1` 리전에 있다는 점에 유의하세요.
 
 대화·봇 테이블, Cognito 사용자 풀, 문서 버킷과 대용량 메시지 버킷은 사용자 데이터를 보호하기 위해 남겨 둡니다. 함께 삭제하려면 테이블과 사용자 풀의 삭제 보호를 끄고 버킷을 비운 뒤 콘솔이나 AWS CLI로 삭제하세요.
 
@@ -445,6 +449,9 @@ bedrockChatParams.set("default", {
   enableFrontendWaf: false
 });
 ```
+
+> [!WARNING]
+> `parameter.ts`의 `default` 항목은 IP 제한을 포함한 `cdk.json`의 모든 설정을 대체합니다. 다른 설정도 함께 옮기거나, 이 키만 `cdk.json`에 설정하세요.
 
 또는 레거시 `cdk/cdk.json`을 사용하는 경우 다음과 같이 설정하세요:
 
@@ -577,6 +584,9 @@ bedrockChatParams.set("default", {
   allowedCountries: ["NZ", "AU"],
 });
 ```
+
+> [!WARNING]
+> `parameter.ts`의 `default` 항목은 IP 제한을 포함한 `cdk.json`의 모든 설정을 대체합니다. 다른 설정도 함께 옮기거나, 이 키만 `cdk.json`에 설정하세요.
 
 ### IPv6 지원 비활성화
 

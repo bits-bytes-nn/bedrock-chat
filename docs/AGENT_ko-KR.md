@@ -176,4 +176,4 @@ def create_calculator_tool(bot: BotModel | None = None):
   - i18n 파일을 편집하세요. [en/index.ts](../frontend/src/i18n/en/index.ts)를 열고 `agent.tools`에 자신만의 `name`과 `description`을 추가하세요.
   - `xx/index.ts`도 편집하세요. 여기서 `xx`는 원하는 국가 코드를 나타냅니다.
 
-- `npx cdk deploy`를 실행하여 변경 사항을 배포하세요. 이렇게 하면 커스텀 봇 화면에서 사용자 정의 도구를 사용할 수 있게 됩니다.
+- `npx cdk deploy --all`를 실행하여 변경 사항을 배포하세요. 이렇게 하면 커스텀 봇 화면에서 사용자 정의 도구를 사용할 수 있게 됩니다.
