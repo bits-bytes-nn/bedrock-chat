@@ -1,5 +1,6 @@
 import { CfnOutput, Duration, RemovalPolicy, Stack, StackProps } from "aws-cdk-lib";
 import { Construct } from "constructs";
+import * as lambda from "aws-cdk-lib/aws-lambda";
 import * as lambdaNodeJs from 'aws-cdk-lib/aws-lambda-nodejs';
 import { VectorCollection } from "@cdklabs/generative-ai-cdk-constructs/lib/cdk-lib/opensearchserverless";
 import {
@@ -128,12 +129,13 @@ class SharedKnowledgeBase extends Construct {
     const transformationFunction = new lambdaNodeJs.NodejsFunction(this, 'TransformationFunction', {
       entry: path.resolve(__dirname, '../lambda/knowledge-base-custom-transformation/index.ts'),
       depsLockFilePath: path.resolve(__dirname, '../lambda/knowledge-base-custom-transformation/package-lock.json'),
-
+      // Without a runtime the construct picks Node.js 16, which Lambda deprecated.
+      runtime: lambda.Runtime.NODEJS_22_X,
       timeout: Duration.minutes(15),
       logGroup: lambdaLogGroup(this, "TransformationFunctionLogGroup"),
     });
-    props.documentBucket.grantReadWrite(transformationFunction);
-    tempBucket.grantReadWrite(transformationFunction);
+    // The function only adds metadata to the batches; the Knowledge Base reads and
+    // writes the files, so it has no S3 permissions.
 
     this.kb = new VectorKnowledgeBase(this, "KnowledgeBase", {
       embeddingsModel: props.embeddingsModel,

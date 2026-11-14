@@ -20,6 +20,9 @@ export interface MonitoringProps {
   readonly api: IHttpApi;
   readonly webSocketHandler: IFunction;
   readonly webSocketLogGroup: logs.ILogGroup;
+  /** The authorizer of new chat connections. */
+  readonly webSocketAuthorizer: IFunction;
+  readonly webSocketAuthorizerLogGroup: logs.ILogGroup;
   readonly embeddingStateMachine: sfn.IStateMachine;
   /** Log group of the function that records sync results. */
   readonly syncStatusLogGroup: logs.ILogGroup;
@@ -85,6 +88,28 @@ export class Monitoring extends Construct {
         props.webSocketHandler.metricErrors({ period, statistic: "Sum" }),
         1,
         "The chat handler Lambda failed (for example a timeout, out of memory or an init error).",
+      ],
+      [
+        "ChatConnectionAuthorizerErrors",
+        // The authorizer denies every connection while it cannot fetch the signing
+        // keys, and the chat handler is then never called.
+        new cloudwatch.MathExpression({
+          expression: "logged + failed",
+          usingMetrics: {
+            logged: loggedErrors(
+              "SigningKeyFetchFailureCount",
+              props.webSocketAuthorizerLogGroup,
+              ["Failed to fetch the signing keys"]
+            ),
+            failed: props.webSocketAuthorizer.metricErrors({
+              period,
+              statistic: "Sum",
+            }),
+          },
+          period,
+        }),
+        1,
+        "Checking the token of new chat connections failed, so chats cannot connect.",
       ],
       [
         "WebSocketHandlerThrottles",
