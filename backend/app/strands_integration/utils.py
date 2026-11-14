@@ -27,9 +27,9 @@ def _tool_factories() -> dict[str, Callable[[BotModel | None], StrandsAgentTool]
     }
 
 
-def get_strands_registered_tools(bot: BotModel | None = None) -> list[StrandsAgentTool]:
-    """Get list of available Strands tools."""
-    return [create(bot) for create in _tool_factories().values()]
+def get_strands_registered_tools() -> list[StrandsAgentTool]:
+    """The tools that bots can turn on, without the settings of a bot."""
+    return [create(None) for create in _tool_factories().values()]
 
 
 def get_strands_tools(

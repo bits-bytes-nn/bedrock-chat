@@ -169,7 +169,7 @@ You can specify the following parameters during deployment to enhance security a
 - **--enable-lambda-snapstart**: Enable [Lambda SnapStart](https://docs.aws.amazon.com/lambda/latest/dg/snapstart.html) (default: disabled). If this flag is set, improves cold start times for Lambda functions, providing faster response times for better user experience.
 - **--ipv4-ranges**: Comma-separated list of allowed IPv4 ranges. (default: allow all ipv4 addresses)
 - **--ipv6-ranges**: Comma-separated list of allowed IPv6 ranges. (default: allow all ipv6 addresses)
-- **--disable-ipv6**: Serve the frontend over IPv4 only and allow no IPv6 address in the WAF. (default: IPv6 enabled)
+- **--disable-ipv6**: Serve the frontend over IPv4 only. (default: IPv6 enabled)
 - **--allowed-signup-email-domains**: Comma-separated list of allowed email domains for sign-up. (default: no domain restriction)
 - **--bedrock-region**: Define the region where bedrock is available. (default: us-east-1)
 - **--repo-url**: The custom repo of Bedrock Chat to deploy, if forked or custom source control. (default: https://github.com/aws-samples/bedrock-chat.git)
@@ -177,7 +177,7 @@ You can specify the following parameters during deployment to enhance security a
 - **--cdk-json-override**: You can override any CDK context values during deployment using the override JSON block. This allows you to modify the configuration without editing the cdk.json file directly.
 
 > [!IMPORTANT]
-> The IPv4 and IPv6 lists are separate: restricting only `--ipv4-ranges` (or `allowedIpV4AddressRanges`) leaves every IPv6 address allowed. Also pass `--ipv6-ranges` or `--disable-ipv6`. In the CDK context, an empty `allowedIpV6AddressRanges` blocks IPv6 clients, so set `enableFrontendIpv6` to `false` with it, as `--disable-ipv6` does. These lists cover the frontend and Cognito only; published APIs use `publishedApiAllowedIpV4AddressRanges` and `publishedApiAllowedIpV6AddressRanges`, which you can set with `--cdk-json-override`.
+> The IPv4 and IPv6 lists are separate: restricting only `--ipv4-ranges` (or `allowedIpV4AddressRanges`) leaves every IPv6 address allowed. Also pass `--ipv6-ranges` or `--disable-ipv6`. An empty `allowedIpV6AddressRanges` also turns IPv6 off on CloudFront, so IPv6 clients connect over IPv4. These lists cover the frontend and Cognito only; published APIs use `publishedApiAllowedIpV4AddressRanges` and `publishedApiAllowedIpV6AddressRanges`, which you can set with `--cdk-json-override`.
 
 Example usage:
 
@@ -188,7 +188,6 @@ Example usage:
     "enableLambdaSnapStart": true,
     "allowedIpV4AddressRanges": ["192.168.1.0/24"],
     "allowedIpV6AddressRanges": [],
-    "enableFrontendIpv6": false,
     "allowedCountries": ["US", "CA"],
     "allowedSignUpEmailDomains": ["example.com"],
     "globalAvailableModels": [
@@ -378,7 +377,6 @@ bedrockChatParams.set("default", {
   bedrockRegion: "us-east-1",
   allowedIpV4AddressRanges: ["192.168.0.0/16"],
   allowedIpV6AddressRanges: [],
-  enableFrontendIpv6: false,
   selfSignUpEnabled: false,
   globalAvailableModels: [
     "claude-v5.5-sonnet",
@@ -394,7 +392,6 @@ bedrockChatParams.set("dev", {
   bedrockRegion: "us-west-2",
   allowedIpV4AddressRanges: ["10.0.0.0/8"],
   allowedIpV6AddressRanges: [],
-  enableFrontendIpv6: false,
   enableRagReplicas: false, // Cost-saving for dev environment
   enableBotStoreReplicas: false, // Cost-saving for dev environment
 });
@@ -403,7 +400,6 @@ bedrockChatParams.set("prod", {
   bedrockRegion: "us-east-1",
   allowedIpV4AddressRanges: ["172.16.0.0/12"],
   allowedIpV6AddressRanges: [],
-  enableFrontendIpv6: false,
   enableLambdaSnapStart: true,
   enableRagReplicas: true, // Enhanced availability for production
   enableBotStoreReplicas: true, // Enhanced availability for production

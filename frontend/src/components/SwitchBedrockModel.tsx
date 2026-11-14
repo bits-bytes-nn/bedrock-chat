@@ -1,5 +1,6 @@
 import { BaseProps } from '../@types/common';
 import useModel from '../hooks/useModel';
+import { useNewChatCount } from '../hooks/useChat';
 import { Listbox, Transition } from '@headlessui/react';
 import { Fragment } from 'react/jsx-runtime';
 import { useMemo, useEffect } from 'react';
@@ -20,7 +21,18 @@ const SwitchBedrockModel: React.FC<Props> = (props) => {
     modelId,
     setModelId,
     getDefaultModel,
+    restoreSavedModel,
   } = useModel(props.botId, props.activeModels);
+
+  // A shown conversation sets its own model without saving it; a new chat starts
+  // with the saved one again.
+  const newChatCount = useNewChatCount();
+  useEffect(() => {
+    if (newChatCount > 0) {
+      restoreSavedModel();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [newChatCount]);
 
   const availableModels = useMemo(() => {
     return allModels.filter((model) => {

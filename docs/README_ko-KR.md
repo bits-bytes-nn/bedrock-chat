@@ -104,7 +104,7 @@ chmod +x bin.sh
 - **--enable-lambda-snapstart**: [Lambda SnapStart](https://docs.aws.amazon.com/lambda/latest/dg/snapstart.html) 활성화 (기본값: 비활성화). 이 플래그가 설정되면 Lambda 함수의 콜드 스타트 시간이 개선되어 더 나은 사용자 경험을 위한 빠른 응답 시간을 제공합니다.
 - **--ipv4-ranges**: 허용된 IPv4 범위의 쉼표로 구분된 목록. (기본값: 모든 ipv4 주소 허용)
 - **--ipv6-ranges**: 허용된 IPv6 범위의 쉼표로 구분된 목록. (기본값: 모든 ipv6 주소 허용)
-- **--disable-ipv6**: 프론트엔드를 IPv4로만 제공하고 WAF에서 IPv6 주소를 모두 차단합니다. (기본값: IPv6 사용)
+- **--disable-ipv6**: 프론트엔드를 IPv4로만 제공합니다. (기본값: IPv6 사용)
 - **--allowed-signup-email-domains**: 가입이 허용된 이메일 도메인의 쉼표로 구분된 목록. (기본값: 도메인 제한 없음)
 - **--bedrock-region**: bedrock이 사용 가능한 리전 정의. (기본값: us-east-1)
 - **--repo-url**: 포크되었거나 사용자 지정 소스 컨트롤의 경우, 배포할 Bedrock Chat의 사용자 지정 리포지토리. (기본값: https://github.com/aws-samples/bedrock-chat.git)
@@ -112,7 +112,7 @@ chmod +x bin.sh
 - **--cdk-json-override**: CDK 컨텍스트 값을 배포 중에 재정의하기 위해 override JSON 블록을 사용할 수 있습니다. 이를 통해 cdk.json 파일을 직접 수정하지 않고도 구성을 수정할 수 있습니다.
 
 > [!IMPORTANT]
-> IPv4와 IPv6 목록은 따로 적용됩니다. `--ipv4-ranges`(또는 `allowedIpV4AddressRanges`)만 제한하면 모든 IPv6 주소가 계속 허용되므로 `--ipv6-ranges`나 `--disable-ipv6`도 함께 지정하세요. CDK 컨텍스트에서 `allowedIpV6AddressRanges`를 빈 목록으로 두면 IPv6 클라이언트가 차단되므로, `--disable-ipv6`처럼 `enableFrontendIpv6`도 `false`로 설정하세요. 이 목록은 프론트엔드와 Cognito에만 적용됩니다. 게시된 API에는 `publishedApiAllowedIpV4AddressRanges`, `publishedApiAllowedIpV6AddressRanges`가 적용되며 `--cdk-json-override`로 설정할 수 있습니다.
+> IPv4와 IPv6 목록은 따로 적용됩니다. `--ipv4-ranges`(또는 `allowedIpV4AddressRanges`)만 제한하면 모든 IPv6 주소가 계속 허용되므로 `--ipv6-ranges`나 `--disable-ipv6`도 함께 지정하세요. `allowedIpV6AddressRanges`를 빈 목록으로 두면 CloudFront의 IPv6도 꺼지므로 IPv6 클라이언트는 IPv4로 접속합니다. 이 목록은 프론트엔드와 Cognito에만 적용됩니다. 게시된 API에는 `publishedApiAllowedIpV4AddressRanges`, `publishedApiAllowedIpV6AddressRanges`가 적용되며 `--cdk-json-override`로 설정할 수 있습니다.
 
 사용 예시:
 
@@ -123,7 +123,6 @@ chmod +x bin.sh
     "enableLambdaSnapStart": true,
     "allowedIpV4AddressRanges": ["192.168.1.0/24"],
     "allowedIpV6AddressRanges": [],
-    "enableFrontendIpv6": false,
     "allowedCountries": ["US", "CA"],
     "allowedSignUpEmailDomains": ["example.com"],
     "globalAvailableModels": [
@@ -306,7 +305,6 @@ bedrockChatParams.set("default", {
   bedrockRegion: "us-east-1",
   allowedIpV4AddressRanges: ["192.168.0.0/16"],
   allowedIpV6AddressRanges: [],
-  enableFrontendIpv6: false,
   selfSignUpEnabled: false,
   globalAvailableModels: [
       "claude-v5.5-sonnet",
@@ -322,7 +320,6 @@ bedrockChatParams.set("dev", {
   bedrockRegion: "us-west-2",
   allowedIpV4AddressRanges: ["10.0.0.0/8"],
   allowedIpV6AddressRanges: [],
-  enableFrontendIpv6: false,
   enableRagReplicas: false, // 개발 환경을 위한 비용 절감
   enableBotStoreReplicas: false, // 개발 환경을 위한 비용 절감
 });
@@ -331,7 +328,6 @@ bedrockChatParams.set("prod", {
   bedrockRegion: "us-east-1",
   allowedIpV4AddressRanges: ["172.16.0.0/12"],
   allowedIpV6AddressRanges: [],
-  enableFrontendIpv6: false,
   enableLambdaSnapStart: true,
   enableRagReplicas: true, // 프로덕션을 위한 가용성 향상
   enableBotStoreReplicas: true, // 프로덕션을 위한 가용성 향상

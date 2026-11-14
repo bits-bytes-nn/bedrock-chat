@@ -5,6 +5,7 @@
 set -uo pipefail
 
 log=$(mktemp)
+trap 'rm -f "$log"' EXIT
 attempts=3
 for attempt in $(seq "$attempts"); do
   "$@" 2>&1 | tee "$log"

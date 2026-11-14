@@ -83,9 +83,11 @@ def _search_with_firecrawl_standalone(
         "limit": max_results,
         "lang": language,
         "scrapeOptions": {"formats": ["markdown"], "onlyMainContent": True},
+        # Ends the scraping before the read timeout below, in milliseconds.
+        "timeout": 50000,
     }
     if country:
-        body["location"] = country
+        body["country"] = country
     response = _call_search_api(
         "Firecrawl",
         "POST",

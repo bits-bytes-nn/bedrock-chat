@@ -37,7 +37,8 @@ defaults:
 jobs:
   synth-and-test:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # The tests and synth retry ECR Public rate limits, waiting up to 3 minutes.
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v6
       - name: Use Node.js

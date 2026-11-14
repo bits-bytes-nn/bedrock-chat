@@ -232,7 +232,7 @@ def test_firecrawl_summarizes_every_page_in_order():
     assert [r["source_link"] for r in results] == [f"https://{i}" for i in range(10)]
     assert results[3]["content"] == "summary of page 3"
     kwargs = request.call_args.kwargs
-    assert kwargs["json"]["limit"] == 10 and kwargs["json"]["location"] == "us"
+    assert kwargs["json"]["limit"] == 10 and kwargs["json"]["country"] == "us"
     # A stuck connection cannot hold the chat until the Lambda times out.
     assert kwargs["timeout"] == internet_search._FIRECRAWL_TIMEOUT
 

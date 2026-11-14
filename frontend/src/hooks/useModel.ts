@@ -365,6 +365,11 @@ const useModel = (botId?: string | null, activeModels?: ActiveModels) => {
     // Shows the model of a loaded conversation without changing the model that
     // new chats start with.
     setModelIdWithoutSaving: setModelId,
+    // Back to the model that new chats start with, after a conversation was shown.
+    restoreSavedModel: () =>
+      setModelId(
+        selectModel(((botId && botModelId) || recentUseModelId || getDefaultModel()) as Model)
+      ),
     model,
     disabledImageUpload: (model?.supportMediaType.length ?? 0) === 0,
     acceptMediaType:

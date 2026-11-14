@@ -750,7 +750,9 @@ describe("Bedrock Chat Stack Test", () => {
       )
     ).toEqual(["ExecutionsFailed", "ExecutionsTimedOut", "ExecutionsAborted"]);
     expect(syncAlarm.Properties.Metrics).toContainEqual(
-      expect.objectContaining({ Expression: "failed + timedOut + aborted" })
+      expect.objectContaining({
+        Expression: "FILL(failed, 0) + FILL(timedOut, 0) + FILL(aborted, 0)",
+      })
     );
 
     // The usage export runs from a schedule, so its failures alarm on Lambda errors.

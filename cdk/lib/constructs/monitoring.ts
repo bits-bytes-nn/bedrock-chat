@@ -94,7 +94,8 @@ export class Monitoring extends Construct {
         // The authorizer denies every connection while it cannot fetch the signing
         // keys, and the chat handler is then never called.
         new cloudwatch.MathExpression({
-          expression: "logged + failed",
+          // A series without data in a period has no value, which would hide the other.
+          expression: "FILL(logged, 0) + FILL(failed, 0)",
           usingMetrics: {
             logged: loggedErrors(
               "SigningKeyFetchFailureCount",
@@ -121,7 +122,7 @@ export class Monitoring extends Construct {
         "KnowledgeSyncFailures",
         // Timed-out and aborted executions leave their bots RUNNING as well.
         new cloudwatch.MathExpression({
-          expression: "failed + timedOut + aborted",
+          expression: "FILL(failed, 0) + FILL(timedOut, 0) + FILL(aborted, 0)",
           usingMetrics: {
             failed: props.embeddingStateMachine.metricFailed({ period }),
             timedOut: props.embeddingStateMachine.metricTimedOut({ period }),
