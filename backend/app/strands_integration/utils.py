@@ -3,6 +3,7 @@ Strands integration utilities - Independent tool management.
 """
 
 import logging
+from collections.abc import Callable
 
 from app.bedrock import is_tooluse_supported
 from app.repositories.models.custom_bot import BotModel
@@ -13,17 +14,22 @@ from strands.types.tools import AgentTool as StrandsAgentTool
 logger = logging.getLogger(__name__)
 
 
-def get_strands_registered_tools(bot: BotModel | None = None) -> list[StrandsAgentTool]:
-    """Get list of available Strands tools."""
+def _tool_factories() -> dict[str, Callable[[BotModel | None], StrandsAgentTool]]:
+    """The tools that a bot can turn on, by tool name."""
     from app.strands_integration.tools.bedrock_agent import create_bedrock_agent_tool
     from app.strands_integration.tools.internet_search import (
         create_internet_search_tool,
     )
 
-    tools: list[StrandsAgentTool] = []
-    tools.append(create_internet_search_tool(bot))
-    tools.append(create_bedrock_agent_tool(bot))
-    return tools
+    return {
+        "internet_search": create_internet_search_tool,
+        "bedrock_agent": create_bedrock_agent_tool,
+    }
+
+
+def get_strands_registered_tools(bot: BotModel | None = None) -> list[StrandsAgentTool]:
+    """Get list of available Strands tools."""
+    return [create(bot) for create in _tool_factories().values()]
 
 
 def get_strands_tools(
@@ -49,20 +55,12 @@ def get_strands_tools(
     if not bot.is_agent_enabled():
         return []
 
-    registered_tools = get_strands_registered_tools(bot)
-    tools: list[StrandsAgentTool] = []
-
-    # Get tools based on bot's tool configuration
-    for tool in bot.agent.tools:
-        if tool.name not in [t.tool_name for t in registered_tools]:
-            continue
-
-        # Append tool by matching name
-        matched_tool = next(
-            (t for t in registered_tools if t.tool_name == tool.name), None
-        )
-        if matched_tool:
-            tools.append(matched_tool)
+    # Only the tools that the bot turned on are created: creating the Bedrock Agent
+    # tool calls the Bedrock Agents API.
+    factories = _tool_factories()
+    tools: list[StrandsAgentTool] = [
+        factories[tool.name](bot) for tool in bot.agent.tools if tool.name in factories
+    ]
 
     # Add knowledge tool if bot has knowledge base
     if bot.has_knowledge():

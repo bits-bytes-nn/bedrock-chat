@@ -1,10 +1,11 @@
 """The internet search of chats without a bot, which the deployment configures."""
 
-from unittest.mock import patch
+from types import SimpleNamespace
+from unittest.mock import MagicMock, patch
 
 import pytest
 from app.strands_integration import utils
-from app.strands_integration.tools import internet_search
+from app.strands_integration.tools import bedrock_agent, internet_search
 from app.usecases import global_config
 
 SECRET_ARN = "arn:aws:secretsmanager:us-east-1:123456789012:secret:key"
@@ -40,7 +41,7 @@ def test_models_without_tool_use_get_no_search():
 
 
 def test_an_unknown_engine_is_a_configuration_error():
-    with configure("bing"), pytest.raises(ValueError):
+    with configure("bing"), pytest.raises(RuntimeError):
         global_config.get_default_chat_search_engine()
 
 
@@ -66,3 +67,22 @@ def test_a_keyed_engine_without_a_key_fails_without_another_engine(secret_arn, k
         with pytest.raises(RuntimeError):
             internet_search._search(None, "weather", "en-us", "w")
     ddg.assert_not_called()
+
+
+def test_tool_names_match_the_names_that_bots_store():
+    assert [tool.tool_name for tool in utils.get_strands_registered_tools()] == list(
+        utils._tool_factories()
+    )
+
+
+def test_bots_create_only_the_tools_that_they_turned_on():
+    bot = MagicMock(
+        agent=SimpleNamespace(tools=[SimpleNamespace(name="internet_search")])
+    )
+    bot.is_agent_enabled.return_value = True
+    bot.has_knowledge.return_value = False
+    with patch.object(bedrock_agent, "create_bedrock_agent_tool") as create_agent_tool:
+        tools = utils.get_strands_tools(bot, "claude-v5.5-haiku")
+
+    assert [tool.tool_name for tool in tools] == ["internet_search"]
+    create_agent_tool.assert_not_called()
