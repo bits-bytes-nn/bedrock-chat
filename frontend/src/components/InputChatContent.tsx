@@ -45,6 +45,10 @@ import {
 import useAttachmentApi from '../hooks/useAttachmentApi';
 import { useNewChatCount } from '../hooks/useChat';
 import { useLocation } from 'react-router-dom';
+import {
+  RESIZED_JPEG_QUALITY,
+  getResizedImageMediaType,
+} from '../utils/ImageUtils';
 
 type Props = BaseProps & {
   disabledSend?: boolean;
@@ -248,7 +252,11 @@ const InputChatContent = forwardRef<HTMLElement, Props>(
     }, [pathname, newChatCount, clearBase64EncodedImages, clearAttachedFiles]);
 
     const disabledSend = useMemo(() => {
-      return content === '' || props.disabledSend || convertingFiles.length > 0;
+      return (
+        content.trim() === '' ||
+        props.disabledSend ||
+        convertingFiles.length > 0
+      );
     }, [content, props.disabledSend, convertingFiles.length]);
 
     const inputRef = useRef<HTMLDivElement>(null);
@@ -297,8 +305,17 @@ const InputChatContent = forwardRef<HTMLElement, Props>(
           }
 
           const img = new Image();
-          img.src = URL.createObjectURL(new Blob([reader.result]));
-          img.onload = async () => {
+          const objectUrl = URL.createObjectURL(new Blob([reader.result]));
+          img.onerror = () => {
+            URL.revokeObjectURL(objectUrl);
+            open(
+              t('error.attachment.imageLoadFailed', {
+                fileName: imageFile.name,
+              })
+            );
+          };
+          img.onload = () => {
+            URL.revokeObjectURL(objectUrl);
             const width = img.naturalWidth;
             const height = img.naturalHeight;
 
@@ -320,14 +337,27 @@ const InputChatContent = forwardRef<HTMLElement, Props>(
                   : width;
             }
 
+            const mediaType = getResizedImageMediaType(
+              imageFile.type,
+              imageFile.name
+            );
+
             // resize image using canvas
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
             canvas.width = newWidth;
             canvas.height = newHeight;
+            if (ctx && mediaType === 'image/jpeg') {
+              // JPEG has no transparency, which would otherwise turn black.
+              ctx.fillStyle = '#ffffff';
+              ctx.fillRect(0, 0, newWidth, newHeight);
+            }
             ctx?.drawImage(img, 0, 0, newWidth, newHeight);
 
-            const resizedImageData = canvas.toDataURL('image/png');
+            const resizedImageData = canvas.toDataURL(
+              mediaType,
+              RESIZED_JPEG_QUALITY
+            );
 
             if (!fitsSendLimit(resizedImageData.length)) {
               return;
@@ -335,9 +365,10 @@ const InputChatContent = forwardRef<HTMLElement, Props>(
 
             pushBase64EncodedImage(resizedImageData);
           };
+          img.src = objectUrl;
         };
       },
-      [pushBase64EncodedImage, fitsSendLimit]
+      [pushBase64EncodedImage, fitsSendLimit, open, t]
     );
 
     const handleAttachedFileRead = useCallback(

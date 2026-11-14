@@ -4,6 +4,7 @@ import {
   canSubmitEditedContent,
   convertMessageMapToArray,
   isTemporaryMessageId,
+  reuseUnchangedMessages,
 } from '../MessageUtils';
 import { DisplayMessageContent, MessageMap } from '../../@types/conversation';
 
@@ -1798,5 +1799,78 @@ describe('canSubmitEditedContent', () => {
     expect(canSubmitEditedContent('hello', 'hello')).toBe(false);
     expect(canSubmitEditedContent('hello', ' hello \n')).toBe(false);
     expect(canSubmitEditedContent('hello', '   ')).toBe(false);
+  });
+});
+
+describe('reuseUnchangedMessages', () => {
+  const messageMap: MessageMap = {
+    '1': {
+      role: 'user',
+      model: 'claude-v5.5-haiku',
+      content: [{ contentType: 'text', body: 'question' }],
+      parent: null,
+      children: ['2'],
+      feedback: null,
+      usedChunks: null,
+      thinkingLog: null,
+    },
+    '2': {
+      role: 'assistant',
+      model: 'claude-v5.5-haiku',
+      content: [{ contentType: 'text', body: 'ans' }],
+      parent: '1',
+      children: [],
+      feedback: null,
+      usedChunks: null,
+      thinkingLog: null,
+    },
+  };
+
+  it('returns the previous array when nothing changed', () => {
+    const previous = convertMessageMapToArray(messageMap, '2');
+    const next = convertMessageMapToArray(messageMap, '2');
+    expect(next[0]).not.toBe(previous[0]);
+    expect(reuseUnchangedMessages(previous, next)).toBe(previous);
+  });
+
+  it('keeps the unchanged messages while one is streamed', () => {
+    const previous = convertMessageMapToArray(messageMap, '2');
+    const streamed: MessageMap = {
+      ...messageMap,
+      '2': {
+        ...messageMap['2'],
+        content: [{ contentType: 'text', body: 'answer' }],
+      },
+    };
+    const messages = reuseUnchangedMessages(
+      previous,
+      convertMessageMapToArray(streamed, '2')
+    );
+    expect(messages).not.toBe(previous);
+    expect(messages[0]).toBe(previous[0]);
+    expect(messages[1]).not.toBe(previous[1]);
+    expect(messages[1].content).toEqual([
+      { contentType: 'text', body: 'answer' },
+    ]);
+  });
+
+  it('replaces a message whose siblings changed', () => {
+    const previous = convertMessageMapToArray(messageMap, '2');
+    const branched: MessageMap = {
+      ...messageMap,
+      '1': { ...messageMap['1'], children: ['2', '3'] },
+      '3': { ...messageMap['2'], content: [{ contentType: 'text', body: 'b' }] },
+    };
+    const messages = reuseUnchangedMessages(
+      previous,
+      convertMessageMapToArray(branched, '2')
+    );
+    expect(messages[1]).not.toBe(previous[1]);
+    expect(messages[1].sibling).toEqual(['2', '3']);
+  });
+
+  it('returns the new messages of another conversation', () => {
+    const previous = convertMessageMapToArray(messageMap, '2');
+    expect(reuseUnchangedMessages(previous, [])).toEqual([]);
   });
 });

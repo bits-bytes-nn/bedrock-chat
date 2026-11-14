@@ -166,7 +166,7 @@ const MODELS: Omit<ModelItem, 'label' | 'description'>[] = [
   },
 ];
 
-const useModelState = create<{
+export const useModelState = create<{
   modelId: Model | undefined;
   setModelId: (m: Model) => void;
 }>((set) => ({
@@ -362,6 +362,9 @@ const useModel = (botId?: string | null, activeModels?: ActiveModels) => {
       }
       setModelId(model);
     },
+    // Shows the model of a loaded conversation without changing the model that
+    // new chats start with.
+    setModelIdWithoutSaving: setModelId,
     model,
     disabledImageUpload: (model?.supportMediaType.length ?? 0) === 0,
     acceptMediaType:

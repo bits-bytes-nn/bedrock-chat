@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import useConversationApi from './useConversationApi';
 import { produce } from 'immer';
 import {
@@ -21,8 +21,10 @@ import { ulid } from 'ulid';
 import {
   NEW_MESSAGE_ID,
   convertMessageMapToArray,
+  reuseUnchangedMessages,
 } from '../utils/MessageUtils';
 import useModel from './useModel';
+import { getCurrentConversation } from '../utils/ConversationUtils';
 import useFeedbackApi from './useFeedbackApi';
 import { useActorRef, useSelector } from '@xstate/react';
 import { streamingStateMachine } from './xstates/streaming';
@@ -358,7 +360,7 @@ const useChat = () => {
   } = useChatState();
 
   const { post: postStreaming } = usePostMessageStreaming();
-  const { modelId, setModelId, availableModels } = useModel();
+  const { modelId, setModelIdWithoutSaving, availableModels } = useModel();
 
   const conversationApi = useConversationApi();
   const feedbackApi = useFeedbackApi();
@@ -377,26 +379,40 @@ const useChat = () => {
     error: relatedDocumentsError,
   } = conversationApi.getRelatedDocuments(conversationId);
 
+  // Unchanged messages keep their objects, so that only the streamed one re-renders.
+  const previousMessages = useRef<DisplayMessageContent[]>([]);
   const messages = useMemo(() => {
-    return getMessages(conversationId, currentMessageId);
+    const next = reuseUnchangedMessages(
+      previousMessages.current,
+      getMessages(conversationId, currentMessageId)
+    );
+    previousMessages.current = next;
+    return next;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [conversationId, chats, currentMessageId]);
 
   const newChat = useNewChat();
 
+  const conversation = useMemo(
+    () => getCurrentConversation(data, conversationId),
+    [data, conversationId]
+  );
+
   // when updated messages
   useEffect(() => {
-    if (data && shouldUpdateMessages(data)) {
-      setMessages(conversationId, data.messageMap);
-      setCurrentMessageId(data.lastMessageId);
-      setModelId(getPostedModel());
+    if (conversation && shouldUpdateMessages(conversation)) {
+      setMessages(conversationId, conversation.messageMap);
+      setCurrentMessageId(conversation.lastMessageId);
+      setModelIdWithoutSaving(getPostedModel());
       reloadRelatedDocuments();
     }
-    if (data && data.shouldContinue !== getShouldContinue()) {
-      setShouldContinue(data.shouldContinue);
+    // A new chat, or a conversation that is still loading, cannot be continued.
+    const shouldContinue = conversation?.shouldContinue ?? false;
+    if (shouldContinue !== getShouldContinue()) {
+      setShouldContinue(shouldContinue);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [conversationId, data]);
+  }, [conversationId, conversation]);
 
   useEffect(() => {
     setIsGeneratedTitle(false);
@@ -783,6 +799,8 @@ const useChat = () => {
     hasError,
     setConversationId,
     conversationId,
+    // The loaded data of the shown conversation, undefined while it loads.
+    conversation,
     loadingConversation,
     conversationError,
     postingMessage: postingMessage || loadingConversation,

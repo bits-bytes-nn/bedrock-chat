@@ -1000,6 +1000,7 @@ How would you categorize this email?`,
           'Each file must be no more than {{maxSize}}.',
         fileCountExceeded: 'Could not upload more than {{maxCount}} files.',
         conversionFailed: 'Could not convert {{fileName}} to text.',
+        imageLoadFailed: 'Could not read {{fileName}} as an image.',
       },
       share: {
         markedEssential: {
@@ -1019,6 +1020,7 @@ How would you categorize this email?`,
       loadFailed: 'Failed to load the data. Reload the page and try again.',
       searchFailed: 'Failed to search. Try again.',
       feedbackFailed: 'Failed to send the feedback. Try again.',
+      updateTitle: 'Failed to rename the chat. Try again.',
     },
     validation: {
       s3Url: {

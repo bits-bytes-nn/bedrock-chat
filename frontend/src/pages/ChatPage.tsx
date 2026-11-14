@@ -183,6 +183,7 @@ const ChatPage: React.FC = () => {
     postChat,
     messages,
     conversationId,
+    conversation,
     setConversationId,
     hasError,
     retryPostChat,
@@ -226,9 +227,10 @@ const ChatPage: React.FC = () => {
   const { conversationId: paramConversationId, botId: paramBotId } =
     useParams();
 
+  // The conversation list may not be loaded yet, or may not include the conversation.
   const botId = useMemo(() => {
-    return paramBotId ?? getBotId(conversationId);
-  }, [conversationId, getBotId, paramBotId]);
+    return paramBotId ?? conversation?.botId ?? getBotId(conversationId);
+  }, [conversation?.botId, conversationId, getBotId, paramBotId]);
 
   const {
     data: bot,
@@ -349,8 +351,13 @@ const ChatPage: React.FC = () => {
     []
   );
 
+  // giveFeedback changes on every render. Read it through a ref, like the edit
+  // handlers, so that the memoized messages do not re-render while streaming.
+  const feedbackHandlers = useRef({ conversationId, giveFeedback });
+  feedbackHandlers.current = { conversationId, giveFeedback };
   const onSubmitFeedback = useCallback(
     (messageId: string, feedback: PutFeedbackRequest) => {
+      const { conversationId, giveFeedback } = feedbackHandlers.current;
       // The backend has not saved a temporary message yet.
       if (conversationId && !isTemporaryMessageId(messageId)) {
         giveFeedback(messageId, feedback).catch((e) => {
@@ -359,7 +366,7 @@ const ChatPage: React.FC = () => {
         });
       }
     },
-    [conversationId, giveFeedback, openSnackbar, t]
+    [openSnackbar, t]
   );
 
   const onRegenerate = useCallback(
@@ -608,7 +615,11 @@ const ChatPage: React.FC = () => {
           </div>
           {getPostedModel() && (
             <div className="absolute right-2 top-10 text-xs text-dark-gray dark:text-light-gray">
-              {t('app.currentModel', { model: getPostedModel() })}
+              {t('app.currentModel', {
+                model: t(`model.${getPostedModel()}.label`, {
+                  defaultValue: getPostedModel(),
+                }),
+              })}
             </div>
           )}
         </div>

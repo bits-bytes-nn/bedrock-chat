@@ -28,7 +28,11 @@ const useConversationApi = () => {
       return http.get<Conversation>(
         !conversationId ? null : `conversation/${conversationId}`,
         {
+          // useChat ignores the previous conversation while the next one loads.
           keepPreviousData: true,
+          // Refetching the whole conversation on every focus is costly. The app
+          // revalidates it after posting and on opening it again.
+          revalidateOnFocus: false,
         }
       );
     },
@@ -39,9 +43,10 @@ const useConversationApi = () => {
     },
     getRelatedDocuments: (conversationId?: string) => {
       return http.get<RelatedDocument[]>(
-        !conversationId ? null : `conversation/${conversationId}/related-documents`, {
-        keepPreviousData: true,
-      });
+        // Not keepPreviousData: the documents have no conversation ID, so those of
+        // the previous conversation could be shown in a new chat.
+        !conversationId ? null : `conversation/${conversationId}/related-documents`
+      );
     },
     getRelatedDocument: async (conversationId: string, sourceId: string) => {
       const res = await http.getOnce<RelatedDocument>(`conversation/${conversationId}/related-documents/${sourceId}`);

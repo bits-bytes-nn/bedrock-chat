@@ -21,6 +21,7 @@ import ListPageLayout from '../layouts/ListPageLayout';
 import ConversationSearchResults from '../components/ConversationSearchResults';
 import { isSubmitEnter } from '../utils/KeyboardUtils';
 import useSnackbar from '../hooks/useSnackbar';
+import { getApiErrorMessage } from '../utils/ErrorUtils';
 
 const ConversationHistoryPage: React.FC = () => {
   const { t } = useTranslation();
@@ -122,9 +123,11 @@ const ConversationHistoryPage: React.FC = () => {
       }
 
       // Update process including optimistic update is handled in useConversation
-      updateTitle(conversationId, title);
+      updateTitle(conversationId, title).catch((e) => {
+        openSnackbar(getApiErrorMessage(e) ?? t('error.updateTitle'));
+      });
     },
-    [updateTitle]
+    [openSnackbar, t, updateTitle]
   );
 
   const onClickConversation = useCallback(

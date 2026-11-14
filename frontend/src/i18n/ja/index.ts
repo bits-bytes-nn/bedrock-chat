@@ -1001,6 +1001,7 @@ const translation: typeof en = {
         fileSizeExceeded: 'ファイルサイズは{{maxSize}}以下にしてください。',
         fileCountExceeded: 'ファイル数は{{maxCount}}以下にしてください。',
         conversionFailed: '{{fileName}}をテキストに変換できませんでした。',
+        imageLoadFailed: '{{fileName}}を画像として読み込めませんでした。',
       },
       cannotAccessBot:
         'このボットにアクセスできません。新しいチャットへリダイレクトしました。',
@@ -1023,6 +1024,7 @@ const translation: typeof en = {
         'データを読み込めませんでした。ページを再読み込みしてもう一度お試しください。',
       searchFailed: '検索できませんでした。もう一度お試しください。',
       feedbackFailed: 'フィードバックを送信できませんでした。もう一度お試しください。',
+      updateTitle: '会話の名前を変更できませんでした。もう一度お試しください。',
     },
     validation: {
       s3Url: {
