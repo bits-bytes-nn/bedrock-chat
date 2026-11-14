@@ -5,6 +5,7 @@ Agent factory for Strands integration.
 import logging
 import os
 
+import boto3
 from botocore.config import Config
 
 from app.repositories.models.conversation import type_model_name
@@ -16,7 +17,10 @@ from strands.agent import NullConversationManager
 from strands.hooks import HookCallback, HookProvider
 from strands.models import BedrockModel
 
-from app.strands_integration.agent.config import get_bedrock_model_config
+from app.strands_integration.agent.config import (
+    get_bedrock_model_config,
+    get_system_prompt,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +33,8 @@ BEDROCK_CLIENT_CONFIG = Config(
     read_timeout=120,
     retries={"mode": "standard", "max_attempts": 3},
 )
+# One session per Lambda container: creating one costs tens of milliseconds a chat.
+BEDROCK_SESSION = boto3.Session(region_name=BEDROCK_REGION)
 
 
 def create_strands_agent(
@@ -44,22 +50,21 @@ def create_strands_agent(
     tools = get_strands_tools(bot, model_name)
     model_config = get_bedrock_model_config(
         model_name=model_name,
-        instructions=instructions,
         generation_params=generation_params,
         guardrail=guardrail,
         enable_reasoning=enable_reasoning,
         prompt_caching_enabled=prompt_caching_enabled,
-        has_tools=bool(tools),
     )
     logger.debug(f"[AGENT_FACTORY] Model config: {model_config}")
     model = BedrockModel(
-        region_name=BEDROCK_REGION,
+        boto_session=BEDROCK_SESSION,
         boto_client_config=BEDROCK_CLIENT_CONFIG,
         **model_config,
     )
 
-    # Strands does not support list of instructions, so we join them into a single string.
-    system_prompt = "\n\n".join(instructions).strip() if instructions else None
+    system_prompt = get_system_prompt(
+        instructions, model_name, prompt_caching_enabled, has_tools=bool(tools)
+    )
 
     agent_hooks: list[HookProvider | HookCallback] = list(hooks or [])
     agent = Agent(

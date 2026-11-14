@@ -6,6 +6,7 @@ import logging
 from typing import TypeGuard
 
 from app.bedrock import (
+    is_prompt_caching_automatic,
     is_prompt_caching_supported,
     is_unsigned_reasoning_content_supported,
 )
@@ -74,11 +75,23 @@ def simple_message_models_to_strands_messages(
     turned off or the chat moved to a model without tool use.
     """
 
+    # The contextual grounding check compares the answer with the search results
+    # and the question of this turn, so only the last user message carries them.
     grounding_source = None
-    if search_results and guardrail and guardrail.is_guardrail_enabled:
+    if (
+        search_results
+        and guardrail
+        and guardrail.is_guardrail_enabled
+        and (guardrail.grounding_threshold > 0 or guardrail.relevance_threshold > 0)
+    ):
         grounding_source = _to_guardrails_grounding_source(search_results)
+    last_user = max(
+        (i for i, m in enumerate(simple_messages) if m.role == "user"), default=None
+    )
 
-    def process_content(c: ContentModel, role: str) -> list[ContentBlock]:
+    def process_content(
+        c: ContentModel, role: str, is_last_user: bool
+    ) -> list[ContentBlock]:
         # Drop unsigned reasoning blocks for DeepSeek R1 and GPT-OSS models
         if (
             not is_unsigned_reasoning_content_supported(model)
@@ -88,12 +101,7 @@ def simple_message_models_to_strands_messages(
             return []
 
         if c.content_type == "text":
-            if (
-                role == "user"
-                and guardrail
-                and guardrail.grounding_threshold > 0
-                and grounding_source
-            ):
+            if is_last_user and grounding_source:
                 return [
                     {"guardContent": grounding_source},
                     {
@@ -111,16 +119,20 @@ def simple_message_models_to_strands_messages(
             "content": [
                 block
                 for c in message.content
-                for block in process_content(c, message.role)
+                for block in process_content(c, message.role, i == last_user)
             ],
         }
-        for message in simple_messages
+        for i, message in enumerate(simple_messages)
         if _is_conversation_role(message.role)
         and (has_tools or not _is_tool_step(message))
     ]
 
-    # Add message cache points
-    if prompt_caching_enabled and is_prompt_caching_supported(model, target="message"):
+    # Add message cache points, unless Strands places them
+    if (
+        prompt_caching_enabled
+        and not is_prompt_caching_automatic(model)
+        and is_prompt_caching_supported(model, target="message")
+    ):
         for order, message in enumerate(
             filter(lambda m: m["role"] == "user", reversed(messages))
         ):

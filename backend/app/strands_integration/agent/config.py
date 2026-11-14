@@ -7,25 +7,49 @@ import logging
 from app.bedrock import (
     get_model_id,
     generation_params_to_converse_configuration,
+    is_prompt_caching_automatic,
     is_prompt_caching_supported,
 )
 from app.repositories.models.conversation import type_model_name
 from app.repositories.models.custom_bot import GenerationParamsModel
 from app.repositories.models.custom_bot_guardrails import BedrockGuardrailsModel
 
-from strands.models import BedrockModel
+from strands.models import BedrockModel, CacheConfig
+from strands.types.content import SystemContentBlock
 
 logger = logging.getLogger(__name__)
 
 
+def get_system_prompt(
+    instructions: list[str],
+    model_name: type_model_name,
+    prompt_caching_enabled: bool,
+    has_tools: bool,
+) -> list[SystemContentBlock] | None:
+    """The instructions as one system block. Models whose cache points Strands does
+    not place get one after it, unless they have tools that they cannot cache."""
+    text = "\n\n".join(instructions).strip()
+    if not text:
+        return None
+    blocks: list[SystemContentBlock] = [{"text": text}]
+    if (
+        prompt_caching_enabled
+        and not is_prompt_caching_automatic(model_name)
+        and is_prompt_caching_supported(model_name, target="system")
+        and not (
+            has_tools and not is_prompt_caching_supported(model_name, target="tool")
+        )
+    ):
+        blocks.append({"cachePoint": {"type": "default"}})
+    return blocks
+
+
 def get_bedrock_model_config(
     model_name: type_model_name,
-    instructions: list[str],
     generation_params: GenerationParamsModel | None = None,
     guardrail: BedrockGuardrailsModel | None = None,
     enable_reasoning: bool = False,
     prompt_caching_enabled: bool = False,
-    has_tools: bool = False,
 ) -> BedrockModel.BedrockConfig:
     """Get Bedrock model configuration."""
 
@@ -73,24 +97,9 @@ def get_bedrock_model_config(
 
         logger.info(f"Enabled Guardrails: {guardrail_config["guardrailIdentifier"]}")
 
-    # Add prompt caching configuration
-    if prompt_caching_enabled and not (
-        has_tools and not is_prompt_caching_supported(model_name, target="tool")
-    ):
-        # Only enable system prompt caching if there are instructions
-        if is_prompt_caching_supported(model_name, "system") and len(instructions) > 0:
-            config["cache_prompt"] = "default"
-            logger.debug(f"Enabled system prompt caching for model {model_name}")
-
-        # Only enable tool caching if model supports it and tools are available
-        if is_prompt_caching_supported(model_name, target="tool") and has_tools:
-            config["cache_tools"] = "default"
-            logger.debug(f"Enabled tool caching for model {model_name}")
-
-    else:
-        logger.info(
-            f"Prompt caching disabled for model {model_name} (enabled={prompt_caching_enabled}, has_tools={has_tools})"
-        )
+    # Other models get their cache points in get_system_prompt and the message converter.
+    if prompt_caching_enabled and is_prompt_caching_automatic(model_name):
+        config["cache_config"] = CacheConfig(strategy="anthropic", tools_ttl=True)
 
     if "additionalModelRequestFields" in converse_config:
         config["additional_request_fields"] = converse_config[

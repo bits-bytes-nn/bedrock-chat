@@ -17,11 +17,11 @@ def test_prompt_caching_follows_the_tools_that_the_agent_really_gets():
     bot = MagicMock()
     bot.is_agent_enabled.return_value = True
     with patch.object(
-        factory, "get_bedrock_model_config", wraps=factory.get_bedrock_model_config
-    ) as config:
+        factory, "get_system_prompt", wraps=factory.get_system_prompt
+    ) as system_prompt:
         agent = factory.create_strands_agent(
             bot=bot, instructions=[], model_name="deepseek-r1"
         )
 
     assert agent.tool_names == []
-    assert config.call_args.kwargs["has_tools"] is False
+    assert system_prompt.call_args.kwargs["has_tools"] is False
