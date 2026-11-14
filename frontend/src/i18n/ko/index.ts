@@ -86,6 +86,10 @@ const translation: typeof en = {
         label: 'GPT-6.1 Sol',
         description: '복잡한 추론을 위한 최신 OpenAI GPT-6.1 모델입니다.',
       },
+      'gpt-6.1-terra': {
+        label: 'GPT-6.1 Terra',
+        description: '성능과 비용의 균형을 갖춘 OpenAI GPT-6.1 모델입니다.',
+      },
       'amazon-nova-2-lite': {
         label: 'Amazon Nova 2 Lite',
         description:
@@ -991,6 +995,7 @@ const translation: typeof en = {
         fileCountExceeded:
           '파일은 최대 {{maxCount}}개까지 업로드할 수 있습니다.',
         conversionFailed: '{{fileName}}을(를) 텍스트로 변환하지 못했습니다.',
+        imageLoadFailed: '{{fileName}}을(를) 이미지로 읽지 못했습니다.',
       },
       share: {
         markedEssential: {
@@ -1011,6 +1016,7 @@ const translation: typeof en = {
         '데이터를 불러오지 못했습니다. 페이지를 새로 고친 뒤 다시 시도하세요.',
       searchFailed: '검색하지 못했습니다. 다시 시도하세요.',
       feedbackFailed: '피드백을 보내지 못했습니다. 다시 시도하세요.',
+      updateTitle: '대화 이름을 바꾸지 못했습니다. 다시 시도하세요.',
     },
     validation: {
       s3Url: {

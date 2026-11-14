@@ -120,6 +120,12 @@ def test_a_failed_request_is_a_tool_error_without_the_query(engine, caplog):
     # An invalid key is not retried.
     sleep.assert_not_called()
     assert "HTTP 401" in caplog.text
+    # The model learns why, so it can tell the user.
+    assert result["content"] == [
+        {
+            "text": f"The internet search failed: {engine.capitalize()} search returned HTTP 401."
+        }
+    ]
     # The request URL holds the query.
     assert "private words" not in caplog.text
 
@@ -190,13 +196,17 @@ def test_a_keyed_engine_without_a_key_does_not_fall_back_to_duckduckgo():
 
 def test_firecrawl_errors_reach_the_model_without_another_engine():
     tool = internet_search.create_internet_search_tool(bot_with("firecrawl"))
-    with patch("firecrawl.FirecrawlApp") as app, patch.object(
-        internet_search, "_search_with_duckduckgo_standalone"
-    ) as ddg:
-        app.return_value.search.side_effect = RuntimeError("quota")
+    with patch.object(
+        internet_search.requests, "request", return_value=failing(402)
+    ), patch.object(internet_search, "_search_with_duckduckgo_standalone") as ddg:
         result = tool(query="q")
 
-    assert result["status"] == "error"
+    assert result == {
+        "status": "error",
+        "content": [
+            {"text": "The internet search failed: Firecrawl search returned HTTP 402."}
+        ],
+    }
     ddg.assert_not_called()
 
 
@@ -205,12 +215,15 @@ def test_firecrawl_summarizes_every_page_in_order():
         {"title": f"T{i}", "url": f"https://{i}", "markdown": f"page {i}"}
         for i in range(10)
     ] + [{"title": "", "markdown": ""}]
-    with patch("firecrawl.FirecrawlApp") as app, patch.object(
+    response = MagicMock(ok=True, status_code=200)
+    response.json.return_value = {"success": True, "data": pages}
+    with patch.object(
+        internet_search.requests, "request", return_value=response
+    ) as request, patch.object(
         internet_search,
         "_summarize_content_standalone",
         side_effect=lambda content, title, url, query: f"summary of {content}",
     ):
-        app.return_value.search.return_value = MagicMock(data=pages)
         results = internet_search._search_with_firecrawl_standalone(
             "q", API_KEY, "en-us", 10
         )
@@ -218,6 +231,26 @@ def test_firecrawl_summarizes_every_page_in_order():
     # Empty pages are dropped, and the summaries keep the page order.
     assert [r["source_link"] for r in results] == [f"https://{i}" for i in range(10)]
     assert results[3]["content"] == "summary of page 3"
+    kwargs = request.call_args.kwargs
+    assert kwargs["json"]["limit"] == 10 and kwargs["json"]["country"] == "us"
+    # A stuck connection cannot hold the chat until the Lambda times out.
+    assert kwargs["timeout"] == internet_search._FIRECRAWL_TIMEOUT
+
+
+def test_firecrawl_summaries_count_as_chat_cost():
+    response = {
+        "output": {"message": {"content": [{"text": "summary"}]}},
+        "usage": {"inputTokens": 1000, "outputTokens": 100},
+    }
+    with patch.object(
+        internet_search, "call_converse_api", return_value=response
+    ), patch.object(internet_search, "emit_chat_cost") as emit:
+        summary = internet_search._summarize_content_standalone(
+            "page", "T", "https://t", "q"
+        )
+
+    assert summary == "summary"
+    assert emit.call_args.args[0] > 0
 
 
 def test_duckduckgo_uses_the_snippets_without_model_calls():

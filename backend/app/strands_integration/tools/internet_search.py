@@ -6,7 +6,13 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 
 import requests
-from app.bedrock import call_converse_api, get_model_id, get_text_from_converse_response
+from app.bedrock import (
+    calculate_price,
+    call_converse_api,
+    get_model_id,
+    get_text_from_converse_response,
+)
+from app.metrics import emit_chat_cost
 from app.repositories.models.custom_bot import BotModel, SearchApiConfigModel
 from app.routes.schemas.bot import SEARCH_API_MAX_RESULTS
 from app.usecases.global_config import (
@@ -65,8 +71,6 @@ def _search_with_firecrawl_standalone(
     query: str, api_key: str, locale: str, max_results: int = 10
 ) -> list[dict[str, str]]:
     """Search with Firecrawl, which returns whole pages, and summarize each page."""
-    from firecrawl import FirecrawlApp, ScrapeOptions
-
     logger.info(
         "Searching with Firecrawl: query_chars=%d, max_results=%d, locale=%s",
         len(query),
@@ -74,12 +78,24 @@ def _search_with_firecrawl_standalone(
         locale,
     )
     language, country = _split_locale(locale)
-    response = FirecrawlApp(api_key=api_key).search(
-        query,
-        limit=max_results,
-        lang=language,
-        location=country or None,
-        scrape_options=ScrapeOptions(formats=["markdown"], onlyMainContent=True),
+    body: dict = {
+        "query": query,
+        "limit": max_results,
+        "lang": language,
+        "scrapeOptions": {"formats": ["markdown"], "onlyMainContent": True},
+        # Ends the scraping before the read timeout below, in milliseconds.
+        "timeout": 50000,
+    }
+    if country:
+        body["country"] = country
+    response = _call_search_api(
+        "Firecrawl",
+        "POST",
+        "https://api.firecrawl.dev/v1/search",
+        # Firecrawl scrapes every result page before it answers.
+        timeout=_FIRECRAWL_TIMEOUT,
+        headers={"Authorization": f"Bearer {api_key}"},
+        json=body,
     )
     pages = [
         (
@@ -87,7 +103,7 @@ def _search_with_firecrawl_standalone(
             page.get("url", "") or page.get("metadata", {}).get("sourceURL", ""),
             page.get("markdown", "") or page.get("content", ""),
         )
-        for page in response.data
+        for page in response.get("data", [])
     ]
     pages = [(title, url, content) for title, url, content in pages if title or content]
     # The summaries are independent model calls, so they run at once.
@@ -109,6 +125,7 @@ def _search_with_firecrawl_standalone(
 
 # (connect, read) seconds for the search APIs.
 _SEARCH_API_TIMEOUT = (5, 20)
+_FIRECRAWL_TIMEOUT = (5, 60)
 _MAX_ATTEMPTS = 3
 # Bedrock throttles the title model when many pages are summarized at once.
 _MAX_PARALLEL_SUMMARIES = 4
@@ -126,21 +143,31 @@ def _retry_delay(response: requests.Response, attempt: int) -> float:
     return min(2**attempt, _MAX_RETRY_DELAY) * random.uniform(0.5, 1)
 
 
-def _call_search_api(engine: str, method: str, url: str, **kwargs) -> dict:
+class SearchApiError(RuntimeError):
+    """A failed search API request. The text names only the engine and the status,
+    because the request URL can hold the query, so the model may see it."""
+
+
+def _call_search_api(
+    engine: str,
+    method: str,
+    url: str,
+    timeout: tuple[int, int] = _SEARCH_API_TIMEOUT,
+    **kwargs,
+) -> dict:
     """Call a search API, retrying rate limits and server errors a few times.
 
     A search is a read, so a retry is safe. Timeouts are not retried: the request
     timeout already bounds the wait, and a retry would double it. The model often searches several queries
-    at once, which exceeds per-second plans such as Brave's free one. The errors name
-    only the engine and the status, because the request URL can hold the query.
+    at once, which exceeds per-second plans such as Brave's free one.
     """
     for attempt in range(_MAX_ATTEMPTS):
         try:
-            response = requests.request(
-                method, url, timeout=_SEARCH_API_TIMEOUT, **kwargs
-            )
+            response = requests.request(method, url, timeout=timeout, **kwargs)
         except requests.RequestException as e:
-            raise RuntimeError(f"{engine} search failed: {type(e).__name__}") from None
+            raise SearchApiError(
+                f"{engine} search failed: {type(e).__name__}"
+            ) from None
         if response.ok:
             return response.json()
         if (
@@ -159,7 +186,7 @@ def _call_search_api(engine: str, method: str, url: str, **kwargs) -> dict:
             delay,
         )
         time.sleep(delay)
-    raise RuntimeError(f"{engine} search returned HTTP {response.status_code}")
+    raise SearchApiError(f"{engine} search returned HTTP {response.status_code}")
 
 
 def _search_with_tavily(
@@ -249,12 +276,23 @@ Content: {content}
 Summary:"""
 
         # Summaries are short, so they use the same lightweight model as titles.
+        model = get_title_model()
         response = call_converse_api(
             {
-                "modelId": get_model_id(get_title_model()),
+                "modelId": get_model_id(model),
                 "messages": [{"role": "user", "content": [{"text": prompt}]}],
                 "inferenceConfig": {"maxTokens": 800},
             }
+        )
+        usage = response.get("usage", {})
+        emit_chat_cost(
+            calculate_price(
+                model,
+                input_tokens=usage.get("inputTokens", 0),
+                output_tokens=usage.get("outputTokens", 0),
+                cache_read_input_tokens=usage.get("cacheReadInputTokens", 0),
+                cache_write_input_tokens=usage.get("cacheWriteInputTokens", 0),
+            )
         )
         summary = get_text_from_converse_response(response).strip()
 
@@ -357,8 +395,16 @@ def create_internet_search_tool(bot: BotModel | None) -> StrandsAgentTool:
                 "content": [{"json": result} for result in results],
             }
 
+        except SearchApiError as e:
+            # The status tells the model, and so the user, why: for example an
+            # exhausted plan or a rejected key.
+            logger.warning("Internet search failed: %s", e)
+            return {
+                "status": "error",
+                "content": [{"text": f"The internet search failed: {e}."}],
+            }
         except Exception:
-            # Error texts can name internal resources; the model and the
+            # Other error texts can name internal resources; the model and the
             # conversation get a fixed text.
             logger.exception("Internet search failed")
             return {

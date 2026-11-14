@@ -95,6 +95,11 @@ const MODELS: Omit<ModelItem, 'label' | 'description'>[] = [
     ...ALWAYS_REASONING,
   },
   {
+    modelId: 'gpt-6.1-terra',
+    supportMediaType: IMAGE_MEDIA_TYPES,
+    ...ALWAYS_REASONING,
+  },
+  {
     modelId: 'gpt-6-astra',
     supportMediaType: IMAGE_MEDIA_TYPES,
     ...ALWAYS_REASONING,
@@ -161,7 +166,7 @@ const MODELS: Omit<ModelItem, 'label' | 'description'>[] = [
   },
 ];
 
-const useModelState = create<{
+export const useModelState = create<{
   modelId: Model | undefined;
   setModelId: (m: Model) => void;
 }>((set) => ({
@@ -357,6 +362,14 @@ const useModel = (botId?: string | null, activeModels?: ActiveModels) => {
       }
       setModelId(model);
     },
+    // Shows the model of a loaded conversation without changing the model that
+    // new chats start with.
+    setModelIdWithoutSaving: setModelId,
+    // Back to the model that new chats start with, after a conversation was shown.
+    restoreSavedModel: () =>
+      setModelId(
+        selectModel(((botId && botModelId) || recentUseModelId || getDefaultModel()) as Model)
+      ),
     model,
     disabledImageUpload: (model?.supportMediaType.length ?? 0) === 0,
     acceptMediaType:

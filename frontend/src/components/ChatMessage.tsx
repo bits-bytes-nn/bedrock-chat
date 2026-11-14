@@ -300,11 +300,11 @@ const ChatMessage: React.FC<Props> = (props) => {
                 chatContent.content.map((content, idx) => {
                   if (content.contentType === 'text') {
                     return (
-                      <React.Fragment key={idx}>
-                        {content.body.split('\n').map((c, idxBody) => (
-                          <div key={idxBody}>{c}</div>
-                        ))}
-                      </React.Fragment>
+                      <div
+                        key={idx}
+                        className="whitespace-pre-wrap break-words">
+                        {content.body}
+                      </div>
                     );
                   }
                 })}

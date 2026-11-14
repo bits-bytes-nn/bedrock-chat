@@ -451,7 +451,7 @@ describe("Bedrock Chat Stack Test", () => {
     expect(tableTrust).toContain(":role/bedrock-chat/test-/*");
     expect(tableTrust).not.toContain("PrincipalTag");
 
-    template.resourceCountIs("AWS::CloudWatch::Alarm", 11);
+    template.resourceCountIs("AWS::CloudWatch::Alarm", 12);
     template.hasResourceProperties("AWS::CloudWatch::Alarm", {
       MetricName: "BotUsageUpdateFailures",
       Period: 3600,
@@ -523,11 +523,23 @@ describe("Bedrock Chat Stack Test", () => {
     });
     // Handlers answer errors without failing, so chat errors and failed bot syncs
     // are counted from their logs.
-    template.resourceCountIs("AWS::Logs::MetricFilter", 2);
+    // So is the authorizer, which denies all connections when it cannot fetch the
+    // signing keys (backend/app/websocket_authorizer.py logs that text).
+    template.resourceCountIs("AWS::Logs::MetricFilter", 3);
+    template.hasResourceProperties("AWS::Logs::MetricFilter", {
+      FilterPattern: Match.stringLikeRegexp("Failed to fetch the signing keys"),
+    });
+    expect(
+      fs.readFileSync(
+        path.join(__dirname, "../../backend/app/websocket_authorizer.py"),
+        "utf8"
+      )
+    ).toContain("Failed to fetch the signing keys");
     const logGroupIds = Object.keys(template.findResources("AWS::Logs::LogGroup"));
     for (const prefix of [
       "WebSocketHandlerV2LogGroup",
       "EmbeddingUpdateSyncStatusHandlerLogGroup",
+      "WebSocketConnectAuthorizerLogGroup",
     ]) {
       const logGroupId = logGroupIds.find((id) => id.startsWith(prefix));
       expect(logGroupId).toBeDefined();
@@ -738,7 +750,9 @@ describe("Bedrock Chat Stack Test", () => {
       )
     ).toEqual(["ExecutionsFailed", "ExecutionsTimedOut", "ExecutionsAborted"]);
     expect(syncAlarm.Properties.Metrics).toContainEqual(
-      expect.objectContaining({ Expression: "failed + timedOut + aborted" })
+      expect.objectContaining({
+        Expression: "FILL(failed, 0) + FILL(timedOut, 0) + FILL(aborted, 0)",
+      })
     );
 
     // The usage export runs from a schedule, so its failures alarm on Lambda errors.
@@ -1376,6 +1390,12 @@ describe("Bedrock Shared Knowledge Bases Stack", () => {
       },
     });
     expectFunctionLogsExpire(template, "KnowledgeBasehashTransformationFunctionLogGroup");
+    // Without a runtime, NodejsFunction picks Node.js 16, which Lambda no longer
+    // creates from 2027-02-01.
+    const runtimes = Object.values(
+      template.findResources("AWS::Lambda::Function")
+    ).map((resource) => resource.Properties.Runtime);
+    expect(runtimes).not.toContain("nodejs16.x");
   });
 });
 

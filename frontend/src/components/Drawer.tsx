@@ -43,6 +43,8 @@ import { isPinnedBot } from '../utils/BotUtils';
 import IconPinnedBot from './IconPinnedBot';
 import useGlobalConfig from '../hooks/useGlobalConfig';
 import { isSubmitEnter } from '../utils/KeyboardUtils';
+import { getApiErrorMessage } from '../utils/ErrorUtils';
+import useSnackbar from '../hooks/useSnackbar';
 
 type Props = BaseProps & {
   isAdmin: boolean;
@@ -93,12 +95,25 @@ const Item: React.FC<ItemProps> = (props) => {
     setTempLabel(props.label);
   }, [props.label]);
 
+  const { open: openSnackbar } = useSnackbar();
+  const { updateTitle, conversationId: itemConversationId } = props;
+  const submitTitle = useCallback(
+    (title: string) => {
+      updateTitle(itemConversationId, title)
+        .then(() => {
+          setEditing(false);
+        })
+        .catch((e) => {
+          // Stay in the edit mode, so that the user can try again.
+          openSnackbar(getApiErrorMessage(e) ?? t('error.updateTitle'));
+        });
+    },
+    [itemConversationId, openSnackbar, t, updateTitle]
+  );
+
   const onClickUpdate = useCallback(() => {
-    props.updateTitle(props.conversationId, tempLabel).then(() => {
-      setEditing(false);
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tempLabel, props.conversationId, props.updateTitle]);
+    submitTitle(tempLabel);
+  }, [submitTitle, tempLabel]);
 
   const onClickDelete = useCallback(() => {
     props.onDelete();
@@ -116,13 +131,7 @@ const Item: React.FC<ItemProps> = (props) => {
         if (isSubmitEnter(e)) {
           e.preventDefault();
 
-          // dispatch 処理の中で Title の更新を行う（同期を取るため）
-          setTempLabel((newLabel) => {
-            props.updateTitle(props.conversationId, newLabel).then(() => {
-              setEditing(false);
-            });
-            return newLabel;
-          });
+          submitTitle(tempLabel);
         }
       };
       inputRef.current?.addEventListener('keydown', listener);
@@ -134,7 +143,7 @@ const Item: React.FC<ItemProps> = (props) => {
         input?.removeEventListener('keydown', listener);
       };
     }
-  }, [editing, props]);
+  }, [editing, submitTitle, tempLabel]);
 
   return (
     <DrawerItem
@@ -221,7 +230,9 @@ const Drawer: React.FC<Props> = (props) => {
 
   const [prevConversations, setPrevConversations] =
     useState<typeof conversations>();
-  const [generateTitleIndex, setGenerateTitleIndex] = useState(-1);
+  // The new conversation whose generated title is shown lazily.
+  const [generatedTitleConversationId, setGeneratedTitleConversationId] =
+    useState<string | null>(null);
 
   const newChat = useNewChat();
   const conversationId = useChatConversationId();
@@ -239,12 +250,11 @@ const Drawer: React.FC<Props> = (props) => {
     if (!conversations || !prevConversations) {
       return;
     }
-    if (conversations.length > prevConversations?.length) {
-      setGenerateTitleIndex(
-        conversations?.findIndex(
-          (c) =>
-            (prevConversations?.findIndex((pc) => c.id === pc.id) ?? -1) < 0
-        ) ?? -1
+    if (conversations.length > prevConversations.length) {
+      setGeneratedTitleConversationId(
+        conversations.find(
+          (c) => !prevConversations.some((pc) => c.id === pc.id)
+        )?.id ?? null
       );
     }
   }, [conversations, prevConversations]);
@@ -405,7 +415,9 @@ const Drawer: React.FC<Props> = (props) => {
                       />
                     ))}
 
-                  {starredBots && starredBots.length > 15 && (
+                  {starredBots &&
+                    starredBots.length >
+                      drawerOptions.displayCount.starredBots && (
                     <Button
                       text
                       rightIcon={<PiArrowRight />}
@@ -485,13 +497,15 @@ const Drawer: React.FC<Props> = (props) => {
                   )}
                   {conversations
                     ?.slice(0, drawerOptions.displayCount.conversationHistory)
-                    .map((conversation, idx) => (
+                    .map((conversation) => (
                       <Item
-                        key={idx}
+                        key={conversation.id}
                         className="grow"
                         label={conversation.title}
                         conversationId={conversation.id}
-                        generatedTitle={idx === generateTitleIndex}
+                        generatedTitle={
+                          conversation.id === generatedTitleConversationId
+                        }
                         updateTitle={props.updateConversationTitle}
                         onClick={closeSmallDrawer}
                         onDelete={() => props.onDeleteConversation(conversation)}

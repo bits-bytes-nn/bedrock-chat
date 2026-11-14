@@ -30,6 +30,7 @@ type_model_name = Literal[
     "gpt-6-luna",
     "gpt-6-sol",
     "gpt-6.1-sol",
+    "gpt-6.1-terra",
     "gpt-oss-20b",
     "gpt-oss-120b",
     # Amazon Nova

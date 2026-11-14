@@ -130,6 +130,49 @@ export const convertMessageMapToArray = (
   return messageArray;
 };
 
+const isSameValue = (a: unknown, b: unknown): boolean =>
+  a === b ||
+  (Array.isArray(a) &&
+    Array.isArray(b) &&
+    a.length === b.length &&
+    a.every((value, idx) => value === b[idx]));
+
+const isSameDisplayMessage = (
+  a: DisplayMessageContent,
+  b: DisplayMessageContent
+): boolean => {
+  const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
+  return [...keys].every((key) =>
+    isSameValue(
+      a[key as keyof DisplayMessageContent],
+      b[key as keyof DisplayMessageContent]
+    )
+  );
+};
+
+/**
+ * Keep the objects of the messages that did not change, so that memoized
+ * components skip them. convertMessageMapToArray builds new objects on every call,
+ * for example on every frame of a streamed answer.
+ *
+ * @param previous The messages returned by the previous call.
+ * @param next The messages that were just built.
+ * @returns previous itself when no message changed.
+ */
+export const reuseUnchangedMessages = (
+  previous: DisplayMessageContent[],
+  next: DisplayMessageContent[]
+): DisplayMessageContent[] => {
+  const previousById = new Map(previous.map((m) => [m.id, m]));
+  const messages = next.map((m) => {
+    const previousMessage = previousById.get(m.id);
+    return previousMessage && isSameDisplayMessage(previousMessage, m)
+      ? previousMessage
+      : m;
+  });
+  return isSameValue(previous, messages) ? previous : messages;
+};
+
 export const convertUsedChunkToRelatedDocument = (usedChunk: UsedChunk): RelatedDocument => {
   switch(usedChunk.contentType) {
     case 's3': {

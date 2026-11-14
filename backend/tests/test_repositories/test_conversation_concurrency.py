@@ -1,9 +1,10 @@
 import unittest
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import boto3
 import pytest
 from app.repositories import conversation as conversation_repository
+from app.repositories.common import RecordNotFoundError
 from app.repositories.conversation import (
     change_conversation_title,
     find_conversation_by_id,
@@ -393,3 +394,19 @@ class TestFailedMessages(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+def test_feedback_on_a_missing_message_is_not_found():
+    with patch.object(
+        conversation_repository,
+        "find_conversation_by_id",
+        return_value=MagicMock(message_map={}),
+    ), patch.object(conversation_repository, "store_conversation") as store:
+        with pytest.raises(RecordNotFoundError):
+            conversation_repository.update_feedback(
+                "user",
+                "conversation",
+                "missing",
+                FeedbackModel(thumbs_up=True, category="", comment=""),
+            )
+    store.assert_not_called()

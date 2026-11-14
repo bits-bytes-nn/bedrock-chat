@@ -48,14 +48,14 @@ class TestGetGlobalAvailableModels(unittest.TestCase):
     @patch.object(global_config, "GLOBAL_AVAILABLE_MODELS", "invalid json")
     def test_invalid_json_raises(self):
         """A broken allowlist must not allow every model."""
-        with self.assertRaises(ValueError):
+        with self.assertRaises(RuntimeError):
             get_global_available_models()
 
     def test_non_array_json_raises(self):
         """JSON values other than an array are rejected."""
         for value in ['{"not": "an array"}', '"string instead of array"', "true"]:
             with patch.object(global_config, "GLOBAL_AVAILABLE_MODELS", value):
-                with self.assertRaises(ValueError):
+                with self.assertRaises(RuntimeError):
                     get_global_available_models()
 
     @patch.object(global_config, "GLOBAL_AVAILABLE_MODELS", '[""]')

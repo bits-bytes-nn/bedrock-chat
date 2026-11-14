@@ -209,6 +209,9 @@ MODELS: dict[str, ModelSpec] = {
     ),
     "gpt-6-sol": _gpt("openai.gpt-6-sol", ModelPrice(0.002, 0.01, 0.0002, 0.0025)),
     "gpt-6.1-sol": _gpt("openai.gpt-6.1-sol", ModelPrice(0.002, 0.01, 0.0001, 0.0025)),
+    "gpt-6.1-terra": _gpt(
+        "openai.gpt-6.1-terra", ModelPrice(0.001, 0.005, 0.00005, 0.00125)
+    ),
     "gpt-oss-20b": _gpt_oss("openai.gpt-oss-20b-1:0", ModelPrice(0.00015, 0.0003)),
     "gpt-oss-120b": _gpt_oss("openai.gpt-oss-120b-1:0", ModelPrice(0.0003, 0.0006)),
     # Amazon Nova does not charge for cache writes (AWS Price List API).

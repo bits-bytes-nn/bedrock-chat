@@ -26,7 +26,7 @@ def get_global_available_models() -> list[str]:
     which means all models are available.
 
     Raises:
-        ValueError: If the value is not a JSON array. The list restricts models, so
+        RuntimeError: If the value is not a JSON array. The list restricts models, so
             a broken value must not silently allow all of them.
     """
     if not GLOBAL_AVAILABLE_MODELS:
@@ -35,9 +35,9 @@ def get_global_available_models() -> list[str]:
     try:
         models = json.loads(GLOBAL_AVAILABLE_MODELS)
     except json.JSONDecodeError as e:
-        raise ValueError("GLOBAL_AVAILABLE_MODELS must be a JSON array") from e
+        raise RuntimeError("GLOBAL_AVAILABLE_MODELS must be a JSON array") from e
     if not isinstance(models, list):
-        raise ValueError("GLOBAL_AVAILABLE_MODELS must be a JSON array")
+        raise RuntimeError("GLOBAL_AVAILABLE_MODELS must be a JSON array")
     return [model for model in models if model and isinstance(model, str)]
 
 
@@ -77,12 +77,12 @@ def get_default_chat_search_engine() -> type_search_engine | None:
         The engine, or None when chats without a bot have no internet search.
 
     Raises:
-        ValueError: If the configured engine is unknown.
+        RuntimeError: If the configured engine is unknown.
     """
     if not DEFAULT_CHAT_SEARCH_ENGINE:
         return None
     if DEFAULT_CHAT_SEARCH_ENGINE not in get_args(type_search_engine):
-        raise ValueError(
+        raise RuntimeError(
             f"Unknown DEFAULT_CHAT_SEARCH_ENGINE: {DEFAULT_CHAT_SEARCH_ENGINE}"
         )
     return DEFAULT_CHAT_SEARCH_ENGINE  # type: ignore[return-value]

@@ -20,6 +20,9 @@ export interface MonitoringProps {
   readonly api: IHttpApi;
   readonly webSocketHandler: IFunction;
   readonly webSocketLogGroup: logs.ILogGroup;
+  /** The authorizer of new chat connections. */
+  readonly webSocketAuthorizer: IFunction;
+  readonly webSocketAuthorizerLogGroup: logs.ILogGroup;
   readonly embeddingStateMachine: sfn.IStateMachine;
   /** Log group of the function that records sync results. */
   readonly syncStatusLogGroup: logs.ILogGroup;
@@ -87,6 +90,29 @@ export class Monitoring extends Construct {
         "The chat handler Lambda failed (for example a timeout, out of memory or an init error).",
       ],
       [
+        "ChatConnectionAuthorizerErrors",
+        // The authorizer denies every connection while it cannot fetch the signing
+        // keys, and the chat handler is then never called.
+        new cloudwatch.MathExpression({
+          // A series without data in a period has no value, which would hide the other.
+          expression: "FILL(logged, 0) + FILL(failed, 0)",
+          usingMetrics: {
+            logged: loggedErrors(
+              "SigningKeyFetchFailureCount",
+              props.webSocketAuthorizerLogGroup,
+              ["Failed to fetch the signing keys"]
+            ),
+            failed: props.webSocketAuthorizer.metricErrors({
+              period,
+              statistic: "Sum",
+            }),
+          },
+          period,
+        }),
+        1,
+        "Checking the token of new chat connections failed, so chats cannot connect.",
+      ],
+      [
         "WebSocketHandlerThrottles",
         props.webSocketHandler.metricThrottles({ period }),
         1,
@@ -96,7 +122,7 @@ export class Monitoring extends Construct {
         "KnowledgeSyncFailures",
         // Timed-out and aborted executions leave their bots RUNNING as well.
         new cloudwatch.MathExpression({
-          expression: "failed + timedOut + aborted",
+          expression: "FILL(failed, 0) + FILL(timedOut, 0) + FILL(aborted, 0)",
           usingMetrics: {
             failed: props.embeddingStateMachine.metricFailed({ period }),
             timedOut: props.embeddingStateMachine.metricTimedOut({ period }),

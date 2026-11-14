@@ -645,8 +645,7 @@ def __find_bots_with_condition(
         if "LastEvaluatedKey" not in response:
             break
         query_params["ExclusiveStartKey"] = response["LastEvaluatedKey"]
-
-    if query_count == max_query_count:
+    else:
         logger.warning("There are more bots than the query limit.")
 
     return bots

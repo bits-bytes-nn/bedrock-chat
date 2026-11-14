@@ -176,4 +176,4 @@ All Strands tools must return a dictionary with the following structure:
   - Edit i18n files. Open [en/index.ts](../frontend/src/i18n/en/index.ts) and add your own `name` and `description` on `agent.tools`.
   - Edit `xx/index.ts` as well. Where `xx` represents the country code you wish.
 
-- Run `npx cdk deploy` to deploy your changes. This will make your custom tool available in the custom bot screen.
+- Run `npx cdk deploy --all` to deploy your changes. This will make your custom tool available in the custom bot screen.

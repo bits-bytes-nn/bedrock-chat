@@ -16,7 +16,7 @@ function useConversationSearch() {
     data: searchResults,
     error: searchError,
     isLoading: isSearching,
-    mutate: mutateSearchResults,
+    mutate: refreshSearchResults,
   } = conversationSearchApi.searchConversations(hasSearched && debouncedQuery ? debouncedQuery : null);
 
   // Execute search when debouncedQuery changes
@@ -30,11 +30,15 @@ function useConversationSearch() {
         return;
       }
 
+      // The search runs when the debounced query changes the SWR key. The same
+      // query again, for example after an error, refetches the current results.
+      if (hasSearched && query === debouncedQuery) {
+        refreshSearchResults();
+      }
       setHasSearched(true);
       setDisplayQuery(query);
-      mutateSearchResults();
     },
-    [mutateSearchResults]
+    [debouncedQuery, hasSearched, refreshSearchResults]
   );
 
   // Clear search

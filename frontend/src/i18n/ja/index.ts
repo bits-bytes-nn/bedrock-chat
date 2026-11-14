@@ -86,6 +86,10 @@ const translation: typeof en = {
         label: 'GPT-6.1 Sol',
         description: '複雑な推論向けの最新OpenAI GPT-6.1モデル。',
       },
+      'gpt-6.1-terra': {
+        label: 'GPT-6.1 Terra',
+        description: '性能とコストのバランスに優れたOpenAI GPT-6.1モデル。',
+      },
       'amazon-nova-2-lite': {
         label: 'Amazon Nova 2 Lite',
         description:
@@ -997,6 +1001,7 @@ const translation: typeof en = {
         fileSizeExceeded: 'ファイルサイズは{{maxSize}}以下にしてください。',
         fileCountExceeded: 'ファイル数は{{maxCount}}以下にしてください。',
         conversionFailed: '{{fileName}}をテキストに変換できませんでした。',
+        imageLoadFailed: '{{fileName}}を画像として読み込めませんでした。',
       },
       cannotAccessBot:
         'このボットにアクセスできません。新しいチャットへリダイレクトしました。',
@@ -1019,6 +1024,7 @@ const translation: typeof en = {
         'データを読み込めませんでした。ページを再読み込みしてもう一度お試しください。',
       searchFailed: '検索できませんでした。もう一度お試しください。',
       feedbackFailed: 'フィードバックを送信できませんでした。もう一度お試しください。',
+      updateTitle: '会話の名前を変更できませんでした。もう一度お試しください。',
     },
     validation: {
       s3Url: {

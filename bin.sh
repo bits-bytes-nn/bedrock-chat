@@ -81,10 +81,11 @@ fi
 StackName="CodeBuildForDeploy"
 
 # Deploy the CloudFormation stack
-aws cloudformation deploy \
+if ! aws cloudformation deploy \
   --stack-name $StackName \
   --template-file deploy.yml \
   --capabilities CAPABILITY_IAM \
+  --no-fail-on-empty-changeset \
   --parameter-overrides \
     AllowSelfRegister=$ALLOW_SELF_REGISTER \
     EnableLambdaSnapStart=$ENABLE_LAMBDA_SNAPSTART \
@@ -95,7 +96,10 @@ aws cloudformation deploy \
     BedrockRegion="$BEDROCK_REGION" \
     CdkJsonOverride="$CDK_JSON_OVERRIDE" \
     RepoUrl="$REPO_URL" \
-    Version="$VERSION"
+    Version="$VERSION"; then
+    echo "Deploying the $StackName stack failed"
+    exit 1
+fi
 
 echo "Waiting for the stack creation to complete..."
 echo "NOTE: this stack contains CodeBuild project which will be used for cdk deploy."
@@ -105,7 +109,7 @@ while true; do
     status=$(aws cloudformation describe-stacks --stack-name $StackName --query 'Stacks[0].StackStatus' --output text 2>/dev/null)
     if [[ "$status" == "CREATE_COMPLETE" || "$status" == "UPDATE_COMPLETE" || "$status" == "DELETE_COMPLETE" ]]; then
         break
-    elif [[ "$status" == "ROLLBACK_COMPLETE" || "$status" == "DELETE_FAILED" || "$status" == "CREATE_FAILED" ]]; then
+    elif [[ "$status" == *FAILED || "$status" == *ROLLBACK_COMPLETE ]]; then
         echo "Stack creation failed with status: $status"
         exit 1
     fi
@@ -157,3 +161,8 @@ echo "Frontend URL: $frontendUrl"
 # The deploy project has administrator access, so do not leave it behind.
 echo "Deleting the $StackName stack..."
 aws cloudformation delete-stack --stack-name $StackName
+
+if [[ "$buildStatus" != "SUCCEEDED" ]]; then
+    echo "The deployment failed: see the log group and stream above."
+    exit 1
+fi

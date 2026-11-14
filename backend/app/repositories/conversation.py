@@ -392,6 +392,8 @@ def update_feedback(
 ):
     logger.info(f"Updating feedback for conversation: {conversation_id}")
     conv = find_conversation_by_id(user_id, conversation_id)
+    if message_id not in conv.message_map:
+        raise RecordNotFoundError(f"Message with id {message_id} not found")
     conv.message_map[message_id].feedback = feedback
     # Store the whole conversation so that large message maps stay in S3.
     store_conversation(user_id, conv)

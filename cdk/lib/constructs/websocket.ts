@@ -45,6 +45,9 @@ export class WebSocket extends Construct {
   readonly webSocketApi: apigwv2.IWebSocketApi;
   readonly handler: IFunction;
   readonly handlerLogGroup: logs.ILogGroup;
+  /** Checks the ID token of every new connection. */
+  readonly authorizer: IFunction;
+  readonly authorizerLogGroup: logs.ILogGroup;
   private readonly defaultStageName = "dev";
 
   constructor(scope: Construct, id: string, props: WebSocketProps) {
@@ -177,6 +180,8 @@ export class WebSocket extends Construct {
     this.webSocketApi = webSocketApi;
     this.handler = handler;
     this.handlerLogGroup = handler.logGroup;
+    this.authorizer = authorizerHandler;
+    this.authorizerLogGroup = authorizerHandler.logGroup;
 
     new CfnOutput(this, "WebSocketEndpoint", {
       value: this.apiEndpoint,

@@ -85,6 +85,10 @@ const translation = {
         label: 'GPT-6.1 Sol',
         description: 'Latest OpenAI GPT-6.1 model for complex reasoning.',
       },
+      'gpt-6.1-terra': {
+        label: 'GPT-6.1 Terra',
+        description: 'OpenAI GPT-6.1 model balancing capability and cost.',
+      },
       'amazon-nova-2-lite': {
         label: 'Amazon Nova 2 Lite',
         description:
@@ -996,6 +1000,7 @@ How would you categorize this email?`,
           'Each file must be no more than {{maxSize}}.',
         fileCountExceeded: 'Could not upload more than {{maxCount}} files.',
         conversionFailed: 'Could not convert {{fileName}} to text.',
+        imageLoadFailed: 'Could not read {{fileName}} as an image.',
       },
       share: {
         markedEssential: {
@@ -1015,6 +1020,7 @@ How would you categorize this email?`,
       loadFailed: 'Failed to load the data. Reload the page and try again.',
       searchFailed: 'Failed to search. Try again.',
       feedbackFailed: 'Failed to send the feedback. Try again.',
+      updateTitle: 'Failed to rename the chat. Try again.',
     },
     validation: {
       s3Url: {
