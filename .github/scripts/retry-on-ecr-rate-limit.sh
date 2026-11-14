@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
-# docker build that retries only when ECR Public rate-limits the anonymous pulls of
-# shared CI runners (429). Any other failure fails at once.
+# Runs a command that pulls from ECR Public (docker build, CDK bundling) and retries
+# it only when ECR Public rate-limits the anonymous pulls of shared CI runners (429).
+# Any other failure fails at once.
 set -uo pipefail
 
 log=$(mktemp)
 attempts=3
 for attempt in $(seq "$attempts"); do
-  docker build "$@" 2>&1 | tee "$log"
+  "$@" 2>&1 | tee "$log"
   status=${PIPESTATUS[0]}
   if [ "$status" -eq 0 ]; then
     exit 0

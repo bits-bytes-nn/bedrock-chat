@@ -10,6 +10,7 @@ on:
       - "!backend/tests/**"
       - "frontend/**"
       - ".github/workflows/cdk.yml"
+      - ".github/scripts/retry-on-ecr-rate-limit.sh"
   push:
     branches:
       - v3
@@ -19,6 +20,7 @@ on:
       - "!backend/tests/**"
       - "frontend/**"
       - ".github/workflows/cdk.yml"
+      - ".github/scripts/retry-on-ecr-rate-limit.sh"
   workflow_dispatch: {}
 
 permissions:
@@ -49,7 +51,8 @@ jobs:
       - name: Type check
         # Jest checks only the files that the tests import, not the bin entry points.
         run: npx tsc --noEmit -p .
+      # Both bundle Lambda code in images from ECR Public.
       - name: Run unit tests
-        run: npm test
+        run: ../.github/scripts/retry-on-ecr-rate-limit.sh npm test
       - name: Synthesize
-        run: npx cdk synth --quiet
+        run: ../.github/scripts/retry-on-ecr-rate-limit.sh npx cdk synth --quiet
