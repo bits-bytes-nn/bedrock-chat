@@ -1,6 +1,7 @@
 /// <reference types="vitest/config" />
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import tailwindcss from '@tailwindcss/vite';
 import { VitePWA } from 'vite-plugin-pwa';
 
 // https://vitejs.dev/config/
@@ -28,6 +29,7 @@ export default defineConfig({
         return null;
       },
     },
+    tailwindcss(),
     react(),
     VitePWA({
       registerType: 'autoUpdate',
@@ -119,6 +121,29 @@ export default defineConfig({
       },
     }),
   ],
+  optimizeDeps: {
+    esbuildOptions: {
+      plugins: [
+        {
+          // The dev server pre-bundles dependencies with esbuild, which does
+          // not run the resolveId hook of the Vite plugin above. Apply the same
+          // xstate-v4 redirect to esbuild so that `npm run dev` works too.
+          name: 'resolve-xstate-v4-for-amplify',
+          setup(build) {
+            build.onResolve({ filter: /^xstate$/ }, async (args) => {
+              if (!args.importer.includes('@aws-amplify')) {
+                return undefined;
+              }
+              return build.resolve('xstate-v4', {
+                kind: args.kind,
+                resolveDir: args.resolveDir,
+              });
+            });
+          },
+        },
+      ],
+    },
+  },
   server: { host: true },
   // Tests that set process.env.TZ need child processes; worker threads ignore it.
   test: { pool: 'forks' },

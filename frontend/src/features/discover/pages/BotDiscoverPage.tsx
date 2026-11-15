@@ -123,7 +123,7 @@ const BotDiscoverPage: React.FC = () => {
           <button
             onClick={() => onPageChange(currentPage - 1)}
             disabled={currentPage === 1}
-            className="rounded p-1 disabled:cursor-not-allowed disabled:opacity-50">
+            className="rounded-sm p-1 disabled:cursor-not-allowed disabled:opacity-50">
             <PiCaretLeft size={20} />
           </button>
 
@@ -134,7 +134,7 @@ const BotDiscoverPage: React.FC = () => {
           <button
             onClick={() => onPageChange(currentPage + 1)}
             disabled={currentPage === totalPages}
-            className="rounded p-1 disabled:cursor-not-allowed disabled:opacity-50">
+            className="rounded-sm p-1 disabled:cursor-not-allowed disabled:opacity-50">
             <PiCaretRight size={20} />
           </button>
         </div>
@@ -146,7 +146,7 @@ const BotDiscoverPage: React.FC = () => {
   return (
     <>
       <div className="flex justify-center pb-16">
-        <div className="flex w-full max-w-screen-xl flex-col gap-3 px-4 pt-8 lg:w-4/5">
+        <div className="flex w-full max-w-(--breakpoint-xl) flex-col gap-3 px-4 pt-8 lg:w-4/5">
           <div className="flex justify-center text-4xl font-bold">
             {t('discover.pageTitle').toUpperCase()}
           </div>
