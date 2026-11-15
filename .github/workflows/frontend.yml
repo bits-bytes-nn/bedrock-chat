@@ -1,12 +1,8 @@
 name: Frontend tests
 
 on:
-  pull_request:
-    branches:
-      - v3
-    paths:
-      - "frontend/**"
-      - ".github/workflows/frontend.yml"
+  # Pull requests run this from ci.yml, whose ci-ok job is the required check.
+  workflow_call: {}
   push:
     branches:
       - v3
@@ -17,10 +13,6 @@ on:
 
 permissions:
   contents: read
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 defaults:
   run:

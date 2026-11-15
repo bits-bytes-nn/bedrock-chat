@@ -1,16 +1,8 @@
 name: CDK tests
 
 on:
-  pull_request:
-    branches:
-      - v3
-    paths:
-      - "cdk/**"
-      - "backend/**"
-      - "!backend/tests/**"
-      - "frontend/**"
-      - ".github/workflows/cdk.yml"
-      - ".github/scripts/retry-on-ecr-rate-limit.sh"
+  # Pull requests run this from ci.yml, whose ci-ok job is the required check.
+  workflow_call: {}
   push:
     branches:
       - v3
@@ -25,10 +17,6 @@ on:
 
 permissions:
   contents: read
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 defaults:
   run:

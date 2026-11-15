@@ -1,0 +1,33 @@
+name: CI
+
+# Every pull request runs all checks, so that the ci-ok job always reports and can
+# be the required status check of the branch protection. Skipping a workflow by
+# paths would leave a required check pending forever.
+on:
+  pull_request:
+    branches:
+      - v3
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    uses: ./.github/workflows/backend.yml
+  cdk:
+    uses: ./.github/workflows/cdk.yml
+  frontend:
+    uses: ./.github/workflows/frontend.yml
+
+  ci-ok:
+    if: always()
+    needs: [backend, cdk, frontend]
+    runs-on: ubuntu-latest
+    steps:
+      - name: All checks passed
+        run: |
+          echo '${{ toJSON(needs) }}' | jq -e 'all(.[]; .result == "success")'
