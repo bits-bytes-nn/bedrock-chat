@@ -1,28 +1,8 @@
 name: Backend tests
 
 on:
-  pull_request:
-    branches:
-      - v3
-    paths:
-      - "backend/**"
-      # tests/test_model_registry.py checks the frontend model list.
-      - "frontend/src/constants/index.ts"
-      - "frontend/src/hooks/useModel.ts"
-      - "frontend/src/i18n/en/index.ts"
-      # tests/test_error_codes.py checks the error codes that the frontend translates,
-      # the attachment limits and the stack names.
-      - "frontend/src/hooks/usePostMessageStreaming.ts"
-      - "frontend/src/components/InputChatContent.tsx"
-      - "cdk/lib/utils/stack-names.ts"
-      # tests/test_usecases/test_file_conversion.py checks the convertible files.
-      - "frontend/src/constants/supportedAttachedFiles.ts"
-      # tests/test_alarm_log_terms.py checks the log lines that alarms count.
-      - "cdk/lib/constructs/monitoring.ts"
-      # tests/test_cognito_trigger_resource.py runs this handler.
-      - "cdk/custom-resources/cognito-trigger/**"
-      - ".github/workflows/backend.yml"
-      - ".github/scripts/retry-on-ecr-rate-limit.sh"
+  # Pull requests run this from ci.yml, whose ci-ok job is the required check.
+  workflow_call: {}
   push:
     branches:
       - v3
@@ -49,10 +29,6 @@ on:
 
 permissions:
   contents: read
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 defaults:
   run:
