@@ -269,6 +269,8 @@ def test_duckduckgo_uses_the_snippets_without_model_calls():
     ]
     kwargs = ddgs.__enter__.return_value.text.call_args.kwargs
     assert kwargs["region"] == "wt-wt" and kwargs["timelimit"] is None
+    # The "api" backend is deprecated.
+    assert "backend" not in kwargs
 
 
 def test_duckduckgo_regions_are_country_then_language():
@@ -279,3 +281,40 @@ def test_duckduckgo_regions_are_country_then_language():
 
     kwargs = ddgs.__enter__.return_value.text.call_args.kwargs
     assert kwargs["region"] == "kr-ko" and kwargs["timelimit"] == "w"
+
+
+def test_an_empty_summary_falls_back_to_the_page():
+    # Models that always reason can use up the output limit before answering.
+    response = {
+        "output": {"message": {"content": [{"reasoningContent": {}}]}},
+        "stopReason": "max_tokens",
+        "usage": {},
+    }
+    with patch.object(
+        internet_search, "call_converse_api", return_value=response
+    ) as converse, patch.object(internet_search, "emit_chat_cost"):
+        summary = internet_search._summarize_content_standalone(
+            "page text", "T", "https://t", "q"
+        )
+
+    assert summary == "page text"
+    # The chat stream has no API Gateway timeout, so throttling is retried.
+    assert converse.call_args.kwargs["max_attempts"] > 1
+
+
+@pytest.mark.parametrize(
+    "error, reason",
+    [
+        ("RatelimitException", "rate limited"),
+        ("TimeoutException", "timed out"),
+        ("DuckDuckGoSearchException", "failed"),
+    ],
+)
+def test_duckduckgo_errors_tell_the_model_why(error, reason):
+    from duckduckgo_search import exceptions
+
+    ddgs = MagicMock()
+    ddgs.__enter__.return_value.text.side_effect = getattr(exceptions, error)("x")
+    with patch("duckduckgo_search.DDGS", return_value=ddgs):
+        with pytest.raises(internet_search.SearchApiError, match=reason):
+            internet_search._search_with_duckduckgo_standalone("q", "", "en")

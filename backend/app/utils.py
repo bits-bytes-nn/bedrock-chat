@@ -33,23 +33,33 @@ def is_running_on_lambda():
     return "AWS_EXECUTION_ENV" in os.environ
 
 
-def get_bedrock_runtime_client(region=BEDROCK_REGION):
+def get_bedrock_runtime_client(region=BEDROCK_REGION, max_attempts: int = 1):
     # Synchronous callers sit behind API Gateway's 29-second integration timeout.
-    # Retries would also repeat timed-out calls and exceed it, so fail fast.
+    # Retries would also repeat timed-out calls and exceed it, so they fail fast
+    # by default.
     client = boto3.client(
         "bedrock-runtime",
         region_name=region,
         config=Config(
             connect_timeout=3,
             read_timeout=23,
-            retries={"mode": "standard", "max_attempts": 1},
+            retries={"mode": "standard", "max_attempts": max_attempts},
         ),
     )
     return client
 
 
 def get_bedrock_agent_client(region=BEDROCK_REGION):
-    client = boto3.client("bedrock-agent", region_name=region)
+    # Agent lookups run before a chat answer starts, so they must not stall it.
+    client = boto3.client(
+        "bedrock-agent",
+        region_name=region,
+        config=Config(
+            connect_timeout=3,
+            read_timeout=5,
+            retries={"mode": "standard", "max_attempts": 3},
+        ),
+    )
     return client
 
 
