@@ -4,8 +4,6 @@ const PROVIDER_PREFIXES: [prefix: string, provider: string][] = [
   ['gpt-', 'OpenAI'],
   ['amazon-', 'Amazon'],
   ['mistral-', 'Mistral AI'],
-  ['deepseek-', 'DeepSeek'],
-  ['llama', 'Meta'],
 ];
 
 export const getModelProvider = (modelId: string): string =>

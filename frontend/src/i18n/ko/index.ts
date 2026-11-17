@@ -150,17 +150,6 @@ const translation: typeof en = {
         description:
           'Amazon Nova 모델 제품군 중 가장 낮은 지연 시간의 응답을 매우 저렴한 비용으로 제공하는 텍스트 전용 모델입니다.',
       },
-      'deepseek-r1': {
-        label: 'DeepSeek R1',
-        description:
-          '일반 추론, 수학, 과학, 코드 생성에 최적화된 최첨단 추론 모델입니다. 영어와 중국어를 지원합니다.',
-      },
-      // Meta Llama 3 models
-      'llama3-3-70b-instruct': {
-        label: 'Meta Llama 3.3 70B Instruct',
-        description:
-          '더 낮은 비용으로 405B 모델에 준하는 성능을 제공하며, 뛰어난 추론 및 지시 이행 능력을 갖춘 최신 Llama 3 모델입니다.',
-      },
       'gpt-oss-20b': {
         label: 'GPT-OSS 20B',
         description:

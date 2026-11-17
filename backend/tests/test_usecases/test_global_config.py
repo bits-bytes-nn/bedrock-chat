@@ -202,43 +202,43 @@ class TestGetTitleModel(unittest.TestCase):
         self.assertEqual(result, "mistral-large")
 
     @patch.object(global_config, "TITLE_MODEL", "")
-    @patch.object(global_config, "DEFAULT_MODEL", "  llama3-3-70b-instruct  ")
+    @patch.object(global_config, "DEFAULT_MODEL", "  amazon-nova-micro  ")
     def test_strips_whitespace_from_default_model_fallback(self):
         """Test that whitespace is stripped from DEFAULT_MODEL when used as fallback."""
         from app.usecases.global_config import get_title_model
 
         result = get_title_model()
-        self.assertEqual(result, "llama3-3-70b-instruct")
+        self.assertEqual(result, "amazon-nova-micro")
 
 
 class TestGetSelectableModels(unittest.TestCase):
     @staticmethod
-    def without_deepseek(models: list[str]) -> list[str]:
-        return [model for model in models if model != "deepseek-r1"]
+    def without_gpt_oss(models: list[str]) -> list[str]:
+        return [model for model in models if model != "gpt-oss-120b"]
 
     @patch.object(global_config, "GLOBAL_AVAILABLE_MODELS", None)
     def test_every_model_offered_in_the_region(self):
         with patch.object(
-            global_config, "filter_available_models", self.without_deepseek
+            global_config, "filter_available_models", self.without_gpt_oss
         ):
             models = get_selectable_models()
-        self.assertNotIn("deepseek-r1", models)
+        self.assertNotIn("gpt-oss-120b", models)
         self.assertEqual(len(models), len(global_config.MODELS) - 1)
 
     @patch.object(
         global_config,
         "GLOBAL_AVAILABLE_MODELS",
-        '["claude-v5.5-sonnet", "deepseek-r1"]',
+        '["claude-v5.5-sonnet", "gpt-oss-120b"]',
     )
     def test_configured_models_offered_in_the_region(self):
         with patch.object(
-            global_config, "filter_available_models", self.without_deepseek
+            global_config, "filter_available_models", self.without_gpt_oss
         ):
             self.assertEqual(get_selectable_models(), ["claude-v5.5-sonnet"])
 
-    @patch.object(global_config, "GLOBAL_AVAILABLE_MODELS", '["deepseek-r1"]')
+    @patch.object(global_config, "GLOBAL_AVAILABLE_MODELS", '["gpt-oss-120b"]')
     def test_never_empty_because_the_frontend_shows_all_models_for_empty(self):
         with patch.object(
-            global_config, "filter_available_models", self.without_deepseek
+            global_config, "filter_available_models", self.without_gpt_oss
         ):
-            self.assertEqual(get_selectable_models(), ["deepseek-r1"])
+            self.assertEqual(get_selectable_models(), ["gpt-oss-120b"])

@@ -172,16 +172,16 @@ class TestFilterAvailableModels(unittest.TestCase):
     def test_offered_on_demand_in_the_region(self):
         self.assertEqual(
             self.available(
-                ["llama3-3-70b-instruct"],
-                on_demand=frozenset({"meta.llama3-3-70b-instruct-v1:0"}),
+                ["gpt-oss-20b"],
+                on_demand=frozenset({"openai.gpt-oss-20b-1:0"}),
             ),
-            ["llama3-3-70b-instruct"],
+            ["gpt-oss-20b"],
         )
 
     def test_drops_models_without_a_profile_or_on_demand_throughput(self):
         # The profile named after mistral-large routes to another model.
         self.assertEqual(
-            self.available(["mistral-large", "deepseek-r1", "amazon-nova-pro"]),
+            self.available(["mistral-large", "gpt-oss-120b", "amazon-nova-pro"]),
             ["amazon-nova-pro"],
         )
 
@@ -225,7 +225,7 @@ class TestFilterAvailableModels(unittest.TestCase):
         )
 
     def test_a_failed_lookup_keeps_every_model(self):
-        models = ["deepseek-r1", "mistral-large"]
+        models = ["gpt-oss-120b", "mistral-large"]
         for failing in ("profiles", "on_demand"):
             bedrock._model_lookup_failed_at = None
             profiles, on_demand = self.failing_lookup(failing)
@@ -233,7 +233,7 @@ class TestFilterAvailableModels(unittest.TestCase):
                 self.assertEqual(bedrock.filter_available_models(models), models)
 
     def test_a_failed_lookup_is_not_repeated_for_a_while(self):
-        models = ["deepseek-r1"]
+        models = ["gpt-oss-120b"]
         profiles, on_demand = self.failing_lookup("profiles")
         with (
             profiles as list_profiles,
@@ -250,7 +250,7 @@ class TestFilterAvailableModels(unittest.TestCase):
     def test_lookups_are_not_retried(self):
         profiles, on_demand = self.failing_lookup("none")
         with profiles as list_profiles, on_demand as list_on_demand:
-            bedrock.filter_available_models(["deepseek-r1"])
+            bedrock.filter_available_models(["gpt-oss-120b"])
         self.assertEqual(list_profiles.call_args.args[1], 1)
         self.assertEqual(list_on_demand.call_args.args[1], 1)
 

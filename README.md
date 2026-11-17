@@ -195,7 +195,7 @@ Example usage:
       "claude-v5.5-haiku",
       "amazon-nova-pro",
       "amazon-nova-lite",
-      "llama3-3-70b-instruct"
+      "gpt-6.1-terra"
     ]
   }
 }'
@@ -302,10 +302,8 @@ npm ci
 - **OpenAI Models:** `gpt-5.5`, `gpt-5.6-luna`, `gpt-5.6-sol`, `gpt-5.6-terra`, `gpt-6-astra`, `gpt-6-luna`, `gpt-6-sol`, `gpt-6.1-sol`, `gpt-6.1-terra`, `gpt-oss-20b`, `gpt-oss-120b`
 - **Amazon Nova Models:** `amazon-nova-pro`, `amazon-nova-lite`, `amazon-nova-micro`, `amazon-nova-2-lite`
 - **Mistral Models:** `mistral-large`, `mistral-large-2`
-- **DeepSeek Models:** `deepseek-r1`
-- **Meta Llama Models:** `llama3-3-70b-instruct`
 
-Model availability differs by region. The parameters sent to each model are defined in [model_registry.py](./backend/app/model_registry.py). Models that Amazon Bedrock no longer offers (Claude 3.x, Claude Opus 4, Opus 4.1 and Sonnet 4, Llama 3.2, Mistral 7B and Mixtral 8x7B) are kept only so that existing conversations remain readable, and cannot be selected.
+Model availability differs by region. The parameters sent to each model are defined in [model_registry.py](./backend/app/model_registry.py). Models that Amazon Bedrock no longer offers (Claude 3.x, Claude Opus 4, Opus 4.1 and Sonnet 4, DeepSeek-R1, Llama 3.2 and 3.3, Mistral 7B and Mixtral 8x7B) are kept only so that existing conversations remain readable, and cannot be selected.
 
 - Before deploying the CDK, you will need to work with Bootstrap once for the region you are deploying to.
 
@@ -353,7 +351,7 @@ The traditional way to configure parameters is by editing the `cdk.json` file. T
       "claude-v5.5-haiku",
       "amazon-nova-pro",
       "amazon-nova-lite",
-      "llama3-3-70b-instruct"
+      "gpt-6.1-terra"
     ]
   }
 }
@@ -383,7 +381,7 @@ bedrockChatParams.set("default", {
     "claude-v5.5-haiku",
     "amazon-nova-pro",
     "amazon-nova-lite",
-    "llama3-3-70b-instruct",
+    "gpt-6.1-terra",
   ],
 });
 

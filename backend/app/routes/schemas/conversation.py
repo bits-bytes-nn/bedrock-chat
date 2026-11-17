@@ -41,11 +41,9 @@ type_model_name = Literal[
     # Mistral
     "mistral-large",
     "mistral-large-2",
-    # DeepSeek
-    "deepseek-r1",
-    # Meta Llama
-    "llama3-3-70b-instruct",
     # Retired
+    "deepseek-r1",
+    "llama3-3-70b-instruct",
     "claude-v4-opus",
     "claude-v4.1-opus",
     "claude-v4-sonnet",
