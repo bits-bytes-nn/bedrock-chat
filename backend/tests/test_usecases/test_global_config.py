@@ -8,6 +8,7 @@ from app.usecases import global_config
 from app.usecases.global_config import (
     get_default_model,
     get_global_available_models,
+    get_selectable_models,
     get_title_model,
 )
 
@@ -208,3 +209,36 @@ class TestGetTitleModel(unittest.TestCase):
 
         result = get_title_model()
         self.assertEqual(result, "llama3-3-70b-instruct")
+
+
+class TestGetSelectableModels(unittest.TestCase):
+    @staticmethod
+    def without_deepseek(models: list[str]) -> list[str]:
+        return [model for model in models if model != "deepseek-r1"]
+
+    @patch.object(global_config, "GLOBAL_AVAILABLE_MODELS", None)
+    def test_every_model_offered_in_the_region(self):
+        with patch.object(
+            global_config, "filter_available_models", self.without_deepseek
+        ):
+            models = get_selectable_models()
+        self.assertNotIn("deepseek-r1", models)
+        self.assertEqual(len(models), len(global_config.MODELS) - 1)
+
+    @patch.object(
+        global_config,
+        "GLOBAL_AVAILABLE_MODELS",
+        '["claude-v5.5-sonnet", "deepseek-r1"]',
+    )
+    def test_configured_models_offered_in_the_region(self):
+        with patch.object(
+            global_config, "filter_available_models", self.without_deepseek
+        ):
+            self.assertEqual(get_selectable_models(), ["claude-v5.5-sonnet"])
+
+    @patch.object(global_config, "GLOBAL_AVAILABLE_MODELS", '["deepseek-r1"]')
+    def test_never_empty_because_the_frontend_shows_all_models_for_empty(self):
+        with patch.object(
+            global_config, "filter_available_models", self.without_deepseek
+        ):
+            self.assertEqual(get_selectable_models(), ["deepseek-r1"])

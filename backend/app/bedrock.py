@@ -3,6 +3,7 @@ from __future__ import annotations
 import functools
 import logging
 import os
+import time
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -197,11 +198,22 @@ def get_text_from_converse_response(response: ConverseResponseTypeDef) -> str:
     return next((block["text"] for block in message["content"] if "text" in block), "")
 
 
+# The output limit for short answers, such as titles and summaries. It leaves
+# room for models that always reason before answering.
+SHORT_ANSWER_MAX_TOKENS = 2048
+
+
 def call_converse_api(
-    args: ConverseStreamRequestTypeDef,
+    args: ConverseStreamRequestTypeDef, max_attempts: int = 1
 ) -> ConverseResponseTypeDef:
-    # Retries are handled by the client configuration.
-    return get_bedrock_runtime_client().converse(**args)
+    """Call Converse once by default, for callers behind API Gateway's timeout.
+
+    Args:
+        args: The Converse request.
+        max_attempts: The attempts, including retries of throttling and server
+            errors, for callers without that timeout.
+    """
+    return get_bedrock_runtime_client(max_attempts=max_attempts).converse(**args)
 
 
 def calculate_price(
@@ -228,22 +240,28 @@ def calculate_price(
     ) / 1000.0
 
 
-@functools.cache
-def _list_system_inference_profiles(region: str) -> dict[str, frozenset[str]]:
-    """Return the system-defined inference profiles in the region.
-
-    Returns:
-        The ARNs of the models that each profile routes to, by profile ID.
-    """
-    client = boto3.client(
+def _bedrock_client(region: str, max_attempts: int):
+    return boto3.client(
         "bedrock",
         region_name=region,
         config=Config(
             connect_timeout=3,
             read_timeout=5,
-            retries={"mode": "standard", "max_attempts": 3},
+            retries={"mode": "standard", "max_attempts": max_attempts},
         ),
     )
+
+
+@functools.cache
+def _list_system_inference_profiles(
+    region: str, max_attempts: int = 3
+) -> dict[str, frozenset[str]]:
+    """Return the system-defined inference profiles in the region.
+
+    Returns:
+        The ARNs of the models that each profile routes to, by profile ID.
+    """
+    client = _bedrock_client(region, max_attempts)
     profiles: dict[str, frozenset[str]] = {}
     kwargs: dict[str, Any] = {"typeEquals": "SYSTEM_DEFINED"}
     while True:
@@ -258,6 +276,43 @@ def _list_system_inference_profiles(region: str) -> dict[str, frozenset[str]]:
         if "nextToken" not in response:
             return profiles
         kwargs["nextToken"] = response["nextToken"]
+
+
+@functools.cache
+def _list_on_demand_models(region: str, max_attempts: int) -> frozenset[str]:
+    """Return the IDs of the foundation models with on-demand throughput in the region."""
+    response = _bedrock_client(region, max_attempts).list_foundation_models(
+        byInferenceType="ON_DEMAND"
+    )
+    return frozenset(model["modelId"] for model in response["modelSummaries"])
+
+
+def _find_inference_profile(
+    base_model_id: str,
+    profiles: dict[str, frozenset[str]],
+    enable_global: bool,
+    enable_cross_region: bool,
+) -> str | None:
+    """Return the global profile, else a geographic profile, that routes to the model."""
+    # Profiles route to foundation models in several regions, so their model ARNs
+    # differ in the region but end with the same model ID.
+    model_arn_suffix = f"foundation-model/{base_model_id}"
+    profile_ids = {
+        profile_id
+        for profile_id, model_arns in profiles.items()
+        if any(arn.endswith(model_arn_suffix) for arn in model_arns)
+    }
+
+    global_profile_id = f"global.{base_model_id}"
+    if enable_global and global_profile_id in profile_ids:
+        return global_profile_id
+
+    if enable_cross_region:
+        # Geographic profiles, such as "us." or "apac.".
+        regional_profile_ids = sorted(profile_ids - {global_profile_id})
+        if regional_profile_ids:
+            return regional_profile_ids[0]
+    return None
 
 
 def get_model_id(
@@ -276,7 +331,6 @@ def get_model_id(
     if not (enable_global or enable_cross_region):
         return base_model_id
 
-    global_profile_id = f"global.{base_model_id}"
     try:
         profiles = _list_system_inference_profiles(bedrock_region)
     except (BotoCoreError, ClientError):
@@ -285,25 +339,13 @@ def get_model_id(
         logger.warning(
             "Failed to list inference profiles in %s", bedrock_region, exc_info=True
         )
-        return global_profile_id if enable_global else base_model_id
+        return f"global.{base_model_id}" if enable_global else base_model_id
 
-    # Profiles route to foundation models in several regions, so their model ARNs
-    # differ in the region but end with the same model ID.
-    model_arn_suffix = f"foundation-model/{base_model_id}"
-    profile_ids = {
-        profile_id
-        for profile_id, model_arns in profiles.items()
-        if any(arn.endswith(model_arn_suffix) for arn in model_arns)
-    }
-
-    if enable_global and global_profile_id in profile_ids:
-        return global_profile_id
-
-    if enable_cross_region:
-        # Geographic profiles, such as "us." or "apac.".
-        regional_profile_ids = sorted(profile_ids - {global_profile_id})
-        if regional_profile_ids:
-            return regional_profile_ids[0]
+    profile_id = _find_inference_profile(
+        base_model_id, profiles, enable_global, enable_cross_region
+    )
+    if profile_id:
+        return profile_id
 
     logger.warning(
         "No inference profile for %s in %s. Using the base model ID, which only works "
@@ -312,3 +354,60 @@ def get_model_id(
         bedrock_region,
     )
     return base_model_id
+
+
+# The model list is read on every page load behind API Gateway's 29-second
+# timeout, so its lookups are not retried, and a failed lookup is not repeated
+# for a while.
+_MODEL_LOOKUP_ATTEMPTS = 1
+_MODEL_LOOKUP_RETRY_SECONDS = 60.0
+_model_lookup_failed_at: float | None = None
+
+
+def filter_available_models(
+    models: list[str],
+    enable_global: bool = ENABLE_BEDROCK_GLOBAL_INFERENCE,
+    enable_cross_region: bool = ENABLE_BEDROCK_CROSS_REGION_INFERENCE,
+    bedrock_region: str = BEDROCK_REGION,
+) -> list[str]:
+    """Keep the models that can be invoked from the region, through an inference
+    profile or with on-demand throughput.
+
+    A failed lookup keeps every model, so that a Bedrock outage does not hide them;
+    a model that is not offered fails when it is used instead.
+    """
+    global _model_lookup_failed_at
+    if (
+        _model_lookup_failed_at is not None
+        and time.monotonic() - _model_lookup_failed_at < _MODEL_LOOKUP_RETRY_SECONDS
+    ):
+        return list(models)
+
+    try:
+        profiles = (
+            _list_system_inference_profiles(bedrock_region, _MODEL_LOOKUP_ATTEMPTS)
+            if enable_global or enable_cross_region
+            else {}
+        )
+        on_demand = _list_on_demand_models(bedrock_region, _MODEL_LOOKUP_ATTEMPTS)
+    except (BotoCoreError, ClientError):
+        _model_lookup_failed_at = time.monotonic()
+        logger.warning(
+            "Failed to list the models offered in %s", bedrock_region, exc_info=True
+        )
+        return list(models)
+    _model_lookup_failed_at = None
+
+    def is_available(model: str) -> bool:
+        try:
+            base_model_id = get_model_spec(model).bedrock_id
+        except ValueError:
+            return False
+        return base_model_id in on_demand or bool(
+            profiles
+            and _find_inference_profile(
+                base_model_id, profiles, enable_global, enable_cross_region
+            )
+        )
+
+    return [model for model in models if is_available(model)]

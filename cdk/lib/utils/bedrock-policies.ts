@@ -3,7 +3,7 @@ import * as iam from "aws-cdk-lib/aws-iam";
 
 /**
  * Bedrock actions used to answer chats: model invocation (Converse and
- * ConverseStream), inference profile lookup, guardrails, knowledge base
+ * ConverseStream), model and inference profile lookup, guardrails, knowledge base
  * retrieval and Bedrock Agents. Resources stay "*" because inference profiles
  * route to foundation models in other Regions.
  */
@@ -13,6 +13,7 @@ export const bedrockChatPolicyStatement = (): iam.PolicyStatement =>
       "bedrock:InvokeModel",
       "bedrock:InvokeModelWithResponseStream",
       "bedrock:ListInferenceProfiles",
+      "bedrock:ListFoundationModels",
       "bedrock:ApplyGuardrail",
       "bedrock:GetKnowledgeBase",
       "bedrock:Retrieve",

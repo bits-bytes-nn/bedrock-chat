@@ -3,6 +3,7 @@ import logging
 import os
 from typing import get_args
 
+from app.bedrock import filter_available_models
 from app.model_registry import MODELS
 from app.routes.schemas.bot import type_search_engine
 from app.routes.schemas.conversation import type_model_name
@@ -39,6 +40,22 @@ def get_global_available_models() -> list[str]:
     if not isinstance(models, list):
         raise RuntimeError("GLOBAL_AVAILABLE_MODELS must be a JSON array")
     return [model for model in models if model and isinstance(model, str)]
+
+
+def get_selectable_models() -> list[str]:
+    """The models that users can choose: the configured models, or every model
+    when none are configured, without those that Bedrock does not offer in the
+    region.
+
+    The frontend shows every model for an empty list, so when no candidate is
+    offered, the candidates are returned unfiltered and fail when they are used.
+    """
+    candidates = get_global_available_models() or list(MODELS)
+    models = filter_available_models(candidates)
+    if not models:
+        logger.warning("None of the models %s is offered in the region", candidates)
+        return candidates
+    return models
 
 
 def _first_available_model(*candidates: str | None) -> str | None:

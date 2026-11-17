@@ -143,5 +143,134 @@ class TestListInferenceProfiles(unittest.TestCase):
         )
 
 
+class TestFilterAvailableModels(unittest.TestCase):
+    PROFILES = TestGetModelId.PROFILES
+
+    def setUp(self):
+        bedrock._model_lookup_failed_at = None
+
+    def tearDown(self):
+        bedrock._model_lookup_failed_at = None
+
+    def available(self, models, on_demand=frozenset(), **kwargs) -> list[str]:
+        with (
+            patch.object(
+                bedrock, "_list_system_inference_profiles", return_value=self.PROFILES
+            ),
+            patch.object(bedrock, "_list_on_demand_models", return_value=on_demand),
+        ):
+            return bedrock.filter_available_models(
+                models, bedrock_region="ap-northeast-2", **kwargs
+            )
+
+    def test_offered_through_an_inference_profile(self):
+        self.assertEqual(
+            self.available(["claude-v4.6-sonnet", "amazon-nova-pro"]),
+            ["claude-v4.6-sonnet", "amazon-nova-pro"],
+        )
+
+    def test_offered_on_demand_in_the_region(self):
+        self.assertEqual(
+            self.available(
+                ["llama3-3-70b-instruct"],
+                on_demand=frozenset({"meta.llama3-3-70b-instruct-v1:0"}),
+            ),
+            ["llama3-3-70b-instruct"],
+        )
+
+    def test_drops_models_without_a_profile_or_on_demand_throughput(self):
+        # The profile named after mistral-large routes to another model.
+        self.assertEqual(
+            self.available(["mistral-large", "deepseek-r1", "amazon-nova-pro"]),
+            ["amazon-nova-pro"],
+        )
+
+    def test_profiles_count_only_when_enabled(self):
+        with (
+            patch.object(bedrock, "_list_system_inference_profiles") as profiles,
+            patch.object(bedrock, "_list_on_demand_models", return_value=frozenset()),
+        ):
+            models = bedrock.filter_available_models(
+                ["claude-v4.6-sonnet"], enable_global=False, enable_cross_region=False
+            )
+        self.assertEqual(models, [])
+        profiles.assert_not_called()
+
+    def test_drops_retired_and_unknown_models(self):
+        self.assertEqual(self.available(["claude-v3.7-sonnet", "no-such-model"]), [])
+
+    def failing_lookup(self, failing: str):
+        error = ClientError(
+            {"Error": {"Code": "ThrottlingException", "Message": ""}}, "List"
+        )
+        return (
+            patch.object(
+                bedrock,
+                "_list_system_inference_profiles",
+                **(
+                    {"side_effect": error}
+                    if failing == "profiles"
+                    else {"return_value": {}}
+                ),
+            ),
+            patch.object(
+                bedrock,
+                "_list_on_demand_models",
+                **(
+                    {"side_effect": error}
+                    if failing == "on_demand"
+                    else {"return_value": frozenset()}
+                ),
+            ),
+        )
+
+    def test_a_failed_lookup_keeps_every_model(self):
+        models = ["deepseek-r1", "mistral-large"]
+        for failing in ("profiles", "on_demand"):
+            bedrock._model_lookup_failed_at = None
+            profiles, on_demand = self.failing_lookup(failing)
+            with profiles, on_demand:
+                self.assertEqual(bedrock.filter_available_models(models), models)
+
+    def test_a_failed_lookup_is_not_repeated_for_a_while(self):
+        models = ["deepseek-r1"]
+        profiles, on_demand = self.failing_lookup("profiles")
+        with (
+            profiles as list_profiles,
+            on_demand,
+            patch.object(
+                bedrock.time, "monotonic", side_effect=[100.0, 130.0, 200.0, 200.0]
+            ),
+        ):
+            bedrock.filter_available_models(models)  # fails at 100
+            bedrock.filter_available_models(models)  # 30 s later: skipped
+            bedrock.filter_available_models(models)  # 100 s later: tried again
+        self.assertEqual(list_profiles.call_count, 2)
+
+    def test_lookups_are_not_retried(self):
+        profiles, on_demand = self.failing_lookup("none")
+        with profiles as list_profiles, on_demand as list_on_demand:
+            bedrock.filter_available_models(["deepseek-r1"])
+        self.assertEqual(list_profiles.call_args.args[1], 1)
+        self.assertEqual(list_on_demand.call_args.args[1], 1)
+
+
+class TestListOnDemandModels(unittest.TestCase):
+    def test_lists_on_demand_model_ids(self):
+        client = MagicMock()
+        client.list_foundation_models.return_value = {
+            "modelSummaries": [{"modelId": "a"}, {"modelId": "b"}]
+        }
+        bedrock._list_on_demand_models.cache_clear()
+        with patch.object(bedrock.boto3, "client", return_value=client):
+            models = bedrock._list_on_demand_models("test-region", 1)
+        bedrock._list_on_demand_models.cache_clear()
+
+        self.assertEqual(models, frozenset({"a", "b"}))
+        client.list_foundation_models.assert_called_once_with(
+            byInferenceType="ON_DEMAND"
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

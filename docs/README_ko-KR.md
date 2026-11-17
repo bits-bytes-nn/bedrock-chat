@@ -147,7 +147,7 @@ override JSON은 cdk.json과 동일한 구조를 따라야 합니다. 다음을 
 - `bedrockRegion`
 - `enableRagReplicas`
 - `enableBedrockCrossRegionInference`
-- `globalAvailableModels`: 활성화할 모델 ID 목록을 허용합니다. 기본값은 빈 목록으로, 모든 모델을 활성화합니다.
+- `globalAvailableModels`: 활성화할 모델 ID 목록을 허용합니다. 기본값은 빈 목록으로, 모든 모델을 활성화합니다. 어느 경우든 `bedrockRegion`에서 추론 프로파일이나 온디맨드로 호출할 수 없는 모델은 표시되지 않습니다.
 - `logoPath`: 내비게이션 드로어 상단에 표시되는 프론트엔드 `public/` 디렉토리 내의 로고 자산에 대한 상대 경로.
 - 그리고 cdk.json에 정의된 기타 컨텍스트 값들
 

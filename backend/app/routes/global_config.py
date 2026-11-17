@@ -2,7 +2,7 @@ from fastapi import APIRouter
 
 from app.usecases.global_config import (
     get_logo_path,
-    get_global_available_models,
+    get_selectable_models,
     get_default_model,
 )
 
@@ -11,8 +11,8 @@ router = APIRouter(tags=["config"])
 
 @router.get("/config/global")
 def get_global_config():
-    """Get global configuration including available models."""
-    global_models = get_global_available_models()
+    """Get global configuration including the models that users can choose."""
+    global_models = get_selectable_models()
     default_model = get_default_model()
     logo_path = get_logo_path()
     return {
