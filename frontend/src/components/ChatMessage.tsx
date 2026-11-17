@@ -247,7 +247,7 @@ const ChatMessage: React.FC<Props> = (props) => {
                         <img
                           key={idx}
                           src={imageUrl}
-                          className="mb-2 h-48 cursor-pointer"
+                          className="mb-2 h-48 cursor-pointer bg-white"
                           onClick={() => {
                             setPreviewImageUrl(imageUrl);
                             setIsOpenPreviewImage(true);
@@ -317,7 +317,7 @@ const ChatMessage: React.FC<Props> = (props) => {
                 {previewImageUrl && (
                   <img
                     src={previewImageUrl}
-                    className="mx-auto max-h-[80vh] max-w-full rounded-md"
+                    className="mx-auto max-h-[80vh] max-w-full rounded-md bg-white"
                   />
                 )}
               </ModalDialog>

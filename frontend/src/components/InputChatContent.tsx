@@ -47,6 +47,7 @@ import { useNewChatCount } from '../hooks/useChat';
 import { useLocation } from 'react-router-dom';
 import {
   RESIZED_JPEG_QUALITY,
+  getPastedImages,
   getResizedImageMediaType,
 } from '../utils/ImageUtils';
 
@@ -347,8 +348,9 @@ const InputChatContent = forwardRef<HTMLElement, Props>(
             const ctx = canvas.getContext('2d');
             canvas.width = newWidth;
             canvas.height = newHeight;
-            if (ctx && mediaType === 'image/jpeg') {
-              // JPEG has no transparency, which would otherwise turn black.
+            if (ctx) {
+              // Transparent areas would turn black for JPEG and for models
+              // that ignore the alpha channel, hiding black text.
               ctx.fillStyle = '#ffffff';
               ctx.fillRect(0, 0, newWidth, newHeight);
             }
@@ -463,19 +465,16 @@ const InputChatContent = forwardRef<HTMLElement, Props>(
       currentElem?.addEventListener('keydown', keydownListener);
 
       const pasteListener = (e: DocumentEventMap['paste']) => {
-        const clipboardItems = e.clipboardData?.items;
-        if (!clipboardItems || clipboardItems.length === 0) {
+        if (!e.clipboardData) {
           return;
         }
-
-        for (let i = 0; i < clipboardItems.length; i++) {
-          if (model?.supportMediaType.includes(clipboardItems[i].type)) {
-            const pastedFile = clipboardItems[i].getAsFile();
-            if (pastedFile) {
-              encodeAndPushImage(pastedFile);
-              e.preventDefault();
-            }
-          }
+        const images = getPastedImages(
+          e.clipboardData,
+          model?.supportMediaType ?? []
+        );
+        if (images.length > 0) {
+          e.preventDefault();
+          images.forEach(encodeAndPushImage);
         }
       };
       currentElem?.addEventListener('paste', pasteListener);
@@ -631,7 +630,7 @@ const InputChatContent = forwardRef<HTMLElement, Props>(
                 <div key={idx} className="relative">
                   <img
                     src={imageFile}
-                    className="h-16 rounded-sm border border-aws-squid-ink-light dark:border-aws-squid-ink-dark"
+                    className="h-16 rounded-sm border border-aws-squid-ink-light bg-white dark:border-aws-squid-ink-dark"
                     onClick={() => {
                       setPreviewImageUrl(imageFile);
                       setIsOpenPreviewImage(true);
@@ -656,7 +655,7 @@ const InputChatContent = forwardRef<HTMLElement, Props>(
                 {previewImageUrl && (
                   <img
                     src={previewImageUrl}
-                    className="mx-auto max-h-[80vh] max-w-full rounded-md"
+                    className="mx-auto max-h-[80vh] max-w-full rounded-md bg-white"
                   />
                 )}
               </ModalDialog>
