@@ -8,6 +8,7 @@ from concurrent.futures import ThreadPoolExecutor
 import requests
 from app.bedrock import (
     calculate_price,
+    SHORT_ANSWER_MAX_TOKENS,
     call_converse_api,
     get_model_id,
     get_text_from_converse_response,
@@ -37,6 +38,11 @@ def _search_with_duckduckgo_standalone(
 ) -> list[dict[str, str]]:
     """Search with DuckDuckGo, using the result snippets as the content."""
     from duckduckgo_search import DDGS
+    from duckduckgo_search.exceptions import (
+        DuckDuckGoSearchException,
+        RatelimitException,
+        TimeoutException,
+    )
 
     language, country = _split_locale(locale)
     # DuckDuckGo regions are `{country}-{language}`; `wt-wt` is no region.
@@ -47,15 +53,21 @@ def _search_with_duckduckgo_standalone(
         region,
         time_limit,
     )
-    with DDGS() as ddgs:
-        results = ddgs.text(
-            keywords=query,
-            region=region,
-            safesearch="moderate",
-            timelimit=time_limit or None,
-            max_results=20,
-            backend="api",
-        )
+    try:
+        with DDGS() as ddgs:
+            results = ddgs.text(
+                keywords=query,
+                region=region,
+                safesearch="moderate",
+                timelimit=time_limit or None,
+                max_results=20,
+            )
+    except RatelimitException as e:
+        raise SearchApiError("DuckDuckGo search was rate limited") from e
+    except TimeoutException as e:
+        raise SearchApiError("DuckDuckGo search timed out") from e
+    except DuckDuckGoSearchException as e:
+        raise SearchApiError("DuckDuckGo search failed") from e
     logger.info("DuckDuckGo search completed. Found %d results", len(results))
     return [
         {
@@ -277,12 +289,15 @@ Summary:"""
 
         # Summaries are short, so they use the same lightweight model as titles.
         model = get_title_model()
+        # The chat stream is not behind API Gateway's timeout, so throttling,
+        # server errors and read timeouts are retried.
         response = call_converse_api(
             {
                 "modelId": get_model_id(model),
                 "messages": [{"role": "user", "content": [{"text": prompt}]}],
-                "inferenceConfig": {"maxTokens": 800},
-            }
+                "inferenceConfig": {"maxTokens": SHORT_ANSWER_MAX_TOKENS},
+            },
+            max_attempts=3,
         )
         usage = response.get("usage", {})
         emit_chat_cost(
@@ -295,14 +310,16 @@ Summary:"""
             )
         )
         summary = get_text_from_converse_response(response).strip()
+        if not summary:
+            raise ValueError(f"Empty summary, stop reason {response.get('stopReason')}")
 
         logger.info(
-            f"Summarized content from {len(content)} chars to {len(summary)} chars"
+            "Summarized content from %d chars to %d chars", len(content), len(summary)
         )
         return summary
 
     except Exception as e:
-        logger.error(f"Error summarizing content: {e}")
+        logger.error("Error summarizing content: %s", e)
         # Fallback: return truncated content
         fallback_content = content[:1000] + "..." if len(content) > 1000 else content
         return fallback_content

@@ -4,22 +4,29 @@ export type ResizedImageMediaType = 'image/png' | 'image/jpeg';
 export const RESIZED_JPEG_QUALITY = 0.9;
 
 /**
- * The media type that a resized image is encoded to. PNG stays PNG, which keeps
- * text and screenshots sharp; other images become JPEG, which is much smaller
- * for photos. Both are drawn on white, so transparent areas never turn black.
+ * The media types that a resized image can be encoded to; the smallest result
+ * is sent. A PNG, which can be a screenshot of text or a copied photo, tries PNG
+ * and JPEG; other images become JPEG, which is much smaller for photos. Images
+ * are drawn on white, so transparent areas never turn black.
  *
  * @param mediaType The media type of the file, which can be empty.
  * @param fileName The file name, used when the media type is empty.
  */
-export const getResizedImageMediaType = (
+export const getResizedImageMediaTypes = (
   mediaType: string,
   fileName: string
-): ResizedImageMediaType => {
+): ResizedImageMediaType[] => {
   const isPng = mediaType
     ? mediaType.toLowerCase() === 'image/png'
     : fileName.toLowerCase().endsWith('.png');
-  return isPng ? 'image/png' : 'image/jpeg';
+  return isPng ? ['image/png', 'image/jpeg'] : ['image/jpeg'];
 };
+
+/** The shortest of the data URLs. */
+export const getSmallestDataUrl = (dataUrls: string[]): string =>
+  dataUrls.reduce((smallest, dataUrl) =>
+    dataUrl.length < smallest.length ? dataUrl : smallest
+  );
 
 /**
  * The images to attach from a paste. Office apps, spreadsheets and web pages

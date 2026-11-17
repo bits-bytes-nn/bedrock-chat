@@ -48,7 +48,8 @@ import { useLocation } from 'react-router-dom';
 import {
   RESIZED_JPEG_QUALITY,
   getPastedImages,
-  getResizedImageMediaType,
+  getResizedImageMediaTypes,
+  getSmallestDataUrl,
 } from '../utils/ImageUtils';
 
 type Props = BaseProps & {
@@ -338,11 +339,6 @@ const InputChatContent = forwardRef<HTMLElement, Props>(
                   : width;
             }
 
-            const mediaType = getResizedImageMediaType(
-              imageFile.type,
-              imageFile.name
-            );
-
             // resize image using canvas
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
@@ -356,9 +352,10 @@ const InputChatContent = forwardRef<HTMLElement, Props>(
             }
             ctx?.drawImage(img, 0, 0, newWidth, newHeight);
 
-            const resizedImageData = canvas.toDataURL(
-              mediaType,
-              RESIZED_JPEG_QUALITY
+            const resizedImageData = getSmallestDataUrl(
+              getResizedImageMediaTypes(imageFile.type, imageFile.name).map(
+                (mediaType) => canvas.toDataURL(mediaType, RESIZED_JPEG_QUALITY)
+              )
             );
 
             if (!fitsSendLimit(resizedImageData.length)) {
@@ -475,6 +472,13 @@ const InputChatContent = forwardRef<HTMLElement, Props>(
         if (images.length > 0) {
           e.preventDefault();
           images.forEach(encodeAndPushImage);
+        } else if (
+          !e.clipboardData.getData('text/plain').trim() &&
+          Array.from(e.clipboardData.items).some((item) =>
+            item.type.startsWith('image/')
+          )
+        ) {
+          open(t('error.notSupportedImage'));
         }
       };
       currentElem?.addEventListener('paste', pasteListener);
@@ -588,7 +592,6 @@ const InputChatContent = forwardRef<HTMLElement, Props>(
           )}>
           <div className="flex w-full">
             <Textarea
-              key={`textarea-${props.isNewChat}`} // Add a key to force re-render
               className="m-1 bg-transparent pr-12 scrollbar-thin"
               placeholder={props.placeholder ?? t('app.inputMessage')}
               disabled={props.disabled}

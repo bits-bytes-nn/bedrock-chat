@@ -10,16 +10,19 @@ Parameters:
     Default: "false"
   Ipv4Ranges:
     Type: String
-    Default: '["0.0.0.0/1","128.0.0.0/1"]' # Set default values based on current config
+    # Comma-separated; empty keeps the default in cdk/cdk.json.
+    Default: ""
   Ipv6Ranges:
     Type: String
-    Default: '["0000:0000:0000:0000:0000:0000:0000:0000/1","8000:0000:0000:0000:0000:0000:0000:0000/1"]' # Set default values based on current config
+    # Comma-separated; empty keeps the default in cdk/cdk.json.
+    Default: ""
   DisableIpv6:
     Type: String
     Default: "false"
   AllowedSignUpEmailDomains:
     Type: String
-    Default: "[]"
+    # Comma-separated; empty keeps the default in cdk/cdk.json.
+    Default: ""
   BedrockRegion:
     Type: String
     Default: "us-east-1"

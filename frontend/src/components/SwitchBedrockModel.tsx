@@ -20,6 +20,7 @@ const SwitchBedrockModel: React.FC<Props> = (props) => {
     availableModels: allModels,
     modelId,
     setModelId,
+    setModelIdWithoutSaving,
     getDefaultModel,
     restoreSavedModel,
   } = useModel(props.botId, props.activeModels);
@@ -56,10 +57,12 @@ const SwitchBedrockModel: React.FC<Props> = (props) => {
     if (!isCurrentModelAvailable && availableModels.length > 0) {
       const defaultModelId = getDefaultModel();
       if (defaultModelId && defaultModelId !== modelId) {
-        setModelId(defaultModelId);
+        // Not saved: the model is only unavailable here, for example in a bot
+        // that turned it off.
+        setModelIdWithoutSaving(defaultModelId);
       }
     }
-  }, [availableModels, modelId, setModelId, getDefaultModel]);
+  }, [availableModels, modelId, setModelIdWithoutSaving, getDefaultModel]);
 
   const modelName = useMemo(() => {
     const foundModel = availableModels.find(

@@ -5,6 +5,7 @@ from app.stream import ToolRunResult
 from app.strands_integration.chat_strands import converse_with_strands
 from app.bedrock import (
     calculate_price,
+    SHORT_ANSWER_MAX_TOKENS,
     call_converse_api,
     get_text_from_converse_response,
     get_model_id,
@@ -669,8 +670,7 @@ def propose_conversation_title(
         {
             "modelId": get_model_id(model),
             "messages": title_messages,
-            # Leaves room for models that always reason before answering.
-            "inferenceConfig": {"maxTokens": 2048},
+            "inferenceConfig": {"maxTokens": SHORT_ANSWER_MAX_TOKENS},
         }
     )
     usage = response.get("usage", {})

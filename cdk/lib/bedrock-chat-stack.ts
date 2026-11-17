@@ -28,6 +28,7 @@ import { BedrockSharedKnowledgeBasesCodebuild } from "./constructs/bedrock-share
 import { BotStore, Language } from "./constructs/bot-store";
 import { Duration } from "aws-cdk-lib";
 import { metricsNamespace } from "./utils/metrics";
+import { chatStackExportName } from "./utils/stack-names";
 import { Monitoring } from "./constructs/monitoring";
 import { ThrottleSettings } from "aws-cdk-lib/aws-apigatewayv2";
 import { lambdaLogGroup } from "./utils/lambda-log-group";
@@ -81,7 +82,6 @@ export class BedrockChatStack extends cdk.Stack {
       ...props,
     });
 
-    const sepHyphen = props.envPrefix ? "-" : "";
     const idp = identityProvider(props.identityProviders);
 
     const accessLogBucket = new Bucket(this, "AccessLogBucket", {
@@ -128,6 +128,12 @@ export class BedrockChatStack extends cdk.Stack {
             "**/.gitignore",
             "**/test/**",
             "**/tests/**",
+            // Local, git-ignored files: settings such as the alarm email and caches.
+            "**/cdk.context.json",
+            "**/.claude/**",
+            "**/.build/**",
+            "**/.pytest_cache/**",
+            "**/.ruff_cache/**",
           ],
         }),
       ],
@@ -430,28 +436,28 @@ export class BedrockChatStack extends cdk.Stack {
     // Outputs for API publication
     new CfnOutput(this, "PublishedApiWebAclArn", {
       value: webAclForPublishedApi.webAclArn,
-      exportName: `${props.envPrefix}${sepHyphen}PublishedApiWebAclArn`,
+      exportName: chatStackExportName(props.envPrefix, "publishedApiWebAclArn"),
     });
     new CfnOutput(this, "ConversationTableNameV3", {
       value: database.conversationTable.tableName,
-      exportName: `${props.envPrefix}${sepHyphen}BedrockClaudeChatConversationTableName`,
+      exportName: chatStackExportName(props.envPrefix, "conversationTableName"),
     });
     new CfnOutput(this, "BotTableNameV3", {
       value: database.botTable.tableName,
-      exportName: `${props.envPrefix}${sepHyphen}BedrockClaudeChatBotTableNameV3`,
+      exportName: chatStackExportName(props.envPrefix, "botTableName"),
     });
     new CfnOutput(this, "TableAccessRoleArn", {
       value: database.tableAccessRole.roleArn,
-      exportName: `${props.envPrefix}${sepHyphen}BedrockClaudeChatTableAccessRoleArn`,
+      exportName: chatStackExportName(props.envPrefix, "tableAccessRoleArn"),
     });
     new CfnOutput(this, "LargeMessageBucketName", {
       value: largeMessageBucket.bucketName,
-      exportName: `${props.envPrefix}${sepHyphen}BedrockClaudeChatLargeMessageBucketName`,
+      exportName: chatStackExportName(props.envPrefix, "largeMessageBucketName"),
     });
     // Published API stacks alarm on their dead-letter queues through this topic.
     new CfnOutput(this, "AlarmTopicArnExport", {
       value: monitoring.alarmTopic.topicArn,
-      exportName: `${props.envPrefix}${sepHyphen}BedrockClaudeChatAlarmTopicArn`,
+      exportName: chatStackExportName(props.envPrefix, "alarmTopicArn"),
     });
     new CfnOutput(this, 'EmbeddingStateMachineArn', {
       value: embedding.stateMachine.stateMachineArn,

@@ -34,7 +34,8 @@ const Textarea = forwardRef<HTMLElement, Props>((props, focusInputRef) => {
       ref.current.style.height = ref.current.scrollHeight + 'px';
       setIsMax(false);
     }
-  }, [props.value]);
+    // The rows change after the first message of a new chat.
+  }, [props.value, props.rows]);
 
   return (
     <div className={`${props.className ?? ''} flex w-full flex-col`}>

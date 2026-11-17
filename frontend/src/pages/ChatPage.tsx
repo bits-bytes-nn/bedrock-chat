@@ -35,7 +35,6 @@ import { useSWRConfig } from 'swr';
 import StatusSyncBot from '../components/StatusSyncBot';
 import Alert from '../components/Alert';
 import useBotSummary from '../hooks/useBotSummary';
-import useModel from '../hooks/useModel';
 import { StreamingState } from '../hooks/xstates/streaming.ts';
 import { AgentToolsProps } from '../features/agent/types';
 import { getRelatedDocumentsOfToolUse } from '../features/agent/utils/AgentUtils';
@@ -434,16 +433,17 @@ const ChatPage: React.FC = () => {
     navigate(`/bot/edit/${bot?.id}`);
   }, [bot?.id, navigate]);
 
-  const { disabledImageUpload } = useModel();
   const [dndMode, setDndMode] = useState(false);
   const onDragOver: React.DragEventHandler<HTMLDivElement> = useCallback(
     (e) => {
-      if (!disabledImageUpload) {
+      // Documents can be attached for every model; unsupported files are
+      // reported on drop.
+      if (e.dataTransfer.types.includes('Files')) {
         setDndMode(true);
       }
       e.preventDefault();
     },
-    [disabledImageUpload]
+    []
   );
 
   const endDnd: React.DragEventHandler<HTMLDivElement> = useCallback((e) => {

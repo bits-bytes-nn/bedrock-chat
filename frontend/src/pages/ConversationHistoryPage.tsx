@@ -56,6 +56,7 @@ const ConversationHistoryPage: React.FC = () => {
     displayQuery,
     handleSearch,
     clearSearch,
+    retrySearch,
   } = useConversationSearch();
 
   // Input change handler
@@ -231,6 +232,7 @@ const ConversationHistoryPage: React.FC = () => {
           searchQuery={displayQuery}
           onbackToConversationHistory={handleClearSearch}
           onSelectConversation={onClickConversation}
+          onRetry={retrySearch}
         />
 
         {/* Regular conversation list (hidden during search) */}

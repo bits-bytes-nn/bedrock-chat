@@ -17,3 +17,20 @@ export const customBotStackPrefix = "BrChatKbStack";
  */
 export const sharedKnowledgeBasesStackName = (envPrefix: string): string =>
   `${envPrefix}${envPrefix ? "-" : ""}BrChatSharedKbStack`;
+
+/** The chat stack's exports that the published API stacks import. */
+const CHAT_STACK_EXPORTS = {
+  publishedApiWebAclArn: "PublishedApiWebAclArn",
+  conversationTableName: "BedrockClaudeChatConversationTableName",
+  botTableName: "BedrockClaudeChatBotTableNameV3",
+  tableAccessRoleArn: "BedrockClaudeChatTableAccessRoleArn",
+  largeMessageBucketName: "BedrockClaudeChatLargeMessageBucketName",
+  alarmTopicArn: "BedrockClaudeChatAlarmTopicArn",
+} as const;
+
+/** The export name of a chat stack output that published API stacks import. */
+export const chatStackExportName = (
+  envPrefix: string,
+  output: keyof typeof CHAT_STACK_EXPORTS
+): string =>
+  `${envPrefix}${envPrefix ? "-" : ""}${CHAT_STACK_EXPORTS[output]}`;

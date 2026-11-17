@@ -213,7 +213,7 @@ The override JSON must follow the same structure as cdk.json. You can override a
 - `enableRagReplicas`
 - `enableBedrockCrossRegionInference`
 - `enableBedrockGlobalInference`
-- `globalAvailableModels`: accepts a list of model IDs to enable. The default value is an empty list, which enables all models.
+- `globalAvailableModels`: accepts a list of model IDs to enable. The default value is an empty list, which enables all models. Either way, models that Amazon Bedrock does not offer from `bedrockRegion`, through an inference profile or on demand, are hidden.
 - `logoPath`: relative path to the logo asset within the frontend `public/` directory that appears at the top of the navigation drawer.
 - And other context values defined in cdk.json
 
@@ -646,6 +646,7 @@ Until the key is set, searches fail and the model answers without them. Changing
 CloudWatch alarms notify an SNS topic (output `AlarmTopicArn`) when:
 
 - the HTTP API answers with server errors (5xx);
+- the WebSocket connection authorizer fails, which rejects every chat connection;
 - generating chat answers fails repeatedly;
 - the WebSocket chat Lambda fails, for example with a timeout or out of memory;
 - Lambda concurrency limits throttle chat requests (these are not the API Gateway 429 responses caused by `apiThrottleRateLimit`);
