@@ -149,17 +149,6 @@ const translation = {
         description:
           'A text-only model that delivers the lowest latency responses in the Amazon Nova family of models at a very low cost.',
       },
-      'deepseek-r1': {
-        label: 'DeepSeek R1',
-        description:
-          'State-of-the-art reasoning model optimized for general reasoning, math, science, and code generation. Supports English and Chinese languages.',
-      },
-      // Meta Llama 3 models
-      'llama3-3-70b-instruct': {
-        label: 'Meta Llama 3.3 70B Instruct',
-        description:
-          'Latest Llama 3 model offering performance on par with the 405B model at a lower cost with excellent reasoning and instruction-following capabilities.',
-      },
       'gpt-oss-20b': {
         label: 'GPT-OSS 20B',
         description:

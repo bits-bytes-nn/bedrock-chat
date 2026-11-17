@@ -150,17 +150,6 @@ const translation: typeof en = {
         description:
           '最も低いレイテンシーと低コストで提供される軽量なテキストモデル',
       },
-      'deepseek-r1': {
-        label: 'DeepSeek R1',
-        description:
-          '一般的な推論、数学、科学、コード生成に最適化された最先端の推論モデル。英語と中国語をサポート',
-      },
-      // Meta Llama 3シリーズ
-      'llama3-3-70b-instruct': {
-        label: 'Meta Llama 3.3 70B Instruct',
-        description:
-          '405Bモデルと同等のパフォーマンスを低コストで提供する最新のLlama 3モデル。優れた推論能力と指示追従能力を備える',
-      },
       'gpt-oss-20b': {
         label: 'GPT-OSS 20B',
         description:

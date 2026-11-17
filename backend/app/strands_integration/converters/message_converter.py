@@ -92,7 +92,7 @@ def simple_message_models_to_strands_messages(
     def process_content(
         c: ContentModel, role: str, is_last_user: bool
     ) -> list[ContentBlock]:
-        # Drop unsigned reasoning blocks for DeepSeek R1 and GPT-OSS models
+        # Drop unsigned reasoning blocks for models that reject them, such as GPT-OSS
         if (
             not is_unsigned_reasoning_content_supported(model)
             and c.content_type == "reasoning"

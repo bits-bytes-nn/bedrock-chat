@@ -131,7 +131,7 @@ def test_only_the_question_of_this_turn_is_checked_for_grounding(grounding, rele
     }
     messages = simple_message_models_to_strands_messages(
         [text("user", "first"), text("assistant", "answer"), text("user", "second")],
-        model="deepseek-r1",
+        model="gpt-oss-120b",
         guardrail=guardrail,
         search_results=[result],
         has_tools=False,

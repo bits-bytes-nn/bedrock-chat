@@ -18,9 +18,11 @@ def test_prompt_caching_follows_the_tools_that_the_agent_really_gets():
     bot.is_agent_enabled.return_value = True
     with patch.object(
         factory, "get_system_prompt", wraps=factory.get_system_prompt
-    ) as system_prompt:
+    ) as system_prompt, patch(
+        "app.strands_integration.utils.is_tooluse_supported", return_value=False
+    ):
         agent = factory.create_strands_agent(
-            bot=bot, instructions=[], model_name="deepseek-r1"
+            bot=bot, instructions=[], model_name="claude-v5.5-haiku"
         )
 
     assert agent.tool_names == []

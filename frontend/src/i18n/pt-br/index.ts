@@ -58,17 +58,6 @@ const translation = {
         description:
           'Um modelo somente de texto que oferece as respostas com menor latência na família de modelos Amazon Nova a um custo muito baixo.',
       },
-      'deepseek-r1': {
-        label: 'DeepSeek R1',
-        description:
-          'Modelo de raciocínio state-of-the-art otimizado para raciocínio geral, matemática, ciência e geração de código. Suporta os idiomas inglês e chinês.',
-      },
-      // Modelos Meta Llama 3
-      'llama3-3-70b-instruct': {
-        label: 'Meta Llama 3.3 70B Instruct',
-        description:
-          'O modelo Llama 3 mais recente, oferecendo desempenho comparável ao modelo 405B a um custo menor, com excelentes capacidades de raciocínio e seguimento de instruções.',
-      },
     },
     agent: {
       label: 'Agente',

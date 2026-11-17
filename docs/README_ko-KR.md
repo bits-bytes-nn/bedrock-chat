@@ -130,7 +130,7 @@ chmod +x bin.sh
       "claude-v5.5-haiku",
       "amazon-nova-pro",
       "amazon-nova-lite",
-      "llama3-3-70b-instruct"
+      "gpt-6.1-terra"
     ]
   }
 }'
@@ -235,10 +235,8 @@ npm ci
 - **OpenAI 모델:** `gpt-5.5`, `gpt-5.6-luna`, `gpt-5.6-sol`, `gpt-5.6-terra`, `gpt-6-astra`, `gpt-6-luna`, `gpt-6-sol`, `gpt-6.1-sol`, `gpt-6.1-terra`, `gpt-oss-20b`, `gpt-oss-120b`
 - **Amazon Nova 모델:** `amazon-nova-pro`, `amazon-nova-lite`, `amazon-nova-micro`, `amazon-nova-2-lite`
 - **Mistral 모델:** `mistral-large`, `mistral-large-2`
-- **DeepSeek 모델:** `deepseek-r1`
-- **Meta Llama 모델:** `llama3-3-70b-instruct`
 
-리전마다 사용할 수 있는 모델이 다릅니다. Amazon Bedrock이 더 이상 제공하지 않는 모델(Claude 3.x, Claude Opus 4·Opus 4.1·Sonnet 4, Llama 3.2, Mistral 7B, Mixtral 8x7B)은 기존 대화를 읽기 위해서만 남아 있으며 선택할 수 없습니다. 모델별 파라미터는 [model_registry.py](../backend/app/model_registry.py)에 정의되어 있습니다.
+리전마다 사용할 수 있는 모델이 다릅니다. Amazon Bedrock이 더 이상 제공하지 않는 모델(Claude 3.x, Claude Opus 4·Opus 4.1·Sonnet 4, DeepSeek-R1, Llama 3.2·3.3, Mistral 7B, Mixtral 8x7B)은 기존 대화를 읽기 위해서만 남아 있으며 선택할 수 없습니다. 모델별 파라미터는 [model_registry.py](../backend/app/model_registry.py)에 정의되어 있습니다.
 
 - CDK를 배포하기 전에 배포하려는 리전에 대해 한 번 Bootstrap 작업을 수행해야 합니다.
 
@@ -289,7 +287,7 @@ BedrockChatStack.FrontendURL = https://xxxxx.cloudfront.net
       "claude-v5.5-haiku",
       "amazon-nova-pro",
       "amazon-nova-lite",
-      "llama3-3-70b-instruct"
+      "gpt-6.1-terra"
     ]
   }
 }
@@ -311,7 +309,7 @@ bedrockChatParams.set("default", {
       "claude-v5.5-haiku",
       "amazon-nova-pro",
       "amazon-nova-lite",
-      "llama3-3-70b-instruct"
+      "gpt-6.1-terra"
     ],
 });
 

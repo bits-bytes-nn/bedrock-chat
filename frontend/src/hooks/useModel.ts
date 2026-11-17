@@ -158,12 +158,6 @@ const MODELS: Omit<ModelItem, 'label' | 'description'>[] = [
   },
   { modelId: 'mistral-large-2', supportMediaType: [], supportReasoning: false },
   { modelId: 'mistral-large', supportMediaType: [], supportReasoning: false },
-  { modelId: 'deepseek-r1', supportMediaType: [], ...ALWAYS_REASONING },
-  {
-    modelId: 'llama3-3-70b-instruct',
-    supportMediaType: [],
-    supportReasoning: false,
-  },
 ];
 
 export const useModelState = create<{

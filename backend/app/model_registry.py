@@ -9,15 +9,13 @@ from dataclasses import dataclass, field
 from typing import Literal
 
 from app.config import (
-    DEFAULT_DEEP_SEEK_GENERATION_CONFIG,
     DEFAULT_GENERATION_CONFIG,
-    DEFAULT_LLAMA_GENERATION_CONFIG,
     DEFAULT_MISTRAL_GENERATION_CONFIG,
     DEFAULT_NOVA_GENERATION_CONFIG,
     GenerationParams,
 )
 
-Provider = Literal["anthropic", "amazon", "openai", "deepseek", "meta", "mistral"]
+Provider = Literal["anthropic", "amazon", "openai", "mistral"]
 CachingTarget = Literal["system", "message", "tool"]
 
 
@@ -234,22 +232,6 @@ MODELS: dict[str, ModelSpec] = {
     "mistral-large-2": _mistral(
         "mistral.mistral-large-2407-v1:0", ModelPrice(0.002, 0.006)
     ),
-    "deepseek-r1": ModelSpec(
-        bedrock_id="deepseek.r1-v1:0",
-        provider="deepseek",
-        price=ModelPrice(0.00135, 0.0054),
-        defaults=DEFAULT_DEEP_SEEK_GENERATION_CONFIG,
-        reasoning="always",
-        supports_tool_use=False,
-        accepts_unsigned_reasoning=False,
-    ),
-    "llama3-3-70b-instruct": ModelSpec(
-        bedrock_id="meta.llama3-3-70b-instruct-v1:0",
-        provider="meta",
-        price=ModelPrice(0.00072, 0.00072),
-        defaults=DEFAULT_LLAMA_GENERATION_CONFIG,
-        default_max_tokens=DEFAULT_LLAMA_GENERATION_CONFIG["max_tokens"],
-    ),
 }
 
 # Models that Bedrock no longer offers. Their names stay valid so that existing
@@ -265,6 +247,8 @@ RETIRED_MODELS: frozenset[str] = frozenset(
         "claude-v4-opus",
         "claude-v4-sonnet",
         "claude-v4.1-opus",
+        "deepseek-r1",
+        "llama3-3-70b-instruct",
         "mistral-7b-instruct",
         "mixtral-8x7b-instruct",
         "llama3-2-1b-instruct",
