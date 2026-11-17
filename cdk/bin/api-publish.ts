@@ -6,13 +6,15 @@ import * as cdk from "aws-cdk-lib";
 import { ApiPublishmentStack } from "../lib/api-publishment-stack";
 import * as apigateway from "aws-cdk-lib/aws-apigateway";
 import { resolveApiPublishParameters } from "../lib/utils/parameter-models";
-import { apiPublishmentStackPrefix } from "../lib/utils/stack-names";
+import {
+  apiPublishmentStackPrefix,
+  chatStackExportName,
+} from "../lib/utils/stack-names";
 
 const app = new cdk.App();
 
 // Get parameters specific to API publishing
 const params = resolveApiPublishParameters();
-const sepHyphen = params.envPrefix ? "-" : "";
 
 // Parse allowed origins
 const publishedApiAllowedOrigins = JSON.parse(params.publishedApiAllowedOrigins);
@@ -20,24 +22,24 @@ const publishedApiAllowedOrigins = JSON.parse(params.publishedApiAllowedOrigins)
 // Log all parameters at once for debugging
 
 const webAclArn = cdk.Fn.importValue(
-  `${params.envPrefix}${sepHyphen}PublishedApiWebAclArn`
+  chatStackExportName(params.envPrefix, "publishedApiWebAclArn")
 );
 
 const conversationTableName = cdk.Fn.importValue(
-  `${params.envPrefix}${sepHyphen}BedrockClaudeChatConversationTableName`
+  chatStackExportName(params.envPrefix, "conversationTableName")
 );
 const botTableName = cdk.Fn.importValue(
-  `${params.envPrefix}${sepHyphen}BedrockClaudeChatBotTableNameV3`
+  chatStackExportName(params.envPrefix, "botTableName")
 );
 const tableAccessRoleArn = cdk.Fn.importValue(
-  `${params.envPrefix}${sepHyphen}BedrockClaudeChatTableAccessRoleArn`
+  chatStackExportName(params.envPrefix, "tableAccessRoleArn")
 );
 const largeMessageBucketName = cdk.Fn.importValue(
-  `${params.envPrefix}${sepHyphen}BedrockClaudeChatLargeMessageBucketName`
+  chatStackExportName(params.envPrefix, "largeMessageBucketName")
 );
 
 const alarmTopicArn = cdk.Fn.importValue(
-  `${params.envPrefix}${sepHyphen}BedrockClaudeChatAlarmTopicArn`
+  chatStackExportName(params.envPrefix, "alarmTopicArn")
 );
 
 // Applied when the publisher sets no throttling.

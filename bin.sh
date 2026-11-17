@@ -72,8 +72,8 @@ done
 
 
 # Validate the template
-aws cloudformation validate-template --template-body file://deploy.yml  > /dev/null 2>&1
-if [[ $? -ne 0 ]]; then
+# Shows the cause, such as expired credentials or a wrong Region.
+if ! aws cloudformation validate-template --template-body file://deploy.yml > /dev/null; then
     echo "Template validation failed"
     exit 1
 fi

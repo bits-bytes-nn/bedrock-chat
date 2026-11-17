@@ -107,7 +107,8 @@ const validateSocialProvider = (
   | Effect.Effect<never, InvalidSocialProvider, never>
   | Effect.Effect<TIdentityProvider, never, never> => {
   if (
-    !["google", "facebook", "amazon", "apple", "oidc"].includes(
+    // The services that cdk/lib/constructs/auth.ts creates a provider for.
+    !["google", "oidc"].includes(
       provider.service
     )
   ) {
