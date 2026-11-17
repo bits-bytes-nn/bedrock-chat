@@ -25,6 +25,7 @@ import { getApiErrorMessage } from '../utils/ErrorUtils';
 import {
   hasDeployFailed,
   isDeploying as isPublicationDeploying,
+  isValidOrigin,
 } from '../utils/PublicationUtils';
 import DialogShareBot from '../components/DialogShareBot';
 import useShareBot from '../hooks/useShareBot';
@@ -123,8 +124,9 @@ const BotApiSettingsPage: React.FC = () => {
       return;
     }
     setHasCreated(true);
-    setEnabledThrottle(!!botPublication.throttle);
-    setEnabledQuota(!!botPublication.quota);
+    // The API always returns both objects; their values are empty when unset.
+    setEnabledThrottle(botPublication.throttle.rateLimit != null);
+    setEnabledQuota(botPublication.quota.limit != null);
     setRateLimit(botPublication.throttle.rateLimit);
     setBurstLimit(botPublication.throttle.burstLimit);
     setRequestLimit(botPublication.quota.limit);
@@ -179,9 +181,7 @@ const BotApiSettingsPage: React.FC = () => {
       if (origin === '') {
         setErrorMessage(`origins${idx}`, t('input.validationError.required'));
         hasError = true;
-      } else if (
-        !/^(https?:\/\/)?([a-zA-Z0-9\\-\\.*]+)(:(\d+))?$/.test(origin)
-      ) {
+      } else if (!isValidOrigin(origin)) {
         setErrorMessage(
           `origins${idx}`,
           t('input.validationError.invalidOriginFormat')
@@ -364,7 +364,7 @@ const BotApiSettingsPage: React.FC = () => {
                         {myBot?.description}
                       </div>
                     ) : (
-                      <div className="text-sm font-light italic text-aws-font-color-light/70 dark:text-aws-font-color-dark">
+                      <div className="text-sm font-light text-aws-font-color-light/70 italic dark:text-aws-font-color-dark">
                         {t('bot.label.noDescription')}
                       </div>
                     )}
@@ -466,7 +466,7 @@ const BotApiSettingsPage: React.FC = () => {
                         className={twMerge(
                           '-mt-3 origin-top transition-all',
                           enabledThrottle
-                            ? 'visible '
+                            ? 'visible'
                             : 'invisible h-0 scale-y-0'
                         )}>
                         <InputText
@@ -502,7 +502,7 @@ const BotApiSettingsPage: React.FC = () => {
                       <div
                         className={twMerge(
                           '-mt-3 origin-top transition-all',
-                          enabledQuota ? 'visible ' : 'invisible h-0 scale-y-0'
+                          enabledQuota ? 'visible' : 'invisible h-0 scale-y-0'
                         )}>
                         <div className="flex flex-col">
                           <div className="flex w-full gap-1">
@@ -561,6 +561,7 @@ const BotApiSettingsPage: React.FC = () => {
                                 errorMessage={errorMessages[`origins${idx}`]}
                               />
                               <ButtonIcon
+                                label={t('button.remove')}
                                 className="text-red dark:text-red-400"
                                 disabled={disabledCreate}
                                 onClick={() => {

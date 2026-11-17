@@ -32,7 +32,7 @@ const StatusSyncBot: React.FC<Props> = (props) => {
         )}
       </div>
 
-      <div className="whitespace-nowrap text-sm text-dark-gray dark:text-light-gray">
+      <div className="text-sm whitespace-nowrap text-dark-gray dark:text-light-gray">
         {props.syncStatus === SyncStatus.QUEUED && (
           <>{t('bot.label.syncStatus.queue')}</>
         )}
@@ -45,11 +45,12 @@ const StatusSyncBot: React.FC<Props> = (props) => {
         {props.syncStatus === SyncStatus.FAILED && (
           <>
             {props.onClickError ? (
-              <a
+              <button
+                type="button"
                 className="flex cursor-pointer items-center gap-0.5 border-b font-semibold text-aws-sea-blue-light hover:font-bold dark:text-aws-link-dark"
                 onClick={props.onClickError}>
                 {t('bot.label.syncStatus.fail')}
-              </a>
+              </button>
             ) : (
               <>{t('bot.label.syncStatus.fail')}</>
             )}

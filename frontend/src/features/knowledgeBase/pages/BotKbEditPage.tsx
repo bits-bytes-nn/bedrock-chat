@@ -1797,6 +1797,7 @@ const BotKbEditPage: React.FC = () => {
                                       errorMessage={errorMessages[`s3Urls-${idx}`]}
                                     />
                                     <ButtonIcon
+                                      label={t('button.remove')}
                                       className="text-red dark:text-red-400"
                                       disabled={
                                         (s3Urls.length === 1 && !s3Url[0]) ||
@@ -1848,6 +1849,7 @@ const BotKbEditPage: React.FC = () => {
                                       errorMessage={errorMessages[`urls-${idx}`]}
                                     />
                                     <ButtonIcon
+                                      label={t('button.remove')}
                                       className="text-red dark:text-red-400"
                                       disabled={
                                         (urls.length === 1 && !url[0]) ||
@@ -1922,6 +1924,7 @@ const BotKbEditPage: React.FC = () => {
                                             }}
                                           />
                                           <ButtonIcon
+                                            label={t('button.remove')}
                                             className="text-red dark:text-red-400"
                                             disabled={
                                               (webCrawlingFilters.includePatterns
@@ -1976,6 +1979,7 @@ const BotKbEditPage: React.FC = () => {
                                             }}
                                           />
                                           <ButtonIcon
+                                            label={t('button.remove')}
                                             className="text-red dark:text-red-400"
                                             disabled={
                                               (webCrawlingFilters.excludePatterns

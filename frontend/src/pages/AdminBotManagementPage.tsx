@@ -89,8 +89,9 @@ const AdminBotManagementPage: React.FC = () => {
         mutateBotPublication(undefined);
         setIsOpenDeleteApiDialog(false);
       })
-      .catch(() => {
-        open(t('bot.error.failDeleteApi'));
+      .catch((e) => {
+        // Explains, for example, that the API is still being published.
+        open(getApiErrorMessage(e) ?? t('bot.error.failDeleteApi'));
       })
       .finally(() => {
         setIsDeletingApi(false);
@@ -184,7 +185,7 @@ const AdminBotManagementPage: React.FC = () => {
                       {bot?.description}
                     </div>
                   ) : (
-                    <div className="text-sm font-light italic text-aws-font-color-light/70 dark:text-aws-font-color-dark">
+                    <div className="text-sm font-light text-aws-font-color-light/70 italic dark:text-aws-font-color-dark">
                       {t('bot.label.noDescription')}
                     </div>
                   )}
@@ -252,7 +253,7 @@ const AdminBotManagementPage: React.FC = () => {
                     {t('bot.label.knowledge')}
                   </div>
                   {!hasSourceUrls && !hasS3Urls && !hasFiles && (
-                    <div className="italic text-dark-gray dark:text-light-gray">
+                    <div className="text-dark-gray italic dark:text-light-gray">
                       {t('admin.botManagement.label.noKnowledge')}
                     </div>
                   )}
@@ -272,6 +273,7 @@ const AdminBotManagementPage: React.FC = () => {
                               value={url}
                             />
                             <ButtonIcon
+                              label={t('button.openInNewTab')}
                               className="text-aws-sea-blue-light dark:text-aws-link-dark"
                               onClick={() => {
                                 window.open(
@@ -299,7 +301,7 @@ const AdminBotManagementPage: React.FC = () => {
                             key={idx}
                             className="rounded-sm border border-gray p-1 py-1.5">
                             <div className="flex items-center justify-between gap-2">
-                              <div className="flex items-center gap-2 break-all px-1">
+                              <div className="flex items-center gap-2 px-1 break-all">
                                 <PiFile className="w-5" />
                                 <div>{filename}</div>
                               </div>
@@ -348,7 +350,7 @@ const AdminBotManagementPage: React.FC = () => {
                 </div>
 
                 {!botPublication && (
-                  <div className="italic text-dark-gray dark:text-light-gray">
+                  <div className="text-dark-gray italic dark:text-light-gray">
                     {t('admin.botManagement.label.notPublishApi')}
                   </div>
                 )}
@@ -514,6 +516,7 @@ const AdminBotManagementPage: React.FC = () => {
                               value={url}
                             />
                             <ButtonIcon
+                              label={t('button.openInNewTab')}
                               className="text-aws-sea-blue-light dark:text-aws-link-dark"
                               onClick={() => {
                                 window.open(

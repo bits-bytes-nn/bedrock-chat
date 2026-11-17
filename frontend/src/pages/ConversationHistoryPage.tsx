@@ -19,7 +19,7 @@ import DialogConfirmDeleteChat from '../components/DialogConfirmDeleteChat';
 import Button from '../components/Button';
 import ListPageLayout from '../layouts/ListPageLayout';
 import ConversationSearchResults from '../components/ConversationSearchResults';
-import { isSubmitEnter } from '../utils/KeyboardUtils';
+import { isSubmitEnter, clickableProps } from '../utils/KeyboardUtils';
 import useSnackbar from '../hooks/useSnackbar';
 import { getApiErrorMessage } from '../utils/ErrorUtils';
 
@@ -207,7 +207,7 @@ const ConversationHistoryPage: React.FC = () => {
             />
             {inputValue && (
               <button
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-dark-gray dark:text-gray hover:text-dark-gray"
+                className="absolute top-1/2 right-3 -translate-y-1/2 text-dark-gray hover:text-dark-gray dark:text-gray"
                 onClick={handleClearSearch}>
                 <PiX size={20} />
               </button>
@@ -241,7 +241,7 @@ const ConversationHistoryPage: React.FC = () => {
             <div
               key={conversation.id}
               className="group flex cursor-pointer items-center justify-between border-b border-gray p-2 hover:bg-light-gray dark:border-dark-gray dark:hover:bg-aws-font-color-dark/10"
-              onClick={() => onClickConversation(conversation.id)}>
+              {...clickableProps(() => onClickConversation(conversation.id))}>
               <div className="flex flex-col">
                 {editingConversationId === conversation.id ? (
                   <div
@@ -255,6 +255,7 @@ const ConversationHistoryPage: React.FC = () => {
                       onChange={(e) => setTempTitle(e.target.value)}
                     />
                     <ButtonIcon
+                      label={t('button.rename')}
                       className="text-base"
                       onClick={() => onUpdateTitle(conversation.id, tempTitle)}
                       disabled={
@@ -264,6 +265,7 @@ const ConversationHistoryPage: React.FC = () => {
                       <PiCheck />
                     </ButtonIcon>
                     <ButtonIcon
+                      label={t('button.cancel')}
                       className="text-base"
                       onClick={() => setEditingConversationId(null)}>
                       <PiX />
@@ -275,7 +277,8 @@ const ConversationHistoryPage: React.FC = () => {
                       {conversation.title}
                     </div>
                     <ButtonIcon
-                      className="-my-2 mr-6 opacity-0 focus-visible:opacity-100 group-hover:opacity-100 [@media(hover:none)]:opacity-100"
+                      label={t('button.edit')}
+                      className="-my-2 mr-6 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100"
                       onClick={(e) => onClickEdit(e, conversation)}>
                       <PiPencilLine />
                     </ButtonIcon>
@@ -286,8 +289,10 @@ const ConversationHistoryPage: React.FC = () => {
                 </div>
               </div>
               {editingConversationId !== conversation.id && (
-                <div className="flex items-center opacity-0 focus-within:opacity-100 group-hover:opacity-100 [@media(hover:none)]:opacity-100">
-                  <ButtonIcon onClick={(e) => onClickDelete(e, conversation)}>
+                <div className="flex items-center opacity-0 group-hover:opacity-100 focus-within:opacity-100 [@media(hover:none)]:opacity-100">
+                  <ButtonIcon
+                    label={t('button.delete')}
+                    onClick={(e) => onClickDelete(e, conversation)}>
                     <PiTrash />
                   </ButtonIcon>
                 </div>

@@ -12,7 +12,7 @@ export const ChatHeader = () => {
   return (
     <div className="flex items-center bg-aws-paper-light dark:bg-aws-paper-dark">
       <StatusSyncBot syncStatus="SUCCEEDED" onClickError={() => {}} />
-      <ButtonIcon onClick={togglePinned}>
+      <ButtonIcon label="Star" onClick={togglePinned}>
         {IsStarred ? <PiStarFill className="text-aws-aqua" /> : <PiStar />}
       </ButtonIcon>
       <ButtonPopover

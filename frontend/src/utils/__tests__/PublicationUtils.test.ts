@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { hasDeployFailed, isDeploying } from '../PublicationUtils';
+import {
+  hasDeployFailed,
+  isDeploying,
+  isValidOrigin,
+} from '../PublicationUtils';
 
 const status = (codebuildStatus: string, cfnStatus = '') => ({
   codebuildStatus,
@@ -54,5 +58,28 @@ describe('isDeploying', () => {
     status('TIMED_OUT'),
   ])('is false for %o', (publication) => {
     expect(isDeploying(publication)).toBe(false);
+  });
+});
+
+describe('isValidOrigin', () => {
+  it.each([
+    '*',
+    'https://example.com',
+    'https://my-app.example.com',
+    'http://localhost:3000',
+    'https://*.example.com',
+  ])('accepts %s', (origin) => {
+    expect(isValidOrigin(origin)).toBe(true);
+  });
+
+  it.each([
+    // The backend requires a scheme.
+    'example.com',
+    'ftp://example.com',
+    'https://a\\b.com',
+    'https://example.com/path',
+    '',
+  ])('rejects %s', (origin) => {
+    expect(isValidOrigin(origin)).toBe(false);
   });
 });

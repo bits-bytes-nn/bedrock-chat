@@ -3,8 +3,8 @@ import { BaseProps } from '../@types/common';
 import { twMerge } from 'tailwind-merge';
 
 type Props = BaseProps & {
-  /** Accessible name, also shown as a tooltip. Required for icon-only buttons. */
-  label?: string;
+  /** Accessible name, also shown as a tooltip. */
+  label: string;
   disabled?: boolean;
   onClick: (e: React.MouseEvent) => void;
   children: React.ReactNode;

@@ -6,6 +6,7 @@ import IconShareBot from './IconShareBot';
 import { SharedScope } from '../@types/bot';
 import { twMerge } from 'tailwind-merge';
 import { isPinnedBot } from '../utils/BotUtils';
+import { clickableProps } from '../utils/KeyboardUtils';
 
 type Props = BaseProps & {
   bot: {
@@ -36,15 +37,13 @@ const ListItemBot: React.FC<Props> = (props) => {
             ? 'cursor-pointer hover:brightness-90'
             : 'text-aws-font-color-light/30 dark:text-aws-font-color-dark/30'
         }`}
-        onClick={() => {
-          if (props.bot.available) {
-            props.onClick(props.bot.id);
-          }
-        }}>
-        <div className="flex w-full flex-nowrap items-center gap-1 whitespace-nowrap text-sm font-semibold">
+        {...(props.bot.available
+          ? clickableProps(() => props.onClick(props.bot.id))
+          : {})}>
+        <div className="flex w-full flex-nowrap items-center gap-1 text-sm font-semibold whitespace-nowrap">
           <IconPinnedBot
             botSharedStatus={props.bot.sharedStatus}
-            className=" shrink-0 text-aws-aqua"
+            className="shrink-0 text-aws-aqua"
           />
 
           {!props.bot.owned && !isPinnedBot(props.bot.sharedStatus) && (
@@ -68,7 +67,7 @@ const ListItemBot: React.FC<Props> = (props) => {
               : t('bot.label.notAvailable')}
           </div>
         ) : (
-          <div className="mt-1 truncate pr-12 text-xs italic text-aws-font-color-light/70 dark:text-aws-font-color-gray">
+          <div className="mt-1 truncate pr-12 text-xs text-aws-font-color-light/70 italic dark:text-aws-font-color-gray">
             {t('bot.label.noDescription')}
           </div>
         )}
