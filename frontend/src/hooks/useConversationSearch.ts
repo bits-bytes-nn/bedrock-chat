@@ -5,57 +5,55 @@ import useConversationSearchApi from './useConversationSearchApi';
 // Debounce delay in milliseconds
 const DEBOUNCE_DELAY = 300;
 
+/**
+ * Whether a search is shown and whether its results are still coming. While the
+ * user types, the debounced query and its results belong to the earlier text.
+ */
+export const getSearchStatus = (
+  query: string,
+  debouncedQuery: string,
+  isLoading: boolean
+) => {
+  const hasSearched = query !== '';
+  return {
+    hasSearched,
+    isSearching: isLoading || (hasSearched && query !== debouncedQuery),
+  };
+};
+
 function useConversationSearch() {
   const conversationSearchApi = useConversationSearchApi();
   const [searchQuery, setSearchQuery] = useState('');
-  const [displayQuery, setDisplayQuery] = useState('');
-  const [hasSearched, setHasSearched] = useState(false);
-  const [debouncedQuery] = useDebounce(searchQuery, DEBOUNCE_DELAY);
+  const query = searchQuery.trim();
+  const [debouncedQuery] = useDebounce(query, DEBOUNCE_DELAY);
 
   const {
     data: searchResults,
     error: searchError,
-    isLoading: isSearching,
+    isLoading,
     mutate: refreshSearchResults,
-  } = conversationSearchApi.searchConversations(hasSearched && debouncedQuery ? debouncedQuery : null);
+  } = conversationSearchApi.searchConversations(debouncedQuery || null);
 
-  // Execute search when debouncedQuery changes
-  const handleSearch = useCallback(
-    (query: string) => {
-      setSearchQuery(query);
-
-      if (!query.trim()) {
-        setHasSearched(false);
-        setDisplayQuery('');
-        return;
-      }
-
-      // The search runs when the debounced query changes the SWR key. The same
-      // query again, for example after an error, refetches the current results.
-      if (hasSearched && query === debouncedQuery) {
-        refreshSearchResults();
-      }
-      setHasSearched(true);
-      setDisplayQuery(query);
-    },
-    [debouncedQuery, hasSearched, refreshSearchResults]
+  const { hasSearched, isSearching } = getSearchStatus(
+    query,
+    debouncedQuery,
+    isLoading
   );
 
-  // Clear search
-  const clearSearch = useCallback(() => {
-    setSearchQuery('');
-    setDisplayQuery('');
-    setHasSearched(false);
-  }, []);
+  const clearSearch = useCallback(() => setSearchQuery(''), []);
+  const retrySearch = useCallback(() => {
+    refreshSearchResults();
+  }, [refreshSearchResults]);
 
   return {
     searchResults: searchResults ?? [],
     isSearching,
     isSearchError: !!searchError,
     hasSearched,
-    displayQuery,
-    handleSearch,
-    clearSearch
+    displayQuery: debouncedQuery,
+    handleSearch: setSearchQuery,
+    clearSearch,
+    retrySearch,
   };
 }
 

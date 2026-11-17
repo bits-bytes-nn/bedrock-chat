@@ -1,22 +1,38 @@
 import { describe, expect, test } from 'vitest';
-import { getPastedImages, getResizedImageMediaType } from '../ImageUtils';
+import {
+  getPastedImages,
+  getResizedImageMediaTypes,
+  getSmallestDataUrl,
+} from '../ImageUtils';
 
-describe('getResizedImageMediaType', () => {
+describe('getResizedImageMediaTypes', () => {
+  const BOTH = ['image/png', 'image/jpeg'];
+  const JPEG = ['image/jpeg'];
   test.each([
-    ['image/png', 'a.png', 'image/png'],
-    ['IMAGE/PNG', 'a', 'image/png'],
-    ['image/jpeg', 'a.jpg', 'image/jpeg'],
-    ['image/webp', 'a.webp', 'image/jpeg'],
-    ['image/gif', 'a.gif', 'image/jpeg'],
+    ['image/png', 'a.png', BOTH],
+    ['IMAGE/PNG', 'a', BOTH],
+    ['image/jpeg', 'a.jpg', JPEG],
+    ['image/webp', 'a.webp', JPEG],
+    ['image/gif', 'a.gif', JPEG],
     // The media type wins over the file name.
-    ['image/jpeg', 'a.png', 'image/jpeg'],
+    ['image/jpeg', 'a.png', JPEG],
   ])('%s %s -> %s', (mediaType, fileName, expected) => {
-    expect(getResizedImageMediaType(mediaType, fileName)).toBe(expected);
+    expect(getResizedImageMediaTypes(mediaType, fileName)).toEqual(expected);
   });
 
   test('uses the file name when the media type is empty', () => {
-    expect(getResizedImageMediaType('', 'Screenshot.PNG')).toBe('image/png');
-    expect(getResizedImageMediaType('', 'photo.heic')).toBe('image/jpeg');
+    expect(getResizedImageMediaTypes('', 'Screenshot.PNG')).toEqual(BOTH);
+    expect(getResizedImageMediaTypes('', 'photo.heic')).toEqual(JPEG);
+  });
+});
+
+describe('getSmallestDataUrl', () => {
+  test('returns the shortest data URL', () => {
+    const png = 'data:image/png;base64,' + 'A'.repeat(100);
+    const jpeg = 'data:image/jpeg;base64,' + 'A'.repeat(40);
+    expect(getSmallestDataUrl([png, jpeg])).toBe(jpeg);
+    expect(getSmallestDataUrl([jpeg, png])).toBe(jpeg);
+    expect(getSmallestDataUrl([png])).toBe(png);
   });
 });
 

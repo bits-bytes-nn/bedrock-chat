@@ -699,6 +699,7 @@ const translation: typeof en = {
       remove: '削除',
       rename: '名前を変更',
       newChat: '新しいチャット',
+      retry: '再試行',
       backToConversationHistory: 'チャット履歴に戻る',
       SaveAndSubmit: '変更 & 送信',
       resend: '再送信',

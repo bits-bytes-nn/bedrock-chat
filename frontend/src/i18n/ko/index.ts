@@ -694,6 +694,7 @@ const translation: typeof en = {
       remove: '제거',
       rename: '이름 변경',
       newChat: '새 채팅',
+      retry: '다시 시도',
       backToConversationHistory: '대화 기록으로 돌아가기',
       SaveAndSubmit: '저장 후 전송',
       resend: '다시 보내기',

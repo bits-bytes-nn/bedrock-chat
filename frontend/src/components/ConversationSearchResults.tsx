@@ -1,7 +1,11 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { ConversationSearchMeta } from '../@types/conversation';
-import { PiArrowLeft, PiMagnifyingGlass } from 'react-icons/pi';
+import {
+  PiArrowClockwise,
+  PiArrowLeft,
+  PiMagnifyingGlass,
+} from 'react-icons/pi';
 import Button from './Button';
 import Skeleton from './Skeleton';
 
@@ -124,6 +128,7 @@ type ConversationSearchResultsProps = {
   searchQuery: string;
   onbackToConversationHistory: () => void;
   onSelectConversation: (id: string) => void;
+  onRetry: () => void;
 };
 
 const ConversationSearchResults: React.FC<ConversationSearchResultsProps> = ({
@@ -134,6 +139,7 @@ const ConversationSearchResults: React.FC<ConversationSearchResultsProps> = ({
   searchQuery,
   onbackToConversationHistory,
   onSelectConversation,
+  onRetry,
 }) => {
   const { t } = useTranslation();
 
@@ -186,13 +192,19 @@ const ConversationSearchResults: React.FC<ConversationSearchResultsProps> = ({
             </div>
           )}
         </div>
-        <Button
-          className="mt-4"
-          outlined
-          icon={<PiArrowLeft />}
-          onClick={onbackToConversationHistory}>
-          {t('button.backToConversationHistory', 'Back to History')}
-        </Button>
+        <div className="mt-4 flex gap-2">
+          {isSearchError && (
+            <Button outlined icon={<PiArrowClockwise />} onClick={onRetry}>
+              {t('button.retry')}
+            </Button>
+          )}
+          <Button
+            outlined
+            icon={<PiArrowLeft />}
+            onClick={onbackToConversationHistory}>
+            {t('button.backToConversationHistory', 'Back to History')}
+          </Button>
+        </div>
       </div>
     );
   }
