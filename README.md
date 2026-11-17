@@ -119,7 +119,7 @@ The attachments of one message may total 3 MB, counting the text of converted pr
 
 ### Knowledge base parsing
 
-The bot's knowledge settings offer an advanced parsing model that reads figures, charts and tables in PDF files and images. Claude Haiku 4.5 is called through a global cross-Region inference profile, so documents may be processed in other Regions. When `enableBedrockGlobalInference` is false, for example because a policy blocks global inference, bots with this parsing model cannot be saved; use the default parser. Claude 3 Haiku is kept as a legacy option and is not available in every Region. Bots saved with Claude 3 or 3.5 Sonnet, which Bedrock no longer offers, use the default parser.
+The bot's knowledge settings offer an advanced parsing model that reads figures, charts and tables in PDF files and images. Claude Haiku 4.5 is called through a global cross-Region inference profile, so documents may be processed in other Regions. When `enableBedrockGlobalInference` is false, for example because a policy blocks global inference, new bots cannot use this parsing model (bots saved with it earlier can still be edited, but their sync fails); use the default parser. Claude 3 Haiku is kept as a legacy option and is not available in every Region. Bots saved with Claude 3 or 3.5 Sonnet, which Bedrock no longer offers, use the default parser.
 
 > [!NOTE]
 > OpenSearch Serverless returns newly indexed documents about a minute after ingestion, so a sync is marked as succeeded a minute after its ingestion completes.

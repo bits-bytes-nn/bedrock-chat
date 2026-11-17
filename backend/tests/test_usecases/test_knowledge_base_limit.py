@@ -78,11 +78,11 @@ class TestDedicatedKnowledgeBaseLimit(unittest.TestCase):
     def test_create_is_rejected_before_files_are_moved(self):
         bot_input = MagicMock(id="new", bedrock_knowledge_base=None)
         bot_input.has_knowledge.return_value = True
-        with patch.object(
-            bot_usecase, "validate_external_resource_references"
-        ), patch.object(bot_usecase, "validate_new_bot_id"), patch.object(
-            bot_usecase, "_update_s3_documents_by_diff"
-        ) as move_files:
+        with (
+            patch.object(bot_usecase, "validate_external_resource_references"),
+            patch.object(bot_usecase, "validate_new_bot_id"),
+            patch.object(bot_usecase, "_update_s3_documents_by_diff") as move_files,
+        ):
             with self.assertRaises(ValueError):
                 bot_usecase.create_new_bot(self.user, bot_input)
         move_files.assert_not_called()
@@ -158,35 +158,68 @@ class TestModifyOwnedBotLimit(unittest.TestCase):
 
 
 class TestParsingModelNeedsGlobalInference(unittest.TestCase):
-    @staticmethod
-    def knowledge_base(**fields):
+    HAIKU = "anthropic.claude-haiku-4-5"
+
+    @classmethod
+    def knowledge_base(cls, **fields):
         from app.routes.schemas.bot_kb import BedrockKnowledgeBaseInput
 
         return BedrockKnowledgeBaseInput.model_construct(
             **{
                 "type": "dedicated",
                 "exist_knowledge_base_id": None,
-                "parsing_model": "anthropic.claude-haiku-4-5",
+                "parsing_model": cls.HAIKU,
                 **fields,
             }
         )
 
     def test_rejects_it_when_global_inference_is_off(self):
-        with self.assertRaises(ValueError):
-            bot_usecase._validate_parsing_model(
-                self.knowledge_base(), enable_global=False
-            )
+        for kb_type in ("dedicated", "shared", None):
+            with self.assertRaises(ValueError):
+                bot_usecase._validate_parsing_model(
+                    self.knowledge_base(type=kb_type), enable_global=False
+                )
 
     def test_accepts_it_when_global_inference_is_on(self):
         bot_usecase._validate_parsing_model(self.knowledge_base(), enable_global=True)
 
-    def test_ignores_knowledge_bases_that_are_not_synced_by_the_bot(self):
+    def test_a_bot_that_already_has_it_can_still_be_edited(self):
+        # The parser cannot be changed after a bot is created.
+        bot_usecase._validate_parsing_model(
+            self.knowledge_base(), current_parsing_model=self.HAIKU, enable_global=False
+        )
+        with self.assertRaises(ValueError):
+            bot_usecase._validate_parsing_model(
+                self.knowledge_base(),
+                current_parsing_model="disabled",
+                enable_global=False,
+            )
+
+    def test_ignores_other_parsers_and_existing_knowledge_bases(self):
         for fields in (
             {"parsing_model": "disabled"},
-            {"type": "shared"},
             {"exist_knowledge_base_id": "KB1"},
         ):
             bot_usecase._validate_parsing_model(
                 self.knowledge_base(**fields), enable_global=False
             )
         bot_usecase._validate_parsing_model(None, enable_global=False)
+
+
+class TestModifyChecksTheParsingModelAgainstTheBot(unittest.TestCase):
+    def test_modify_passes_the_stored_parsing_model(self):
+        bot = MagicMock(sync_status="SUCCEEDED")
+        bot.bedrock_knowledge_base.parsing_model = "anthropic.claude-haiku-4-5"
+        modify_input = MagicMock(knowledge=None)
+        with (
+            patch.object(bot_usecase, "find_bot_by_id", return_value=bot),
+            patch.object(bot_usecase, "validate_external_resource_references"),
+            patch.object(
+                bot_usecase, "_validate_parsing_model", side_effect=RuntimeError
+            ) as validate,
+        ):
+            with self.assertRaises(RuntimeError):
+                bot_usecase.modify_owned_bot(MagicMock(), "bot", modify_input)
+        validate.assert_called_once_with(
+            modify_input.bedrock_knowledge_base, "anthropic.claude-haiku-4-5"
+        )

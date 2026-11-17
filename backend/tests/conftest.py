@@ -124,3 +124,13 @@ def dynamodb_tables():
     with mock_aws():
         _create_tables()
         yield
+
+
+@pytest.fixture(autouse=True)
+def _forget_model_lookup_failures():
+    """Model lookup failures are remembered per process; tests start without any."""
+    from app import bedrock
+
+    bedrock._lookup_failed_at.clear()
+    yield
+    bedrock._lookup_failed_at.clear()

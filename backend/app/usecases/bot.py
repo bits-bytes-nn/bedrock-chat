@@ -224,18 +224,27 @@ _GLOBAL_PROFILE_PARSING_MODELS = {"anthropic.claude-haiku-4-5"}
 
 def _validate_parsing_model(
     knowledge_base: BedrockKnowledgeBaseInput | None,
+    current_parsing_model: str | None = None,
     enable_global: bool = ENABLE_BEDROCK_GLOBAL_INFERENCE,
 ) -> None:
     """Reject a parsing model that the knowledge base sync could not invoke.
+
+    Args:
+        knowledge_base: The knowledge base settings that are saved.
+        current_parsing_model: The parsing model that the bot already has. The
+            parser cannot be changed after a bot is created, so keeping it is
+            allowed and other edits of the bot still work.
+        enable_global: Whether global cross-Region inference is turned on.
 
     Raises:
         ValueError: If the model needs global inference, which is turned off.
     """
     if (
         knowledge_base is not None
+        # A knowledge base made outside the bot has its own parser.
         and knowledge_base.exist_knowledge_base_id is None
-        and knowledge_base.type in (None, "dedicated")
         and knowledge_base.parsing_model in _GLOBAL_PROFILE_PARSING_MODELS
+        and knowledge_base.parsing_model != current_parsing_model
         and not enable_global
     ):
         raise ValueError(
@@ -368,7 +377,14 @@ def modify_owned_bot(
             code="knowledge_base_syncing",
         )
     validate_external_resource_references(user, modify_input, current_bot=bot)
-    _validate_parsing_model(modify_input.bedrock_knowledge_base)
+    _validate_parsing_model(
+        modify_input.bedrock_knowledge_base,
+        (
+            bot.bedrock_knowledge_base.parsing_model
+            if bot.bedrock_knowledge_base
+            else None
+        ),
+    )
     if modify_input.knowledge and _uses_dedicated_knowledge_base(
         any(
             (
