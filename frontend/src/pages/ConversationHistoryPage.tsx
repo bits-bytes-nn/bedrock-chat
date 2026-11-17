@@ -19,7 +19,7 @@ import DialogConfirmDeleteChat from '../components/DialogConfirmDeleteChat';
 import Button from '../components/Button';
 import ListPageLayout from '../layouts/ListPageLayout';
 import ConversationSearchResults from '../components/ConversationSearchResults';
-import { isSubmitEnter, clickableProps } from '../utils/KeyboardUtils';
+import { isSubmitEnter } from '../utils/KeyboardUtils';
 import useSnackbar from '../hooks/useSnackbar';
 import { getApiErrorMessage } from '../utils/ErrorUtils';
 
@@ -241,7 +241,7 @@ const ConversationHistoryPage: React.FC = () => {
             <div
               key={conversation.id}
               className="group flex cursor-pointer items-center justify-between border-b border-gray p-2 hover:bg-light-gray dark:border-dark-gray dark:hover:bg-aws-font-color-dark/10"
-              {...clickableProps(() => onClickConversation(conversation.id))}>
+              onClick={() => onClickConversation(conversation.id)}>
               <div className="flex flex-col">
                 {editingConversationId === conversation.id ? (
                   <div
@@ -273,9 +273,14 @@ const ConversationHistoryPage: React.FC = () => {
                   </div>
                 ) : (
                   <div className="flex items-center">
-                    <div className="text-base font-medium">
+                    {/* The keyboard way into the row, whose click opens the
+                        conversation; the row holds other buttons, so it is not
+                        a button itself. */}
+                    <button
+                      type="button"
+                      className="text-left text-base font-medium">
                       {conversation.title}
-                    </div>
+                    </button>
                     <ButtonIcon
                       label={t('button.edit')}
                       className="-my-2 mr-6 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100"

@@ -25,13 +25,14 @@ describe('isSubmitEnter', () => {
 });
 
 describe('clickableProps', () => {
-  const press = (key: string, onTheRow = true) => {
+  const press = (key: string, onTheRow = true, repeat = false) => {
     const onClick = vi.fn();
     const props = clickableProps(onClick);
     const row = {};
     const preventDefault = vi.fn();
     props.onKeyDown({
       key,
+      repeat,
       target: onTheRow ? row : {},
       currentTarget: row,
       preventDefault,
@@ -49,6 +50,10 @@ describe('clickableProps', () => {
     const { onClick, preventDefault } = press(key);
     expect(onClick).toHaveBeenCalledOnce();
     expect(preventDefault).toHaveBeenCalledOnce();
+  });
+
+  test('a held key does not activate it again', () => {
+    expect(press('Enter', true, true).onClick).not.toHaveBeenCalled();
   });
 
   test('other keys do not', () => {

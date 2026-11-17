@@ -24,6 +24,9 @@ SHARED_KNOWLEDGE_BASES_STACK_NAME = os.environ.get(
 )
 # The most documents that DeleteKnowledgeBaseDocuments takes at once.
 DOCUMENTS_PER_REQUEST = 10
+# Statuses of a document that an earlier attempt is already deleting, as in
+# embedding_statemachine/bedrock_knowledge_base/synchronize_data_source.py.
+DELETING_STATUSES = ("DELETING", "DELETE_IN_PROGRESS")
 
 s3_client = boto3.client("s3", BEDROCK_REGION)
 
@@ -73,7 +76,12 @@ def delete_shared_knowledge_base_documents(user_id: str, bot_id: str):
 
     The shared knowledge bases stay for other bots, so the documents that the bot
     ingested into them are deleted one by one. Deleting the files alone leaves them
-    searchable in the index.
+    searchable in the index. The stream image of a deleted bot has no knowledge base
+    settings, so every shared data source is listed, also for bots without one.
+
+    Raises:
+        RuntimeError: If Bedrock reports a document as failed to delete, so that
+            the stream retries the removal.
     """
     if not SHARED_KNOWLEDGE_BASES_STACK_NAME:
         return
@@ -91,15 +99,28 @@ def delete_shared_knowledge_base_documents(user_id: str, bot_id: str):
             )
             for document in page["documentDetails"]
             if document["identifier"].get("s3", {}).get("uri", "").startswith(prefix)
+            # A retried removal finds the documents of the earlier attempt.
+            and document.get("status") not in DELETING_STATUSES
         ]
+        failed: list[str] = []
         for i in range(0, len(documents), DOCUMENTS_PER_REQUEST):
-            agent.delete_knowledge_base_documents(
+            response = agent.delete_knowledge_base_documents(
                 knowledgeBaseId=knowledge_base_id,
                 dataSourceId=data_source_id,
                 documentIdentifiers=[
                     {"dataSourceType": "S3", "s3": {"uri": uri}}
                     for uri in documents[i : i + DOCUMENTS_PER_REQUEST]
                 ],
+            )
+            failed.extend(
+                document["identifier"].get("s3", {}).get("uri", "")
+                for document in response.get("documentDetails", [])
+                if document.get("status") == "FAILED"
+            )
+        if failed:
+            raise RuntimeError(
+                f"Failed to delete {len(failed)} documents of bot {bot_id} from "
+                f"data source {data_source_id}: {failed[:3]}"
             )
         if documents:
             logger.info(

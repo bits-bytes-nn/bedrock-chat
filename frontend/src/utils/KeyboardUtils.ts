@@ -23,7 +23,8 @@ export const clickableProps = (onClick: () => void) => ({
   tabIndex: 0,
   onClick,
   onKeyDown: (e: React.KeyboardEvent) => {
-    if (e.target !== e.currentTarget) {
+    // A held key repeats, which would open the row again and again.
+    if (e.target !== e.currentTarget || e.repeat) {
       return;
     }
     if (e.key === 'Enter' || e.key === ' ') {

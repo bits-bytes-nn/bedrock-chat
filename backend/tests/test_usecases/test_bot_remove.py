@@ -312,10 +312,6 @@ class TestFindPublishedStack(unittest.TestCase):
                 api_publication.find_stack_by_bot_id("bot")
 
 
-if __name__ == "__main__":
-    unittest.main()
-
-
 class TestDeleteSharedKnowledgeBaseDocuments(unittest.TestCase):
     OUTPUTS = [
         {"OutputKey": "KnowledgeBaseIdh1", "OutputValue": "KB1"},
@@ -324,7 +320,9 @@ class TestDeleteSharedKnowledgeBaseDocuments(unittest.TestCase):
         {"OutputKey": "Other", "OutputValue": "x"},
     ]
 
-    def run_removal(self, documents_by_source, stack_error=None):
+    def run_removal(
+        self, documents_by_source, stack_error=None, delete_status="DELETING"
+    ):
         cfn, agent = MagicMock(), MagicMock()
         if stack_error:
             cfn.describe_stacks.side_effect = stack_error
@@ -335,13 +333,25 @@ class TestDeleteSharedKnowledgeBaseDocuments(unittest.TestCase):
             return [
                 {
                     "documentDetails": [
-                        {"identifier": {"dataSourceType": "S3", "s3": {"uri": uri}}}
-                        for uri in documents_by_source.get(dataSourceId, [])
+                        {
+                            "identifier": {"dataSourceType": "S3", "s3": {"uri": uri}},
+                            "status": status,
+                        }
+                        for uri, status in (
+                            d if isinstance(d, tuple) else (d, "INDEXED")
+                            for d in documents_by_source.get(dataSourceId, [])
+                        )
                     ]
                 }
             ]
 
         agent.get_paginator.return_value.paginate.side_effect = paginate
+        agent.delete_knowledge_base_documents.side_effect = lambda **kwargs: {
+            "documentDetails": [
+                {"identifier": identifier, "status": delete_status}
+                for identifier in kwargs["documentIdentifiers"]
+            ]
+        }
         clients = {"cloudformation": cfn, "bedrock-agent": agent}
         with (
             patch.object(bot_remove, "SHARED_KNOWLEDGE_BASES_STACK_NAME", "Shared"),
@@ -370,6 +380,16 @@ class TestDeleteSharedKnowledgeBaseDocuments(unittest.TestCase):
         # At most 10 documents per request.
         self.assertEqual(agent.delete_knowledge_base_documents.call_count, 2)
 
+    def test_a_retry_skips_documents_that_are_being_deleted(self):
+        uri = "s3://docs/user/bot/documents/a.pdf"
+        agent = self.run_removal({"DS1": [(uri, "DELETING")]})
+        agent.delete_knowledge_base_documents.assert_not_called()
+
+    def test_a_document_that_failed_to_delete_fails_the_removal(self):
+        uri = "s3://docs/user/bot/documents/a.pdf"
+        with self.assertRaises(RuntimeError):
+            self.run_removal({"DS1": [uri]}, delete_status="FAILED")
+
     def test_nothing_to_do_without_the_shared_stack(self):
         error = ClientError(
             {
@@ -390,3 +410,7 @@ class TestDeleteSharedKnowledgeBaseDocuments(unittest.TestCase):
         )
         with self.assertRaises(ClientError):
             self.run_removal({}, stack_error=error)
+
+
+if __name__ == "__main__":
+    unittest.main()

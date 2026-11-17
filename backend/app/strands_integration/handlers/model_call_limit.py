@@ -4,6 +4,7 @@ Limit on the model calls of one answer.
 
 import logging
 
+from app.metrics import emit_metric
 from strands.hooks import BeforeModelCallEvent, HookProvider, HookRegistry
 
 logger = logging.getLogger(__name__)
@@ -32,6 +33,7 @@ class ModelCallLimit(HookProvider):
         self.calls += 1
         if self.calls > self.max_calls:
             logger.warning("Stopped an answer after %d model calls", self.max_calls)
+            emit_metric("ModelCallLimitReached", 1)
             # The cancellation text becomes the final answer, with stop reason
             # end_turn, so the conversation is saved as usual.
             event.cancel = STOPPED_ANSWER.format(count=self.max_calls)
