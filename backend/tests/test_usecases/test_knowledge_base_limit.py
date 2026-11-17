@@ -155,3 +155,38 @@ class TestModifyOwnedBotLimit(unittest.TestCase):
         with self.assertRaises(LimitExceededError):
             self.modify("c", "shared", "dedicated")
         self.move_files.assert_not_called()
+
+
+class TestParsingModelNeedsGlobalInference(unittest.TestCase):
+    @staticmethod
+    def knowledge_base(**fields):
+        from app.routes.schemas.bot_kb import BedrockKnowledgeBaseInput
+
+        return BedrockKnowledgeBaseInput.model_construct(
+            **{
+                "type": "dedicated",
+                "exist_knowledge_base_id": None,
+                "parsing_model": "anthropic.claude-haiku-4-5",
+                **fields,
+            }
+        )
+
+    def test_rejects_it_when_global_inference_is_off(self):
+        with self.assertRaises(ValueError):
+            bot_usecase._validate_parsing_model(
+                self.knowledge_base(), enable_global=False
+            )
+
+    def test_accepts_it_when_global_inference_is_on(self):
+        bot_usecase._validate_parsing_model(self.knowledge_base(), enable_global=True)
+
+    def test_ignores_knowledge_bases_that_are_not_synced_by_the_bot(self):
+        for fields in (
+            {"parsing_model": "disabled"},
+            {"type": "shared"},
+            {"exist_knowledge_base_id": "KB1"},
+        ):
+            bot_usecase._validate_parsing_model(
+                self.knowledge_base(**fields), enable_global=False
+            )
+        bot_usecase._validate_parsing_model(None, enable_global=False)

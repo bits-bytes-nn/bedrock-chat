@@ -3,6 +3,7 @@ import os
 import re
 from typing import Literal, TypeGuard
 
+from app.bedrock import ENABLE_BEDROCK_GLOBAL_INFERENCE
 from app.config import DEFAULT_GENERATION_CONFIG
 from app.repositories.api_publication import is_build_running
 from app.repositories.common import (
@@ -75,6 +76,7 @@ from app.routes.schemas.bot import (
     type_sync_status,
 )
 from app.routes.schemas.bot_guardrails import BedrockGuardrailsOutput
+from app.routes.schemas.bot_kb import BedrockKnowledgeBaseInput
 from app.routes.schemas.bot_kb import BedrockKnowledgeBaseOutput
 from app.strands_integration.utils import get_strands_registered_tools
 from app.user import User
@@ -214,6 +216,34 @@ def _uses_dedicated_knowledge_base(
     return knowledge_base.type in (None, "dedicated")
 
 
+# Parsing models that a knowledge base invokes through a global cross-Region
+# inference profile, as in getParsingModel of
+# cdk/lib/utils/bedrock-knowledge-base-args.ts.
+_GLOBAL_PROFILE_PARSING_MODELS = {"anthropic.claude-haiku-4-5"}
+
+
+def _validate_parsing_model(
+    knowledge_base: BedrockKnowledgeBaseInput | None,
+    enable_global: bool = ENABLE_BEDROCK_GLOBAL_INFERENCE,
+) -> None:
+    """Reject a parsing model that the knowledge base sync could not invoke.
+
+    Raises:
+        ValueError: If the model needs global inference, which is turned off.
+    """
+    if (
+        knowledge_base is not None
+        and knowledge_base.exist_knowledge_base_id is None
+        and knowledge_base.type in (None, "dedicated")
+        and knowledge_base.parsing_model in _GLOBAL_PROFILE_PARSING_MODELS
+        and not enable_global
+    ):
+        raise ValueError(
+            "This parsing model needs global cross-Region inference, which is "
+            "turned off in this deployment. Turn parsing off or choose another model."
+        )
+
+
 def _check_dedicated_knowledge_base_limit(user: User, bot_id: str) -> None:
     """Raises:
     ValueError: If the user already has the maximum number of such bots.
@@ -238,6 +268,7 @@ def create_new_bot(user: User, bot_input: BotInput) -> BotOutput:
     """
     validate_external_resource_references(user, bot_input, current_bot=None)
     validate_new_bot_id(bot_input.id)
+    _validate_parsing_model(bot_input.bedrock_knowledge_base)
     if _uses_dedicated_knowledge_base(
         bot_input.has_knowledge(),
         (
@@ -337,6 +368,7 @@ def modify_owned_bot(
             code="knowledge_base_syncing",
         )
     validate_external_resource_references(user, modify_input, current_bot=bot)
+    _validate_parsing_model(modify_input.bedrock_knowledge_base)
     if modify_input.knowledge and _uses_dedicated_knowledge_base(
         any(
             (
