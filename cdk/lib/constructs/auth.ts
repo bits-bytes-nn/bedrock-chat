@@ -68,8 +68,8 @@ export class Auth extends Construct {
     const clientProps = (() => {
       const defaultProps = {
         idTokenValidity: props.tokenValidity,
+        // The Amplify sign-in uses SRP, which never sends the password.
         authFlows: {
-          userPassword: true,
           userSrp: true,
         },
       };
