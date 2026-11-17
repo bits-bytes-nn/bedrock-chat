@@ -353,6 +353,7 @@ class TestDeleteSharedKnowledgeBaseDocuments(unittest.TestCase):
             ]
         }
         clients = {"cloudformation": cfn, "bedrock-agent": agent}
+        self.last_agent = agent
         with (
             patch.object(bot_remove, "SHARED_KNOWLEDGE_BASES_STACK_NAME", "Shared"),
             patch.object(bot_remove, "DOCUMENT_BUCKET", "docs"),
@@ -388,7 +389,19 @@ class TestDeleteSharedKnowledgeBaseDocuments(unittest.TestCase):
     def test_a_document_that_failed_to_delete_fails_the_removal(self):
         uri = "s3://docs/user/bot/documents/a.pdf"
         with self.assertRaises(RuntimeError):
-            self.run_removal({"DS1": [uri]}, delete_status="FAILED")
+            self.run_removal({"DS1": [uri], "DS2": [uri]}, delete_status="FAILED")
+
+    def test_a_failure_does_not_skip_the_other_data_sources(self):
+        uri = "s3://docs/user/bot/documents/a.pdf"
+        try:
+            self.run_removal({"DS1": [uri], "DS2": [uri]}, delete_status="FAILED")
+        except RuntimeError:
+            pass
+        sources = [
+            c.kwargs["dataSourceId"]
+            for c in self.last_agent.delete_knowledge_base_documents.call_args_list
+        ]
+        self.assertEqual(sources, ["DS1", "DS2"])
 
     def test_nothing_to_do_without_the_shared_stack(self):
         error = ClientError(

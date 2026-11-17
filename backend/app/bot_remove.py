@@ -89,6 +89,8 @@ def delete_shared_knowledge_base_documents(user_id: str, bot_id: str):
         f"s3://{DOCUMENT_BUCKET}/{compose_upload_document_s3_path(user_id, bot_id, '')}"
     )
     agent = boto3.client("bedrock-agent", BEDROCK_REGION)
+    # Every data source is cleaned up before a failure is raised.
+    failed: list[str] = []
     for knowledge_base_id, data_source_id in _shared_knowledge_base_data_sources():
         documents = [
             document["identifier"]["s3"]["uri"]
@@ -102,7 +104,6 @@ def delete_shared_knowledge_base_documents(user_id: str, bot_id: str):
             # A retried removal finds the documents of the earlier attempt.
             and document.get("status") not in DELETING_STATUSES
         ]
-        failed: list[str] = []
         for i in range(0, len(documents), DOCUMENTS_PER_REQUEST):
             response = agent.delete_knowledge_base_documents(
                 knowledgeBaseId=knowledge_base_id,
@@ -117,11 +118,6 @@ def delete_shared_knowledge_base_documents(user_id: str, bot_id: str):
                 for document in response.get("documentDetails", [])
                 if document.get("status") == "FAILED"
             )
-        if failed:
-            raise RuntimeError(
-                f"Failed to delete {len(failed)} documents of bot {bot_id} from "
-                f"data source {data_source_id}: {failed[:3]}"
-            )
         if documents:
             logger.info(
                 "Deleted %d documents of bot %s from data source %s",
@@ -129,6 +125,11 @@ def delete_shared_knowledge_base_documents(user_id: str, bot_id: str):
                 bot_id,
                 data_source_id,
             )
+    if failed:
+        raise RuntimeError(
+            f"Failed to delete {len(failed)} documents of bot {bot_id} from the "
+            f"shared knowledge bases: {failed[:3]}"
+        )
 
 
 def delete_search_api_keys(user_id: str, bot_id: str):

@@ -9,13 +9,17 @@ from app.strands_integration.handlers.model_call_limit import ModelCallLimit
 
 
 def test_the_answer_ends_with_a_note_after_the_limit():
+    from app.strands_integration.handlers import model_call_limit
+
     limit = ModelCallLimit(max_calls=2)
     events = [SimpleNamespace(cancel=False) for _ in range(3)]
-    for event in events:
-        limit.before_model_call(event)
+    with patch.object(model_call_limit, "emit_metric") as emit:
+        for event in events:
+            limit.before_model_call(event)
 
     assert [bool(e.cancel) for e in events] == [False, False, True]
     assert "2 steps" in events[2].cancel
+    emit.assert_called_once_with("ModelCallLimitReached", 1)
 
 
 def test_a_failed_answer_still_counts_its_cost():
