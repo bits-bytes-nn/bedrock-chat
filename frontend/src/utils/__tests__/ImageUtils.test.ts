@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { getResizedImageMediaType } from '../ImageUtils';
+import { getPastedImages, getResizedImageMediaType } from '../ImageUtils';
 
 describe('getResizedImageMediaType', () => {
   test.each([
@@ -17,5 +17,38 @@ describe('getResizedImageMediaType', () => {
   test('uses the file name when the media type is empty', () => {
     expect(getResizedImageMediaType('', 'Screenshot.PNG')).toBe('image/png');
     expect(getResizedImageMediaType('', 'photo.heic')).toBe('image/jpeg');
+  });
+});
+
+describe('getPastedImages', () => {
+  const PNG = 'image/png';
+  const clipboard = (text: string, types: string[]) => {
+    const files = types.map((type) => new File(['x'], 'image', { type }));
+    return {
+      getData: (format: string) => (format === 'text/plain' ? text : ''),
+      items: files.map((file) => ({
+        type: file.type,
+        getAsFile: () => file,
+      })) as unknown as DataTransferItemList,
+    };
+  };
+
+  test('attaches a pasted screenshot', () => {
+    expect(getPastedImages(clipboard('', [PNG]), [PNG])).toHaveLength(1);
+  });
+
+  test('pastes text when the clipboard also has a picture of it', () => {
+    expect(
+      getPastedImages(clipboard('Quarterly report', [PNG]), [PNG])
+    ).toEqual([]);
+  });
+
+  test('ignores whitespace-only text', () => {
+    expect(getPastedImages(clipboard(' \n', [PNG]), [PNG])).toHaveLength(1);
+  });
+
+  test('skips media types that the model does not accept', () => {
+    expect(getPastedImages(clipboard('', ['image/tiff']), [PNG])).toEqual([]);
+    expect(getPastedImages(clipboard('', [PNG]), [])).toEqual([]);
   });
 });
