@@ -247,7 +247,7 @@ const BedrockCustomBotParametersSchema = BaseParametersSchema.extend({
     .string()
     .optional()
     .transform((val) => val === "true")
-    .default("false"),
+    .default(false),
 });
 
 /**
@@ -261,7 +261,7 @@ const BedrockSharedKnowledgeBasesParametersSchema = BaseParametersSchema.extend(
     .string()
     .optional()
     .transform((val) => val === "true")
-    .default("false"),
+    .default(false),
 });
 
 /**

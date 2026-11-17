@@ -7,9 +7,11 @@ import time
 from typing import (
     TYPE_CHECKING,
     Any,
+    Callable,
     Literal,
     NotRequired,
     TypedDict,
+    TypeVar,
 )
 
 import boto3
@@ -30,6 +32,8 @@ if TYPE_CHECKING:
 
 
 logger = logging.getLogger(__name__)
+
+_T = TypeVar("_T")
 
 BEDROCK_REGION = os.environ.get("BEDROCK_REGION", "us-east-1")
 ENABLE_BEDROCK_GLOBAL_INFERENCE = (
@@ -240,30 +244,44 @@ def calculate_price(
     ) / 1000.0
 
 
-def _bedrock_client(region: str, max_attempts: int):
+# The model lookups run before chat answers and on every page load, behind API
+# Gateway's 29-second timeout, so they are not retried, have a deadline, and a
+# failed lookup is not repeated for a while.
+_LOOKUP_DEADLINE_SECONDS = 10.0
+_LOOKUP_RETRY_SECONDS = 60.0
+_lookup_failed_at: dict[str, float] = {}
+
+
+class ModelLookupUnavailable(Exception):
+    """Bedrock could not list the models of the region."""
+
+
+def _bedrock_client(region: str):
     return boto3.client(
         "bedrock",
         region_name=region,
         config=Config(
             connect_timeout=3,
             read_timeout=5,
-            retries={"mode": "standard", "max_attempts": max_attempts},
+            retries={"mode": "standard", "max_attempts": 1},
         ),
     )
 
 
 @functools.cache
-def _list_system_inference_profiles(
-    region: str, max_attempts: int = 3
-) -> dict[str, frozenset[str]]:
+def _list_system_inference_profiles(region: str) -> dict[str, frozenset[str]]:
     """Return the system-defined inference profiles in the region.
 
     Returns:
         The ARNs of the models that each profile routes to, by profile ID.
+
+    Raises:
+        TimeoutError: If the pages take longer than the lookup deadline.
     """
-    client = _bedrock_client(region, max_attempts)
+    client = _bedrock_client(region)
+    deadline = time.monotonic() + _LOOKUP_DEADLINE_SECONDS
     profiles: dict[str, frozenset[str]] = {}
-    kwargs: dict[str, Any] = {"typeEquals": "SYSTEM_DEFINED"}
+    kwargs: dict[str, Any] = {"typeEquals": "SYSTEM_DEFINED", "maxResults": 1000}
     while True:
         response = client.list_inference_profiles(**kwargs)
         profiles.update(
@@ -275,16 +293,34 @@ def _list_system_inference_profiles(
         )
         if "nextToken" not in response:
             return profiles
+        if time.monotonic() > deadline:
+            raise TimeoutError(f"Listing inference profiles in {region} took too long")
         kwargs["nextToken"] = response["nextToken"]
 
 
 @functools.cache
-def _list_on_demand_models(region: str, max_attempts: int) -> frozenset[str]:
+def _list_on_demand_models(region: str) -> frozenset[str]:
     """Return the IDs of the foundation models with on-demand throughput in the region."""
-    response = _bedrock_client(region, max_attempts).list_foundation_models(
+    response = _bedrock_client(region).list_foundation_models(
         byInferenceType="ON_DEMAND"
     )
     return frozenset(model["modelId"] for model in response["modelSummaries"])
+
+
+def _lookup(list_models: Callable[[str], _T], region: str) -> _T:
+    """Run a cached model lookup, remembering a failure for a while.
+
+    Raises:
+        ModelLookupUnavailable: If the lookup failed now or recently.
+    """
+    failed_at = _lookup_failed_at.get(region)
+    if failed_at is not None and time.monotonic() - failed_at < _LOOKUP_RETRY_SECONDS:
+        raise ModelLookupUnavailable(f"A model lookup in {region} failed recently")
+    try:
+        return list_models(region)
+    except (BotoCoreError, ClientError, TimeoutError) as e:
+        _lookup_failed_at[region] = time.monotonic()
+        raise ModelLookupUnavailable(f"Failed to list the models in {region}") from e
 
 
 def _find_inference_profile(
@@ -332,8 +368,8 @@ def get_model_id(
         return base_model_id
 
     try:
-        profiles = _list_system_inference_profiles(bedrock_region)
-    except (BotoCoreError, ClientError):
+        profiles = _lookup(_list_system_inference_profiles, bedrock_region)
+    except ModelLookupUnavailable:
         # Most current models are offered through a global profile, so try it rather
         # than failing every request while the lookup is unavailable.
         logger.warning(
@@ -356,14 +392,6 @@ def get_model_id(
     return base_model_id
 
 
-# The model list is read on every page load behind API Gateway's 29-second
-# timeout, so its lookups are not retried, and a failed lookup is not repeated
-# for a while.
-_MODEL_LOOKUP_ATTEMPTS = 1
-_MODEL_LOOKUP_RETRY_SECONDS = 60.0
-_model_lookup_failed_at: float | None = None
-
-
 def filter_available_models(
     models: list[str],
     enable_global: bool = ENABLE_BEDROCK_GLOBAL_INFERENCE,
@@ -376,27 +404,18 @@ def filter_available_models(
     A failed lookup keeps every model, so that a Bedrock outage does not hide them;
     a model that is not offered fails when it is used instead.
     """
-    global _model_lookup_failed_at
-    if (
-        _model_lookup_failed_at is not None
-        and time.monotonic() - _model_lookup_failed_at < _MODEL_LOOKUP_RETRY_SECONDS
-    ):
-        return list(models)
-
     try:
         profiles = (
-            _list_system_inference_profiles(bedrock_region, _MODEL_LOOKUP_ATTEMPTS)
+            _lookup(_list_system_inference_profiles, bedrock_region)
             if enable_global or enable_cross_region
             else {}
         )
-        on_demand = _list_on_demand_models(bedrock_region, _MODEL_LOOKUP_ATTEMPTS)
-    except (BotoCoreError, ClientError):
-        _model_lookup_failed_at = time.monotonic()
+        on_demand = _lookup(_list_on_demand_models, bedrock_region)
+    except ModelLookupUnavailable:
         logger.warning(
             "Failed to list the models offered in %s", bedrock_region, exc_info=True
         )
         return list(models)
-    _model_lookup_failed_at = None
 
     def is_available(model: str) -> bool:
         try:

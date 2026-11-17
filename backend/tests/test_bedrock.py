@@ -146,12 +146,6 @@ class TestListInferenceProfiles(unittest.TestCase):
 class TestFilterAvailableModels(unittest.TestCase):
     PROFILES = TestGetModelId.PROFILES
 
-    def setUp(self):
-        bedrock._model_lookup_failed_at = None
-
-    def tearDown(self):
-        bedrock._model_lookup_failed_at = None
-
     def available(self, models, on_demand=frozenset(), **kwargs) -> list[str]:
         with (
             patch.object(
@@ -227,32 +221,83 @@ class TestFilterAvailableModels(unittest.TestCase):
     def test_a_failed_lookup_keeps_every_model(self):
         models = ["gpt-oss-120b", "mistral-large"]
         for failing in ("profiles", "on_demand"):
-            bedrock._model_lookup_failed_at = None
+            bedrock._lookup_failed_at.clear()
             profiles, on_demand = self.failing_lookup(failing)
             with profiles, on_demand:
                 self.assertEqual(bedrock.filter_available_models(models), models)
 
-    def test_a_failed_lookup_is_not_repeated_for_a_while(self):
-        models = ["gpt-oss-120b"]
-        profiles, on_demand = self.failing_lookup("profiles")
+    def test_a_slow_lookup_counts_as_failed(self):
         with (
-            profiles as list_profiles,
-            on_demand,
             patch.object(
-                bedrock.time, "monotonic", side_effect=[100.0, 130.0, 200.0, 200.0]
+                bedrock, "_list_system_inference_profiles", side_effect=TimeoutError
             ),
+            patch.object(bedrock, "_list_on_demand_models", return_value=frozenset()),
         ):
-            bedrock.filter_available_models(models)  # fails at 100
-            bedrock.filter_available_models(models)  # 30 s later: skipped
-            bedrock.filter_available_models(models)  # 100 s later: tried again
-        self.assertEqual(list_profiles.call_count, 2)
+            self.assertEqual(
+                bedrock.filter_available_models(["gpt-oss-120b"]), ["gpt-oss-120b"]
+            )
 
-    def test_lookups_are_not_retried(self):
-        profiles, on_demand = self.failing_lookup("none")
-        with profiles as list_profiles, on_demand as list_on_demand:
-            bedrock.filter_available_models(["gpt-oss-120b"])
-        self.assertEqual(list_profiles.call_args.args[1], 1)
-        self.assertEqual(list_on_demand.call_args.args[1], 1)
+
+class TestLookupFailures(unittest.TestCase):
+    ERROR = ClientError(
+        {"Error": {"Code": "ThrottlingException", "Message": ""}}, "List"
+    )
+
+    def test_a_failed_lookup_is_not_repeated_for_a_while(self):
+        lookup = MagicMock(side_effect=self.ERROR)
+        with patch.object(
+            bedrock.time, "monotonic", side_effect=[100.0, 130.0, 200.0, 200.0]
+        ):
+            for _ in range(3):
+                with self.assertRaises(bedrock.ModelLookupUnavailable):
+                    bedrock._lookup(lookup, "r")
+        # Called at 100 s, skipped at 130 s, called again at 200 s.
+        self.assertEqual(lookup.call_count, 2)
+
+    def test_failures_are_remembered_per_region(self):
+        with self.assertRaises(bedrock.ModelLookupUnavailable):
+            bedrock._lookup(MagicMock(side_effect=self.ERROR), "a")
+        self.assertEqual(bedrock._lookup(MagicMock(return_value=1), "b"), 1)
+
+    def test_get_model_id_skips_a_lookup_that_failed_recently(self):
+        with patch.object(
+            bedrock, "_list_system_inference_profiles", side_effect=self.ERROR
+        ) as profiles:
+            for _ in range(2):
+                self.assertEqual(
+                    get_model_id(
+                        MODEL,
+                        enable_global=True,
+                        enable_cross_region=True,
+                        bedrock_region="us-east-1",
+                    ),
+                    "global.anthropic.claude-haiku-5-5",
+                )
+        profiles.assert_called_once()
+
+    def test_the_client_does_not_retry(self):
+        with patch.object(bedrock.boto3, "client") as client:
+            bedrock._bedrock_client("r")
+        config = client.call_args.kwargs["config"]
+        self.assertEqual(config.retries["max_attempts"], 1)
+
+
+class TestListInferenceProfilesDeadline(unittest.TestCase):
+    def test_stops_paging_after_the_deadline(self):
+        client = MagicMock()
+        client.list_inference_profiles.return_value = {
+            "inferenceProfileSummaries": [],
+            "nextToken": "t",
+        }
+        bedrock._list_system_inference_profiles.cache_clear()
+        with (
+            patch.object(bedrock.boto3, "client", return_value=client),
+            patch.object(bedrock.time, "monotonic", side_effect=[0.0, 5.0, 11.0]),
+        ):
+            with self.assertRaises(TimeoutError):
+                bedrock._list_system_inference_profiles("test-region")
+        bedrock._list_system_inference_profiles.cache_clear()
+        self.assertEqual(client.list_inference_profiles.call_count, 2)
 
 
 class TestListOnDemandModels(unittest.TestCase):
@@ -263,7 +308,7 @@ class TestListOnDemandModels(unittest.TestCase):
         }
         bedrock._list_on_demand_models.cache_clear()
         with patch.object(bedrock.boto3, "client", return_value=client):
-            models = bedrock._list_on_demand_models("test-region", 1)
+            models = bedrock._list_on_demand_models("test-region")
         bedrock._list_on_demand_models.cache_clear()
 
         self.assertEqual(models, frozenset({"a", "b"}))
