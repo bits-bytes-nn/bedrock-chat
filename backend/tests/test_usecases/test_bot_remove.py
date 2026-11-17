@@ -28,6 +28,7 @@ class TestBotRemoval(unittest.TestCase):
             delete_custom_bot_stack_by_bot_id=steps.delete_custom_bot_stack_by_bot_id,
             delete_published_api=steps.delete_published_api,
             delete_from_s3=steps.delete_from_s3,
+            delete_shared_knowledge_base_documents=steps.delete_shared_knowledge_base_documents,
             delete_api_key_from_secret_manager=steps.delete_api_key_from_secret_manager,
             delete_conversation_by_user_id=steps.delete_conversation_by_user_id,
         ):
@@ -37,6 +38,9 @@ class TestBotRemoval(unittest.TestCase):
         steps.delete_custom_bot_stack_by_bot_id.assert_called_once_with("bot")
         steps.delete_published_api.assert_called_once_with("bot")
         steps.delete_from_s3.assert_called_once_with("user", "bot")
+        steps.delete_shared_knowledge_base_documents.assert_called_once_with(
+            "user", "bot"
+        )
         # The key of every search engine, whichever the bot used.
         self.assertEqual(
             steps.delete_api_key_from_secret_manager.call_args_list,
@@ -50,7 +54,7 @@ class TestBotRemoval(unittest.TestCase):
             steps.method_calls[-1],
             call.delete_conversation_by_user_id("PUBLISHED_API#bot"),
         )
-        self.assertEqual(len(steps.method_calls), 7)
+        self.assertEqual(len(steps.method_calls), 8)
 
     def test_ignores_items_other_than_bots(self):
         for keys in (
@@ -310,3 +314,79 @@ class TestFindPublishedStack(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestDeleteSharedKnowledgeBaseDocuments(unittest.TestCase):
+    OUTPUTS = [
+        {"OutputKey": "KnowledgeBaseIdh1", "OutputValue": "KB1"},
+        {"OutputKey": "DataSourceh10", "OutputValue": "DS1"},
+        {"OutputKey": "DataSourceh11", "OutputValue": "DS2"},
+        {"OutputKey": "Other", "OutputValue": "x"},
+    ]
+
+    def run_removal(self, documents_by_source, stack_error=None):
+        cfn, agent = MagicMock(), MagicMock()
+        if stack_error:
+            cfn.describe_stacks.side_effect = stack_error
+        else:
+            cfn.describe_stacks.return_value = {"Stacks": [{"Outputs": self.OUTPUTS}]}
+
+        def paginate(knowledgeBaseId, dataSourceId, PaginationConfig):
+            return [
+                {
+                    "documentDetails": [
+                        {"identifier": {"dataSourceType": "S3", "s3": {"uri": uri}}}
+                        for uri in documents_by_source.get(dataSourceId, [])
+                    ]
+                }
+            ]
+
+        agent.get_paginator.return_value.paginate.side_effect = paginate
+        clients = {"cloudformation": cfn, "bedrock-agent": agent}
+        with (
+            patch.object(bot_remove, "SHARED_KNOWLEDGE_BASES_STACK_NAME", "Shared"),
+            patch.object(bot_remove, "DOCUMENT_BUCKET", "docs"),
+            patch.object(
+                bot_remove.boto3, "client", side_effect=lambda name, *_: clients[name]
+            ),
+        ):
+            bot_remove.delete_shared_knowledge_base_documents("user", "bot")
+        return agent
+
+    def test_deletes_only_the_documents_of_the_bot(self):
+        mine = [f"s3://docs/user/bot/documents/f{i}.pdf" for i in range(12)]
+        others = [
+            "s3://docs/user/bot2/documents/a.pdf",
+            "s3://docs/other/bot/documents/b.pdf",
+        ]
+        agent = self.run_removal({"DS1": mine + others, "DS2": others})
+
+        deleted = [
+            (c.kwargs["dataSourceId"], d["s3"]["uri"])
+            for c in agent.delete_knowledge_base_documents.call_args_list
+            for d in c.kwargs["documentIdentifiers"]
+        ]
+        self.assertEqual(deleted, [("DS1", uri) for uri in mine])
+        # At most 10 documents per request.
+        self.assertEqual(agent.delete_knowledge_base_documents.call_count, 2)
+
+    def test_nothing_to_do_without_the_shared_stack(self):
+        error = ClientError(
+            {
+                "Error": {
+                    "Code": "ValidationError",
+                    "Message": "Stack with id Shared does not exist",
+                }
+            },
+            "DescribeStacks",
+        )
+        agent = self.run_removal({}, stack_error=error)
+        agent.delete_knowledge_base_documents.assert_not_called()
+
+    def test_other_errors_are_raised_for_a_retry(self):
+        error = ClientError(
+            {"Error": {"Code": "Throttling", "Message": "Rate exceeded"}},
+            "DescribeStacks",
+        )
+        with self.assertRaises(ClientError):
+            self.run_removal({}, stack_error=error)

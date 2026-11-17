@@ -66,7 +66,7 @@ Athena에서 SQL을 사용하여 대화 로그를 조회할 수 있습니다. �
 
 ### Bot ID별 쿼리
 
-`bot-id`와 `datehour`을 수정하세요. `bot-id`는 왼쪽 사이드바에 표시되는 Bot Publish API에서 접근할 수 있는 Bot 관리 화면에서 확인할 수 있습니다. URL의 끝부분 `https://xxxx.cloudfront.net/admin/bot/<bot-id>`을 참고하세요.
+`bot-id`와 `datehour`을 수정하세요. `bot-id`는 **관리자 패널** > **봇 분석** 또는 **API 관리**에서 여는 봇 화면의 URL 끝부분(`https://xxxx.cloudfront.net/admin/bot/<bot-id>`)에서 확인할 수 있습니다.
 
 ```sql
 SELECT
@@ -93,7 +93,7 @@ ORDER BY
 
 ### 사용자 ID별 쿼리
 
-`user-id`와 `datehour`을 수정하세요. `user-id`는 Bot 관리 화면에서 확인할 수 있습니다.
+`user-id`와 `datehour`을 수정하세요. `user-id`는 Cognito 사용자 풀에서 사용자의 `sub` 속성입니다(Amazon Cognito 콘솔 > 사용자 풀 > 사용자). 봇 화면에는 소유자 이메일만 표시됩니다.
 
 ```sql
 SELECT

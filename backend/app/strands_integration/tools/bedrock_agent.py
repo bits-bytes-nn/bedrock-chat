@@ -37,7 +37,7 @@ def _invoke_bedrock_agent_standalone(
     try:
         from app.utils import get_bedrock_agent_runtime_client
 
-        runtime_client = get_bedrock_agent_runtime_client()
+        runtime_client = get_bedrock_agent_runtime_client(max_attempts=1)
 
         logger.info(f"Invoking Bedrock Agent: agent_id={agent_id}, alias_id={alias_id}")
 

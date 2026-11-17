@@ -4,6 +4,7 @@ import random
 import re
 import time
 from concurrent.futures import ThreadPoolExecutor
+from urllib.parse import urlparse
 
 import requests
 from app.bedrock import (
@@ -25,6 +26,15 @@ from strands import tool
 from strands.types.tools import AgentTool as StrandsAgentTool
 
 logger = logging.getLogger(__name__)
+
+
+def _web_link(url: str) -> str:
+    """The link of a search result, if it is a web page.
+
+    Other schemes are dropped: an `s3://` link would be presigned with the
+    backend's permissions when the answer is shown.
+    """
+    return url if urlparse(url).scheme in ("http", "https") else ""
 
 
 def _split_locale(locale: str) -> tuple[str, str]:
@@ -73,7 +83,7 @@ def _search_with_duckduckgo_standalone(
         {
             "content": result["body"],
             "source_name": result["title"],
-            "source_link": result["href"],
+            "source_link": _web_link(result["href"]),
         }
         for result in results
     ]
@@ -130,7 +140,7 @@ def _search_with_firecrawl_standalone(
         )
     logger.info("Firecrawl search completed. Found %d results", len(pages))
     return [
-        {"content": summary, "source_name": title, "source_link": url}
+        {"content": summary, "source_name": title, "source_link": _web_link(url)}
         for (title, url, _), summary in zip(pages, summaries)
     ]
 
@@ -220,7 +230,7 @@ def _search_with_tavily(
         {
             "content": result.get("content", ""),
             "source_name": result.get("title", ""),
-            "source_link": result.get("url", ""),
+            "source_link": _web_link(result.get("url", "")),
         }
         for result in results
     ]
@@ -263,7 +273,7 @@ def _search_with_brave(
                 if snippet
             ),
             "source_name": result.get("title", ""),
-            "source_link": result.get("url", ""),
+            "source_link": _web_link(result.get("url", "")),
         }
         for result in results
     ]

@@ -1,8 +1,9 @@
 import json
 import logging
 import os
+import threading
 from datetime import datetime
-from typing import Literal
+from typing import Any, Literal
 
 import boto3
 from botocore.config import Config
@@ -33,20 +34,29 @@ def is_running_on_lambda():
     return "AWS_EXECUTION_ENV" in os.environ
 
 
+_runtime_clients: dict[tuple[str, int], Any] = {}
+_runtime_clients_lock = threading.Lock()
+
+
 def get_bedrock_runtime_client(region=BEDROCK_REGION, max_attempts: int = 1):
     # Synchronous callers sit behind API Gateway's 29-second integration timeout.
     # Retries would also repeat timed-out calls and exceed it, so they fail fast
     # by default.
-    client = boto3.client(
-        "bedrock-runtime",
-        region_name=region,
-        config=Config(
-            connect_timeout=3,
-            read_timeout=23,
-            retries={"mode": "standard", "max_attempts": max_attempts},
-        ),
-    )
-    return client
+    # Clients are reused: creating them is slow, and creating them from the default
+    # session in several threads at once, as page summaries do, is not thread-safe.
+    with _runtime_clients_lock:
+        key = (region, max_attempts)
+        if key not in _runtime_clients:
+            _runtime_clients[key] = boto3.client(
+                "bedrock-runtime",
+                region_name=region,
+                config=Config(
+                    connect_timeout=3,
+                    read_timeout=23,
+                    retries={"mode": "standard", "max_attempts": max_attempts},
+                ),
+            )
+        return _runtime_clients[key]
 
 
 def get_bedrock_agent_client(region=BEDROCK_REGION):
@@ -63,8 +73,18 @@ def get_bedrock_agent_client(region=BEDROCK_REGION):
     return client
 
 
-def get_bedrock_agent_runtime_client(region=BEDROCK_REGION):
-    client = boto3.client("bedrock-agent-runtime", region_name=region)
+def get_bedrock_agent_runtime_client(region=BEDROCK_REGION, max_attempts: int = 3):
+    # Knowledge base retrieval runs before the first token of an answer. Agent
+    # invocations are billed again when retried, so their callers pass 1.
+    client = boto3.client(
+        "bedrock-agent-runtime",
+        region_name=region,
+        config=Config(
+            connect_timeout=3,
+            read_timeout=60,
+            retries={"mode": "standard", "max_attempts": max_attempts},
+        ),
+    )
     return client
 
 

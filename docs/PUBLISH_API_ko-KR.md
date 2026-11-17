@@ -18,7 +18,7 @@
 
 ### API 게시 설정
 
-`PublishAllowed` 사용자로 로그인하고 봇을 생성한 후 `API PublishSettings`를 선택합니다. 공유된 봇만 게시할 수 있다는 점에 유의하세요.
+`PublishAllowed` 사용자로 로그인하고 봇을 생성한 후 봇의 ⋯ 메뉴에서 **API 게시 설정**을 선택합니다. 모든 사용자에게 공유된 봇만 게시할 수 있습니다.
 ![](./imgs/bot_api_publish_screenshot.png)
 
 다음 화면에서 스로틀링과 관련된 여러 매개변수를 구성할 수 있습니다. 자세한 내용은 다음을 참조하세요: [더 나은 처리량을 위한 API 요청 스로틀링](https://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-request-throttling.html).
