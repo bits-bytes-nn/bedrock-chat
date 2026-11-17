@@ -497,6 +497,7 @@ const translation: typeof en = {
         notSupportedFile: '지원되지 않는 파일입니다.',
         duplicatedFile: '같은 이름의 파일이 이미 업로드되어 있습니다.',
         failUpload: '파일을 업로드하지 못했습니다.',
+        failUpdateEssential: '필수 봇 지정을 변경하지 못했습니다.',
         failStar: '즐겨찾기를 변경하지 못했습니다.',
         failDeleteApi: 'API를 삭제하지 못했습니다.',
         failDelete: '봇을 삭제하지 못했습니다.',
@@ -684,6 +685,12 @@ const translation: typeof en = {
       rename: '이름 변경',
       newChat: '새 채팅',
       retry: '다시 시도',
+      download: '다운로드',
+      star: '즐겨찾기에 추가',
+      unstar: '즐겨찾기에서 제거',
+      share: '공유',
+      openInNewTab: '새 탭에서 열기',
+      clear: '지우기',
       backToConversationHistory: '대화 기록으로 돌아가기',
       SaveAndSubmit: '저장 후 전송',
       resend: '다시 보내기',
@@ -935,7 +942,8 @@ const translation: typeof en = {
       api: {
         knowledge_base_syncing:
           '지식 기반을 동기화하는 중입니다. 동기화가 끝난 뒤 다시 시도하세요.',
-        api_publishing: 'API를 게시하는 중입니다. 게시가 끝난 뒤 다시 시도하세요.',
+        api_publishing:
+          'API를 게시하는 중입니다. 게시가 끝난 뒤 다시 시도하세요.',
         dedicated_knowledge_base_limit:
           '전용 지식 기반이 있는 봇은 최대 {{limit}}개까지 만들 수 있습니다. 기존 봇을 삭제하거나 공유 지식 기반을 사용하세요.',
         bot_not_published: '게시되지 않은 봇입니다.',

@@ -9,6 +9,7 @@ import Button from '../../../components/Button';
 import { PiChat } from 'react-icons/pi';
 import MenuBot from '../../../components/MenuBot';
 import { copyBotUrl } from '../../../utils/BotUtils';
+import { clickableProps } from '../../../utils/KeyboardUtils';
 
 type Props = {
   bot: BotMeta;
@@ -72,7 +73,7 @@ const CardBotForDiscover: React.FC<Props> = (props) => {
 
       <div
         className="flex h-28 w-full cursor-pointer flex-col rounded-xl border border-gray bg-white px-4 py-2 transition-colors hover:bg-light-gray dark:border-dark-gray dark:bg-aws-squid-ink-dark"
-        onClick={handleClick}>
+        {...clickableProps(handleClick)}>
         <div className="flex items-center">
           {!props.hidePinnedIcon && (
             <IconPinnedBot
@@ -82,7 +83,7 @@ const CardBotForDiscover: React.FC<Props> = (props) => {
           )}
           <div className="truncate text-base font-bold">{props.bot.title}</div>
         </div>
-        <div className="line-clamp-3 overflow-hidden text-sm italic text-dark-gray dark:text-gray">
+        <div className="line-clamp-3 overflow-hidden text-sm text-dark-gray italic dark:text-gray">
           {props.bot.description === ''
             ? t('bot.label.noDescription')
             : props.bot.description}

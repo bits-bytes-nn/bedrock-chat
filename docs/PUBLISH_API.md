@@ -18,7 +18,7 @@ For governance reasons, only limited users are able to publish bots. Before publ
 
 ### API Publish Settings
 
-After logging in as a `PublishAllowed` user and create a bot, choose `API PublishSettings`. Note that only a shared bot can be published.
+After logging in as a `PublishAllowed` user and creating a bot, choose **API Publish Settings** in the bot's ⋯ menu. Only bots shared with all users can be published.
 ![](./imgs/bot_api_publish_screenshot.png)
 
 On the following screen, we can configure several parameters regarding throttling. For the detail, please also see: [Throttle API requests for better throughput](https://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-request-throttling.html).
@@ -42,7 +42,7 @@ Client needs to set `x-api-key` on the request header.
 
 Published APIs keep the backend version and stack settings they were published with. After upgrading Bedrock Chat, publish each API again to update it. For example, an API published before Tavily and Brave Search were added fails to load a bot that uses them, and searches with DuckDuckGo once the bot's Firecrawl settings are saved again.
 
-`GET /conversation/{conversationId}/{messageId}` returns 404 while the answer is not ready, and 500 with the reason when it could not be generated. The API stack has `FailedAnswers` and `ChatQueueDlqMessages` alarms for such failures and alarms for errors of its Lambda functions; they notify the chat stack's `AlarmTopicArn` topic. Requests with `continueGenerate` are rejected with 400, and a message larger than the queue limit of 1 MiB with 413. Answers are generated with limited concurrency, so a burst of requests waits in the queue. A failed answer is retried once, about 30 seconds later; invalid requests, missing bots, messages or conversations that are too large and conversations too long for the model fail at once.
+`GET /conversation/{conversationId}/{messageId}` returns 404 while the answer is not ready, and 500 with the reason when it could not be generated. The API stack has `FailedAnswers` and `ChatQueueDlqMessages` alarms for such failures and alarms for errors of its Lambda functions; they notify the chat stack's `AlarmTopicArn` topic. Requests with `continueGenerate` are rejected with 400, and a message larger than the queue limit of 1 MiB with 413. Answers are generated with limited concurrency, so a burst of requests waits in the queue. All API keys of one published API share its conversations: a client that knows a conversation ID can read and continue it with any key of the API, so give clients that must not see each other's conversations their own published bot, and let the API create conversation IDs instead of choosing guessable ones. A failed answer is retried once, about 30 seconds later; invalid requests, missing bots, messages or conversations that are too large and conversations too long for the model fail at once.
 
 Without throttling settings, a published API allows 10 requests per second with a burst of 20, so that a leaked key cannot run up model costs unchecked. Throttling (rate and burst) and quota (limit and period) must each be set completely or not at all; otherwise the publish request is rejected (422).
 

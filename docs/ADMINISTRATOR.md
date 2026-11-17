@@ -8,7 +8,7 @@ The admin user must be a member of group called `Admin`, which can be set up via
 
 ## Mark public bots as Essential
 
-Public bots can be marked as "Essential" by administrators. Bots marked as Essential will be featured in the "Essential" section of the bot store, making them easily accessible to users. This allows administrators to pin important bots that they want all users to use.
+Public bots can be marked as "Essential" by administrators. Bots marked as Essential will be featured in the "Essential" section of the bot store, making them easily accessible to users. This allows administrators to pin important bots that they want all users to use. Only bots shared with all users can be marked: choose **Mark as Essential** in the bot's ⋯ menu.
 
 ### Examples
 
@@ -66,7 +66,7 @@ You can query the conversation logs by Athena, using SQL. To download logs, open
 
 ### Query per Bot ID
 
-Edit `bot-id` and `datehour`. `bot-id` can be referred on Bot Management screen, where can be accessed from Bot Publish APIs, showing on the left sidebar. Note the end part of the URL like `https://xxxx.cloudfront.net/admin/bot/<bot-id>`.
+Edit `bot-id` and `datehour`. `bot-id` is shown in the URL of the bot's page, which opens from **Admin Panel** > **Bot Analytics** or **API Management**: `https://xxxx.cloudfront.net/admin/bot/<bot-id>`.
 
 ```sql
 SELECT
@@ -93,7 +93,7 @@ ORDER BY
 
 ### Query per User ID
 
-Edit `user-id` and `datehour`. `user-id` can be referred on Bot Management screen.
+Edit `user-id` and `datehour`. `user-id` is the user's `sub` attribute in the Cognito user pool (Amazon Cognito console > User pools > Users); the bot pages show only the owner's email.
 
 ```sql
 SELECT

@@ -206,6 +206,7 @@ const BotExplorePage: React.FC = () => {
                       className="mr-1"
                     />
                     <ButtonIcon
+                      label={t('button.share')}
                       className="-mr-3"
                       onClick={() => {
                         onClickShare(bot.id);

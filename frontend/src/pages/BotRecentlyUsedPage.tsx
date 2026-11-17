@@ -184,6 +184,7 @@ const BotRecentlyUsedPage: React.FC = () => {
                         className="mr-2"
                       />
                       <ButtonIcon
+                        label={t('button.share')}
                         className="-mr-3"
                         onClick={() => {
                           onClickShare(bot.id);

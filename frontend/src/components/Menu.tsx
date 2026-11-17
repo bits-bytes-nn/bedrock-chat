@@ -102,25 +102,27 @@ const MenuSettings: React.FC<Props> = (props) => {
             </div>
           </div>
 
-          <div
-            className="flex w-full cursor-pointer items-center p-2 hover:bg-aws-sea-blue-hover-light dark:hover:bg-aws-paper-dark"
+          <button
+            type="button"
+            className="flex w-full cursor-pointer items-center p-2 text-left hover:bg-aws-sea-blue-hover-light dark:hover:bg-aws-paper-dark"
             onClick={() => {
               setIsOpen(false);
               props.onClickDrawerOptions();
             }}>
             <PiSidebar className="mr-2" />
             {t('button.drawerOption')}
-          </div>
+          </button>
 
-          <div
-            className="flex w-full cursor-pointer items-center p-2 hover:bg-aws-sea-blue-hover-light dark:hover:bg-aws-paper-dark"
+          <button
+            type="button"
+            className="flex w-full cursor-pointer items-center p-2 text-left hover:bg-aws-sea-blue-hover-light dark:hover:bg-aws-paper-dark"
             onClick={() => {
               setIsOpen(false);
               props.onSelectLanguage();
             }}>
             <PiTranslate className="mr-2" />
             {t('button.language')}
-          </div>
+          </button>
 
           <div className="flex w-full items-center px-2 hover:bg-aws-sea-blue-hover-light dark:hover:bg-aws-paper-dark">
             {isDarkTheme ? (
@@ -131,6 +133,7 @@ const MenuSettings: React.FC<Props> = (props) => {
             <div className="flex w-full items-center justify-between">
               <span>{t('button.mode')}</span>
               <Toggle
+                ariaLabel={t('button.mode')}
                 value={isDarkTheme}
                 onChange={(isDarkTheme) => {
                   changeTheme(isDarkTheme);
@@ -138,21 +141,23 @@ const MenuSettings: React.FC<Props> = (props) => {
               />
             </div>
           </div>
-          <div
-            className="flex w-full cursor-pointer items-center border-t p-2 hover:bg-aws-sea-blue-hover-light dark:hover:bg-aws-paper-dark"
+          <button
+            type="button"
+            className="flex w-full cursor-pointer items-center border-t p-2 text-left hover:bg-aws-sea-blue-hover-light dark:hover:bg-aws-paper-dark"
             onClick={() => {
               setIsOpen(false);
               props.onClearConversations();
             }}>
             <PiTrash className="mr-2" />
             {t('button.clearConversation')}
-          </div>
-          <div
-            className="flex w-full cursor-pointer items-center border-t p-2 hover:bg-aws-sea-blue-hover-light dark:hover:bg-aws-paper-dark"
+          </button>
+          <button
+            type="button"
+            className="flex w-full cursor-pointer items-center border-t p-2 text-left hover:bg-aws-sea-blue-hover-light dark:hover:bg-aws-paper-dark"
             onClick={props.onSignOut}>
             <PiSignOut className="mr-2" />
             {t('button.signOut')}
-          </div>
+          </button>
         </div>
       )}
     </>

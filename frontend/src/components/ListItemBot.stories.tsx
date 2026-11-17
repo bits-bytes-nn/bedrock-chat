@@ -78,9 +78,9 @@ export const MyBots = () => {
   const { t } = useTranslation();
   const [myBots, setMyBots] = useState(bots);
   return (
-    <div className="h-4/5 overflow-x-hidden overflow-y-scroll border-b border-gray pr-1 scrollbar-thin">
+    <div className="h-4/5 scrollbar-thin overflow-x-hidden overflow-y-scroll border-b border-gray pr-1">
       {myBots.length === 0 && (
-        <div className="flex size-full items-center justify-center italic text-dark-gray dark:text-light-gray">
+        <div className="flex size-full items-center justify-center text-dark-gray italic dark:text-light-gray">
           {t('bot.label.noBots')}
         </div>
       )}
@@ -103,7 +103,10 @@ export const MyBots = () => {
               {bot.sharedScope === 'all' ? (
                 <div className="flex items-center">
                   <PiUsers className="mr-1" />
-                  <ButtonIcon className="-mr-3" onClick={() => {}}>
+                  <ButtonIcon
+                    label="Share"
+                    className="-mr-3"
+                    onClick={() => {}}>
                     <PiLink />
                   </ButtonIcon>
                 </div>
@@ -116,11 +119,17 @@ export const MyBots = () => {
 
             <div className="mr-5">
               {bot.isStarred ? (
-                <ButtonIcon disabled={!bot.available} onClick={() => {}}>
+                <ButtonIcon
+                  label="Unstar"
+                  disabled={!bot.available}
+                  onClick={() => {}}>
                   <PiStarFill className="text-aws-aqua" />
                 </ButtonIcon>
               ) : (
-                <ButtonIcon disabled={!bot.available} onClick={() => {}}>
+                <ButtonIcon
+                  label="Star"
+                  disabled={!bot.available}
+                  onClick={() => {}}>
                   <PiStar />
                 </ButtonIcon>
               )}
@@ -165,9 +174,9 @@ export const RecentlyUsedSharedBots = () => {
   const { t } = useTranslation();
   const [recentlyUsedSharedBots, setRecentlyUsedSharedBots] = useState(bots);
   return (
-    <div className="h-4/5 overflow-y-scroll border-b border-gray  pr-1 scrollbar-thin">
+    <div className="h-4/5 scrollbar-thin overflow-y-scroll border-b border-gray pr-1">
       {recentlyUsedSharedBots.length === 0 && (
-        <div className="flex size-full items-center justify-center italic text-dark-gray dark:text-light-gray">
+        <div className="flex size-full items-center justify-center text-dark-gray italic dark:text-light-gray">
           {t('bot.label.noBotsRecentlyUsed')}
         </div>
       )}
@@ -178,15 +187,22 @@ export const RecentlyUsedSharedBots = () => {
           onClick={() => {}}
           className="last:border-b-0">
           {bot.isStarred ? (
-            <ButtonIcon disabled={!bot.available} onClick={() => {}}>
+            <ButtonIcon
+              label="Unstar"
+              disabled={!bot.available}
+              onClick={() => {}}>
               <PiStarFill className="text-aws-aqua" />
             </ButtonIcon>
           ) : (
-            <ButtonIcon disabled={!bot.available} onClick={() => {}}>
+            <ButtonIcon
+              label="Star"
+              disabled={!bot.available}
+              onClick={() => {}}>
               <PiStar />
             </ButtonIcon>
           )}
           <ButtonIcon
+            label="Remove"
             className="text-red"
             onClick={() => {
               setRecentlyUsedSharedBots((current) =>
@@ -228,7 +244,7 @@ export const ApiManagement = () => {
     },
   ];
   return (
-    <div className="h-4/5 overflow-x-hidden overflow-y-scroll border-b border-gray pr-1 scrollbar-thin">
+    <div className="h-4/5 scrollbar-thin overflow-x-hidden overflow-y-scroll border-b border-gray pr-1">
       {botApis?.map((api, idx) => (
         <ListItemBot key={idx} bot={api} onClick={() => {}}>
           <div className="flex flex-col items-end gap-2">
@@ -299,7 +315,7 @@ export const Analytics = () => {
     },
   ];
   return (
-    <div className="h-4/5 overflow-x-hidden overflow-y-scroll border-b border-gray pr-1 scrollbar-thin">
+    <div className="h-4/5 scrollbar-thin overflow-x-hidden overflow-y-scroll border-b border-gray pr-1">
       {sortedBots?.map((bot, idx) => (
         <ListItemBot key={idx} bot={bot} onClick={() => {}}>
           <div className="relative flex h-full items-center">
@@ -307,7 +323,7 @@ export const Analytics = () => {
               {(Math.floor(bot.totalPrice * 100) / 100).toFixed(2)} USD
             </div>
 
-            <div className="absolute bottom-0 right-0 flex origin-bottom-right whitespace-nowrap text-xs font-light">
+            <div className="absolute right-0 bottom-0 flex origin-bottom-right text-xs font-light whitespace-nowrap">
               {bot.isPublished ? (
                 <>
                   {bot.isPublished

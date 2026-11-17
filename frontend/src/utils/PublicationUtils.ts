@@ -22,3 +22,11 @@ export const isDeploying = (publication: DeployStatus): boolean =>
   !hasDeployFailed(publication) &&
   (publication.codebuildStatus === 'IN_PROGRESS' ||
     publication.cfnStatus.endsWith('_IN_PROGRESS'));
+
+/**
+ * Whether an allowed origin of a published API is valid: `*`, or an http(s)
+ * origin whose host may hold `*` wildcards, with an optional port. The backend
+ * accepts only `*` and values that start with `http://` or `https://`.
+ */
+export const isValidOrigin = (origin: string): boolean =>
+  /^(\*|https?:\/\/[A-Za-z0-9.*-]+(:\d+)?)$/.test(origin);

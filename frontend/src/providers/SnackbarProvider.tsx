@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useEffect } from 'react';
 import { PiWarningFill, PiX } from 'react-icons/pi';
 import ButtonIcon from '../components/ButtonIcon';
@@ -11,6 +12,7 @@ type Props = {
 const SNACKBAR_DURATION_MS = 5000;
 
 const SnackbarProvider: React.FC<Props> = ({ children }) => {
+  const { t } = useTranslation();
   const { isOpen, close, message, openCount } = useSnackbar();
 
   useEffect(() => {
@@ -24,7 +26,7 @@ const SnackbarProvider: React.FC<Props> = ({ children }) => {
 
   return (
     <>
-      <div className="fixed left-0 top-0 z-50 w-full lg:left-1/3 lg:w-1/2">
+      <div className="fixed top-0 left-0 z-50 w-full lg:left-1/3 lg:w-1/2">
         <Transition
           show={isOpen}
           enter="transform transition duration-75"
@@ -36,13 +38,13 @@ const SnackbarProvider: React.FC<Props> = ({ children }) => {
           <div className="">
             <div
               role="alert"
-              className="mx-4 mt-4 flex justify-between rounded-sm bg-red p-3  text-sm text-aws-font-color-white-light shadow-lg">
+              className="mx-4 mt-4 flex justify-between rounded-sm bg-red p-3 text-sm text-aws-font-color-white-light shadow-lg">
               <div className="mr-3 text-3xl">
                 <PiWarningFill />
               </div>
               <div className="grow">{message}</div>
-              <div className="-mr-2 -mt-2">
-                <ButtonIcon onClick={close}>
+              <div className="-mt-2 -mr-2">
+                <ButtonIcon label={t('button.close')} onClick={close}>
                   <PiX />
                 </ButtonIcon>
               </div>

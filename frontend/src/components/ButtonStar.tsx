@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React from 'react';
 import ButtonIcon from './ButtonIcon';
 import { PiStar, PiStarFill } from 'react-icons/pi';
@@ -11,8 +12,10 @@ type Props = BaseProps & {
 };
 
 const ButtonStar: React.FC<Props> = (props) => {
+  const { t } = useTranslation();
   return (
     <ButtonIcon
+      label={props.isStarred ? t('button.unstar') : t('button.star')}
       className={twMerge(props.className)}
       disabled={props.disabled}
       onClick={props.onClick}>

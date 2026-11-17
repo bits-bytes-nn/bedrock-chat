@@ -318,3 +318,18 @@ def test_duckduckgo_errors_tell_the_model_why(error, reason):
     with patch("duckduckgo_search.DDGS", return_value=ddgs):
         with pytest.raises(internet_search.SearchApiError, match=reason):
             internet_search._search_with_duckduckgo_standalone("q", "", "en")
+
+
+@pytest.mark.parametrize(
+    "url, link",
+    [
+        ("https://example.com/a", "https://example.com/a"),
+        ("http://example.com", "http://example.com"),
+        # Would be presigned with the backend's permissions when shown.
+        ("s3://other-bucket/key", ""),
+        ("javascript:alert(1)", ""),
+        ("", ""),
+    ],
+)
+def test_only_web_links_are_kept(url, link):
+    assert internet_search._web_link(url) == link

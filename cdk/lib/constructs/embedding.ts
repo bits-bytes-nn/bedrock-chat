@@ -683,6 +683,31 @@ export class Embedding extends Construct {
         "secretsmanager:DeleteSecret",
       ])
     );
+    // The bot's documents in the shared knowledge bases, which stay for other bots.
+    const sharedStackName = sharedKnowledgeBasesStackName(props.envPrefix);
+    removeHandlerRole.addToPolicy(
+      new iam.PolicyStatement({
+        actions: ["cloudformation:DescribeStacks"],
+        resources: [
+          `arn:${Stack.of(this).partition}:cloudformation:${props.bedrockRegion}:${
+            Stack.of(this).account
+          }:stack/${sharedStackName}/*`,
+        ],
+      })
+    );
+    removeHandlerRole.addToPolicy(
+      new iam.PolicyStatement({
+        actions: [
+          "bedrock:ListKnowledgeBaseDocuments",
+          "bedrock:DeleteKnowledgeBaseDocuments",
+        ],
+        resources: [
+          `arn:${Stack.of(this).partition}:bedrock:${props.bedrockRegion}:${
+            Stack.of(this).account
+          }:knowledge-base/*`,
+        ],
+      })
+    );
     props.database.botTable.grantStreamRead(removeHandlerRole);
     props.documentBucket.grantReadWrite(removeHandlerRole);
     props.largeMessageBucket.grantRead(removeHandlerRole);
@@ -711,6 +736,7 @@ export class Embedding extends Construct {
         TABLE_ACCESS_ROLE_ARN: props.database.tableAccessRole.roleArn,
         DOCUMENT_BUCKET: props.documentBucket.bucketName,
         LARGE_MESSAGE_BUCKET: props.largeMessageBucket.bucketName,
+        SHARED_KNOWLEDGE_BASES_STACK_NAME: sharedStackName,
       },
       role: removeHandlerRole,
       logGroup: lambdaLogGroup(this, "BotRemovalHandlerLogGroup", removeHandlerRole),

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Dialog, Transition } from '@headlessui/react';
 import { Fragment, useCallback } from 'react';
 import { BaseProps } from '../@types/common';
@@ -15,6 +16,7 @@ type Props = BaseProps & {
 };
 
 const ModalDialog: React.FC<Props> = (props) => {
+  const { t } = useTranslation();
   const onClose = useCallback(() => {
     if (props.onClose) {
       props.onClose();
@@ -66,13 +68,14 @@ const ModalDialog: React.FC<Props> = (props) => {
                   {props.title && (
                     <Dialog.Title
                       as="h3"
-                      className="border-b pb-2 text-lg font-medium leading-6 text-aws-font-color-light dark:text-aws-font-color-white-dark">
+                      className="border-b pb-2 text-lg leading-6 font-medium text-aws-font-color-light dark:text-aws-font-color-white-dark">
                       {props.title}
                     </Dialog.Title>
                   )}
                   {props.showCloseIcon && (
                     <ButtonIcon
-                      className="absolute right-2 top-2"
+                      label={t('button.close')}
+                      className="absolute top-2 right-2"
                       onClick={onClose}>
                       <PiX />
                     </ButtonIcon>

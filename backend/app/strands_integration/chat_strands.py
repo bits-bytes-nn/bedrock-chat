@@ -13,14 +13,19 @@ from app.repositories.models.custom_bot import (
     BotModel,
     GenerationParamsModel,
 )
-from app.routes.schemas.conversation import ChatInput
+from app.routes.schemas.conversation import ChatInput, type_model_name
 from app.strands_integration.agent import create_strands_agent
 from app.strands_integration.converters import (
     simple_message_models_to_strands_messages,
     strands_message_to_simple_message_model,
     strands_message_to_message_model,
 )
-from app.strands_integration.handlers import ToolResultCapture, create_callback_handler
+from app.metrics import emit_chat_cost
+from app.strands_integration.handlers import (
+    ModelCallLimit,
+    ToolResultCapture,
+    create_callback_handler,
+)
 from app.stream import OnStopInput, OnThinking
 from app.utils import get_current_time
 from app.vector_search import (
@@ -92,7 +97,7 @@ def converse_with_strands(
         guardrail=guardrail,
         enable_reasoning=chat_input.enable_reasoning,
         prompt_caching_enabled=prompt_caching_enabled,
-        hooks=[tool_capture],
+        hooks=[tool_capture, ModelCallLimit()],
     )
 
     thinking_log: list[SimpleMessageModel] = []
@@ -135,6 +140,11 @@ def converse_with_strands(
                 agent.messages[-1],
                 agent.event_loop_metrics,
             )
+        except Exception:
+            # The model calls before the failure are billed, and the cost is
+            # otherwise emitted only for a finished answer.
+            emit_chat_cost(_price(chat_input.message.model, agent.event_loop_metrics))
+            raise
 
     stop_reason, result_message, metrics = run_agent(agent)
 
@@ -152,13 +162,7 @@ def converse_with_strands(
     cache_read_input_tokens = metrics.accumulated_usage.get("cacheReadInputTokens", 0)
     cache_write_input_tokens = metrics.accumulated_usage.get("cacheWriteInputTokens", 0)
 
-    price = calculate_price(
-        model=chat_input.message.model,
-        input_tokens=input_tokens,
-        output_tokens=output_tokens,
-        cache_read_input_tokens=cache_read_input_tokens,
-        cache_write_input_tokens=cache_write_input_tokens,
-    )
+    price = _price(chat_input.message.model, metrics)
 
     logger.info(f"token count: {json.dumps({
             'input': input_tokens,
@@ -176,4 +180,15 @@ def converse_with_strands(
         cache_read_input_count=cache_read_input_tokens,
         cache_write_input_count=cache_write_input_tokens,
         price=price,
+    )
+
+
+def _price(model: type_model_name, metrics: EventLoopMetrics) -> float:
+    usage = metrics.accumulated_usage
+    return calculate_price(
+        model=model,
+        input_tokens=usage.get("inputTokens", 0),
+        output_tokens=usage.get("outputTokens", 0),
+        cache_read_input_tokens=usage.get("cacheReadInputTokens", 0),
+        cache_write_input_tokens=usage.get("cacheWriteInputTokens", 0),
     )

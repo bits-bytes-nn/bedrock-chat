@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Popover, Transition } from '@headlessui/react';
 import React, { Fragment, ReactNode, useMemo } from 'react';
 import { PiDotsThreeOutlineFill } from 'react-icons/pi';
@@ -10,6 +11,7 @@ type Props = {
 };
 
 const PopoverMenu: React.FC<Props> = (props) => {
+  const { t } = useTranslation();
   const origin = useMemo(() => {
     if (props.target === 'bottom-left') {
       return 'left-0';
@@ -27,7 +29,9 @@ const PopoverMenu: React.FC<Props> = (props) => {
             className={`${
               props.className ?? ''
             } group inline-flex items-center rounded-lg border border-aws-squid-ink-light/50 bg-aws-paper-light p-1 px-3 text-base hover:brightness-75 disabled:hover:brightness-100 dark:border-aws-font-color-gray/50 dark:bg-aws-paper-dark`}
-            disabled={props.disabled}>
+            disabled={props.disabled}
+            aria-label={t('button.menu')}
+            title={t('button.menu')}>
             <PiDotsThreeOutlineFill />
           </Popover.Button>
           <Transition
@@ -40,7 +44,7 @@ const PopoverMenu: React.FC<Props> = (props) => {
             leaveTo="opacity-0 translate-y-1">
             <Popover.Panel className={`absolute z-10 ${origin}`}>
               <div className="mt-0.5 overflow-hidden shadow-lg">
-                <div className="flex flex-col whitespace-nowrap rounded-sm border border-aws-font-color-light/50 bg-aws-paper-light text-sm dark:border-aws-font-color-dark/50 dark:bg-aws-paper-dark">
+                <div className="flex flex-col rounded-sm border border-aws-font-color-light/50 bg-aws-paper-light text-sm whitespace-nowrap dark:border-aws-font-color-dark/50 dark:bg-aws-paper-dark">
                   {props.children}
                 </div>
               </div>
