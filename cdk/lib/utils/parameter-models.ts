@@ -59,6 +59,9 @@ const BaseParametersSchema = z.object({
 
   // Bedrock configuration
   bedrockRegion: z.string().default("us-east-1"),
+  // Region of AgentCore Web Search, the internet search engine without an API key.
+  // It is offered in fewer Regions than Bedrock models. Empty uses bedrockRegion.
+  webSearchRegion: z.string().default(""),
   enableBedrockGlobalInference: contextBoolean.default(true),
   enableBedrockCrossRegionInference: contextBoolean.default(true),
 });
@@ -160,7 +163,7 @@ const BedrockChatParametersSchema = BaseParametersSchema.extend({
   // Internet search of chats without a bot. Empty turns it off. An engine with an
   // API key gets a secret in the stack, which the admin fills in after the deploy.
   defaultChatSearchEngine: z
-    .enum(["", "duckduckgo", ...SEARCH_API_ENGINES])
+    .enum(["", "duckduckgo", "agentcore", ...SEARCH_API_ENGINES])
     .default(""),
 
   // Frontend branding
@@ -307,6 +310,7 @@ export function resolveBedrockChatParameters(
     envName,
     envPrefix,
     bedrockRegion: app.node.tryGetContext("bedrockRegion"),
+    webSearchRegion: app.node.tryGetContext("webSearchRegion"),
     enableFrontendWaf: app.node.tryGetContext("enableFrontendWaf"),
     enableFrontendIpv6: app.node.tryGetContext("enableFrontendIpv6"),
     allowedIpV4AddressRanges: app.node.tryGetContext(
@@ -417,6 +421,7 @@ export function resolveApiPublishParameters(): ApiPublishParameters {
     envName: getEnvVar("ENV_NAME"),
     envPrefix: getEnvVar("ENV_PREFIX"),
     bedrockRegion: getEnvVar("BEDROCK_REGION"),
+    webSearchRegion: getEnvVar("WEB_SEARCH_REGION"),
     enableBedrockGlobalInference: getBooleanEnvVar(
       "ENABLE_BEDROCK_GLOBAL_INFERENCE"
     ),

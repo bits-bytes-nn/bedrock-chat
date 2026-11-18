@@ -66,6 +66,7 @@ const chat = new BedrockChatStack(
     envPrefix: params.envPrefix,
     crossRegionReferences: true,
     bedrockRegion: params.bedrockRegion,
+    webSearchRegion: params.webSearchRegion,
     webAclId: waf ? waf.webAclArn.value : '',
     enableIpV6: params.enableFrontendIpv6 && params.allowedIpV6AddressRanges.length > 0,
     identityProviders: params.identityProviders,

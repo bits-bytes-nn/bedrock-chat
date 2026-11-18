@@ -627,7 +627,7 @@ bedrockChatParams.set("default", {
 
 ### Internet Search in Chats Without a Bot
 
-Chats without a bot have no tools by default. Set `defaultChatSearchEngine` to give them the [internet search tool](./docs/AGENT.md) with one engine for the whole deployment: `duckduckgo` (no API key), `tavily`, `brave` or `firecrawl`. This parameter is not in `cdk.json`, so set it in `parameter.ts`, `cdk/cdk.context.json` or with `-c defaultChatSearchEngine=tavily`. With `bin.sh`, pass `--cdk-json-override '{"context": {"defaultChatSearchEngine": "tavily"}}'` on every run. A deploy without the value turns the search off and deletes the secret with the key.
+Chats without a bot have no tools by default. Set `defaultChatSearchEngine` to give them the [internet search tool](./docs/AGENT.md) with one engine for the whole deployment: `duckduckgo` or `agentcore` (no API key), `tavily`, `brave` or `firecrawl`. This parameter is not in `cdk.json`, so set it in `parameter.ts`, `cdk/cdk.context.json` or with `-c defaultChatSearchEngine=tavily`. With `bin.sh`, pass `--cdk-json-override '{"context": {"defaultChatSearchEngine": "tavily"}}'` on every run. A deploy without the value turns the search off and deletes the secret with the key.
 
 For an engine with an API key, the stack creates an empty secret and shows its name in the output `DefaultChatSearchApiKeySecretName`. Put the key in after the deploy; later deploys keep it. Write the key to a file instead of the command line, so that it stays out of the shell history:
 
@@ -636,6 +636,8 @@ For an engine with an API key, the stack creates an empty secret and shows its n
 aws secretsmanager put-secret-value --secret-id <DefaultChatSearchApiKeySecretName> --secret-string file://key.json
 rm key.json
 ```
+
+[AgentCore Web Search](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/web-search-api.html) (`agentcore`) is authorized with IAM instead of a key and billed to the AWS account per query (see [AgentCore pricing](https://aws.amazon.com/bedrock/agentcore/pricing/)). It is offered in fewer Regions than Bedrock models, so set `webSearchRegion` to one of them when `bedrockRegion` is not, for example `ap-northeast-1` for `ap-northeast-2`; the search query then leaves `bedrockRegion`. Bots can choose it too, so the chat handlers can always call it in that Region. It takes no locale, and a time limit keeps only pages with a publication date. Its terms require showing the sources of the results with an answer that uses them; the app shows them with the answer.
 
 Until the key is set, searches fail and the model answers without them. Changing the engine replaces the secret, so put the key of the new engine in again. Models without tool use get no search. Answers of chats without a bot do not cite their sources inline; the search results are shown with the answer.
 

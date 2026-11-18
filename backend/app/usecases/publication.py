@@ -107,8 +107,13 @@ def create_bot_publication(user: User, bot_id: str, bot_publish_input: BotPublis
             bot_publish_input.allowed_origins
         )
 
-    # The published API enforces the same model settings as the main API.
-    for name in ("GLOBAL_AVAILABLE_MODELS", "DEFAULT_MODEL", "TITLE_MODEL"):
+    # The published API enforces the same model and search settings as the main API.
+    for name in (
+        "GLOBAL_AVAILABLE_MODELS",
+        "DEFAULT_MODEL",
+        "TITLE_MODEL",
+        "WEB_SEARCH_REGION",
+    ):
         if os.environ.get(name):
             environment_variables[name] = os.environ[name]
 

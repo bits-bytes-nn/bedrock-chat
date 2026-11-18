@@ -184,6 +184,10 @@ const translation = {
               label: 'DuckDuckGo (For Trial)',
               hint: 'Limited rate, but free to use. Designed for trial use.',
             },
+            agentcore: {
+              label: 'Amazon Bedrock AgentCore Web Search',
+              hint: 'Search on Amazon\'s web index, billed to the AWS account per query. No API key is required. https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/web-search-api.html',
+            },
             firecrawl: {
               label: 'Firecrawl (For Business)',
               hint: 'Rate limits can be expanded. Designed for business use. API key is required. https://www.firecrawl.dev/',

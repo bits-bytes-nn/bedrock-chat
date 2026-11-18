@@ -333,3 +333,60 @@ def test_duckduckgo_errors_tell_the_model_why(error, reason):
 )
 def test_only_web_links_are_kept(url, link):
     assert internet_search._web_link(url) == link
+
+
+def search_with_agentcore(results=None, error=None, **kwargs):
+    client = MagicMock()
+    if error is not None:
+        client.invoke_web_search.side_effect = error
+    else:
+        client.invoke_web_search.return_value = {"results": results or []}
+    tool = internet_search.create_internet_search_tool(bot_with("agentcore"))
+    with patch.object(internet_search, "get_web_search_client", return_value=client):
+        return tool(**kwargs), client
+
+
+def test_agentcore_web_search_needs_no_key():
+    result, client = search_with_agentcore(
+        [
+            {"text": "sunny", "title": "T", "url": "https://t"},
+            # Title and URL are optional in the response.
+            {"text": "rain"},
+        ],
+        query="weather",
+        time_limit="w",
+    )
+
+    request = client.invoke_web_search.call_args.kwargs
+    assert request["webSearchId"] == "web-search.v1"
+    assert request["searchQuery"] == "weather"
+    after = request["filters"]["publishedDateFilter"]["publishedAfter"]
+    assert after.tzinfo is not None
+    assert result["content"] == [
+        {"json": {"content": "sunny", "source_name": "T", "source_link": "https://t"}},
+        {"json": {"content": "rain", "source_name": "", "source_link": ""}},
+    ]
+
+
+def test_agentcore_web_search_without_a_time_limit_has_no_filters():
+    _, client = search_with_agentcore(query="weather", time_limit="")
+    assert "filters" not in client.invoke_web_search.call_args.kwargs
+
+
+def test_agentcore_web_search_tells_the_model_to_shorten_a_long_query():
+    result, client = search_with_agentcore(query="q" * 201)
+    client.invoke_web_search.assert_not_called()
+    assert result["status"] == "error"
+    assert "200 characters" in result["content"][0]["text"]
+
+
+def test_agentcore_web_search_errors_name_only_the_code():
+    from botocore.exceptions import ClientError
+
+    error = ClientError(
+        {"Error": {"Code": "AccessDeniedException", "Message": "secret detail"}},
+        "InvokeWebSearch",
+    )
+    result, _ = search_with_agentcore(error=error, query="weather")
+    text = result["content"][0]["text"]
+    assert "AccessDeniedException" in text and "secret detail" not in text

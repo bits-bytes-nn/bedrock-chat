@@ -137,6 +137,27 @@ upstream에서 업그레이드하는 경우:
 
 동기화 중에도 봇을 삭제할 수 있습니다. 동기화가 끝나면 삭제된 봇을 위해 만든 지식 기반 스택을 삭제합니다. 삭제 요청이 실패하면 동기화 상태 업데이트 실패 알람이 울립니다. 요청 뒤 스택 삭제 자체가 실패(`DELETE_FAILED`)하면 알람이 울리지 않습니다([Alarms and API Throttling](../README.md#alarms-and-api-throttling)). Bedrock 리전에서 봇이 더 이상 없는 `BrChatKbStack*` 스택을 찾아 삭제하세요.
 
+## 봇 삭제 복구
+
+봇을 삭제하면 관련 리소스는 비동기로 지워집니다. 지식 베이스 스택, 게시된 API, 공유 지식 베이스의 문서, 파일, 검색 API 키, API 클라이언트의 대화가 대상입니다. 삭제 핸들러는 실패한 레코드를 최대 12시간 동안 5번 다시 시도하고, 그래도 실패하면 봇 삭제 DLQ로 보냅니다. 이때 `BotRemovalFailures` 알람이 울립니다([Alarms and API Throttling](../README.md#alarms-and-api-throttling)).
+
+DLQ 메시지에는 DynamoDB 스트림의 위치만 있고 봇 정보는 없습니다. 복구 절차는 다음과 같습니다.
+
+1. `BotRemovalHandler` 함수의 로그에서 `Failed to clean up bot <봇 ID> of user <사용자 ID>`와 실패한 단계의 오류를 찾습니다.
+2. 원인을 해결합니다. 예를 들어 `DELETE_FAILED` 상태의 스택은 Bedrock 리전의 CloudFormation에서 삭제하고, 권한이 없으면 권한을 추가합니다.
+3. 해당 봇에 대해 핸들러를 다시 실행합니다. 모든 단계가 멱등이므로 이미 끝난 단계는 아무 일도 하지 않습니다.
+
+   ```sh
+   cat > removal.json <<JSON
+   {"Records": [{"dynamodb": {"Keys": {"PK": {"S": "<사용자 ID>"}, "SK": {"S": "BOT#<봇 ID>"}}}}]}
+   JSON
+   aws lambda invoke --function-name <BotRemovalHandler 함수 이름> \
+     --cli-binary-format raw-in-base64-out --payload file://removal.json result.json
+   ```
+
+   `result.json`이 `null`이고 출력에 `FunctionError`가 없으면 성공입니다.
+4. 알람이 해제되도록 DLQ에서 메시지를 삭제합니다.
+
 ## 사용자 데이터 삭제
 
 Cognito에서 사용자를 삭제해도 그 사용자의 대화와 봇은 삭제되지 않습니다. 이를 삭제하려면 `backend`에서 [delete_user_data.py](../backend/scripts/delete_user_data.py)를 실행하세요. 테이블 이름과 대용량 메시지 버킷은 `BedrockChatStack` 출력에서 확인합니다.

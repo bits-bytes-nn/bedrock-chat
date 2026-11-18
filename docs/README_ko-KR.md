@@ -503,7 +503,9 @@ bedrockChatParams.set("default", {
 
 ### 봇 없는 대화의 인터넷 검색
 
-봇 없이 시작한 대화에는 기본으로 도구가 없습니다. `defaultChatSearchEngine`을 설정하면 배포 전체에서 엔진 하나를 쓰는 [인터넷 검색 도구](./AGENT_ko-KR.md)가 켜집니다. 값은 `duckduckgo`(API 키 불필요), `tavily`, `brave`, `firecrawl` 중 하나입니다. 이 파라미터는 `cdk.json`에 없으므로 `parameter.ts`, `cdk/cdk.context.json` 또는 `-c defaultChatSearchEngine=tavily`로 지정합니다. `bin.sh`를 쓰면 실행할 때마다 `--cdk-json-override '{"context": {"defaultChatSearchEngine": "tavily"}}'`를 넘깁니다. 값 없이 배포하면 검색이 꺼지고 키가 든 시크릿도 삭제됩니다.
+봇 없이 시작한 대화에는 기본으로 도구가 없습니다. `defaultChatSearchEngine`을 설정하면 배포 전체에서 엔진 하나를 쓰는 [인터넷 검색 도구](./AGENT_ko-KR.md)가 켜집니다. 값은 `duckduckgo`·`agentcore`(API 키 불필요), `tavily`, `brave`, `firecrawl` 중 하나입니다. 이 파라미터는 `cdk.json`에 없으므로 `parameter.ts`, `cdk/cdk.context.json` 또는 `-c defaultChatSearchEngine=tavily`로 지정합니다. `bin.sh`를 쓰면 실행할 때마다 `--cdk-json-override '{"context": {"defaultChatSearchEngine": "tavily"}}'`를 넘깁니다. 값 없이 배포하면 검색이 꺼지고 키가 든 시크릿도 삭제됩니다.
+
+[AgentCore Web Search](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/web-search-api.html)(`agentcore`)는 키 대신 IAM으로 권한을 확인하고, 질의 수에 따라 AWS 계정에 요금이 청구됩니다([AgentCore 요금](https://aws.amazon.com/bedrock/agentcore/pricing/)). Bedrock 모델보다 제공 리전이 적으므로, `bedrockRegion`이 제공 리전이 아니면 `webSearchRegion`을 제공 리전으로 지정합니다(예: `ap-northeast-2`이면 `ap-northeast-1`). 이때 검색어는 `bedrockRegion` 밖으로 나갑니다. 봇도 이 엔진을 고를 수 있으므로 채팅 핸들러는 항상 그 리전에서 호출할 수 있습니다. 지역·언어 설정은 없고, 기간을 지정하면 게시일이 있는 페이지만 남습니다. 이용 약관상 검색 결과를 쓴 답변에는 출처를 함께 보여야 하며, 앱은 답변과 함께 검색 결과를 보여 줍니다.
 
 API 키가 필요한 엔진이면 스택이 빈 시크릿을 만들고 그 이름을 스택 출력 `DefaultChatSearchApiKeySecretName`으로 알려 줍니다. 배포 후 키를 넣으면 이후 배포에서도 유지됩니다. 셸 기록에 남지 않도록 키는 명령행 대신 파일로 넘깁니다.
 

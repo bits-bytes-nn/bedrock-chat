@@ -137,6 +137,27 @@ While a bot's knowledge sync is queued or running, its owner cannot save the bot
 
 A bot can be deleted during a sync. When the sync ends, it deletes the knowledge base stack it built for the deleted bot. If the delete request fails, the alarm for failed sync status updates goes off; a stack whose deletion fails later (`DELETE_FAILED`) raises no alarm ([Alarms and API Throttling](../README.md#alarms-and-api-throttling)); look for `BrChatKbStack*` stacks in the Bedrock region whose bot no longer exists and delete them.
 
+## Bot removal recovery
+
+Deleting a bot removes its resources asynchronously: its knowledge base stack, published API, documents in shared knowledge bases, files, search API keys and the conversations of its API's clients. The removal handler retries a failed record five times for up to 12 hours, then sends it to the bot removal dead-letter queue, and the `BotRemovalFailures` alarm goes off ([Alarms and API Throttling](../README.md#alarms-and-api-throttling)).
+
+The queue message records only the position in the DynamoDB stream, not the bot. To recover:
+
+1. Find the bot in the logs of the `BotRemovalHandler` function: `Failed to clean up bot <bot id> of user <user id>`, with the error of the step that failed.
+2. Fix the cause, for example a stack in `DELETE_FAILED` (delete it in CloudFormation in the Bedrock region) or a missing permission.
+3. Run the handler again for the bot. Every step is idempotent, so the steps that already succeeded do nothing:
+
+   ```sh
+   cat > removal.json <<JSON
+   {"Records": [{"dynamodb": {"Keys": {"PK": {"S": "<user id>"}, "SK": {"S": "BOT#<bot id>"}}}}]}
+   JSON
+   aws lambda invoke --function-name <BotRemovalHandler function name> \
+     --cli-binary-format raw-in-base64-out --payload file://removal.json result.json
+   ```
+
+   The command succeeds when `result.json` holds `null` and the output has no `FunctionError`.
+4. Delete the message from the dead-letter queue, so that the alarm clears.
+
 ## Deleting a user's data
 
 Deleting a user in Cognito does not delete their conversations or bots. To delete them, run [delete_user_data.py](../backend/scripts/delete_user_data.py) from `backend` with the table names and the large message bucket from the `BedrockChatStack` outputs:

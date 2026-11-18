@@ -51,6 +51,7 @@ new ApiPublishmentStack(app, `${apiPublishmentStackPrefix}${params.publishedApiI
     region: process.env.CDK_DEFAULT_REGION,
   },
   bedrockRegion: params.bedrockRegion,
+  webSearchRegion: params.webSearchRegion || params.bedrockRegion,
   metricsNamespace: metricsNamespace(params.envPrefix),
   tableAccessRolePath: tableAccessRolePath(params.envPrefix),
   alarmTopicArn,

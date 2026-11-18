@@ -87,7 +87,7 @@ class GenerationParams(BaseSchema):
     reasoning_params: ReasoningParams
 
 
-type_search_engine = Literal["duckduckgo", "firecrawl", "tavily", "brave"]
+type_search_engine = Literal["duckduckgo", "agentcore", "firecrawl", "tavily", "brave"]
 
 # The search engines that need an API key, with the most results that each one
 # returns for a request. The backend stores a key as `<engine>/<user id>/<bot id>`,

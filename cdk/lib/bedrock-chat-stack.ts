@@ -38,6 +38,8 @@ export interface BedrockChatStackProps extends StackProps {
   readonly envName: string;
   readonly envPrefix: string;
   readonly bedrockRegion: string;
+  /** Region of AgentCore Web Search; empty uses bedrockRegion. */
+  readonly webSearchRegion?: string;
   readonly webAclId: string;
   readonly identityProviders: TIdentityProvider[];
   readonly userPoolDomainPrefix: string;
@@ -285,6 +287,7 @@ export class BedrockChatStack extends cdk.Stack {
     const defaultChatSearch = {
       engine: defaultChatSearchEngine,
       apiKey: defaultChatSearchApiKey,
+      webSearchRegion: props.webSearchRegion || props.bedrockRegion,
     };
 
     const backendApi = new Api(this, "BackendApi", {

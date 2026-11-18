@@ -4,9 +4,11 @@ import random
 import re
 import time
 from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime, timedelta, timezone
 from urllib.parse import urlparse
 
 import requests
+from botocore.exceptions import BotoCoreError, ClientError
 from app.bedrock import (
     calculate_price,
     SHORT_ANSWER_MAX_TOKENS,
@@ -22,6 +24,7 @@ from app.usecases.global_config import (
     get_default_chat_search_engine,
     get_title_model,
 )
+from app.utils import get_web_search_client
 from strands import tool
 from strands.types.tools import AgentTool as StrandsAgentTool
 
@@ -236,6 +239,58 @@ def _search_with_tavily(
     ]
 
 
+_WEB_SEARCH_PERIODS = {
+    "d": timedelta(days=1),
+    "w": timedelta(weeks=1),
+    "m": timedelta(days=31),
+    "y": timedelta(days=366),
+}
+_WEB_SEARCH_MAX_QUERY_CHARS = 200
+_WEB_SEARCH_MAX_RESULTS = 10
+
+
+def _search_with_agentcore(query: str, time_limit: str) -> list[dict[str, str]]:
+    """Search with AgentCore Web Search, whose results carry a text extract of
+    each page. It takes no locale, and a time limit drops pages without a date."""
+    if len(query) > _WEB_SEARCH_MAX_QUERY_CHARS:
+        # Told to the model, which can search again with a shorter query.
+        raise SearchApiError(
+            f"AgentCore web search takes queries of at most "
+            f"{_WEB_SEARCH_MAX_QUERY_CHARS} characters"
+        )
+    request: dict = {
+        "webSearchId": "web-search.v1",
+        "searchQuery": query,
+        "maxResults": _WEB_SEARCH_MAX_RESULTS,
+    }
+    if time_limit in _WEB_SEARCH_PERIODS:
+        request["filters"] = {
+            "publishedDateFilter": {
+                "publishedAfter": datetime.now(timezone.utc)
+                - _WEB_SEARCH_PERIODS[time_limit]
+            }
+        }
+    try:
+        results = get_web_search_client().invoke_web_search(**request)["results"]
+    except ClientError as e:
+        raise SearchApiError(
+            f"AgentCore web search failed: {e.response['Error']['Code']}"
+        ) from None
+    except BotoCoreError as e:
+        raise SearchApiError(
+            f"AgentCore web search failed: {type(e).__name__}"
+        ) from None
+    logger.info("AgentCore web search completed. Found %d results", len(results))
+    return [
+        {
+            "content": result["text"],
+            "source_name": result.get("title", ""),
+            "source_link": _web_link(result.get("url", "")),
+        }
+        for result in results
+    ]
+
+
 def _plain_text(snippet: str) -> str:
     """Brave marks the matched words in its snippets with HTML tags."""
     return html.unescape(re.sub(r"<[^>]+>", "", snippet))
@@ -379,6 +434,8 @@ def _search(
     engine, config = _search_settings(bot)
     if engine == "duckduckgo":
         return _search_with_duckduckgo_standalone(query, time_limit, locale)
+    if engine == "agentcore":
+        return _search_with_agentcore(query, time_limit)
 
     if config is None:
         # The bot schema requires the key, so only a broken item gets here.

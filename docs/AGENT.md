@@ -40,7 +40,7 @@ To enable the Agent functionality with Tool Use for your customized chatbot, fol
 
 4. For example, "Internet Search" tool allows the Agent to fetch information from the internet to answer user questions.
 
-   In the search settings, choose the search engine. DuckDuckGo needs no API key but has low rate limits. Firecrawl, [Tavily](https://www.tavily.com/) and [Brave Search](https://brave.com/search/api/) need an API key of the bot owner, which is stored in AWS Secrets Manager as `<engine>/<user id>/<bot id>` and deleted when the bot stops using it or is deleted. Each engine has its own key, so switching the engine asks for the key again.
+   In the search settings, choose the search engine. DuckDuckGo needs no API key but has low rate limits. [AgentCore Web Search](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/web-search-api.html) needs no API key either: it is billed to the AWS account per query and runs in the deployment's `webSearchRegion` ([configuration](../README.md#internet-search-in-chats-without-a-bot)). Firecrawl, [Tavily](https://www.tavily.com/) and [Brave Search](https://brave.com/search/api/) need an API key of the bot owner, which is stored in AWS Secrets Manager as `<engine>/<user id>/<bot id>` and deleted when the bot stops using it or is deleted. Each engine has its own key, so switching the engine asks for the key again.
 
    Chats without a bot can search too when the deployment sets `defaultChatSearchEngine` ([configuration](../README.md#internet-search-in-chats-without-a-bot)).
 

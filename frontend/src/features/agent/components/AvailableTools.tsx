@@ -27,6 +27,7 @@ import {
 
 const SEARCH_ENGINES: SearchEngine[] = [
   'duckduckgo',
+  'agentcore',
   'firecrawl',
   'tavily',
   'brave',

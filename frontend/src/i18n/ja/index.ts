@@ -185,6 +185,10 @@ const translation: typeof en = {
               label: 'DuckDuckGo (For Trial)',
               hint: 'リミットレートが厳しいが無料で使用可能。小規模利用向け',
             },
+            agentcore: {
+              label: 'Amazon Bedrock AgentCore Web Search',
+              hint: 'Amazonのウェブインデックスで検索します。クエリ数に応じてAWSアカウントに課金されます。APIキーは不要です。https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/web-search-api.html',
+            },
             firecrawl: {
               label: 'Firecrawl (For Business)',
               hint: 'レートリミットの拡張可能。ビジネス利用向け。APIキーが必要. https://www.firecrawl.dev/',

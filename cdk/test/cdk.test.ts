@@ -861,12 +861,12 @@ describe("Bedrock Chat Stack Test", () => {
     const engines = [...limits![1].matchAll(/"(\w+)":/g)].map((m) => m[1]);
     expect([...SEARCH_API_ENGINES].sort()).toEqual(engines.sort());
 
-    // defaultChatSearchEngine takes the keyed engines and DuckDuckGo.
+    // defaultChatSearchEngine takes the keyed engines and those without a key.
     const allEngines = schema.match(/^type_search_engine = Literal\[([^\]]*)\]/m);
     expect(allEngines).not.toBeNull();
     expect(
       [...allEngines![1].matchAll(/"(\w+)"/g)].map((m) => m[1]).sort()
-    ).toEqual(["duckduckgo", ...SEARCH_API_ENGINES].sort());
+    ).toEqual(["duckduckgo", "agentcore", ...SEARCH_API_ENGINES].sort());
   });
 
   test("chats without a bot search with the engine and key of the deployment", () => {
@@ -918,6 +918,37 @@ describe("Bedrock Chat Stack Test", () => {
 
     // DuckDuckGo needs no key.
     newChatStack({ defaultChatSearchEngine: "duckduckgo" }).resourceCountIs(
+      "AWS::SecretsManager::Secret",
+      0
+    );
+  });
+
+  test("chat handlers may search with AgentCore Web Search in its Region", () => {
+    const canSearch = (template: Template, region: string) =>
+      Object.values(
+        template.findResources("AWS::Lambda::Function", {
+          Properties: {
+            Environment: { Variables: { WEB_SEARCH_REGION: region } },
+          },
+        })
+      ).filter((fn) =>
+        roleStatementsOf(template, fn).some(
+          (statement) =>
+            [statement.Action].flat().includes("bedrock-agentcore:InvokeWebSearch") &&
+            JSON.stringify(statement.Resource).includes(
+              `:bedrock-agentcore:${region}:aws:tool/web-search.v1`
+            )
+        )
+      );
+
+    // Bots can choose it without a deployment setting, so both chat handlers
+    // always can; the Region defaults to the Bedrock one.
+    expect(canSearch(newChatStack(), "us-east-1")).toHaveLength(2);
+    expect(
+      canSearch(newChatStack({ webSearchRegion: "ap-northeast-1" }), "ap-northeast-1")
+    ).toHaveLength(2);
+    // It needs no key.
+    newChatStack({ defaultChatSearchEngine: "agentcore" }).resourceCountIs(
       "AWS::SecretsManager::Secret",
       0
     );
@@ -1405,6 +1436,7 @@ describe("Api Publishment Stack", () => {
     const stack = new ApiPublishmentStack(app, "ApiPublishmentStackTest", {
       env: { region: "us-east-1" },
       bedrockRegion: "us-east-1",
+      webSearchRegion: "ap-northeast-1",
       enableBedrockGlobalInference: false,
       enableBedrockCrossRegionInference: false,
       conversationTableName: "conversation-table",
@@ -1419,6 +1451,20 @@ describe("Api Publishment Stack", () => {
       tableAccessRolePath: "/bedrock-chat/default/",
     });
     const template = Template.fromStack(stack);
+
+    // The consumer answers with the bot, which may search with AgentCore.
+    template.hasResourceProperties("AWS::Lambda::Function", {
+      Environment: {
+        Variables: Match.objectLike({ WEB_SEARCH_REGION: "ap-northeast-1" }),
+      },
+    });
+    template.hasResourceProperties("AWS::IAM::Policy", {
+      PolicyDocument: {
+        Statement: Match.arrayWith([
+          Match.objectLike({ Action: "bedrock-agentcore:InvokeWebSearch" }),
+        ]),
+      },
+    });
 
     // Both handler roles assume the chat stack's table access role, which trusts
     // roles under this path.
