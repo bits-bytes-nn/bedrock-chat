@@ -9,13 +9,13 @@ from app.bedrock import (
     call_converse_api,
     get_text_from_converse_response,
     get_model_id,
-    is_prefill_supported,
     is_tooluse_supported,
 )
 from app.metrics import emit_chat_cost, emit_metric
 from app.model_registry import get_model_spec
 from mypy_boto3_bedrock_runtime.type_defs import MessageTypeDef
 from app.prompt import (
+    CONTINUE_PROMPT,
     KNOWLEDGE_BASE_PROMPT,
     build_rag_prompt,
     get_prompt_to_cite_tool_results,
@@ -35,6 +35,8 @@ from app.repositories.models.conversation import (
     SimpleMessageModel,
     TextContentModel,
     TextToolResultModel,
+    drop_partial_word,
+    join_continuation,
     ToolResultContentModel,
     ToolUseContentModel,
 )
@@ -206,12 +208,24 @@ def prepare_conversation(
         conversation.message_map[message_id] = new_message
         conversation.message_map[parent_id].children.append(message_id)  # type: ignore
 
-    # If the "Generate continue" button is pressed, a new_message is not generated.
+    # Continue to Generate adds no message: the answer is extended in place.
     else:
-        message_id = (
-            conversation.message_map[conversation.last_message_id].parent
-            or "instruction"
-        )
+        cut_off = conversation.message_map.get(conversation.last_message_id)
+        # Another branch, or a finished answer, would be joined to the wrong text.
+        if (
+            is_new_conversation
+            or not conversation.should_continue
+            or cut_off is None
+            or cut_off.role != "assistant"
+            or cut_off.children
+            or chat_input.message.parent_message_id != conversation.last_message_id
+        ):
+            raise ValueError(
+                "Only the last answer, cut off at the output limit, can be continued."
+            )
+        # The answer is continued by the model that wrote it.
+        chat_input.message.model = cut_off.model
+        message_id = cut_off.parent or "instruction"
 
     # The stored model serializes about like the conversation response (attachments
     # in base64), plus the instruction and the price, so it is a close upper estimate.
@@ -380,15 +394,25 @@ def chat(
     )
 
     if chat_input.continue_generate:
-        message_for_continue_generate = SimpleMessageModel.from_message_model(
-            message=message_map[conversation.last_message_id],
+        # The model writes the last, possibly cut, word again.
+        cut_off_answer = messages[-1]
+        messages[-1] = SimpleMessageModel(
+            role=cut_off_answer.role,
+            content=drop_partial_word(cut_off_answer.content),
+        )
+        # Asked in a user turn: recent models reject an assistant prefill or
+        # restart the answer, and an agent's tool use would break the turn order.
+        messages.append(
+            SimpleMessageModel(
+                role="user",
+                content=[TextContentModel(content_type="text", body=CONTINUE_PROMPT)],
+            )
         )
 
     else:
         messages.append(
             SimpleMessageModel.from_message_model(message=message_map[user_msg_id]),
         )
-        message_for_continue_generate = None
 
     generation_params = bot.generation_params if bot else None
 
@@ -420,7 +444,6 @@ def chat(
     # Post handling: process the result and update conversation
     return post_process_result(
         result=result,
-        message_for_continue_generate=message_for_continue_generate,
         conversation=conversation,
         user_msg_id=user_msg_id,
         bot=bot,
@@ -480,7 +503,6 @@ def fit_answer(
 
 def post_process_result(
     result: OnStopInput,
-    message_for_continue_generate: SimpleMessageModel | None,
     conversation: ConversationModel,
     user_msg_id: str,
     bot: BotModel | None,
@@ -500,31 +522,32 @@ def post_process_result(
     stop_reason = result["stop_reason"]
 
     conversation.total_price += result["price"]
-    conversation.should_continue = stop_reason == "max_tokens" and is_prefill_supported(
-        chat_input.message.model
-    )
-
     # Set message parent and generate assistant message ID
     message.parent = user_msg_id
 
-    # Generate assistant message ID
-    if chat_input.continue_generate and not message.thinking_log:
-        if message_for_continue_generate is not None:
-            message.continue_from(message_for_continue_generate)
-
+    if chat_input.continue_generate:
+        # The continued answer replaces the cut-off one under the same id, and
+        # keeps its tool steps and feedback.
         assistant_msg_id = conversation.last_message_id
+        cut_off = conversation.message_map[assistant_msg_id]
+        # Without new text, the word the model was to write again is kept.
+        message.content = (
+            join_continuation(drop_partial_word(cut_off.content), message.content)
+            if any(
+                isinstance(c, TextContentModel) and c.body.strip()
+                for c in message.content
+            )
+            else cut_off.content
+        )
+        if cut_off.thinking_log or message.thinking_log:
+            message.thinking_log = [
+                *(cut_off.thinking_log or []),
+                *(message.thinking_log or []),
+            ]
+        message.feedback = cut_off.feedback
         conversation.message_map[assistant_msg_id] = message
 
     else:
-        if chat_input.continue_generate and message.thinking_log:
-            if message_for_continue_generate is not None:
-                message.thinking_log[0].continue_from(message_for_continue_generate)
-
-            # Remove old assistant message and create new one
-            old_assistant_msg_id = conversation.last_message_id
-            conversation.message_map[user_msg_id].children.remove(old_assistant_msg_id)
-            del conversation.message_map[old_assistant_msg_id]
-
         # Issue id for new assistant message
         assistant_msg_id = str(ULID())
         conversation.message_map[assistant_msg_id] = message
@@ -544,6 +567,12 @@ def post_process_result(
 
         # Store RAG results in ToolResultCapture for citation support
         related_documents.extend(search_results_as_related_documents)
+
+    # An answer cut off before any text, e.g. while reasoning, has nothing to
+    # continue from.
+    conversation.should_continue = stop_reason == "max_tokens" and any(
+        isinstance(c, TextContentModel) for c in message.content
+    )
 
     fit_answer(conversation, message, related_documents)
     # Store conversation before finish streaming so that front-end can avoid 404 issue

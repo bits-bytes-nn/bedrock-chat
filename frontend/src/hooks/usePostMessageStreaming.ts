@@ -83,18 +83,14 @@ const usePostMessageStreaming = create<{
   errorDetail: string | null;
   /** Conversation that the error belongs to. */
   errorConversationId: string | null;
-  /** Conversation whose last answer stopped at the maximum output tokens. */
-  truncatedConversationId: string | null;
 }>((set) => {
   return {
     errorDetail: null,
     errorConversationId: null,
-    truncatedConversationId: null,
     post: async ({ input, handleStreamingEvent }) => {
       set({
         errorDetail: null,
         errorConversationId: null,
-        truncatedConversationId: null,
       });
       handleStreamingEvent({ type: 'wakeup' });
 
@@ -220,9 +216,6 @@ const usePostMessageStreaming = create<{
                   break;
                 case PostStreamingStatus.STREAMING_END:
                   streamEnded = true;
-                  if (data.stop_reason === 'max_tokens') {
-                    set({ truncatedConversationId: input.conversationId });
-                  }
                   handleStreamingEvent({
                     type: 'goodbye',
                   });

@@ -87,6 +87,19 @@ class TestMergeConversations(unittest.TestCase):
         self.assertNotIn("old", merged.message_map)
         self.assertEqual(merged.message_map["a"].children, [])
 
+    def test_continue_flag_follows_the_last_answer(self):
+        base = conversation()
+        mine, theirs = base.model_copy(deep=True), base.model_copy(deep=True)
+        add_reply(mine, "finished", 0)
+        add_reply(theirs, "cut-off", 0)
+        theirs.should_continue = True
+
+        merged = merge_conversations(base, mine, theirs)
+
+        # The finished answer is shown, so it must not offer Continue.
+        self.assertEqual(merged.last_message_id, "finished")
+        self.assertFalse(merged.should_continue)
+
     def test_mine_wins_when_both_change_the_same_field(self):
         base = conversation()
         mine, theirs = base.model_copy(deep=True), base.model_copy(deep=True)
@@ -170,6 +183,21 @@ class TestMergeConversations(unittest.TestCase):
         mine.last_message_id = "old"  # unchanged from base, so theirs wins
         merged = merge_conversations(base, mine, theirs)
         self.assertIn(merged.last_message_id, merged.message_map)
+
+    def test_continue_flag_follows_the_fallback_answer(self):
+        base = conversation()
+        add_reply(base, "old", 0)
+        mine, theirs = base.model_copy(deep=True), base.model_copy(deep=True)
+        # Mine cut off "old" again while theirs deleted it.
+        mine.should_continue = True
+        del theirs.message_map["old"]
+        theirs.message_map["a"].children.remove("old")
+        theirs.last_message_id = "a"
+
+        merged = merge_conversations(base, mine, theirs)
+
+        self.assertEqual(merged.last_message_id, "a")
+        self.assertFalse(merged.should_continue)
 
     def test_no_message_is_left_without_its_parent(self):
         base = conversation()

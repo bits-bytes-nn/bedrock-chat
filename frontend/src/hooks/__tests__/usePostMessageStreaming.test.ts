@@ -91,7 +91,7 @@ describe('usePostMessageStreaming', () => {
   test('sends START, the body and END, then resolves on STREAMING_END', async () => {
     const { promise, ws, events } = await startPost();
     ws.receive({ status: 'STREAMING', completion: 'Hi' });
-    ws.receive({ status: 'STREAMING_END', stop_reason: 'max_tokens' });
+    ws.receive({ status: 'STREAMING_END', stop_reason: 'end_turn' });
 
     await expect(promise).resolves.toBeUndefined();
     expect(ws.url).toContain(
@@ -99,9 +99,6 @@ describe('usePostMessageStreaming', () => {
     );
     expect(ws.sent.map((m) => m.step)).toEqual(['START', 'BODY', 'END']);
     expect(events.map((e) => e.type)).toEqual(['wakeup', 'text', 'goodbye']);
-    expect(usePostMessageStreaming.getState().truncatedConversationId).toBe(
-      'conversation'
-    );
   });
 
   test('keeps the error reason when the socket closes afterwards', async () => {

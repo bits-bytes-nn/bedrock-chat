@@ -53,10 +53,6 @@ def is_tooluse_supported(model: type_model_name) -> bool:
     return get_model_spec(model).supports_tool_use
 
 
-def is_prefill_supported(model: type_model_name) -> bool:
-    return get_model_spec(model).supports_prefill
-
-
 def is_prompt_caching_supported(
     model: type_model_name, target: Literal["system", "message", "tool"]
 ) -> bool:

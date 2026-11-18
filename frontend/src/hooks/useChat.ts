@@ -24,7 +24,11 @@ import {
   reuseUnchangedMessages,
 } from '../utils/MessageUtils';
 import useModel from './useModel';
-import { getCurrentConversation } from '../utils/ConversationUtils';
+import {
+  canContinueAnswer,
+  getCurrentConversation,
+  joinContinuationText,
+} from '../utils/ConversationUtils';
 import useFeedbackApi from './useFeedbackApi';
 import { useActorRef, useSelector } from '@xstate/react';
 import { streamingStateMachine } from './xstates/streaming';
@@ -121,9 +125,6 @@ const useChatState = create<{
   setIsGeneratedTitle: (b: boolean) => void;
   getPostedModel: () => Model;
   shouldUpdateMessages: (currentConversation: Conversation) => boolean;
-  shouldCotinue: boolean;
-  setShouldContinue: (b: boolean) => void;
-  getShouldContinue: () => boolean;
   reasoningEnabled: boolean;
   setReasoningEnabled: (enabled: boolean) => void;
 }>((set, get) => {
@@ -271,15 +272,6 @@ const useChatState = create<{
         get().currentMessageId !== currentConversation.lastMessageId
       );
     },
-    getShouldContinue: () => {
-      return get().shouldCotinue;
-    },
-    setShouldContinue: (b) => {
-      set(() => ({
-        shouldCotinue: b,
-      }));
-    },
-    shouldCotinue: false,
     reasoningEnabled: false,
     setReasoningEnabled: (enabled) => set({ reasoningEnabled: enabled }),
   };
@@ -353,8 +345,6 @@ const useChat = () => {
     setIsGeneratedTitle,
     getPostedModel,
     shouldUpdateMessages,
-    getShouldContinue,
-    setShouldContinue,
     reasoningEnabled,
     setReasoningEnabled,
   } = useChatState();
@@ -363,6 +353,7 @@ const useChat = () => {
   const { modelId, setModelIdWithoutSaving, availableModels } = useModel();
 
   const conversationApi = useConversationApi();
+  const { refetchConversation } = conversationApi;
   const feedbackApi = useFeedbackApi();
   const {
     data,
@@ -405,11 +396,6 @@ const useChat = () => {
       setCurrentMessageId(conversation.lastMessageId);
       setModelIdWithoutSaving(getPostedModel());
       reloadRelatedDocuments();
-    }
-    // A new chat, or a conversation that is still loading, cannot be continued.
-    const shouldContinue = conversation?.shouldContinue ?? false;
-    if (shouldContinue !== getShouldContinue()) {
-      setShouldContinue(shouldContinue);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [conversationId, conversation]);
@@ -657,7 +643,11 @@ const useChat = () => {
 
     // WARNING: Non-streaming is not supported from the UI side as it is planned to be DEPRICATED.
     const unsubscribe = subscribeStreamingText(streamingActor, (text) => {
-      editMessage(conversationId, currentMessage.id, currentContentBody + text);
+      editMessage(
+        conversationId,
+        currentMessage.id,
+        joinContinuationText(currentContentBody, text)
+      );
     });
     postStreaming({
       input,
@@ -665,18 +655,25 @@ const useChat = () => {
         streamingSend(event);
       },
     })
-      .then(() => {
-        mutate();
-      })
       .catch((e) => {
         console.error(e);
         // The streaming hook rejects with the message to show.
         openSnackbar(
           typeof e === 'string' ? e : i18next.t('error.answerResponse')
         );
-        // Drop the partial text and show the saved answer.
-        mutate();
       })
+      // The continued conversation, even if another one is shown by now.
+      .then(() => refetchConversation(conversationId))
+      .then((stored) => {
+        // The continued answer keeps its id, so the refetch alone would not
+        // replace the streamed text. Show what was saved: the joined answer, or
+        // the cut-off one if the continuation failed.
+        if (stored && useChatState.getState().conversationId === stored.id) {
+          setMessages(stored.id, stored.messageMap);
+          reloadRelatedDocuments();
+        }
+      })
+      .catch((e) => console.error(e))
       .finally(() => {
         unsubscribe();
         setPostingMessage(false);
@@ -814,7 +811,10 @@ const useChat = () => {
     postChat,
     regenerate,
     getPostedModel,
-    getShouldContinue,
+    shouldContinue: canContinueAnswer(
+      conversation,
+      messages[messages.length - 1]?.id
+    ),
     continueGenerate,
     reasoningEnabled,
     setReasoningEnabled,

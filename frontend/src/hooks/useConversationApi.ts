@@ -65,6 +65,18 @@ const useConversationApi = () => {
       }>(`conversation/${conversationId}/proposed-title`);
       return updateTitle(conversationId, res.data.title);
     },
+    /**
+     * Fetch a conversation into the cache, also when another one is shown. A
+     * mutate without data would return the cache of an unmounted key unchanged.
+     */
+    refetchConversation: (conversationId: string) =>
+      mutate<Conversation>(
+        `conversation/${conversationId}`,
+        http
+          .getOnce<Conversation>(`conversation/${conversationId}`)
+          .then((res) => res.data),
+        { revalidate: false }
+      ),
     mutateConversations: (
       conversations?:
         | ConversationMeta[]

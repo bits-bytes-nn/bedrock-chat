@@ -536,7 +536,6 @@ class TestFitAnswer(unittest.TestCase):
         with patch.multiple(
             chat_usecase,
             emit_chat_cost=MagicMock(),
-            is_prefill_supported=MagicMock(return_value=False),
             store_conversation=MagicMock(),
             store_related_documents=MagicMock(),
         ):
@@ -550,7 +549,6 @@ class TestFitAnswer(unittest.TestCase):
                     "cache_write_input_count": 0,
                     "price": 0,
                 },
-                message_for_continue_generate=None,
                 conversation=conversation,
                 user_msg_id="a",
                 bot=None,

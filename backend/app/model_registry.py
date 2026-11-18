@@ -49,7 +49,6 @@ class ModelSpec:
     # Where top_k goes in additionalModelRequestFields, if supported.
     top_k_field: Literal["claude", "nova"] | None = None
     supports_stop_sequences: bool = True
-    supports_prefill: bool = True
     supports_tool_use: bool = True
     prompt_caching: frozenset[CachingTarget] = frozenset()
     # Reasoning blocks without a signature cannot be sent back to these models.
@@ -65,10 +64,9 @@ def _claude(
     reasoning: Literal["budget", "adaptive"],
     *,
     modern: bool = False,
-    supports_prefill: bool = True,
 ) -> ModelSpec:
     """Claude 4.5 and later. Modern models (Opus 4.7 and later) reject sampling
-    parameters and assistant prefill."""
+    parameters."""
     return ModelSpec(
         bedrock_id=bedrock_id,
         provider="anthropic",
@@ -79,7 +77,6 @@ def _claude(
         supports_top_p=not modern,
         exclusive_temperature_top_p=not modern,
         top_k_field=None if modern else "claude",
-        supports_prefill=supports_prefill and not modern,
         prompt_caching=_ALL_CACHING,
     )
 
@@ -143,7 +140,6 @@ MODELS: dict[str, ModelSpec] = {
         "anthropic.claude-opus-4-6-v1",
         _OPUS_4_5_PRICE,
         "adaptive",
-        supports_prefill=False,
     ),
     "claude-v4.7-opus": _claude(
         "anthropic.claude-opus-4-7", _OPUS_4_5_PRICE, "adaptive", modern=True
@@ -167,7 +163,6 @@ MODELS: dict[str, ModelSpec] = {
         "anthropic.claude-sonnet-4-6",
         _SONNET_4_PRICE,
         "adaptive",
-        supports_prefill=False,
     ),
     "claude-v5-sonnet": _claude(
         "anthropic.claude-sonnet-5",
