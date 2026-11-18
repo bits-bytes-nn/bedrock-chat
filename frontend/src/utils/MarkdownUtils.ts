@@ -25,7 +25,10 @@ export const normalizeMathDelimiters = (markdown: string): string =>
       index % 2 === 1
         ? part
         : part
-            .replace(/\\\[([\s\S]+?)\\\]/g, (_, math: string) => MATH + math + MATH)
+            .replace(
+              /\\\[([\s\S]+?)\\\]/g,
+              (_, math: string) => MATH + math + MATH
+            )
             .replace(/\\\((.+?)\\\)/g, (_, math: string) => MATH + math + MATH)
     )
     .join('');

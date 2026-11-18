@@ -35,7 +35,9 @@ describe('normalizeMathDelimiters', () => {
   it('keeps the structure of lists, quotes and tables', () => {
     // Only the delimiters change, with the indentation and prefixes around them.
     expect(
-      normalizeMathDelimiters('1. Step:\n   \\[\n   a^2\n   \\]\n   done\n2. next')
+      normalizeMathDelimiters(
+        '1. Step:\n   \\[\n   a^2\n   \\]\n   done\n2. next'
+      )
     ).toBe(`1. Step:\n   ${MATH}\n   a^2\n   ${MATH}\n   done\n2. next`);
     expect(normalizeMathDelimiters('> a\n> \\[x\\]\n> b')).toBe(
       `> a\n> ${MATH}x${MATH}\n> b`
