@@ -14,7 +14,9 @@ describe('isInlineImageSource', () => {
   });
 
   it('rejects remote images', () => {
-    expect(isInlineImageSource('https://evil.example/p.png?d=secret')).toBe(false);
+    expect(isInlineImageSource('https://evil.example/p.png?d=secret')).toBe(
+      false
+    );
     expect(isInlineImageSource('//evil.example/p.png')).toBe(false);
     expect(isInlineImageSource(undefined)).toBe(false);
   });
