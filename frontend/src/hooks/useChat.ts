@@ -24,7 +24,10 @@ import {
   reuseUnchangedMessages,
 } from '../utils/MessageUtils';
 import useModel from './useModel';
-import { getCurrentConversation } from '../utils/ConversationUtils';
+import {
+  canContinueAnswer,
+  getCurrentConversation,
+} from '../utils/ConversationUtils';
 import useFeedbackApi from './useFeedbackApi';
 import { useActorRef, useSelector } from '@xstate/react';
 import { streamingStateMachine } from './xstates/streaming';
@@ -121,9 +124,6 @@ const useChatState = create<{
   setIsGeneratedTitle: (b: boolean) => void;
   getPostedModel: () => Model;
   shouldUpdateMessages: (currentConversation: Conversation) => boolean;
-  shouldCotinue: boolean;
-  setShouldContinue: (b: boolean) => void;
-  getShouldContinue: () => boolean;
   reasoningEnabled: boolean;
   setReasoningEnabled: (enabled: boolean) => void;
 }>((set, get) => {
@@ -201,10 +201,16 @@ const useChatState = create<{
           if (!draft[id]?.[messageId]) {
             return;
           }
-          const textContent = draft[id][messageId].content.find(
+          const message = draft[id][messageId];
+          const textContent = message.content.find(
             (c) => c.contentType === 'text'
           );
-          if (textContent && textContent.body !== content) {
+          if (!textContent) {
+            // An answer cut off while reasoning has no text yet.
+            if (content) {
+              message.content.push({ contentType: 'text', body: content });
+            }
+          } else if (textContent.body !== content) {
             textContent.body = content;
           }
         }),
@@ -271,15 +277,6 @@ const useChatState = create<{
         get().currentMessageId !== currentConversation.lastMessageId
       );
     },
-    getShouldContinue: () => {
-      return get().shouldCotinue;
-    },
-    setShouldContinue: (b) => {
-      set(() => ({
-        shouldCotinue: b,
-      }));
-    },
-    shouldCotinue: false,
     reasoningEnabled: false,
     setReasoningEnabled: (enabled) => set({ reasoningEnabled: enabled }),
   };
@@ -353,8 +350,6 @@ const useChat = () => {
     setIsGeneratedTitle,
     getPostedModel,
     shouldUpdateMessages,
-    getShouldContinue,
-    setShouldContinue,
     reasoningEnabled,
     setReasoningEnabled,
   } = useChatState();
@@ -405,11 +400,6 @@ const useChat = () => {
       setCurrentMessageId(conversation.lastMessageId);
       setModelIdWithoutSaving(getPostedModel());
       reloadRelatedDocuments();
-    }
-    // A new chat, or a conversation that is still loading, cannot be continued.
-    const shouldContinue = conversation?.shouldContinue ?? false;
-    if (shouldContinue !== getShouldContinue()) {
-      setShouldContinue(shouldContinue);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [conversationId, conversation]);
@@ -665,18 +655,23 @@ const useChat = () => {
         streamingSend(event);
       },
     })
-      .then(() => {
-        mutate();
-      })
       .catch((e) => {
         console.error(e);
         // The streaming hook rejects with the message to show.
         openSnackbar(
           typeof e === 'string' ? e : i18next.t('error.answerResponse')
         );
-        // Drop the partial text and show the saved answer.
-        mutate();
       })
+      .then(() => mutate())
+      .then((stored) => {
+        // The continued answer keeps its id, so the refetch alone would not
+        // replace the streamed text. Show what was saved: the joined answer, or
+        // the cut-off one if the continuation failed.
+        if (stored && useChatState.getState().conversationId === stored.id) {
+          setMessages(stored.id, stored.messageMap);
+        }
+      })
+      .catch((e) => console.error(e))
       .finally(() => {
         unsubscribe();
         setPostingMessage(false);
@@ -814,7 +809,10 @@ const useChat = () => {
     postChat,
     regenerate,
     getPostedModel,
-    getShouldContinue,
+    shouldContinue: canContinueAnswer(
+      conversation,
+      messages[messages.length - 1]?.id
+    ),
     continueGenerate,
     reasoningEnabled,
     setReasoningEnabled,

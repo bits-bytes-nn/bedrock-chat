@@ -1,5 +1,8 @@
 import { describe, expect, test } from 'vitest';
-import { getCurrentConversation } from '../ConversationUtils';
+import {
+  canContinueAnswer,
+  getCurrentConversation,
+} from '../ConversationUtils';
 
 const previous = { id: 'previous', shouldContinue: true };
 
@@ -19,10 +22,30 @@ describe('getCurrentConversation', () => {
   test('returns undefined without data', () => {
     expect(getCurrentConversation(undefined, 'next')).toBeUndefined();
   });
+});
 
-  test('a new chat cannot continue the previous conversation', () => {
-    expect(getCurrentConversation(previous, '')?.shouldContinue ?? false).toBe(
-      false
-    );
+describe('canContinueAnswer', () => {
+  const cutOff = { shouldContinue: true, lastMessageId: 'answer' };
+
+  test('continues the stored answer that was cut off', () => {
+    expect(canContinueAnswer(cutOff, 'answer')).toBe(true);
+  });
+
+  test('does not continue a finished answer', () => {
+    expect(
+      canContinueAnswer({ ...cutOff, shouldContinue: false }, 'answer')
+    ).toBe(false);
+  });
+
+  test('does not continue another branch', () => {
+    expect(canContinueAnswer(cutOff, 'sibling')).toBe(false);
+  });
+
+  test('does not continue a posted answer before the refetch', () => {
+    expect(canContinueAnswer(cutOff, 'new-message-assistant')).toBe(false);
+  });
+
+  test('does not continue without a loaded conversation', () => {
+    expect(canContinueAnswer(undefined, 'answer')).toBe(false);
   });
 });

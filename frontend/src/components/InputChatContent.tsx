@@ -613,7 +613,7 @@ const InputChatContent = forwardRef<HTMLElement, Props>(
               </ButtonFileChoose>
               {props.supportReasoning && (
                 <ButtonReasoning
-                  disabled={props.isLoading || props.canContinue}
+                  disabled={props.isLoading}
                   showReasoning={reasoningEnabled}
                   forceReasoningEnabled={forceReasoningEnabled}
                   onToggleReasoning={() => onChangeReasoning(!reasoningEnabled)}

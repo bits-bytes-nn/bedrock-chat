@@ -91,7 +91,7 @@ describe('usePostMessageStreaming', () => {
   test('sends START, the body and END, then resolves on STREAMING_END', async () => {
     const { promise, ws, events } = await startPost();
     ws.receive({ status: 'STREAMING', completion: 'Hi' });
-    ws.receive({ status: 'STREAMING_END', stop_reason: 'max_tokens' });
+    ws.receive({ status: 'STREAMING_END', stop_reason: 'end_turn' });
 
     await expect(promise).resolves.toBeUndefined();
     expect(ws.url).toContain(

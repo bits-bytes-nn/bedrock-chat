@@ -465,9 +465,6 @@ class SimpleMessageModel(BaseModel):
             content=[content.to_content() for content in self.content],
         )
 
-    def continue_from(self, message: SimpleMessageModel):
-        self.content = join_continuation(message.content, self.content)
-
 
 class MessageModel(BaseModel):
     role: str
@@ -541,9 +538,6 @@ class MessageModel(BaseModel):
             ]
 
         return self
-
-    def continue_from(self, message: SimpleMessageModel):
-        self.content = join_continuation(message.content, self.content)
 
 
 class ConversationModel(BaseModel):

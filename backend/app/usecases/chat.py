@@ -36,6 +36,7 @@ from app.repositories.models.conversation import (
     SimpleMessageModel,
     TextContentModel,
     TextToolResultModel,
+    join_continuation,
     ToolResultContentModel,
     ToolUseContentModel,
 )
@@ -207,12 +208,24 @@ def prepare_conversation(
         conversation.message_map[message_id] = new_message
         conversation.message_map[parent_id].children.append(message_id)  # type: ignore
 
-    # If the "Generate continue" button is pressed, a new_message is not generated.
+    # Continue to Generate adds no message: the answer is extended in place.
     else:
-        message_id = (
-            conversation.message_map[conversation.last_message_id].parent
-            or "instruction"
-        )
+        cut_off = conversation.message_map.get(conversation.last_message_id)
+        # Another branch, or a finished answer, would be joined to the wrong text.
+        if (
+            is_new_conversation
+            or not conversation.should_continue
+            or cut_off is None
+            or cut_off.role != "assistant"
+            or cut_off.children
+            or chat_input.message.parent_message_id != conversation.last_message_id
+        ):
+            raise ValueError(
+                "Only the last answer, cut off at the output limit, can be continued."
+            )
+        # The answer is continued by the model that wrote it.
+        chat_input.message.model = cut_off.model
+        message_id = cut_off.parent or "instruction"
 
     # The stored model serializes about like the conversation response (attachments
     # in base64), plus the instruction and the price, so it is a close upper estimate.
@@ -381,9 +394,6 @@ def chat(
     )
 
     if chat_input.continue_generate:
-        message_for_continue_generate = SimpleMessageModel.from_message_model(
-            message=message_map[conversation.last_message_id],
-        )
         # Models that take an assistant prefill extend the cut-off answer
         # directly; the others are asked to continue it.
         if not is_prefill_supported(chat_input.message.model):
@@ -400,7 +410,6 @@ def chat(
         messages.append(
             SimpleMessageModel.from_message_model(message=message_map[user_msg_id]),
         )
-        message_for_continue_generate = None
 
     generation_params = bot.generation_params if bot else None
 
@@ -432,7 +441,6 @@ def chat(
     # Post handling: process the result and update conversation
     return post_process_result(
         result=result,
-        message_for_continue_generate=message_for_continue_generate,
         conversation=conversation,
         user_msg_id=user_msg_id,
         bot=bot,
@@ -492,7 +500,6 @@ def fit_answer(
 
 def post_process_result(
     result: OnStopInput,
-    message_for_continue_generate: SimpleMessageModel | None,
     conversation: ConversationModel,
     user_msg_id: str,
     bot: BotModel | None,
@@ -512,29 +519,35 @@ def post_process_result(
     stop_reason = result["stop_reason"]
 
     conversation.total_price += result["price"]
-    conversation.should_continue = stop_reason == "max_tokens"
+    # An answer cut off before any text, e.g. while reasoning, has nothing to
+    # continue from.
+    conversation.should_continue = stop_reason == "max_tokens" and any(
+        isinstance(c, TextContentModel) for c in message.content
+    )
 
     # Set message parent and generate assistant message ID
     message.parent = user_msg_id
 
-    # Generate assistant message ID
-    if chat_input.continue_generate and not message.thinking_log:
-        if message_for_continue_generate is not None:
-            message.continue_from(message_for_continue_generate)
-
+    if chat_input.continue_generate:
+        # The continued answer replaces the cut-off one under the same id, and
+        # keeps its tool steps and citations.
         assistant_msg_id = conversation.last_message_id
+        cut_off = conversation.message_map[assistant_msg_id]
+        message.content = join_continuation(cut_off.content, message.content)
+        if cut_off.thinking_log or message.thinking_log:
+            message.thinking_log = [
+                *(cut_off.thinking_log or []),
+                *(message.thinking_log or []),
+            ]
+        if cut_off.used_chunks or message.used_chunks:
+            message.used_chunks = [
+                *(cut_off.used_chunks or []),
+                *(message.used_chunks or []),
+            ]
+        message.feedback = cut_off.feedback
         conversation.message_map[assistant_msg_id] = message
 
     else:
-        if chat_input.continue_generate and message.thinking_log:
-            if message_for_continue_generate is not None:
-                message.thinking_log[0].continue_from(message_for_continue_generate)
-
-            # Remove old assistant message and create new one
-            old_assistant_msg_id = conversation.last_message_id
-            conversation.message_map[user_msg_id].children.remove(old_assistant_msg_id)
-            del conversation.message_map[old_assistant_msg_id]
-
         # Issue id for new assistant message
         assistant_msg_id = str(ULID())
         conversation.message_map[assistant_msg_id] = message
