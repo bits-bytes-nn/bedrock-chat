@@ -225,8 +225,6 @@ def prepare_conversation(
             )
         # The answer is continued by the model that wrote it.
         chat_input.message.model = cut_off.model
-        # Sent and joined without its cut word; stored only if continued.
-        cut_off.content = drop_partial_word(cut_off.content)
         message_id = cut_off.parent or "instruction"
 
     # The stored model serializes about like the conversation response (attachments
@@ -396,6 +394,12 @@ def chat(
     )
 
     if chat_input.continue_generate:
+        # The model writes the last, possibly cut, word again.
+        cut_off_answer = messages[-1]
+        messages[-1] = SimpleMessageModel(
+            role=cut_off_answer.role,
+            content=drop_partial_word(cut_off_answer.content),
+        )
         # Asked in a user turn: recent models reject an assistant prefill or
         # restart the answer, and an agent's tool use would break the turn order.
         messages.append(
@@ -526,7 +530,12 @@ def post_process_result(
         # keeps its tool steps and feedback.
         assistant_msg_id = conversation.last_message_id
         cut_off = conversation.message_map[assistant_msg_id]
-        message.content = join_continuation(cut_off.content, message.content)
+        # Without new text, the word the model was to write again is kept.
+        message.content = (
+            join_continuation(drop_partial_word(cut_off.content), message.content)
+            if any(isinstance(c, TextContentModel) for c in message.content)
+            else cut_off.content
+        )
         if cut_off.thinking_log or message.thinking_log:
             message.thinking_log = [
                 *(cut_off.thinking_log or []),

@@ -29,8 +29,9 @@ export const canContinueAnswer = (
 // Mirrors drop_partial_word and join_continuation in
 // backend/app/repositories/models/conversation.py, so that the streamed
 // continuation looks like the answer that will be stored.
+// No lookbehind: Safari before 16.4 cannot parse it.
 const PARTIAL_WORD =
-  /(?<=\s)[^\s\u3040-\u30ff\u3400-\u9fff\uf900-\ufaff\uff00-\uffef]+$/;
+  /(\s)[^\s\u3040-\u30ff\u3400-\u9fff\uf900-\ufaff\uff00-\uffef]+$/;
 
 /**
  * The text of a cut-off answer joined with its streamed continuation. The
@@ -47,7 +48,9 @@ export const joinContinuationText = (
   if (!continuation) {
     return answer;
   }
-  const head = answer.replace(PARTIAL_WORD, '');
+  const dropped = answer.replace(PARTIAL_WORD, '$1');
+  // Nothing but whitespace would be left, so the backend keeps the word.
+  const head = dropped.trim() ? dropped : answer;
   return /[ \t]$/.test(head)
     ? head + continuation.replace(/^[ \t]+/, '')
     : head + continuation;

@@ -277,7 +277,13 @@ class TestChatFlow(unittest.TestCase):
             return_value=answer("", "max_tokens"),
         ):
             chat_usecase.chat(USER, self.continue_request("c12", answer_id))
-        self.assertTrue(find_conversation_by_id(USER.id, "c12").should_continue)
+        stored = find_conversation_by_id(USER.id, "c12")
+        self.assertTrue(stored.should_continue)
+        # Without new text, the word that was to be written again is kept.
+        self.assertEqual(
+            stored.message_map[answer_id].content,
+            [TextContentModel(content_type="text", body="The first half")],
+        )
 
     def test_continued_agent_answer_keeps_its_tool_steps(self):
         def step(body: str) -> SimpleMessageModel:

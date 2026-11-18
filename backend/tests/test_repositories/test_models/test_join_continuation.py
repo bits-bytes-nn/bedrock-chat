@@ -77,6 +77,13 @@ def test_drops_the_word_the_limit_may_have_cut(body, kept):
     assert drop_partial_word([REASONING, text(body)]) == [REASONING, text(kept)]
 
 
+def test_keeps_a_word_that_would_leave_no_text():
+    assert drop_partial_word([REASONING, text("\n\nThe")]) == [
+        REASONING,
+        text("\n\nThe"),
+    ]
+
+
 def test_leaves_content_that_does_not_end_in_text():
     assert drop_partial_word([REASONING]) == [REASONING]
     assert drop_partial_word([]) == []

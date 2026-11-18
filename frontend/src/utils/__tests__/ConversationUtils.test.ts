@@ -69,6 +69,10 @@ describe('joinContinuationText', () => {
     expect(joinContinuationText('due to', 'to similar')).toBe('due to similar');
   });
 
+  test('keeps a word that would leave no text', () => {
+    expect(joinContinuationText('\n\nThe', ' answer')).toBe('\n\nThe answer');
+  });
+
   test('keeps indentation after a line break', () => {
     expect(joinContinuationText('def f():\n', '    return 1')).toBe(
       'def f():\n    return 1'

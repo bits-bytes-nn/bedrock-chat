@@ -422,6 +422,9 @@ def drop_partial_word(content: list[ContentModel]) -> list[ContentModel]:
     if not content or not isinstance(content[-1], TextContentModel):
         return content
     body = _PARTIAL_WORD.sub("", content[-1].body)
+    if not body.strip():
+        # Models reject a text block without text, and nothing would be left.
+        return content
     return [*content[:-1], TextContentModel(content_type="text", body=body)]
 
 
@@ -671,11 +674,13 @@ def merge_conversations(
         # Removed by the repair: show the latest branch instead.
         if theirs.last_message_id in message_map:
             merged.last_message_id = theirs.last_message_id
+            merged.should_continue = theirs.should_continue
         elif "system" in message_map:
             leaf = "system"
             while message_map[leaf].children:
                 leaf = message_map[leaf].children[-1]
             merged.last_message_id = leaf
+            merged.should_continue = False
     merged.version = theirs.version
     return merged
 
