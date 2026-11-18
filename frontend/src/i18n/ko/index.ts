@@ -84,11 +84,21 @@ const translation: typeof en = {
       },
       'gpt-6.1-sol': {
         label: 'GPT-6.1 Sol',
-        description: '복잡한 추론을 위한 최신 OpenAI GPT-6.1 모델입니다.',
+        description: '복잡한 추론을 위한 OpenAI GPT-6.1 모델입니다.',
       },
       'gpt-6.1-terra': {
         label: 'GPT-6.1 Terra',
         description: '성능과 비용의 균형을 갖춘 OpenAI GPT-6.1 모델입니다.',
+      },
+      'gpt-6.2-astra': {
+        label: 'GPT-6.2 Astra',
+        description:
+          '복잡한 다단계 작업을 위한 최신 OpenAI 플래그십 모델입니다.',
+      },
+      'gpt-6.2-sol': {
+        label: 'GPT-6.2 Sol',
+        description:
+          '일상 업무를 위한 빠르고 다재다능한 최신 OpenAI 모델입니다.',
       },
       'amazon-nova-2-lite': {
         label: 'Amazon Nova 2 Lite',
@@ -184,6 +194,10 @@ const translation: typeof en = {
             duckduckgo: {
               label: 'DuckDuckGo (체험용)',
               hint: '요청 수가 제한되지만 무료로 사용할 수 있습니다. 체험용으로 적합합니다.',
+            },
+            agentcore: {
+              label: 'Amazon Bedrock AgentCore Web Search',
+              hint: 'Amazon의 웹 인덱스로 검색하며, 질의 수에 따라 AWS 계정에 요금이 청구됩니다. 배포의 웹 검색 리전에서 실행되며(모델 리전과 다를 수 있음), 결과는 최대 10개입니다. API 키가 필요 없습니다. https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/web-search-api.html',
             },
             firecrawl: {
               label: 'Firecrawl (비즈니스용)',
@@ -689,6 +703,9 @@ const translation: typeof en = {
       star: '즐겨찾기에 추가',
       unstar: '즐겨찾기에서 제거',
       share: '공유',
+      help: '도움말',
+      previewImage: '이미지 미리 보기',
+      showSource: '출처 보기',
       openInNewTab: '새 탭에서 열기',
       clear: '지우기',
       backToConversationHistory: '대화 기록으로 돌아가기',
@@ -982,10 +999,12 @@ const translation: typeof en = {
         '최대 출력 길이에 도달해 답변이 중간에 끝났습니다. 계속 생성을 누르거나 봇 생성 설정에서 최대 토큰 수를 늘려 주세요.',
       maxTokensReachedWithoutSettings:
         '최대 출력 길이에 도달해 답변이 중간에 끝났습니다. 나머지 내용은 계속 생성으로 받을 수 있습니다.',
+      notSupportedDocument:
+        '선택한 모델은 PDF와 Office 파일을 읽지 못합니다. 다른 모델을 고르거나 내용을 텍스트로 첨부하세요.',
       notSupportedImage: '선택한 모델은 이미지를 지원하지 않습니다.',
       unsupportedFileFormat: '선택한 파일 형식은 지원되지 않습니다.',
       emptyAnswer:
-        '답변이 비어 있습니다. 모델의 콘텐츠 필터가 응답을 차단했을 수 있습니다. 질문을 바꿔 다시 시도하세요.',
+        '답변이 비어 있습니다. 모델의 콘텐츠 필터가 응답을 차단했을 수 있습니다. 메시지를 수정하거나 다시 생성하세요.',
       totalFileSizeToSendExceeded:
         '전체 파일 크기는 {{maxSize}} 이하여야 합니다.',
       attachment: {

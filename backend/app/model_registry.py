@@ -50,6 +50,8 @@ class ModelSpec:
     top_k_field: Literal["claude", "nova"] | None = None
     supports_stop_sequences: bool = True
     supports_tool_use: bool = True
+    # Converse document blocks. Attachments are sent as text to models without them.
+    supports_documents: bool = True
     prompt_caching: frozenset[CachingTarget] = frozenset()
     # Reasoning blocks without a signature cannot be sent back to these models.
     accepts_unsigned_reasoning: bool = True
@@ -82,8 +84,8 @@ def _claude(
 
 
 def _gpt(bedrock_id: str, price: ModelPrice) -> ModelSpec:
-    """OpenAI GPT-5.5 and later. Converse rejects temperature, topP, stopSequences
-    and cache points for these models."""
+    """OpenAI GPT-5.5 and later. Converse rejects temperature, topP, stopSequences,
+    cache points and document blocks for these models."""
     return ModelSpec(
         bedrock_id=bedrock_id,
         provider="openai",
@@ -93,6 +95,7 @@ def _gpt(bedrock_id: str, price: ModelPrice) -> ModelSpec:
         supports_temperature=False,
         supports_top_p=False,
         supports_stop_sequences=False,
+        supports_documents=False,
         accepts_unsigned_reasoning=False,
     )
 
@@ -202,6 +205,10 @@ MODELS: dict[str, ModelSpec] = {
     ),
     "gpt-6-sol": _gpt("openai.gpt-6-sol", ModelPrice(0.002, 0.01, 0.0002, 0.0025)),
     "gpt-6.1-sol": _gpt("openai.gpt-6.1-sol", ModelPrice(0.002, 0.01, 0.0001, 0.0025)),
+    "gpt-6.2-astra": _gpt(
+        "openai.gpt-6.2-astra", ModelPrice(0.008, 0.04, 0.0004, 0.01)
+    ),
+    "gpt-6.2-sol": _gpt("openai.gpt-6.2-sol", ModelPrice(0.002, 0.01, 0.0001, 0.0025)),
     "gpt-6.1-terra": _gpt(
         "openai.gpt-6.1-terra", ModelPrice(0.001, 0.005, 0.00005, 0.00125)
     ),

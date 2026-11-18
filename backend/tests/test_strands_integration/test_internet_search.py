@@ -1,5 +1,6 @@
 """The search API requests and the results that the model gets."""
 
+from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -10,15 +11,17 @@ from app.strands_integration.tools import internet_search
 API_KEY = "test-api-key"
 
 
-def bot_with(engine: str) -> MagicMock:
+def bot_with(engine: str, keyed: bool = True) -> MagicMock:
     tool = InternetToolModel.model_construct(
         tool_type="internet",
         name="internet_search",
         description="",
         search_engine=engine,
-        search_api_config=MagicMock(api_key=API_KEY, max_results=3),
+        search_api_config=(
+            MagicMock(api_key=API_KEY, max_results=3) if keyed else None
+        ),
     )
-    return MagicMock(agent=MagicMock(tools=[tool]))
+    return MagicMock(internet_tool=MagicMock(return_value=tool))
 
 
 def search(engine: str, payload: dict, **kwargs) -> tuple[dict, MagicMock]:
@@ -333,3 +336,105 @@ def test_duckduckgo_errors_tell_the_model_why(error, reason):
 )
 def test_only_web_links_are_kept(url, link):
     assert internet_search._web_link(url) == link
+
+
+def search_with_agentcore(results=None, error=None, **kwargs):
+    client = MagicMock()
+    if error is not None:
+        client.invoke_web_search.side_effect = error
+    else:
+        client.invoke_web_search.return_value = {"results": results or []}
+    tool = internet_search.create_internet_search_tool(
+        bot_with("agentcore", keyed=False)
+    )
+    with patch.object(internet_search, "get_web_search_client", return_value=client):
+        return tool(**kwargs), client
+
+
+def test_agentcore_web_search_needs_no_key():
+    result, client = search_with_agentcore(
+        [
+            {"text": "sunny", "title": "T", "url": "https://t"},
+            # Title and URL are optional in the response.
+            {"text": "rain"},
+        ],
+        query="weather",
+        time_limit="w",
+    )
+
+    request = client.invoke_web_search.call_args.kwargs
+    assert request["webSearchId"] == "web-search.v1"
+    assert request["searchQuery"] == "weather"
+    after = request["filters"]["publishedDateFilter"]["publishedAfter"]
+    age = datetime.now(timezone.utc) - after
+    assert timedelta(days=7) <= age < timedelta(days=7, minutes=1)
+    assert result["content"] == [
+        {"json": {"content": "sunny", "source_name": "T", "source_link": "https://t"}},
+        {"json": {"content": "rain", "source_name": "", "source_link": ""}},
+    ]
+
+
+def test_agentcore_web_search_tells_the_model_the_publication_time():
+    published = datetime(2026, 11, 1, tzinfo=timezone.utc)
+    result, _ = search_with_agentcore(
+        [{"text": "news", "url": "https://n", "publishedAt": published}],
+        query="news",
+    )
+    assert result["content"][0]["json"]["published_at"] == published.isoformat()
+
+
+def test_agentcore_web_search_counts_as_chat_cost():
+    with patch.object(internet_search, "emit_chat_cost") as emit:
+        search_with_agentcore(query="weather")
+    emit.assert_called_once_with(internet_search.WEB_SEARCH_PRICE_PER_QUERY)
+
+
+def test_searches_all_pages_unless_the_model_asks_for_recent_ones():
+    # A default time limit would drop the undated pages that answer most questions.
+    _, client = search_with_agentcore(query="what is a cache")
+    assert "filters" not in client.invoke_web_search.call_args.kwargs
+
+
+def test_agentcore_web_search_tells_the_model_to_shorten_a_long_query():
+    result, client = search_with_agentcore(query="q" * 201)
+    client.invoke_web_search.assert_not_called()
+    assert result["status"] == "error"
+    assert "200 characters" in result["content"][0]["text"]
+
+
+def test_failed_searches_raise_the_alarm_metric():
+    # The model answers without the search, so only the metric shows a failure
+    # such as an exhausted plan or an unsupported Region.
+    from botocore.exceptions import EndpointConnectionError
+
+    with patch.object(internet_search, "emit_metric") as emit:
+        result, _ = search_with_agentcore(
+            error=EndpointConnectionError(endpoint_url="https://x"), query="weather"
+        )
+    assert result["status"] == "error"
+    emit.assert_called_once_with("InternetSearchFailures", 1)
+
+
+def test_queries_that_the_engine_rejects_are_no_service_failures():
+    from botocore.exceptions import ClientError
+
+    invalid = ClientError(
+        {"Error": {"Code": "ValidationException", "Message": "bad"}},
+        "InvokeWebSearch",
+    )
+    with patch.object(internet_search, "emit_metric") as emit:
+        search_with_agentcore(query="q" * 201)
+        search_with_agentcore(error=invalid, query="weather")
+    emit.assert_not_called()
+
+
+def test_agentcore_web_search_errors_name_only_the_code():
+    from botocore.exceptions import ClientError
+
+    error = ClientError(
+        {"Error": {"Code": "AccessDeniedException", "Message": "secret detail"}},
+        "InvokeWebSearch",
+    )
+    result, _ = search_with_agentcore(error=error, query="weather")
+    text = result["content"][0]["text"]
+    assert "AccessDeniedException" in text and "secret detail" not in text

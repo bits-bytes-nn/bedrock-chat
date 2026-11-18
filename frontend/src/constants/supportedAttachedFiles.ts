@@ -62,6 +62,12 @@ const NON_TEXT_FILE_EXTENSIONS = [
   '.xlsx',
 ];
 
+/** PDF and Office files, which only models with Converse document blocks read. */
+export const isDocumentFile = (fileName: string): boolean =>
+  NON_TEXT_FILE_EXTENSIONS.some((extension) =>
+    fileName.toLowerCase().endsWith(extension)
+  );
+
 // Converted to text by the backend: presentations are parsed and recordings are
 // transcribed with Amazon Transcribe.
 export const CONVERTIBLE_FILE_EXTENSIONS = [

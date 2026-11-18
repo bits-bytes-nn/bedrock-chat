@@ -44,6 +44,7 @@ from app.repositories.models.custom_bot import (
     BotAliasModel,
     BotModel,
 )
+from app.routes.schemas.bot import SEARCH_ENGINES_REQUIRING_CITATIONS
 from app.routes.schemas.conversation import (
     ChatInput,
     ChatOutput,
@@ -57,7 +58,11 @@ from app.routes.schemas.conversation import (
 )
 from app.stream import OnStopInput, OnThinking
 from app.usecases.bot import fetch_bot, modify_bot_last_used_time, modify_bot_stats
-from app.usecases.global_config import get_global_available_models, get_title_model
+from app.usecases.global_config import (
+    get_default_chat_search_engine,
+    get_global_available_models,
+    get_title_model,
+)
 from app.user import User
 from app.utils import get_current_time
 from app.vector_search import (
@@ -297,6 +302,14 @@ def validate_model_is_available(model: str, bot: BotModel | None) -> None:
             raise PermissionError(f"Model {model} is not active for this bot.")
 
 
+def _search_engine(bot: BotModel | None) -> str | None:
+    """The internet search engine that an answer can use, or None."""
+    if bot is None:
+        return get_default_chat_search_engine()
+    tool = bot.internet_tool()
+    return tool.search_engine if tool else None
+
+
 def chat(
     user: User,
     chat_input: ChatInput,
@@ -308,7 +321,11 @@ def chat(
 ) -> tuple[ConversationModel, MessageModel]:
     user_msg_id, conversation, bot = prepare_conversation(user, chat_input)
     validate_model_is_available(chat_input.message.model, bot)
-    display_citation = bot is not None and bot.display_retrieved_chunks
+    # Without tool use there is no internet search to cite.
+    display_citation = (bot is not None and bot.display_retrieved_chunks) or (
+        _search_engine(bot) in SEARCH_ENGINES_REQUIRING_CITATIONS
+        and is_tooluse_supported(chat_input.message.model)
+    )
 
     message_map = conversation.message_map
     instructions: list[str] = (
@@ -323,7 +340,13 @@ def chat(
 
     related_documents: list[RelatedDocumentModel] = []
     search_results: list[SearchResult] = []
-    if bot is not None:
+    if bot is None:
+        # Chats without a bot have only the deployment's internet search tool.
+        if display_citation and is_tooluse_supported(chat_input.message.model):
+            instructions.append(
+                get_prompt_to_cite_tool_results(model=chat_input.message.model)
+            )
+    else:
         if bot.is_agent_enabled() and is_tooluse_supported(chat_input.message.model):
             if bot.has_knowledge():
                 instructions.append(KNOWLEDGE_BASE_PROMPT)

@@ -472,6 +472,13 @@ class BotModel(BaseModel):
             or self.has_existing_knowledge_base()
         )
 
+    def internet_tool(self) -> InternetToolModel | None:
+        """The bot's internet search tool, if it has one."""
+        return next(
+            (tool for tool in self.agent.tools if isinstance(tool, InternetToolModel)),
+            None,
+        )
+
     def is_agent_enabled(self) -> bool:
         # Always consider agents active, even if they have a knowledge base
         return len(self.agent.tools) > 0 or self.has_knowledge()

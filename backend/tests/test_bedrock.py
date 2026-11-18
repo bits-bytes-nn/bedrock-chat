@@ -147,6 +147,10 @@ class TestFilterAvailableModels(unittest.TestCase):
     PROFILES = TestGetModelId.PROFILES
 
     def available(self, models, on_demand=frozenset(), **kwargs) -> list[str]:
+        # Explicit, because app.bedrock reads the defaults when another test module
+        # imported it first.
+        kwargs.setdefault("enable_global", True)
+        kwargs.setdefault("enable_cross_region", True)
         with (
             patch.object(
                 bedrock, "_list_system_inference_profiles", return_value=self.PROFILES
@@ -224,7 +228,12 @@ class TestFilterAvailableModels(unittest.TestCase):
             bedrock._lookup_failed_at.clear()
             profiles, on_demand = self.failing_lookup(failing)
             with profiles, on_demand:
-                self.assertEqual(bedrock.filter_available_models(models), models)
+                self.assertEqual(
+                    bedrock.filter_available_models(
+                        models, enable_global=True, enable_cross_region=True
+                    ),
+                    models,
+                )
 
     def test_a_slow_lookup_counts_as_failed(self):
         with (
@@ -234,7 +243,10 @@ class TestFilterAvailableModels(unittest.TestCase):
             patch.object(bedrock, "_list_on_demand_models", return_value=frozenset()),
         ):
             self.assertEqual(
-                bedrock.filter_available_models(["gpt-oss-120b"]), ["gpt-oss-120b"]
+                bedrock.filter_available_models(
+                    ["gpt-oss-120b"], enable_global=True, enable_cross_region=True
+                ),
+                ["gpt-oss-120b"],
             )
 
 

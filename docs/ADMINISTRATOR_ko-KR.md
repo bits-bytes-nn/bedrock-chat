@@ -129,13 +129,46 @@ upstream에서 업그레이드하는 경우:
 - 사용량 분석 내보내기 버킷과 Athena 쿼리 결과 버킷에 `usageAnalysisRetentionDays`(기본값 90일) 만료 규칙이 생겨 오래된 내보내기가 삭제됩니다. 먼저 복사해 두거나 값을 늘리세요.
 - `CreatingBotAllowed` 그룹의 기존 멤버는 그대로 남습니다. 이전에는 모든 사용자가 이 그룹에 자동으로 가입했으므로(`autoJoinUserGroups`의 기본값은 이제 `[]`) Cognito에서 그룹 멤버를 검토하세요.
 
-게시된 API는 게시할 때의 코드와 스택 설정(기본 스로틀링, 알람, 비용 지표와 지표 네임스페이스)을 그대로 씁니다. 업그레이드한 뒤 다시 게시하세요.
+게시된 API는 게시할 때의 코드와 스택 설정(기본 스로틀링, 알람, 비용 지표와 지표 네임스페이스)을 그대로 씁니다. 업그레이드한 뒤 다시 게시하세요. 검색 엔진이 추가되기 전에 게시한 API는 봇이 그 엔진(예: AgentCore Web Search)을 쓰면 봇을 불러오지 못하므로, 엔진을 바꾸기 전에 다시 게시하세요. `webSearchRegion`을 바꾼 뒤에도 다시 게시해야 합니다.
 
 ## 지식 동기화 복구
 
 봇의 지식 동기화가 대기 중이거나 실행 중이면 소유자는 봇을 저장할 수 없습니다(오류 코드 `knowledge_base_syncing`과 함께 409). 동기화가 시간 초과되거나 중단되면 봇은 `RUNNING` 상태로 남습니다. 이때 관리자가 봇을 저장하면 새 동기화가 대기열에 들어가며, 소유자는 봇을 삭제할 수 있습니다. 저장하기 전에 이전 수집 작업과 지식 기반 스택 빌드가 끝났는지 Bedrock 콘솔과 CloudFormation에서 확인하세요. 겹쳐서 실행되면 새 동기화도 다시 실패할 수 있습니다. 동기화에 실패한 봇은 변경 사항이 없어도 저장하면 동기화를 다시 시도합니다. 전용 지식 기반과 공유 지식 기반 모두, 재시도는 빠졌거나 실패한 봇 파일을 다시 수집하고 실패 전에 삭제한 파일을 지식 기반에서 정리합니다.
 
 동기화 중에도 봇을 삭제할 수 있습니다. 동기화가 끝나면 삭제된 봇을 위해 만든 지식 기반 스택을 삭제합니다. 삭제 요청이 실패하면 동기화 상태 업데이트 실패 알람이 울립니다. 요청 뒤 스택 삭제 자체가 실패(`DELETE_FAILED`)하면 알람이 울리지 않습니다([Alarms and API Throttling](../README.md#alarms-and-api-throttling)). Bedrock 리전에서 봇이 더 이상 없는 `BrChatKbStack*` 스택을 찾아 삭제하세요.
+
+## 봇 삭제 복구
+
+봇을 삭제하면 관련 리소스는 비동기로 지워집니다. 지식 베이스 스택, 게시된 API, 공유 지식 베이스의 문서, 파일, 검색 API 키, API 클라이언트의 대화가 대상입니다. 삭제 핸들러는 실패한 레코드를 12시간 안에서 최대 5번 다시 시도하고, 그래도 실패하면 봇 삭제 DLQ로 보냅니다. 이때 `BotRemovalFailures` 알람이 울립니다([Alarms and API Throttling](../README.md#alarms-and-api-throttling)).
+
+DLQ 메시지에는 DynamoDB 스트림의 위치만 있고 봇 정보는 없습니다. 복구 절차는 다음과 같습니다.
+
+1. `BotRemovalHandler` 함수의 로그에서 `Failed to clean up bot <봇 ID> of user <사용자 ID>`와 실패한 단계의 오류를 찾습니다. 시간 초과로 끝난 삭제는 실패 로그가 없고, 마지막 `Removing bot <봇 ID> of user <사용자 ID>` 뒤에 `Task timed out`이 남습니다.
+2. 원인을 해결합니다. 예를 들어 `DELETE_FAILED` 상태의 스택은 Bedrock 리전의 CloudFormation에서 삭제하고, 권한이 없으면 권한을 추가합니다.
+3. 봇 항목이 실제로 지워졌는지 확인합니다. 핸들러는 키가 가리키는 봇의 리소스를 봇이 남아 있어도 지웁니다. `aws dynamodb get-item --region <스택 리전> --table-name <BotTableNameV3 출력값> --key '{"PK": {"S": "<사용자 ID>"}, "SK": {"S": "BOT#<봇 ID>"}}'`의 출력이 비어 있어야 합니다.
+4. 해당 봇에 대해 핸들러를 다시 실행합니다. 모든 단계가 멱등이므로 이미 끝난 단계는 아무 일도 하지 않습니다.
+
+   함수 이름은 `BedrockChatStack`의 `BotRemovalHandlerName` 출력값입니다. 명령은 그 스택의 리전(Bedrock 리전 아님)에서 실행합니다. 삭제는 함수 제한 시간인 15분까지 걸릴 수 있으므로, CLI 읽기 제한 시간을 늘리고 재시도는 끕니다.
+
+   ```sh
+   cat > removal.json <<JSON
+   {"Records": [{"dynamodb": {"Keys": {"PK": {"S": "<사용자 ID>"}, "SK": {"S": "BOT#<봇 ID>"}}}}]}
+   JSON
+   AWS_MAX_ATTEMPTS=1 aws lambda invoke --region <스택 리전> \
+     --function-name <BotRemovalHandlerName> --cli-read-timeout 900 \
+     --cli-binary-format raw-in-base64-out --payload file://removal.json result.json
+   ```
+
+   출력에 `FunctionError`가 없고, `result.json`이 `null`이며, 이번 실행의 함수 로그에 `Failed to clean up bot`과 `Skipping event`(키가 봇을 가리키지 않음)가 모두 없으면 성공입니다.
+5. 알람이 해제되도록 DLQ에서 메시지를 삭제합니다. DLQ URL은 `BotRemovalDeadLetterQueueUrl` 출력값입니다.
+
+   ```sh
+   QUEUE_URL=<BotRemovalDeadLetterQueueUrl>
+   aws sqs receive-message --region <스택 리전> --queue-url "$QUEUE_URL" \
+     --attribute-names SentTimestamp --query 'Messages[].[ReceiptHandle,Body]'
+   aws sqs delete-message --region <스택 리전> --queue-url "$QUEUE_URL" \
+     --receipt-handle <ReceiptHandle>
+   ```
 
 ## 사용자 데이터 삭제
 

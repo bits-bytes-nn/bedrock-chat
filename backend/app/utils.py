@@ -14,6 +14,8 @@ logger = logging.getLogger(__name__)
 REGION = os.environ.get("REGION", "us-east-1")
 BEDROCK_REGION = os.environ.get("BEDROCK_REGION", "us-east-1")
 ENV_NAME = os.environ.get("ENV_NAME", "default")
+# AgentCore Web Search is offered in fewer Regions than Bedrock models.
+WEB_SEARCH_REGION = os.environ.get("WEB_SEARCH_REGION") or BEDROCK_REGION
 
 logger.debug(f"REGION: {REGION}")
 logger.debug(f"BEDROCK_REGION: {BEDROCK_REGION}")
@@ -86,6 +88,28 @@ def get_bedrock_agent_runtime_client(region=BEDROCK_REGION, max_attempts: int = 
         ),
     )
     return client
+
+
+_web_search_client: Any = None
+
+
+def get_web_search_client():
+    """The AgentCore client for web searches, reused across calls. The client
+    owns the retries of these searches: throttling, server errors and timeouts.
+    Searches take about a second, so a short read timeout bounds the retries."""
+    global _web_search_client
+    with _runtime_clients_lock:
+        if _web_search_client is None:
+            _web_search_client = boto3.client(
+                "bedrock-agentcore",
+                region_name=WEB_SEARCH_REGION,
+                config=Config(
+                    connect_timeout=3,
+                    read_timeout=5,
+                    retries={"mode": "standard", "max_attempts": 3},
+                ),
+            )
+        return _web_search_client
 
 
 def get_current_time():

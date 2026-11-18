@@ -21,19 +21,22 @@ const ExpandableDrawerGroup: React.FC<Props> = ({
 
   return (
     <div className={twMerge(props.className)}>
-      <div
-        className="flex w-full cursor-pointer items-center transition hover:brightness-75"
+      <button
+        type="button"
+        aria-expanded={isShow}
+        className="flex w-full cursor-pointer items-center text-left transition hover:brightness-75"
         onClick={() => {
           setIsOpen(!isShow);
         }}>
         <PiCaretDown className={`mx-1 text-sm ${isShow ? '' : 'rotate-180'}`} />
 
         <div className="italic">{props.label}</div>
-      </div>
+      </button>
       <div className="">
         <div
           className={`origin-top transition-all ${
-            isShow ? 'visible' : 'h-0 scale-y-0'
+            // Collapsed fields stay out of the tab order.
+            isShow ? 'visible' : 'invisible h-0 scale-y-0'
           }`}>
           {props.children}
         </div>

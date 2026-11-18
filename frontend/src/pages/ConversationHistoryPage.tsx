@@ -207,6 +207,8 @@ const ConversationHistoryPage: React.FC = () => {
             />
             {inputValue && (
               <button
+                type="button"
+                aria-label={t('button.clear')}
                 className="absolute top-1/2 right-3 -translate-y-1/2 text-dark-gray hover:text-dark-gray dark:text-gray"
                 onClick={handleClearSearch}>
                 <PiX size={20} />

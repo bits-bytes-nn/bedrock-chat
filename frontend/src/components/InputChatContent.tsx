@@ -34,6 +34,7 @@ import {
   MB,
   convertedFileName,
   isConvertibleFile,
+  isDocumentFile,
   maxConvertibleFileSizeMb,
 } from '../constants/supportedAttachedFiles';
 import { isSubmitEnter } from '../utils/KeyboardUtils';
@@ -171,14 +172,21 @@ const InputChatContent = forwardRef<HTMLElement, Props>(
     const { t } = useTranslation();
     const {
       disabledImageUpload,
+      disabledDocumentUpload,
       model,
       acceptMediaType,
       forceReasoningEnabled,
     } = useModel();
 
     const extendedAcceptMediaType = useMemo(() => {
-      return [...acceptMediaType, ...SUPPORTED_FILE_EXTENSIONS];
-    }, [acceptMediaType]);
+      return [
+        ...acceptMediaType,
+        // The picker does not offer what the model cannot read.
+        ...SUPPORTED_FILE_EXTENSIONS.filter(
+          (extension) => !(disabledDocumentUpload && isDocumentFile(extension))
+        ),
+      ];
+    }, [acceptMediaType, disabledDocumentUpload]);
 
     const [content, setContent] = useState('');
     const { reasoningEnabled, onChangeReasoning } = props;
@@ -531,6 +539,8 @@ const InputChatContent = forwardRef<HTMLElement, Props>(
           if (file) {
             if (isConvertibleFile(file.name)) {
               handleConvertibleFile(file);
+            } else if (disabledDocumentUpload && isDocumentFile(file.name)) {
+              open(t('error.notSupportedDocument'));
             } else if (
               SUPPORTED_FILE_EXTENSIONS.some((extension) =>
                 file.name.toLowerCase().endsWith(extension.toLowerCase())
@@ -557,6 +567,7 @@ const InputChatContent = forwardRef<HTMLElement, Props>(
         open,
         t,
         acceptMediaType,
+        disabledDocumentUpload,
       ]
     );
 
@@ -633,7 +644,17 @@ const InputChatContent = forwardRef<HTMLElement, Props>(
                 <div key={idx} className="relative">
                   <img
                     src={imageFile}
+                    alt={t('button.previewImage')}
+                    role="button"
+                    tabIndex={0}
                     className="h-16 rounded-sm border border-aws-squid-ink-light bg-white dark:border-aws-squid-ink-dark"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        setPreviewImageUrl(imageFile);
+                        setIsOpenPreviewImage(true);
+                      }
+                    }}
                     onClick={() => {
                       setPreviewImageUrl(imageFile);
                       setIsOpenPreviewImage(true);
@@ -658,6 +679,7 @@ const InputChatContent = forwardRef<HTMLElement, Props>(
                 {previewImageUrl && (
                   <img
                     src={previewImageUrl}
+                    alt={t('button.previewImage')}
                     className="mx-auto max-h-[80vh] max-w-full rounded-md bg-white"
                   />
                 )}

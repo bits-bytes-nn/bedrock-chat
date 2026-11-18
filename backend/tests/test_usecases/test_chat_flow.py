@@ -129,6 +129,25 @@ class TestChatFlow(unittest.TestCase):
 
         self.assertIn(KNOWLEDGE_BASE_PROMPT, converse.call_args.kwargs["instructions"])
 
+    def test_answers_cite_search_results_whose_terms_require_it(self):
+        def instructions(engine: str | None) -> list[str]:
+            with (
+                patch.object(
+                    chat_usecase, "get_default_chat_search_engine", return_value=engine
+                ),
+                patch.object(
+                    chat_usecase, "converse_with_strands", return_value=answer("hi")
+                ) as converse,
+            ):
+                chat_usecase.chat(USER, chat_input(f"cite-{engine}", None, "news?"))
+            return converse.call_args.kwargs["instructions"]
+
+        cite = chat_usecase.get_prompt_to_cite_tool_results(model=MODEL)
+        # AgentCore Web Search results must be shown with the answer.
+        self.assertIn(cite, instructions("agentcore"))
+        self.assertNotIn(cite, instructions("tavily"))
+        self.assertNotIn(cite, instructions(None))
+
     def test_emits_the_chat_cost_of_every_answer(self):
         # The WebSocket, POST /conversation and SQS handlers all answer through
         # chat(), without emitting the cost themselves.

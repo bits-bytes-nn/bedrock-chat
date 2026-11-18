@@ -20,9 +20,12 @@ import {
   searchApiKeySecretPolicyStatement,
 } from "./utils/bedrock-policies";
 import { lambdaLogGroup } from "./utils/lambda-log-group";
+import { webSearchEnvironment } from "./utils/default-chat-search";
 
 interface ApiPublishmentStackProps extends StackProps {
   readonly bedrockRegion: string;
+  /** Region of AgentCore Web Search, which the bot may search with. */
+  readonly webSearchRegion: string;
   readonly enableBedrockGlobalInference: boolean;
   readonly enableBedrockCrossRegionInference: boolean;
   readonly conversationTableName: string;
@@ -193,6 +196,7 @@ export class ApiPublishmentStack extends Stack {
           ENABLE_BEDROCK_CROSS_REGION_INFERENCE:
             props.enableBedrockCrossRegionInference.toString(),
           BEDROCK_REGION: props.bedrockRegion,
+          ...webSearchEnvironment(props.webSearchRegion, handlerRole),
           // Conversations over the DynamoDB item limit are stored in this bucket.
           LARGE_MESSAGE_BUCKET: props.largeMessageBucketName,
           TABLE_ACCESS_ROLE_ARN: props.tableAccessRoleArn,

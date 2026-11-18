@@ -87,7 +87,11 @@ class GenerationParams(BaseSchema):
     reasoning_params: ReasoningParams
 
 
-type_search_engine = Literal["duckduckgo", "firecrawl", "tavily", "brave"]
+type_search_engine = Literal["duckduckgo", "agentcore", "firecrawl", "tavily", "brave"]
+
+# The search engines whose terms require showing the sources of the results with
+# an answer that uses them, so that answers cite them whatever the bot's setting.
+SEARCH_ENGINES_REQUIRING_CITATIONS: frozenset[str] = frozenset({"agentcore"})
 
 # The search engines that need an API key, with the most results that each one
 # returns for a request. The backend stores a key as `<engine>/<user id>/<bot id>`,
@@ -189,7 +193,6 @@ class Knowledge(BaseSchema):
             raise ValueError(f"Invalid S3 URL format: {v}")
 
         bucket_name = url_parts.pop(0)
-        prefix = "/".join(url_parts)
 
         if not bucket_name:
             raise ValueError(f"Invalid S3 URL format: {v}")

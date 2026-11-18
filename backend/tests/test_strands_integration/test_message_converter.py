@@ -141,3 +141,37 @@ def test_only_the_question_of_this_turn_is_checked_for_grounding(grounding, rele
     source, query = messages[-1]["content"]
     assert source["guardContent"]["text"]["qualifiers"] == ["grounding_source"]
     assert query["guardContent"]["text"] == {"text": "second", "qualifiers": ["query"]}
+
+
+def test_attachments_reach_models_without_document_blocks_as_text():
+    # GPT models reject document blocks ("This model doesn't support documents").
+    from app.repositories.models.conversation import AttachmentContentModel
+
+    message = SimpleMessageModel(
+        role="user",
+        content=[
+            TextContentModel(content_type="text", body="Summarize"),
+            AttachmentContentModel(
+                content_type="attachment", body=b"The code word", file_name="note.txt"
+            ),
+            AttachmentContentModel(
+                content_type="attachment", body=b"%PDF-1.4 ascii", file_name="r%20e.PDF"
+            ),
+            AttachmentContentModel(
+                content_type="attachment",
+                body="\ufeffa,b".encode("utf-8"),
+                file_name='x"<y.csv',
+            ),
+        ],
+    )
+    gpt = simple_message_models_to_strands_messages([message], "gpt-6.1-sol")
+    blocks = gpt[0]["content"]
+    assert not any("document" in block for block in blocks)
+    assert blocks[1]["text"] == '<file name="note.txt">\nThe code word\n</file>'
+    # A PDF is never inlined, even when its bytes decode.
+    assert "r e.PDF" in blocks[2]["text"] and "cannot read" in blocks[2]["text"]
+    # The byte order mark goes, and the name cannot close the tag.
+    assert blocks[3]["text"] == '<file name="x&quot;&lt;y.csv">\na,b\n</file>'
+
+    claude = simple_message_models_to_strands_messages([message], "claude-v5.5-haiku")
+    assert sum("document" in block for block in claude[0]["content"]) == 3

@@ -129,13 +129,46 @@ When you upgrade from upstream:
 - The usage analysis export and Athena query result buckets get an expiration of `usageAnalysisRetentionDays` (default 90), so older exports are deleted. Copy them first or raise the value.
 - `CreatingBotAllowed` keeps its members, who all joined automatically before (`autoJoinUserGroups` now defaults to `[]`). Review the group in Cognito.
 
-Published APIs keep the code and stack settings they were published with, including the default throttle, alarms, cost metric and metric namespace. Publish them again after upgrading.
+Published APIs keep the code and stack settings they were published with, including the default throttle, alarms, cost metric and metric namespace. Publish them again after upgrading. An API published before a search engine was added cannot load its bot once the bot uses that engine, for example AgentCore Web Search, so publish it again before switching the engine; publish again also after changing `webSearchRegion`.
 
 ## Knowledge sync recovery
 
 While a bot's knowledge sync is queued or running, its owner cannot save the bot (409 with the error code `knowledge_base_syncing`). If the sync timed out or was aborted, the bot stays `RUNNING`: an administrator can save the bot, which queues a new sync, and the owner can delete it. Before saving, check that the earlier ingestion job and knowledge base stack build have ended (Bedrock console and CloudFormation); a new sync that overlaps them can fail again. Saving a bot whose sync failed retries the sync, even if nothing changed. The retry ingests the bot's files that are missing or failed and removes the files deleted before the failure, for dedicated and shared knowledge bases alike.
 
 A bot can be deleted during a sync. When the sync ends, it deletes the knowledge base stack it built for the deleted bot. If the delete request fails, the alarm for failed sync status updates goes off; a stack whose deletion fails later (`DELETE_FAILED`) raises no alarm ([Alarms and API Throttling](../README.md#alarms-and-api-throttling)); look for `BrChatKbStack*` stacks in the Bedrock region whose bot no longer exists and delete them.
+
+## Bot removal recovery
+
+Deleting a bot removes its resources asynchronously: its knowledge base stack, published API, documents in shared knowledge bases, files, search API keys and the conversations of its API's clients. The removal handler retries a failed record up to five times, within 12 hours, then sends it to the bot removal dead-letter queue, and the `BotRemovalFailures` alarm goes off ([Alarms and API Throttling](../README.md#alarms-and-api-throttling)).
+
+The queue message records only the position in the DynamoDB stream, not the bot. To recover:
+
+1. Find the bot in the logs of the `BotRemovalHandler` function: `Failed to clean up bot <bot id> of user <user id>`, with the error of the step that failed. A removal that timed out logs no failure; its last `Removing bot <bot id> of user <user id>` is followed by `Task timed out`.
+2. Fix the cause, for example a stack in `DELETE_FAILED` (delete it in CloudFormation in the Bedrock region) or a missing permission.
+3. Check that the bot item is really gone: the handler removes the resources of whatever bot the keys name, also of a bot that still exists. `aws dynamodb get-item --region <stack region> --table-name <BotTableNameV3 output> --key '{"PK": {"S": "<user id>"}, "SK": {"S": "BOT#<bot id>"}}'` must print nothing.
+4. Run the handler again for the bot. Every step is idempotent, so the steps that already succeeded do nothing:
+
+   The function name is the `BotRemovalHandlerName` output of `BedrockChatStack`. Run the commands in the Region of that stack (not the Bedrock region). A removal can take up to the function's 15-minute timeout, so the read timeout of the CLI is raised and its retries are turned off:
+
+   ```sh
+   cat > removal.json <<JSON
+   {"Records": [{"dynamodb": {"Keys": {"PK": {"S": "<user id>"}, "SK": {"S": "BOT#<bot id>"}}}}]}
+   JSON
+   AWS_MAX_ATTEMPTS=1 aws lambda invoke --region <stack region> \
+     --function-name <BotRemovalHandlerName> --cli-read-timeout 900 \
+     --cli-binary-format raw-in-base64-out --payload file://removal.json result.json
+   ```
+
+   The retry succeeded when the output has no `FunctionError`, `result.json` holds `null`, and the function's log for this run has neither `Failed to clean up bot` nor `Skipping event` (which means that the keys did not name a bot).
+5. Delete the message from the dead-letter queue, whose URL is the `BotRemovalDeadLetterQueueUrl` output, so that the alarm clears:
+
+   ```sh
+   QUEUE_URL=<BotRemovalDeadLetterQueueUrl>
+   aws sqs receive-message --region <stack region> --queue-url "$QUEUE_URL" \
+     --attribute-names SentTimestamp --query 'Messages[].[ReceiptHandle,Body]'
+   aws sqs delete-message --region <stack region> --queue-url "$QUEUE_URL" \
+     --receipt-handle <ReceiptHandle>
+   ```
 
 ## Deleting a user's data
 

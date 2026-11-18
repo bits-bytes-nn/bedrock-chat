@@ -79,10 +79,24 @@ function getBooleanEnvVar(name: string): boolean | undefined {
   return value === undefined ? undefined : value === "true";
 }
 
+// Region of AgentCore Web Search, the internet search engine without an API key.
+// It is offered in fewer Regions than Bedrock models. Empty uses bedrockRegion.
+export const webSearchRegionSchema = z
+  .string()
+  .regex(/^$|^[a-z]{2}(-[a-z]+)+-\d+$/, "must be a Region code such as ap-northeast-1")
+  .default("");
+
+/** The Region that chat handlers search with AgentCore Web Search in. */
+export const resolveWebSearchRegion = (params: {
+  webSearchRegion: string;
+  bedrockRegion: string;
+}): string => params.webSearchRegion || params.bedrockRegion;
+
 /**
  * Parameters schema for the main Bedrock Chat application
  */
 const BedrockChatParametersSchema = BaseParametersSchema.extend({
+  webSearchRegion: webSearchRegionSchema,
 
   // Frontend WAF toggle (CloudFront scope)
   // Set to 'false' if you're unable to deploy resources in us-east-1
@@ -160,7 +174,7 @@ const BedrockChatParametersSchema = BaseParametersSchema.extend({
   // Internet search of chats without a bot. Empty turns it off. An engine with an
   // API key gets a secret in the stack, which the admin fills in after the deploy.
   defaultChatSearchEngine: z
-    .enum(["", "duckduckgo", ...SEARCH_API_ENGINES])
+    .enum(["", "duckduckgo", "agentcore", ...SEARCH_API_ENGINES])
     .default(""),
 
   // Frontend branding
@@ -191,6 +205,7 @@ const BedrockChatParametersSchema = BaseParametersSchema.extend({
  * Parameters schema for API publishing
  */
 const ApiPublishParametersSchema = BaseParametersSchema.extend({
+  webSearchRegion: webSearchRegionSchema,
   // API publishing configuration
   // API Gateway takes a fractional rate, and whole numbers for the others.
   publishedApiThrottleRateLimit: contextNumber.pipe(z.number().positive()).optional(),
@@ -307,6 +322,7 @@ export function resolveBedrockChatParameters(
     envName,
     envPrefix,
     bedrockRegion: app.node.tryGetContext("bedrockRegion"),
+    webSearchRegion: app.node.tryGetContext("webSearchRegion"),
     enableFrontendWaf: app.node.tryGetContext("enableFrontendWaf"),
     enableFrontendIpv6: app.node.tryGetContext("enableFrontendIpv6"),
     allowedIpV4AddressRanges: app.node.tryGetContext(
@@ -417,6 +433,7 @@ export function resolveApiPublishParameters(): ApiPublishParameters {
     envName: getEnvVar("ENV_NAME"),
     envPrefix: getEnvVar("ENV_PREFIX"),
     bedrockRegion: getEnvVar("BEDROCK_REGION"),
+    webSearchRegion: getEnvVar("WEB_SEARCH_REGION"),
     enableBedrockGlobalInference: getBooleanEnvVar(
       "ENABLE_BEDROCK_GLOBAL_INFERENCE"
     ),

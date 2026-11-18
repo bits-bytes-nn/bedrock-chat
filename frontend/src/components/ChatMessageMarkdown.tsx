@@ -20,7 +20,11 @@ import remarkMath from 'remark-math';
 import 'katex/dist/katex.min.css';
 import { onlyText } from 'react-children-utilities';
 import RelatedDocumentViewer from './RelatedDocumentViewer';
-import { isInlineImageSource } from '../utils/MarkdownUtils';
+import {
+  endsInsideMath,
+  isInlineImageSource,
+  normalizeMathDelimiters,
+} from '../utils/MarkdownUtils';
 
 type Props = BaseProps & {
   children: string;
@@ -63,20 +67,21 @@ const RelatedDocumentLink: React.FC<{
 
   return (
     <>
-      <a
+      <button
+        type="button"
+        disabled={props.relatedDocument == null}
         className={twMerge(
-          'mx-0.5 ',
+          'mx-0.5 inline font-medium underline',
           props.relatedDocument != null
             ? 'cursor-pointer text-aws-sea-blue-light dark:text-aws-link-dark hover:text-aws-sea-blue-hover-light dark:hover:text-aws-sea-blue-hover-dark'
             : 'cursor-not-allowed text-gray'
         )}
         onClick={() => {
-          if (props.relatedDocument != null) {
-            setRelatedDocument(props.linkId, props.relatedDocument);
-          }
+          // Disabled without a document.
+          setRelatedDocument(props.linkId, props.relatedDocument!);
         }}>
         {props.children}
-      </a>
+      </button>
 
       {relatedDocuments[props.linkId] && (
         <RelatedDocumentViewer
@@ -107,7 +112,10 @@ const ChatMessageMarkdown: React.FC<Props> = ({
 
   const chatWaitingSymbol = useMemo(() => t('app.chatWaitingSymbol'), [t]);
   const text = useMemo(() => {
-    const textRemovedIncompleteCitation = children.replace(/\[\^[^\]]*?$/, '[^');
+    const textRemovedIncompleteCitation = normalizeMathDelimiters(children).replace(
+      /\[\^[^\]]*?$/,
+      '[^'
+    );
     let textReplacedSourceId = textRemovedIncompleteCitation.replace(
       /\[\^(?<sourceId>[\w!?/+\-_~=;.,*&@#$%]+?)\]/g,
       (_, sourceId) => {
@@ -119,7 +127,8 @@ const ChatMessageMarkdown: React.FC<Props> = ({
       },
     );
 
-    if (isStreaming) {
+    // Inside unclosed math, the cursor would be rendered as part of the formula.
+    if (isStreaming && !endsInsideMath(textReplacedSourceId)) {
       textReplacedSourceId += chatWaitingSymbol;
     }
 

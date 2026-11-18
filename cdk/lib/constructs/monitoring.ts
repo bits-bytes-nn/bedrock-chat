@@ -179,6 +179,20 @@ export class Monitoring extends Construct {
       errorThreshold,
       `Updating the usage of bots failed at least ${errorThreshold} times in an hour.`,
     ]);
+    alarms.push([
+      "InternetSearchFailures",
+      new cloudwatch.Metric({
+        // Published by the internet search tool when a search fails, for example
+        // for an exhausted search plan, a rejected key or an unsupported Region.
+        // The model answers without the search, so nothing else shows it.
+        namespace: props.metricsNamespace,
+        metricName: "InternetSearchFailures",
+        statistic: "Sum",
+        period: Duration.hours(1),
+      }),
+      errorThreshold,
+      `Internet searches failed at least ${errorThreshold} times in an hour.`,
+    ]);
     if (props.dailyChatCostAlarmUsd > 0) {
       alarms.push([
         "DailyChatCost",

@@ -22,7 +22,7 @@
     "i18next": "^23.6.0",
     "i18next-browser-languagedetector": "^7.1.0",
     "immer": "^10.0.2",
-    "katex": "^0.16.47",
+    "katex": "^0.19.1",
     "react": "^18.2.0",
     "react-children-utilities": "^2.10.0",
     "react-device-detect": "^2.2.3",
@@ -88,6 +88,7 @@
     "@aws-amplify/ui-react-core": {
       "xstate": "4.38.3"
     },
-    "serialize-javascript": "^7.0.5"
+    "serialize-javascript": "^7.0.5",
+    "katex": "$katex"
   }
 }

@@ -206,7 +206,7 @@ const ChatMessage: React.FC<Props> = (props) => {
         )}
         {chatContent?.role === 'assistant' && (
           <div className="min-w-[2.3rem] max-w-[2.3rem]">
-            <img src="/images/bedrock_icon_64.png" className="rounded-sm" />
+            <img src="/images/bedrock_icon_64.png" alt="" className="rounded-sm" />
           </div>
         )}
 
@@ -244,15 +244,21 @@ const ChatMessage: React.FC<Props> = (props) => {
                     if (content.contentType === 'image') {
                       const imageUrl = `data:${content.mediaType};base64,${content.body}`;
                       return (
-                        <img
+                        <button
                           key={idx}
-                          src={imageUrl}
-                          className="mb-2 h-48 cursor-pointer bg-white"
+                          type="button"
+                          aria-label={t('button.previewImage')}
+                          className="mb-2 block"
                           onClick={() => {
                             setPreviewImageUrl(imageUrl);
                             setIsOpenPreviewImage(true);
-                          }}
-                        />
+                          }}>
+                          <img
+                            src={imageUrl}
+                            alt=""
+                            className="h-48 cursor-pointer bg-white"
+                          />
+                        </button>
                       );
                     }
                   })}
@@ -317,6 +323,7 @@ const ChatMessage: React.FC<Props> = (props) => {
                 {previewImageUrl && (
                   <img
                     src={previewImageUrl}
+                    alt={t('button.previewImage')}
                     className="mx-auto max-h-[80vh] max-w-full rounded-md bg-white"
                   />
                 )}

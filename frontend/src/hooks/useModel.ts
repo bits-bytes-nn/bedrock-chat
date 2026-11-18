@@ -90,49 +90,70 @@ const MODELS: Omit<ModelItem, 'label' | 'description'>[] = [
     supportReasoning: true,
   },
   {
+    modelId: 'gpt-6.2-astra',
+    supportMediaType: IMAGE_MEDIA_TYPES,
+    ...ALWAYS_REASONING,
+    supportDocument: false,
+  },
+  {
+    modelId: 'gpt-6.2-sol',
+    supportMediaType: IMAGE_MEDIA_TYPES,
+    ...ALWAYS_REASONING,
+    supportDocument: false,
+  },
+  {
     modelId: 'gpt-6.1-sol',
     supportMediaType: IMAGE_MEDIA_TYPES,
     ...ALWAYS_REASONING,
+    supportDocument: false,
   },
   {
     modelId: 'gpt-6.1-terra',
     supportMediaType: IMAGE_MEDIA_TYPES,
     ...ALWAYS_REASONING,
+    supportDocument: false,
   },
   {
     modelId: 'gpt-6-astra',
     supportMediaType: IMAGE_MEDIA_TYPES,
     ...ALWAYS_REASONING,
+    supportDocument: false,
   },
   {
     modelId: 'gpt-6-sol',
     supportMediaType: IMAGE_MEDIA_TYPES,
     ...ALWAYS_REASONING,
+    supportDocument: false,
   },
   {
     modelId: 'gpt-6-luna',
     supportMediaType: IMAGE_MEDIA_TYPES,
     ...ALWAYS_REASONING,
+    supportDocument: false,
   },
   {
     modelId: 'gpt-5.6-terra',
     supportMediaType: IMAGE_MEDIA_TYPES,
     ...ALWAYS_REASONING,
+    supportDocument: false,
   },
   {
     modelId: 'gpt-5.6-sol',
     supportMediaType: IMAGE_MEDIA_TYPES,
     ...ALWAYS_REASONING,
+    supportDocument: false,
   },
   {
     modelId: 'gpt-5.6-luna',
     supportMediaType: IMAGE_MEDIA_TYPES,
     ...ALWAYS_REASONING,
+    supportDocument: false,
   },
   {
     modelId: 'gpt-5.5',
     supportMediaType: IMAGE_MEDIA_TYPES,
     ...ALWAYS_REASONING,
+    supportDocument: false,
   },
   { modelId: 'gpt-oss-120b', supportMediaType: [], ...ALWAYS_REASONING },
   { modelId: 'gpt-oss-20b', supportMediaType: [], ...ALWAYS_REASONING },
@@ -366,6 +387,7 @@ const useModel = (botId?: string | null, activeModels?: ActiveModels) => {
       ),
     model,
     disabledImageUpload: (model?.supportMediaType.length ?? 0) === 0,
+    disabledDocumentUpload: model?.supportDocument === false,
     acceptMediaType:
       model?.supportMediaType.flatMap((mediaType: string) => {
         const ext = mediaType.split('/')[1];

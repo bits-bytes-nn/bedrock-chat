@@ -12,7 +12,12 @@ export type SearchApiConfig = {
   maxResults: number;
 };
 
-export type SearchEngine = 'duckduckgo' | 'firecrawl' | 'tavily' | 'brave';
+export type SearchEngine =
+  | 'duckduckgo'
+  | 'agentcore'
+  | 'firecrawl'
+  | 'tavily'
+  | 'brave';
 export type ToolType = 'internet' | 'plain' | 'bedrock_agent';
 
 export type BedrockAgentConfig = {

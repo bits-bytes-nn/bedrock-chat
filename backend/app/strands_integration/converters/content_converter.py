@@ -2,6 +2,10 @@
 Content conversion utilities for Strands integration.
 """
 
+import html
+from pathlib import Path
+from urllib.parse import unquote
+
 from app.repositories.models.conversation import (
     AttachmentContentModel,
     ContentModel,
@@ -79,6 +83,34 @@ def _attachment_content_model_to_strands_content_blocks(
             ),
         },
     ]
+
+
+# Formats that are never text, even when their bytes happen to decode.
+BINARY_DOCUMENT_FORMATS = frozenset({"pdf", "doc", "docx", "xls", "xlsx"})
+
+
+def attachment_content_model_to_text_blocks(
+    content: AttachmentContentModel,
+) -> list[ContentBlock]:
+    """An attachment as text, for models without document blocks. A text file is
+    inlined; other files, such as PDFs, are named so that the model can say why it
+    does not answer from them."""
+    file_name = unquote(content.file_name)
+    name = html.escape(file_name)
+    text: str | None = None
+    if Path(file_name).suffix[1:].lower() not in BINARY_DOCUMENT_FORMATS:
+        try:
+            text = content.body.decode("utf-8-sig")
+        except UnicodeDecodeError:
+            pass
+    if text is None:
+        return [
+            {
+                "text": f"[The file {name} is attached, but this model cannot "
+                "read it. Another model can.]"
+            }
+        ]
+    return [{"text": f'<file name="{name}">\n{text}\n</file>'}]
 
 
 def _tool_use_content_model_to_strands_content_blocks(

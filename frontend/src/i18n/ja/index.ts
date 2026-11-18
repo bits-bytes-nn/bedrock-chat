@@ -84,11 +84,19 @@ const translation: typeof en = {
       },
       'gpt-6.1-sol': {
         label: 'GPT-6.1 Sol',
-        description: '複雑な推論向けの最新OpenAI GPT-6.1モデル。',
+        description: '複雑な推論向けのOpenAI GPT-6.1モデル。',
       },
       'gpt-6.1-terra': {
         label: 'GPT-6.1 Terra',
         description: '性能とコストのバランスに優れたOpenAI GPT-6.1モデル。',
+      },
+      'gpt-6.2-astra': {
+        label: 'GPT-6.2 Astra',
+        description: '複雑なマルチステップ作業向けの最新OpenAIフラッグシップモデル。',
+      },
+      'gpt-6.2-sol': {
+        label: 'GPT-6.2 Sol',
+        description: '日常業務向けの高速で汎用的な最新OpenAIモデル。',
       },
       'amazon-nova-2-lite': {
         label: 'Amazon Nova 2 Lite',
@@ -184,6 +192,10 @@ const translation: typeof en = {
             duckduckgo: {
               label: 'DuckDuckGo (For Trial)',
               hint: 'リミットレートが厳しいが無料で使用可能。小規模利用向け',
+            },
+            agentcore: {
+              label: 'Amazon Bedrock AgentCore Web Search',
+              hint: 'Amazonのウェブインデックスで検索します。クエリ数に応じてAWSアカウントに課金されます。デプロイのウェブ検索リージョン（モデルのリージョンと異なる場合があります）で実行され、結果は最大10件です。APIキーは不要です。https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/web-search-api.html',
             },
             firecrawl: {
               label: 'Firecrawl (For Business)',
@@ -485,7 +497,7 @@ const translation: typeof en = {
         },
         on: {
           content:
-            'このボットは共有されているため、あなた以外のユーザーもアクセスできます。共有されているユーザーは「ボットを探す」から、このボットを検索して利用することができます。',
+            'このボットは共有されているため、あなた以外のユーザーもアクセスできます。共有されているユーザーは<Link>ボットを探す</Link>から、このボットを検索して利用することができます。',
           linkDescription:
             '以下の共有リンクを使ってボットと会話することもできます。',
         },
@@ -694,6 +706,9 @@ const translation: typeof en = {
       star: 'お気に入りに追加',
       unstar: 'お気に入りから削除',
       share: '共有',
+      help: 'ヘルプ',
+      previewImage: '画像をプレビュー',
+      showSource: '出典を表示',
       openInNewTab: '新しいタブで開く',
       clear: 'クリア',
       backToConversationHistory: 'チャット履歴に戻る',
@@ -988,10 +1003,12 @@ const translation: typeof en = {
         '最大出力長に達したため回答が途中で終了しました。「生成を続ける」を選択するか、ボットの生成設定で最大トークン数を増やしてください。',
       maxTokensReachedWithoutSettings:
         '最大出力長に達したため回答が途中で終了しました。続きは「生成を続ける」で生成できます。',
+      notSupportedDocument:
+        '選択しているモデルは PDF と Office ファイルを読めません。別のモデルを選ぶか、内容をテキストで添付してください。',
       notSupportedImage: '選択しているモデルは、画像を利用できません。',
       unsupportedFileFormat: '選択したファイル形式はサポートされていません。',
       emptyAnswer:
-        '回答がありません。モデルのコンテンツフィルターが応答をブロックした可能性があります。質問を変えて再度お試しください。',
+        '回答がありません。モデルのコンテンツフィルターが応答をブロックした可能性があります。メッセージを編集するか、再生成してください。',
       totalFileSizeToSendExceeded:
         'ファイルサイズの合計が{{maxSize}}を超えています。',
       attachment: {
