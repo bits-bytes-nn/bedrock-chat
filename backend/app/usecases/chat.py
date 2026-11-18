@@ -16,6 +16,7 @@ from app.metrics import emit_chat_cost, emit_metric
 from app.model_registry import get_model_spec
 from mypy_boto3_bedrock_runtime.type_defs import MessageTypeDef
 from app.prompt import (
+    CONTINUE_PROMPT,
     KNOWLEDGE_BASE_PROMPT,
     build_rag_prompt,
     get_prompt_to_cite_tool_results,
@@ -383,6 +384,17 @@ def chat(
         message_for_continue_generate = SimpleMessageModel.from_message_model(
             message=message_map[conversation.last_message_id],
         )
+        # Models that take an assistant prefill extend the cut-off answer
+        # directly; the others are asked to continue it.
+        if not is_prefill_supported(chat_input.message.model):
+            messages.append(
+                SimpleMessageModel(
+                    role="user",
+                    content=[
+                        TextContentModel(content_type="text", body=CONTINUE_PROMPT)
+                    ],
+                )
+            )
 
     else:
         messages.append(
@@ -500,9 +512,7 @@ def post_process_result(
     stop_reason = result["stop_reason"]
 
     conversation.total_price += result["price"]
-    conversation.should_continue = stop_reason == "max_tokens" and is_prefill_supported(
-        chat_input.message.model
-    )
+    conversation.should_continue = stop_reason == "max_tokens"
 
     # Set message parent and generate assistant message ID
     message.parent = user_msg_id

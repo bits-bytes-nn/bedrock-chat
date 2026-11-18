@@ -168,8 +168,7 @@ const ChatPage: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { open: openSnackbar } = useSnackbar();
-  const { errorDetail, errorConversationId, truncatedConversationId } =
-    usePostMessageStreaming();
+  const { errorDetail, errorConversationId } = usePostMessageStreaming();
   const { isAdmin } = useLoginUser();
   const { pinBot, unpinBot } = useBotPinning();
 
@@ -703,10 +702,8 @@ const ChatPage: React.FC = () => {
                   })}
                 </>
               )}
-              {!postingMessage &&
-                !hasError &&
-                !getShouldContinue() &&
-                truncatedConversationId === conversationId && (
+              {/* Stored with the conversation, so it outlives a reload. */}
+              {!postingMessage && !hasError && getShouldContinue() && (
                   <div className="mb-12 mt-2 flex items-center justify-center px-4 text-sm text-aws-font-color-light/80 dark:text-aws-font-color-dark/80">
                     <PiWarningCircleFill className="mr-1 shrink-0 text-xl text-yellow" />
                     {bot?.owned

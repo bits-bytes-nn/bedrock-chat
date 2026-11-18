@@ -536,7 +536,6 @@ class TestFitAnswer(unittest.TestCase):
         with patch.multiple(
             chat_usecase,
             emit_chat_cost=MagicMock(),
-            is_prefill_supported=MagicMock(return_value=False),
             store_conversation=MagicMock(),
             store_related_documents=MagicMock(),
         ):

@@ -405,6 +405,29 @@ ContentModel = Annotated[
 ]
 
 
+def join_continuation(
+    previous: list[ContentModel], continuation: list[ContentModel]
+) -> list[ContentModel]:
+    """The content of an answer that was cut off, followed by its continuation.
+
+    The continuation's reasoning is dropped: it is not part of the answer, and
+    reasoning after text cannot be sent back to the model. Text that ends the
+    previous part and text that starts the continuation become one block.
+    """
+    rest = [c for c in continuation if not isinstance(c, ReasoningContentModel)]
+    if (
+        previous
+        and rest
+        and isinstance(previous[-1], TextContentModel)
+        and isinstance(rest[0], TextContentModel)
+    ):
+        joined = TextContentModel(
+            content_type="text", body=previous[-1].body + rest[0].body
+        )
+        return [*previous[:-1], joined, *rest[1:]]
+    return [*previous, *rest]
+
+
 def content_model_from_content(content: Content) -> ContentModel:
 
     if isinstance(content, TextContent):
@@ -443,17 +466,7 @@ class SimpleMessageModel(BaseModel):
         )
 
     def continue_from(self, message: SimpleMessageModel):
-        if (
-            len(message.content) > 0
-            and isinstance(message.content[-1], TextContentModel)
-            and len(self.content) > 0
-            and isinstance(self.content[0], TextContentModel)
-        ):
-            message.content[-1].body += self.content[0].body
-            self.content = [
-                *message.content,
-                *self.content[1:],
-            ]
+        self.content = join_continuation(message.content, self.content)
 
 
 class MessageModel(BaseModel):
@@ -530,17 +543,7 @@ class MessageModel(BaseModel):
         return self
 
     def continue_from(self, message: SimpleMessageModel):
-        if (
-            len(message.content) > 0
-            and isinstance(message.content[-1], TextContentModel)
-            and len(self.content) > 0
-            and isinstance(self.content[0], TextContentModel)
-        ):
-            message.content[-1].body += self.content[0].body
-            self.content = [
-                *message.content,
-                *self.content[1:],
-            ]
+        self.content = join_continuation(message.content, self.content)
 
 
 class ConversationModel(BaseModel):

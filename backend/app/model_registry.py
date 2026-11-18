@@ -49,6 +49,8 @@ class ModelSpec:
     # Where top_k goes in additionalModelRequestFields, if supported.
     top_k_field: Literal["claude", "nova"] | None = None
     supports_stop_sequences: bool = True
+    # Whether the model continues an answer that ends the messages. Models that
+    # reject it, or restart the answer instead, are asked to continue it.
     supports_prefill: bool = True
     supports_tool_use: bool = True
     prompt_caching: frozenset[CachingTarget] = frozenset()
@@ -86,7 +88,7 @@ def _claude(
 
 def _gpt(bedrock_id: str, price: ModelPrice) -> ModelSpec:
     """OpenAI GPT-5.5 and later. Converse rejects temperature, topP, stopSequences
-    and cache points for these models."""
+    and cache points for these models, and they restart a prefilled answer."""
     return ModelSpec(
         bedrock_id=bedrock_id,
         provider="openai",
@@ -96,6 +98,7 @@ def _gpt(bedrock_id: str, price: ModelPrice) -> ModelSpec:
         supports_temperature=False,
         supports_top_p=False,
         supports_stop_sequences=False,
+        supports_prefill=False,
         accepts_unsigned_reasoning=False,
     )
 
@@ -128,6 +131,7 @@ def _gpt_oss(bedrock_id: str, price: ModelPrice) -> ModelSpec:
         default_max_tokens=8192,
         reasoning="always",
         supports_stop_sequences=False,
+        supports_prefill=False,
         accepts_unsigned_reasoning=False,
     )
 

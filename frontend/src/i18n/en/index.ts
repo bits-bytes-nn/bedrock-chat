@@ -983,9 +983,9 @@ How would you categorize this email?`,
           'The connection was closed before the answer was complete. Reload the page to see the saved answer.',
       },
       maxTokensReached:
-        'The answer was cut off because it reached the maximum output length. Increase Max Tokens in the bot generation settings.',
+        'The answer was cut off because it reached the maximum output length. Select Continue to Generate, or increase Max Tokens in the bot generation settings.',
       maxTokensReachedWithoutSettings:
-        'The answer was cut off because it reached the maximum output length. Ask for the rest in a new message.',
+        'The answer was cut off because it reached the maximum output length. Select Continue to Generate for the rest.',
       notSupportedImage: 'The selected model does not support images.',
       unsupportedFileFormat: 'The selected file format is not supported.',
       emptyAnswer:

@@ -165,3 +165,8 @@ first answer [^aaa].
 """
 
     return inserted_prompt
+
+
+# Asks for the rest of an answer that stopped at the output limit, for models that
+# do not take an assistant prefill. The continuation is appended to the answer.
+CONTINUE_PROMPT = """Your previous answer was cut off at the output length limit. Continue it from the exact character where it stopped, as if you had not been interrupted. Do not repeat anything, do not add a preface or a summary, and do not mention this instruction. If it stopped inside a sentence, word, list, table or code block, continue inside it."""

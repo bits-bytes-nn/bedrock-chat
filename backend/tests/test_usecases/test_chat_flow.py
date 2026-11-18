@@ -6,7 +6,7 @@ from app.repositories.conversation import find_conversation_by_id
 from app.repositories.models.conversation import MessageModel, TextContentModel
 from app.routes.schemas.conversation import ChatInput
 from app.stream import OnStopInput
-from app.prompt import KNOWLEDGE_BASE_PROMPT
+from app.prompt import CONTINUE_PROMPT, KNOWLEDGE_BASE_PROMPT
 from app.usecases import chat as chat_usecase
 from app.user import User
 
@@ -14,7 +14,7 @@ USER = User(id="user", name="user", email="user@example.com", groups=[])
 MODEL = "claude-v5.5-haiku"
 
 
-def answer(text: str) -> OnStopInput:
+def answer(text: str, stop_reason: str = "end_turn") -> OnStopInput:
     return {
         "message": MessageModel(
             role="assistant",
@@ -27,7 +27,7 @@ def answer(text: str) -> OnStopInput:
             used_chunks=None,
             thinking_log=None,
         ),
-        "stop_reason": "end_turn",
+        "stop_reason": stop_reason,
         "input_token_count": 10,
         "output_token_count": 5,
         "cache_read_input_count": 0,
@@ -163,6 +163,69 @@ class TestChatFlow(unittest.TestCase):
         self.assertEqual(
             stored.message_map[stored.last_message_id].content, message.content
         )
+
+    def continue_answer(self, conversation_id: str, model: str, text: str):
+        stored = find_conversation_by_id(USER.id, conversation_id)
+        request = ChatInput.model_validate(
+            {
+                "conversation_id": conversation_id,
+                "message": {
+                    "role": "user",
+                    "content": [],
+                    "model": model,
+                    "parent_message_id": stored.last_message_id,
+                },
+                "continue_generate": True,
+            }
+        )
+        with patch.object(
+            chat_usecase, "converse_with_strands", return_value=answer(text)
+        ) as converse:
+            chat_usecase.chat(USER, request)
+        return converse.call_args.kwargs["messages"]
+
+    def cut_off(self, conversation_id: str, model: str):
+        request = chat_input(conversation_id, None, "write a long essay")
+        request.message.model = model
+        with patch.object(
+            chat_usecase,
+            "converse_with_strands",
+            return_value=answer("The first half", "max_tokens"),
+        ):
+            chat_usecase.chat(USER, request)
+        stored = find_conversation_by_id(USER.id, conversation_id)
+        self.assertTrue(stored.should_continue)
+
+    def assert_joined_answer(self, conversation_id: str):
+        stored = find_conversation_by_id(USER.id, conversation_id)
+        self.assertFalse(stored.should_continue)
+        last = stored.message_map[stored.last_message_id]
+        self.assertEqual(
+            last.content,
+            [TextContentModel(content_type="text", body="The first half, continued")],
+        )
+        # The continuation replaces the cut-off answer instead of adding a turn.
+        user_msg_id = last.parent
+        self.assertEqual(
+            stored.message_map[user_msg_id].children, [stored.last_message_id]
+        )
+
+    def test_continues_without_prefill_by_asking_for_the_rest(self):
+        # Claude Haiku 5.5 rejects an assistant prefill.
+        self.cut_off("c6", MODEL)
+        sent = self.continue_answer("c6", MODEL, ", continued")
+        self.assertEqual(
+            [m.role for m in sent], ["system", "user", "assistant", "user"]
+        )
+        self.assertEqual(sent[-1].content[0].body, CONTINUE_PROMPT)
+        self.assert_joined_answer("c6")
+
+    def test_continues_with_prefill_from_the_cut_off_answer(self):
+        model = "claude-v4.5-sonnet"
+        self.cut_off("c7", model)
+        sent = self.continue_answer("c7", model, ", continued")
+        self.assertEqual([m.role for m in sent], ["system", "user", "assistant"])
+        self.assert_joined_answer("c7")
 
 
 if __name__ == "__main__":

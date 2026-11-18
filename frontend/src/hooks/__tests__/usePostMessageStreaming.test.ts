@@ -99,9 +99,6 @@ describe('usePostMessageStreaming', () => {
     );
     expect(ws.sent.map((m) => m.step)).toEqual(['START', 'BODY', 'END']);
     expect(events.map((e) => e.type)).toEqual(['wakeup', 'text', 'goodbye']);
-    expect(usePostMessageStreaming.getState().truncatedConversationId).toBe(
-      'conversation'
-    );
   });
 
   test('keeps the error reason when the socket closes afterwards', async () => {
