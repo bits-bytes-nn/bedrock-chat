@@ -25,3 +25,30 @@ export const canContinueAnswer = (
 ): boolean =>
   !!conversation?.shouldContinue &&
   shownLastMessageId === conversation.lastMessageId;
+
+// Mirrors drop_partial_word and join_continuation in
+// backend/app/repositories/models/conversation.py, so that the streamed
+// continuation looks like the answer that will be stored.
+const PARTIAL_WORD =
+  /(?<=\s)[^\s\u3040-\u30ff\u3400-\u9fff\uf900-\ufaff\uff00-\uffef]+$/;
+
+/**
+ * The text of a cut-off answer joined with its streamed continuation. The
+ * backend sends the answer without its last, possibly cut, word, which the model
+ * writes again, and keeps one space between words.
+ *
+ * @param answer The text of the cut-off answer.
+ * @param continuation The continuation streamed so far.
+ */
+export const joinContinuationText = (
+  answer: string,
+  continuation: string
+): string => {
+  if (!continuation) {
+    return answer;
+  }
+  const head = answer.replace(PARTIAL_WORD, '');
+  return /[ \t]$/.test(head)
+    ? head + continuation.replace(/^[ \t]+/, '')
+    : head + continuation;
+};

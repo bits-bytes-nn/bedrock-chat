@@ -9,7 +9,6 @@ from app.bedrock import (
     call_converse_api,
     get_text_from_converse_response,
     get_model_id,
-    is_prefill_supported,
     is_tooluse_supported,
 )
 from app.metrics import emit_chat_cost, emit_metric
@@ -36,6 +35,7 @@ from app.repositories.models.conversation import (
     SimpleMessageModel,
     TextContentModel,
     TextToolResultModel,
+    drop_partial_word,
     join_continuation,
     ToolResultContentModel,
     ToolUseContentModel,
@@ -225,6 +225,8 @@ def prepare_conversation(
             )
         # The answer is continued by the model that wrote it.
         chat_input.message.model = cut_off.model
+        # Sent and joined without its cut word; stored only if continued.
+        cut_off.content = drop_partial_word(cut_off.content)
         message_id = cut_off.parent or "instruction"
 
     # The stored model serializes about like the conversation response (attachments
@@ -394,17 +396,14 @@ def chat(
     )
 
     if chat_input.continue_generate:
-        # Models that take an assistant prefill extend the cut-off answer
-        # directly; the others are asked to continue it.
-        if not is_prefill_supported(chat_input.message.model):
-            messages.append(
-                SimpleMessageModel(
-                    role="user",
-                    content=[
-                        TextContentModel(content_type="text", body=CONTINUE_PROMPT)
-                    ],
-                )
+        # Asked in a user turn: recent models reject an assistant prefill or
+        # restart the answer, and an agent's tool use would break the turn order.
+        messages.append(
+            SimpleMessageModel(
+                role="user",
+                content=[TextContentModel(content_type="text", body=CONTINUE_PROMPT)],
             )
+        )
 
     else:
         messages.append(
@@ -519,18 +518,12 @@ def post_process_result(
     stop_reason = result["stop_reason"]
 
     conversation.total_price += result["price"]
-    # An answer cut off before any text, e.g. while reasoning, has nothing to
-    # continue from.
-    conversation.should_continue = stop_reason == "max_tokens" and any(
-        isinstance(c, TextContentModel) for c in message.content
-    )
-
     # Set message parent and generate assistant message ID
     message.parent = user_msg_id
 
     if chat_input.continue_generate:
         # The continued answer replaces the cut-off one under the same id, and
-        # keeps its tool steps and citations.
+        # keeps its tool steps and feedback.
         assistant_msg_id = conversation.last_message_id
         cut_off = conversation.message_map[assistant_msg_id]
         message.content = join_continuation(cut_off.content, message.content)
@@ -538,11 +531,6 @@ def post_process_result(
             message.thinking_log = [
                 *(cut_off.thinking_log or []),
                 *(message.thinking_log or []),
-            ]
-        if cut_off.used_chunks or message.used_chunks:
-            message.used_chunks = [
-                *(cut_off.used_chunks or []),
-                *(message.used_chunks or []),
             ]
         message.feedback = cut_off.feedback
         conversation.message_map[assistant_msg_id] = message
@@ -567,6 +555,12 @@ def post_process_result(
 
         # Store RAG results in ToolResultCapture for citation support
         related_documents.extend(search_results_as_related_documents)
+
+    # An answer cut off before any text, e.g. while reasoning, has nothing to
+    # continue from.
+    conversation.should_continue = stop_reason == "max_tokens" and any(
+        isinstance(c, TextContentModel) for c in message.content
+    )
 
     fit_answer(conversation, message, related_documents)
     # Store conversation before finish streaming so that front-end can avoid 404 issue

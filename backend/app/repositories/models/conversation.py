@@ -405,6 +405,26 @@ ContentModel = Annotated[
 ]
 
 
+# A word that the output limit may have cut: the trailing characters after a
+# space, in a script that separates words with spaces. Chinese and Japanese text
+# has no such boundary and is left as it is.
+_PARTIAL_WORD = re.compile(
+    r"(?<=\s)[^\s\u3040-\u30ff\u3400-\u9fff\uf900-\ufaff\uff00-\uffef]+\Z"
+)
+
+
+def drop_partial_word(content: list[ContentModel]) -> list[ContentModel]:
+    """The content of a cut-off answer without its last, possibly cut, word.
+
+    Asked to continue, models start a new word: they neither finish a cut word
+    nor keep the space before the next one. The dropped word is written again.
+    """
+    if not content or not isinstance(content[-1], TextContentModel):
+        return content
+    body = _PARTIAL_WORD.sub("", content[-1].body)
+    return [*content[:-1], TextContentModel(content_type="text", body=body)]
+
+
 def join_continuation(
     previous: list[ContentModel], continuation: list[ContentModel]
 ) -> list[ContentModel]:
@@ -412,7 +432,8 @@ def join_continuation(
 
     The continuation's reasoning is dropped: it is not part of the answer, and
     reasoning after text cannot be sent back to the model. Text that ends the
-    previous part and text that starts the continuation become one block.
+    previous part and text that starts the continuation become one block, with
+    one space between words.
     """
     rest = [c for c in continuation if not isinstance(c, ReasoningContentModel)]
     if (
@@ -421,9 +442,10 @@ def join_continuation(
         and isinstance(previous[-1], TextContentModel)
         and isinstance(rest[0], TextContentModel)
     ):
-        joined = TextContentModel(
-            content_type="text", body=previous[-1].body + rest[0].body
-        )
+        head, tail = previous[-1].body, rest[0].body
+        if head.endswith((" ", "\t")):
+            tail = tail.lstrip(" \t")
+        joined = TextContentModel(content_type="text", body=head + tail)
         return [*previous[:-1], joined, *rest[1:]]
     return [*previous, *rest]
 
@@ -635,9 +657,16 @@ def merge_conversations(
         merged.total_price = theirs.total_price + mine.total_price
     else:
         merged.total_price = theirs.total_price + mine.total_price - base.total_price
-    for field in ("title", "last_message_id", "should_continue"):
-        if base is None or getattr(mine, field) != getattr(base, field):
-            setattr(merged, field, getattr(mine, field))
+    if base is None or mine.title != base.title:
+        merged.title = mine.title
+    # should_continue describes the last answer, so the two move together.
+    if (
+        base is None
+        or mine.last_message_id != base.last_message_id
+        or mine.should_continue != base.should_continue
+    ):
+        merged.last_message_id = mine.last_message_id
+        merged.should_continue = mine.should_continue
     if merged.last_message_id not in message_map:
         # Removed by the repair: show the latest branch instead.
         if theirs.last_message_id in message_map:

@@ -27,6 +27,7 @@ import useModel from './useModel';
 import {
   canContinueAnswer,
   getCurrentConversation,
+  joinContinuationText,
 } from '../utils/ConversationUtils';
 import useFeedbackApi from './useFeedbackApi';
 import { useActorRef, useSelector } from '@xstate/react';
@@ -201,16 +202,10 @@ const useChatState = create<{
           if (!draft[id]?.[messageId]) {
             return;
           }
-          const message = draft[id][messageId];
-          const textContent = message.content.find(
+          const textContent = draft[id][messageId].content.find(
             (c) => c.contentType === 'text'
           );
-          if (!textContent) {
-            // An answer cut off while reasoning has no text yet.
-            if (content) {
-              message.content.push({ contentType: 'text', body: content });
-            }
-          } else if (textContent.body !== content) {
+          if (textContent && textContent.body !== content) {
             textContent.body = content;
           }
         }),
@@ -358,6 +353,7 @@ const useChat = () => {
   const { modelId, setModelIdWithoutSaving, availableModels } = useModel();
 
   const conversationApi = useConversationApi();
+  const { refetchConversation } = conversationApi;
   const feedbackApi = useFeedbackApi();
   const {
     data,
@@ -647,7 +643,11 @@ const useChat = () => {
 
     // WARNING: Non-streaming is not supported from the UI side as it is planned to be DEPRICATED.
     const unsubscribe = subscribeStreamingText(streamingActor, (text) => {
-      editMessage(conversationId, currentMessage.id, currentContentBody + text);
+      editMessage(
+        conversationId,
+        currentMessage.id,
+        joinContinuationText(currentContentBody, text)
+      );
     });
     postStreaming({
       input,
@@ -662,13 +662,15 @@ const useChat = () => {
           typeof e === 'string' ? e : i18next.t('error.answerResponse')
         );
       })
-      .then(() => mutate())
+      // The continued conversation, even if another one is shown by now.
+      .then(() => refetchConversation(conversationId))
       .then((stored) => {
         // The continued answer keeps its id, so the refetch alone would not
         // replace the streamed text. Show what was saved: the joined answer, or
         // the cut-off one if the continuation failed.
         if (stored && useChatState.getState().conversationId === stored.id) {
           setMessages(stored.id, stored.messageMap);
+          reloadRelatedDocuments();
         }
       })
       .catch((e) => console.error(e))

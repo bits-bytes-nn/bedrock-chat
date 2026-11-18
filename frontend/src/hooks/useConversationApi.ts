@@ -65,6 +65,9 @@ const useConversationApi = () => {
       }>(`conversation/${conversationId}/proposed-title`);
       return updateTitle(conversationId, res.data.title);
     },
+    /** Refetch a conversation, also when another one is shown. */
+    refetchConversation: (conversationId: string) =>
+      mutate<Conversation>(`conversation/${conversationId}`),
     mutateConversations: (
       conversations?:
         | ConversationMeta[]

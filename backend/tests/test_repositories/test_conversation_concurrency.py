@@ -87,6 +87,19 @@ class TestMergeConversations(unittest.TestCase):
         self.assertNotIn("old", merged.message_map)
         self.assertEqual(merged.message_map["a"].children, [])
 
+    def test_continue_flag_follows_the_last_answer(self):
+        base = conversation()
+        mine, theirs = base.model_copy(deep=True), base.model_copy(deep=True)
+        add_reply(mine, "finished", 0)
+        add_reply(theirs, "cut-off", 0)
+        theirs.should_continue = True
+
+        merged = merge_conversations(base, mine, theirs)
+
+        # The finished answer is shown, so it must not offer Continue.
+        self.assertEqual(merged.last_message_id, "finished")
+        self.assertFalse(merged.should_continue)
+
     def test_mine_wins_when_both_change_the_same_field(self):
         base = conversation()
         mine, theirs = base.model_copy(deep=True), base.model_copy(deep=True)

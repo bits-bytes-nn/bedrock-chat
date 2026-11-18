@@ -191,14 +191,8 @@ class TestChatFlow(unittest.TestCase):
         self.assertTrue(stored.should_continue)
         return stored.last_message_id
 
-    def continue_answer(
-        self,
-        conversation_id: str,
-        parent: str,
-        text: str = ", continued",
-        thinking_log: list[SimpleMessageModel] | None = None,
-    ):
-        request = ChatInput.model_validate(
+    def continue_request(self, conversation_id: str, parent: str) -> ChatInput:
+        return ChatInput.model_validate(
             {
                 "conversation_id": conversation_id,
                 "message": {
@@ -211,6 +205,15 @@ class TestChatFlow(unittest.TestCase):
                 "continue_generate": True,
             }
         )
+
+    def continue_answer(
+        self,
+        conversation_id: str,
+        parent: str,
+        text: str = "half, continued",
+        thinking_log: list[SimpleMessageModel] | None = None,
+    ):
+        request = self.continue_request(conversation_id, parent)
         with patch.object(
             chat_usecase,
             "converse_with_strands",
@@ -233,24 +236,48 @@ class TestChatFlow(unittest.TestCase):
         )
         return last
 
-    def test_continues_without_prefill_by_asking_for_the_rest(self):
-        # Claude Haiku 5.5 rejects an assistant prefill.
+    def test_continues_by_asking_for_the_rest(self):
         answer_id = self.cut_off("c6")
         call = self.continue_answer("c6", answer_id)
         sent = call["messages"]
         self.assertEqual(
             [m.role for m in sent], ["system", "user", "assistant", "user"]
         )
+        # The word the limit may have cut is written again.
+        self.assertEqual(sent[-2].content[0].body, "The first ")
         self.assertEqual(sent[-1].content[0].body, CONTINUE_PROMPT)
         # The model that wrote the answer continues it.
         self.assertEqual(call["chat_input"].message.model, MODEL)
         self.joined_answer("c6")
 
-    def test_continues_with_prefill_from_the_cut_off_answer(self):
-        answer_id = self.cut_off("c7", "claude-v4.5-sonnet")
-        sent = self.continue_answer("c7", answer_id)["messages"]
-        self.assertEqual([m.role for m in sent], ["system", "user", "assistant"])
-        self.joined_answer("c7")
+    def test_failed_continuation_keeps_the_cut_off_answer(self):
+        answer_id = self.cut_off("c7")
+        with (
+            patch.object(
+                chat_usecase,
+                "converse_with_strands",
+                side_effect=RuntimeError("throttled"),
+            ),
+            self.assertRaises(RuntimeError),
+        ):
+            chat_usecase.chat(USER, self.continue_request("c7", answer_id))
+        stored = find_conversation_by_id(USER.id, "c7")
+        self.assertTrue(stored.should_continue)
+        self.assertEqual(
+            stored.message_map[answer_id].content,
+            [TextContentModel(content_type="text", body="The first half")],
+        )
+
+    def test_continuation_cut_off_again_can_be_continued(self):
+        # A model that always reasons may spend the tokens on reasoning only.
+        answer_id = self.cut_off("c12")
+        with patch.object(
+            chat_usecase,
+            "converse_with_strands",
+            return_value=answer("", "max_tokens"),
+        ):
+            chat_usecase.chat(USER, self.continue_request("c12", answer_id))
+        self.assertTrue(find_conversation_by_id(USER.id, "c12").should_continue)
 
     def test_continued_agent_answer_keeps_its_tool_steps(self):
         def step(body: str) -> SimpleMessageModel:
