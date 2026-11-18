@@ -141,3 +141,29 @@ def test_only_the_question_of_this_turn_is_checked_for_grounding(grounding, rele
     source, query = messages[-1]["content"]
     assert source["guardContent"]["text"]["qualifiers"] == ["grounding_source"]
     assert query["guardContent"]["text"] == {"text": "second", "qualifiers": ["query"]}
+
+
+def test_attachments_reach_models_without_document_blocks_as_text():
+    # GPT models reject document blocks ("This model doesn't support documents").
+    from app.repositories.models.conversation import AttachmentContentModel
+
+    message = SimpleMessageModel(
+        role="user",
+        content=[
+            TextContentModel(content_type="text", body="Summarize"),
+            AttachmentContentModel(
+                content_type="attachment", body=b"The code word", file_name="note.txt"
+            ),
+            AttachmentContentModel(
+                content_type="attachment", body=b"%PDF\xff\xfe", file_name="r%20e.pdf"
+            ),
+        ],
+    )
+    gpt = simple_message_models_to_strands_messages([message], "gpt-6.1-sol")
+    blocks = gpt[0]["content"]
+    assert not any("document" in block for block in blocks)
+    assert blocks[1]["text"] == '<file name="note.txt">\nThe code word\n</file>'
+    assert "r e.pdf" in blocks[2]["text"] and "cannot read" in blocks[2]["text"]
+
+    claude = simple_message_models_to_strands_messages([message], "claude-v5.5-haiku")
+    assert sum("document" in block for block in claude[0]["content"]) == 2

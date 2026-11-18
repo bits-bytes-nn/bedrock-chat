@@ -5,7 +5,10 @@ import { BedrockChatStack } from "../lib/bedrock-chat-stack";
 import { BedrockRegionResourcesStack } from "../lib/bedrock-region-resources";
 import { FrontendWafStack } from "../lib/frontend-waf-stack";
 import { LogRetentionChecker } from "../rules/log-retention-checker";
-import { getBedrockChatParameters } from "../lib/utils/parameter-models";
+import {
+  getBedrockChatParameters,
+  resolveWebSearchRegion,
+} from "../lib/utils/parameter-models";
 import { bedrockChatParams } from "../parameter";
 
 const app = new cdk.App();
@@ -66,7 +69,7 @@ const chat = new BedrockChatStack(
     envPrefix: params.envPrefix,
     crossRegionReferences: true,
     bedrockRegion: params.bedrockRegion,
-    webSearchRegion: params.webSearchRegion,
+    webSearchRegion: resolveWebSearchRegion(params),
     webAclId: waf ? waf.webAclArn.value : '',
     enableIpV6: params.enableFrontendIpv6 && params.allowedIpV6AddressRanges.length > 0,
     identityProviders: params.identityProviders,

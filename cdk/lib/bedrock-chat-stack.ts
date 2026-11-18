@@ -38,8 +38,8 @@ export interface BedrockChatStackProps extends StackProps {
   readonly envName: string;
   readonly envPrefix: string;
   readonly bedrockRegion: string;
-  /** Region of AgentCore Web Search; empty uses bedrockRegion. */
-  readonly webSearchRegion?: string;
+  /** Region of AgentCore Web Search (resolveWebSearchRegion). */
+  readonly webSearchRegion: string;
   readonly webAclId: string;
   readonly identityProviders: TIdentityProvider[];
   readonly userPoolDomainPrefix: string;
@@ -151,6 +151,7 @@ export class BedrockChatStack extends cdk.Stack {
         envName: props.envName,
         envPrefix: props.envPrefix,
         bedrockRegion: props.bedrockRegion,
+        webSearchRegion: props.webSearchRegion,
         enableBedrockGlobalInference: props.enableBedrockGlobalInference,
         enableBedrockCrossRegionInference:
           props.enableBedrockCrossRegionInference,
@@ -287,7 +288,7 @@ export class BedrockChatStack extends cdk.Stack {
     const defaultChatSearch = {
       engine: defaultChatSearchEngine,
       apiKey: defaultChatSearchApiKey,
-      webSearchRegion: props.webSearchRegion || props.bedrockRegion,
+      webSearchRegion: props.webSearchRegion,
     };
 
     const backendApi = new Api(this, "BackendApi", {
@@ -429,6 +430,10 @@ export class BedrockChatStack extends cdk.Stack {
         value: defaultChatSearchApiKey.secretName,
       });
     }
+    // docs/ADMINISTRATOR.md: retrying a bot removal that went to the dead-letter queue.
+    new CfnOutput(this, "BotRemovalHandlerName", {
+      value: embedding.removalHandlerName,
+    });
     new CfnOutput(this, "FrontendURL", {
       value: frontend.getOrigin(),
     });

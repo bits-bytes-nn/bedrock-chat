@@ -5,7 +5,10 @@ import "source-map-support/register";
 import * as cdk from "aws-cdk-lib";
 import { ApiPublishmentStack } from "../lib/api-publishment-stack";
 import * as apigateway from "aws-cdk-lib/aws-apigateway";
-import { resolveApiPublishParameters } from "../lib/utils/parameter-models";
+import {
+  resolveApiPublishParameters,
+  resolveWebSearchRegion,
+} from "../lib/utils/parameter-models";
 import {
   apiPublishmentStackPrefix,
   chatStackExportName,
@@ -51,7 +54,7 @@ new ApiPublishmentStack(app, `${apiPublishmentStackPrefix}${params.publishedApiI
     region: process.env.CDK_DEFAULT_REGION,
   },
   bedrockRegion: params.bedrockRegion,
-  webSearchRegion: params.webSearchRegion || params.bedrockRegion,
+  webSearchRegion: resolveWebSearchRegion(params),
   metricsNamespace: metricsNamespace(params.envPrefix),
   tableAccessRolePath: tableAccessRolePath(params.envPrefix),
   alarmTopicArn,

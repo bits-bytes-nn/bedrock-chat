@@ -16,7 +16,7 @@ from app.bedrock import (
     get_model_id,
     get_text_from_converse_response,
 )
-from app.metrics import emit_chat_cost
+from app.metrics import emit_chat_cost, emit_metric
 from app.repositories.models.custom_bot import BotModel, SearchApiConfigModel
 from app.routes.schemas.bot import SEARCH_API_MAX_RESULTS
 from app.usecases.global_config import (
@@ -247,6 +247,10 @@ _WEB_SEARCH_PERIODS = {
 }
 _WEB_SEARCH_MAX_QUERY_CHARS = 200
 _WEB_SEARCH_MAX_RESULTS = 10
+# USD per query after the free monthly queries, billed to the AWS account rather
+# than to a key of the bot owner (https://aws.amazon.com/bedrock/agentcore/pricing/).
+# Counted as chat cost, so that the daily cost alarm covers it.
+WEB_SEARCH_PRICE_PER_QUERY = 0.007
 
 
 def _search_with_agentcore(query: str, time_limit: str) -> list[dict[str, str]]:
@@ -273,19 +277,32 @@ def _search_with_agentcore(query: str, time_limit: str) -> list[dict[str, str]]:
     try:
         results = get_web_search_client().invoke_web_search(**request)["results"]
     except ClientError as e:
-        raise SearchApiError(
-            f"AgentCore web search failed: {e.response['Error']['Code']}"
-        ) from None
+        code = e.response["Error"]["Code"]
+        # The model sees only the code; the log keeps what support would ask for.
+        logger.warning(
+            "AgentCore web search failed: %s %s (request %s)",
+            code,
+            e.response["Error"].get("Message", ""),
+            e.response.get("ResponseMetadata", {}).get("RequestId", ""),
+        )
+        raise SearchApiError(f"AgentCore web search failed: {code}") from None
     except BotoCoreError as e:
         raise SearchApiError(
             f"AgentCore web search failed: {type(e).__name__}"
         ) from None
+    emit_chat_cost(WEB_SEARCH_PRICE_PER_QUERY)
     logger.info("AgentCore web search completed. Found %d results", len(results))
     return [
         {
             "content": result["text"],
             "source_name": result.get("title", ""),
             "source_link": _web_link(result.get("url", "")),
+            # Tells the model how recent the page is.
+            **(
+                {"published_at": result["publishedAt"].isoformat()}
+                if result.get("publishedAt")
+                else {}
+            ),
         }
         for result in results
     ]
@@ -390,18 +407,6 @@ Summary:"""
         return fallback_content
 
 
-def _get_internet_tool_config(bot: BotModel | None):
-    """Extract internet tool configuration from bot."""
-    if not bot or not bot.agent or not bot.agent.tools:
-        return None
-
-    for tool_config in bot.agent.tools:
-        if tool_config.tool_type == "internet":
-            return tool_config
-
-    return None
-
-
 def _search_settings(
     bot: BotModel | None,
 ) -> tuple[str, SearchApiConfigModel | None]:
@@ -421,7 +426,7 @@ def _search_settings(
             raise RuntimeError(f"The API key secret for {engine} is empty")
         return engine, config
 
-    internet_tool = _get_internet_tool_config(bot)
+    internet_tool = bot.internet_tool()
     if internet_tool is None:
         return "duckduckgo", None
     return internet_tool.search_engine, internet_tool.search_api_config
@@ -458,15 +463,15 @@ def create_internet_search_tool(bot: BotModel | None) -> StrandsAgentTool:
 
     @tool
     def internet_search(
-        query: str, locale: str = "en-us", time_limit: str = "d"
+        query: str, locale: str = "en-us", time_limit: str = ""
     ) -> dict:
         """
         Search the internet for information.
 
         Args:
-            query: The query to search for on the internet.
-            locale: The country code and language code for the search. Must be `{language}-{country}` for example `jp-jp` (Japanese - Japan), `zh-cn` (Chinese - China), `en-ca` (English - Canada), `fr-ca` (French - Canada), `en-nz` (English - New Zealand), etc. If empty the default is `en-us`.
-            time_limit: Retrieve only the most recent results, for example `w` only returns the results from the last week. Units are 'd' (day), 'w' (week), 'm' (month), 'y' (year). Use empty string to retrieve all results.
+            query: The query to search for on the internet, at most 200 characters. Write it in the language of the pages you want: some engines ignore the locale.
+            locale: The country code and language code for the search. Must be `{language}-{country}` for example `ja-jp` (Japanese - Japan), `zh-cn` (Chinese - China), `en-ca` (English - Canada), `fr-ca` (French - Canada), `en-nz` (English - New Zealand), etc. If empty the default is `en-us`.
+            time_limit: Retrieve only the most recent results, for example `w` only returns the results from the last week. Units are 'd' (day), 'w' (week), 'm' (month), 'y' (year). Leave it empty to retrieve all results, including pages without a date; set it only for news and other recent events.
 
         Returns:
             dict: ToolResult format with search results in json field
@@ -483,6 +488,7 @@ def create_internet_search_tool(bot: BotModel | None) -> StrandsAgentTool:
             # The status tells the model, and so the user, why: for example an
             # exhausted plan or a rejected key.
             logger.warning("Internet search failed: %s", e)
+            emit_metric("InternetSearchFailures", 1)
             return {
                 "status": "error",
                 "content": [{"text": f"The internet search failed: {e}."}],
@@ -491,6 +497,7 @@ def create_internet_search_tool(bot: BotModel | None) -> StrandsAgentTool:
             # Other error texts can name internal resources; the model and the
             # conversation get a fixed text.
             logger.exception("Internet search failed")
+            emit_metric("InternetSearchFailures", 1)
             return {
                 "status": "error",
                 "content": [{"text": "The internet search failed."}],

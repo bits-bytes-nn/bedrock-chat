@@ -34,6 +34,7 @@ import {
   MB,
   convertedFileName,
   isConvertibleFile,
+  isDocumentFile,
   maxConvertibleFileSizeMb,
 } from '../constants/supportedAttachedFiles';
 import { isSubmitEnter } from '../utils/KeyboardUtils';
@@ -171,6 +172,7 @@ const InputChatContent = forwardRef<HTMLElement, Props>(
     const { t } = useTranslation();
     const {
       disabledImageUpload,
+      disabledDocumentUpload,
       model,
       acceptMediaType,
       forceReasoningEnabled,
@@ -531,6 +533,8 @@ const InputChatContent = forwardRef<HTMLElement, Props>(
           if (file) {
             if (isConvertibleFile(file.name)) {
               handleConvertibleFile(file);
+            } else if (disabledDocumentUpload && isDocumentFile(file.name)) {
+              open(t('error.notSupportedDocument'));
             } else if (
               SUPPORTED_FILE_EXTENSIONS.some((extension) =>
                 file.name.toLowerCase().endsWith(extension.toLowerCase())
@@ -557,6 +561,7 @@ const InputChatContent = forwardRef<HTMLElement, Props>(
         open,
         t,
         acceptMediaType,
+        disabledDocumentUpload,
       ]
     );
 

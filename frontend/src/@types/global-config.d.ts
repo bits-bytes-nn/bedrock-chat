@@ -15,5 +15,7 @@ export interface ModelItem {
   supportMediaType: string[];
   supportReasoning: boolean;
   forceReasoningEnabled?: boolean;
+  /** False for models that cannot read PDF and Office files; text files still work. */
+  supportDocument?: boolean;
   description?: string;
 }

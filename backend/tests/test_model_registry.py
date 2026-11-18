@@ -46,6 +46,26 @@ class TestRegistryConsistency(unittest.TestCase):
         self.assertEqual(frontend_keys, set(MODELS))
         self.assertEqual(ui_models, set(MODELS))
 
+    def test_frontend_capabilities_match_registry(self):
+        # The UI forces the reasoning toggle and refuses PDF and Office files from
+        # these flags, so they must follow the request rules of the backend.
+        use_model = (FRONTEND / "hooks" / "useModel.ts").read_text()
+        models_block = use_model[use_model.index("const MODELS") :]
+        models_block = models_block[: models_block.index("\n];")]
+        entries = dict(
+            re.findall(r"modelId: '([^']+)',(.*?)(?=modelId:|\Z)", models_block, re.S)
+        )
+        self.assertEqual(set(entries), set(MODELS))
+        for model, spec in MODELS.items():
+            with self.subTest(model=model):
+                self.assertEqual(
+                    "ALWAYS_REASONING" in entries[model], spec.reasoning == "always"
+                )
+                self.assertEqual(
+                    "supportDocument: false" in entries[model],
+                    not spec.supports_documents,
+                )
+
     def test_frontend_has_english_labels(self):
         english = (FRONTEND / "i18n" / "en" / "index.ts").read_text()
         missing = [model for model in MODELS if f"'{model}': {{" not in english]

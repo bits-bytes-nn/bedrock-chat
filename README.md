@@ -299,7 +299,7 @@ npm ci
     The following model IDs are supported (please make sure that they are also enabled in the Bedrock console under Model access in your deployment region):
 
 - **Claude Models:** `claude-v4.5-opus`, `claude-v4.6-opus`, `claude-v4.7-opus`, `claude-v4.8-opus`, `claude-v5-opus`, `claude-v5.5-opus`, `claude-v4.5-sonnet`, `claude-v4.6-sonnet`, `claude-v5-sonnet`, `claude-v5.5-sonnet`, `claude-v4.5-haiku`, `claude-v5.5-haiku`
-- **OpenAI Models:** `gpt-5.5`, `gpt-5.6-luna`, `gpt-5.6-sol`, `gpt-5.6-terra`, `gpt-6-astra`, `gpt-6-luna`, `gpt-6-sol`, `gpt-6.1-sol`, `gpt-6.1-terra`, `gpt-oss-20b`, `gpt-oss-120b`
+- **OpenAI Models:** `gpt-5.5`, `gpt-5.6-luna`, `gpt-5.6-sol`, `gpt-5.6-terra`, `gpt-6-astra`, `gpt-6-luna`, `gpt-6-sol`, `gpt-6.1-sol`, `gpt-6.1-terra`, `gpt-6.2-astra`, `gpt-6.2-sol`, `gpt-oss-20b`, `gpt-oss-120b`
 - **Amazon Nova Models:** `amazon-nova-pro`, `amazon-nova-lite`, `amazon-nova-micro`, `amazon-nova-2-lite`
 - **Mistral Models:** `mistral-large`, `mistral-large-2`
 
@@ -637,7 +637,7 @@ aws secretsmanager put-secret-value --secret-id <DefaultChatSearchApiKeySecretNa
 rm key.json
 ```
 
-[AgentCore Web Search](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/web-search-api.html) (`agentcore`) is authorized with IAM instead of a key and billed to the AWS account per query (see [AgentCore pricing](https://aws.amazon.com/bedrock/agentcore/pricing/)). It is offered in fewer Regions than Bedrock models, so set `webSearchRegion` to one of them when `bedrockRegion` is not, for example `ap-northeast-1` for `ap-northeast-2`; the search query then leaves `bedrockRegion`. Bots can choose it too, so the chat handlers can always call it in that Region. It takes no locale, and a time limit keeps only pages with a publication date. Its terms require showing the sources of the results with an answer that uses them; the app shows them with the answer.
+[AgentCore Web Search](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/web-search-api.html) (`agentcore`) is authorized with IAM instead of a key and billed to the AWS account per query (see [AgentCore pricing](https://aws.amazon.com/bedrock/agentcore/pricing/)). It is offered in fewer Regions than Bedrock models, so set `webSearchRegion` to one of them when `bedrockRegion` is not, for example `ap-northeast-1` for `ap-northeast-2`; the search query then leaves `bedrockRegion`. Like `defaultChatSearchEngine`, it is not in `cdk.json`: set it in `parameter.ts`, `cdk/cdk.context.json` or with `-c webSearchRegion=ap-northeast-1` on every deploy. Bots can choose the engine too, so the chat handlers can always call it in that Region, and the `InternetSearchFailures` alarm goes off when searches fail, for example in a Region without the service. It takes no locale, and a time limit keeps only pages with a publication date. Its terms require showing the sources of the results with an answer that uses them, so answers that can use it cite their sources whatever the bot's setting; a client of a published API must show the sources in `thinking_log` too.
 
 Until the key is set, searches fail and the model answers without them. Changing the engine replaces the secret, so put the key of the new engine in again. Models without tool use get no search. Answers of chats without a bot do not cite their sources inline; the search results are shown with the answer.
 
@@ -652,10 +652,11 @@ CloudWatch alarms notify an SNS topic (output `AlarmTopicArn`) when:
 - Lambda concurrency limits throttle chat requests (these are not the API Gateway 429 responses caused by `apiThrottleRateLimit`);
 - the knowledge sync state machine fails, times out or is aborted, or a bot's knowledge sync fails;
 - the knowledge base sync status update fails. This can mean that the knowledge base stack of a deleted bot was left behind; look for `BrChatKbStack*` stacks without a bot;
-- the resources of a deleted bot could not be removed;
+- the resources of a deleted bot could not be removed ([recovery](./docs/ADMINISTRATOR.md#bot-removal-recovery));
 - the hourly conversation export for usage analysis fails;
 - updating the usage counts of bots fails at least 5 times in an hour (the answers are still saved);
-- a day of chat answers costs at least `dailyChatCostAlarmUsd` (default 100 USD; 0 turns it off). The cost is computed with the model prices in the backend and includes published APIs;
+- internet searches fail at least 5 times in an hour, for example for an exhausted search plan, a rejected API key or a `webSearchRegion` without AgentCore Web Search (the answers go on without the search);
+- a day of chat answers costs at least `dailyChatCostAlarmUsd` (default 100 USD; 0 turns it off). The cost is computed with the model prices in the backend, includes published APIs and AgentCore Web Search queries at their list price;
 - a published API fails to answer or its Lambda functions fail. These alarms are in each `ApiPublishmentStack*` stack ([API publication](./docs/PUBLISH_API.md#architecture)).
 
 Set `alarmEmail` to subscribe an email address; AWS sends a confirmation email first. To recover a bot from a failed or stuck sync, see [Knowledge sync recovery](./docs/ADMINISTRATOR.md#knowledge-sync-recovery).

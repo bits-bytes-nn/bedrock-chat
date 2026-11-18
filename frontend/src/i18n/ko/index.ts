@@ -84,11 +84,21 @@ const translation: typeof en = {
       },
       'gpt-6.1-sol': {
         label: 'GPT-6.1 Sol',
-        description: '복잡한 추론을 위한 최신 OpenAI GPT-6.1 모델입니다.',
+        description: '복잡한 추론을 위한 OpenAI GPT-6.1 모델입니다.',
       },
       'gpt-6.1-terra': {
         label: 'GPT-6.1 Terra',
         description: '성능과 비용의 균형을 갖춘 OpenAI GPT-6.1 모델입니다.',
+      },
+      'gpt-6.2-astra': {
+        label: 'GPT-6.2 Astra',
+        description:
+          '복잡한 다단계 작업을 위한 최신 OpenAI 플래그십 모델입니다.',
+      },
+      'gpt-6.2-sol': {
+        label: 'GPT-6.2 Sol',
+        description:
+          '일상 업무를 위한 빠르고 다재다능한 최신 OpenAI 모델입니다.',
       },
       'amazon-nova-2-lite': {
         label: 'Amazon Nova 2 Lite',
@@ -986,6 +996,8 @@ const translation: typeof en = {
         '최대 출력 길이에 도달해 답변이 중간에 끝났습니다. 계속 생성을 누르거나 봇 생성 설정에서 최대 토큰 수를 늘려 주세요.',
       maxTokensReachedWithoutSettings:
         '최대 출력 길이에 도달해 답변이 중간에 끝났습니다. 나머지 내용은 계속 생성으로 받을 수 있습니다.',
+      notSupportedDocument:
+        '선택한 모델은 PDF와 Office 파일을 읽지 못합니다. 다른 모델을 고르거나 내용을 텍스트로 첨부하세요.',
       notSupportedImage: '선택한 모델은 이미지를 지원하지 않습니다.',
       unsupportedFileFormat: '선택한 파일 형식은 지원되지 않습니다.',
       emptyAnswer:

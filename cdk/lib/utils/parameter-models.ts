@@ -59,9 +59,6 @@ const BaseParametersSchema = z.object({
 
   // Bedrock configuration
   bedrockRegion: z.string().default("us-east-1"),
-  // Region of AgentCore Web Search, the internet search engine without an API key.
-  // It is offered in fewer Regions than Bedrock models. Empty uses bedrockRegion.
-  webSearchRegion: z.string().default(""),
   enableBedrockGlobalInference: contextBoolean.default(true),
   enableBedrockCrossRegionInference: contextBoolean.default(true),
 });
@@ -85,7 +82,21 @@ function getBooleanEnvVar(name: string): boolean | undefined {
 /**
  * Parameters schema for the main Bedrock Chat application
  */
+// Region of AgentCore Web Search, the internet search engine without an API key.
+// It is offered in fewer Regions than Bedrock models. Empty uses bedrockRegion.
+const webSearchRegion = z
+  .string()
+  .regex(/^$|^[a-z]{2}(-[a-z]+)+-\d$/, "must be a Region code such as ap-northeast-1")
+  .default("");
+
+/** The Region that chat handlers search with AgentCore Web Search in. */
+export const resolveWebSearchRegion = (params: {
+  webSearchRegion: string;
+  bedrockRegion: string;
+}): string => params.webSearchRegion || params.bedrockRegion;
+
 const BedrockChatParametersSchema = BaseParametersSchema.extend({
+  webSearchRegion,
 
   // Frontend WAF toggle (CloudFront scope)
   // Set to 'false' if you're unable to deploy resources in us-east-1
@@ -194,6 +205,7 @@ const BedrockChatParametersSchema = BaseParametersSchema.extend({
  * Parameters schema for API publishing
  */
 const ApiPublishParametersSchema = BaseParametersSchema.extend({
+  webSearchRegion,
   // API publishing configuration
   // API Gateway takes a fractional rate, and whole numbers for the others.
   publishedApiThrottleRateLimit: contextNumber.pipe(z.number().positive()).optional(),

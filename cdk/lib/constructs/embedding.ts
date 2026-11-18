@@ -49,6 +49,8 @@ export class Embedding extends Construct {
   readonly stateMachine: sfn.StateMachine;
   /** Bot removals that failed after the retries, which may leave stacks behind. */
   readonly removalDeadLetterQueue: sqs.Queue;
+  /** Name of the function that removes a deleted bot's resources, for manual retries. */
+  removalHandlerName!: string;
 
   private _updateSyncStatusHandler: lambda.Function;
   private _bootstrapStateMachineHandler: IFunction;
@@ -741,6 +743,7 @@ export class Embedding extends Construct {
       role: removeHandlerRole,
       logGroup: lambdaLogGroup(this, "BotRemovalHandlerLogGroup", removeHandlerRole),
     });
+    this.removalHandlerName = removalHandler.functionName;
     removalHandler.addEventSource(
       new DynamoEventSource(props.database.botTable, {
         startingPosition: lambda.StartingPosition.TRIM_HORIZON,

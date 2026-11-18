@@ -6,6 +6,7 @@ import logging
 from typing import TypeGuard
 
 from app.bedrock import (
+    is_document_supported,
     is_prompt_caching_automatic,
     is_prompt_caching_supported,
     is_unsigned_reasoning_content_supported,
@@ -28,6 +29,7 @@ from strands.types.content import (
 )
 
 from app.strands_integration.converters.content_converter import (
+    attachment_content_model_to_text_blocks,
     content_model_to_strands_content_blocks,
     strands_content_block_to_content_model,
 )
@@ -99,6 +101,9 @@ def simple_message_models_to_strands_messages(
             and not getattr(c, "signature", None)
         ):
             return []
+
+        if c.content_type == "attachment" and not is_document_supported(model):
+            return attachment_content_model_to_text_blocks(c)
 
         if c.content_type == "text":
             if is_last_user and grounding_source:

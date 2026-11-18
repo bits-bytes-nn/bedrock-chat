@@ -2,6 +2,8 @@
 Content conversion utilities for Strands integration.
 """
 
+from urllib.parse import unquote
+
 from app.repositories.models.conversation import (
     AttachmentContentModel,
     ContentModel,
@@ -79,6 +81,25 @@ def _attachment_content_model_to_strands_content_blocks(
             ),
         },
     ]
+
+
+def attachment_content_model_to_text_blocks(
+    content: AttachmentContentModel,
+) -> list[ContentBlock]:
+    """An attachment as text, for models without document blocks. A text file is
+    inlined; other files, such as PDFs, are named so that the model can say why it
+    does not answer from them."""
+    name = unquote(content.file_name)
+    try:
+        text = content.body.decode("utf-8")
+    except UnicodeDecodeError:
+        return [
+            {
+                "text": f"[The file {name} is attached, but this model cannot "
+                "read it. Another model can.]"
+            }
+        ]
+    return [{"text": f'<file name="{name}">\n{text}\n</file>'}]
 
 
 def _tool_use_content_model_to_strands_content_blocks(

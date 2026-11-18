@@ -84,11 +84,19 @@ const translation: typeof en = {
       },
       'gpt-6.1-sol': {
         label: 'GPT-6.1 Sol',
-        description: '複雑な推論向けの最新OpenAI GPT-6.1モデル。',
+        description: '複雑な推論向けのOpenAI GPT-6.1モデル。',
       },
       'gpt-6.1-terra': {
         label: 'GPT-6.1 Terra',
         description: '性能とコストのバランスに優れたOpenAI GPT-6.1モデル。',
+      },
+      'gpt-6.2-astra': {
+        label: 'GPT-6.2 Astra',
+        description: '複雑なマルチステップ作業向けの最新OpenAIフラッグシップモデル。',
+      },
+      'gpt-6.2-sol': {
+        label: 'GPT-6.2 Sol',
+        description: '日常業務向けの高速で汎用的な最新OpenAIモデル。',
       },
       'amazon-nova-2-lite': {
         label: 'Amazon Nova 2 Lite',
@@ -992,6 +1000,8 @@ const translation: typeof en = {
         '最大出力長に達したため回答が途中で終了しました。「生成を続ける」を選択するか、ボットの生成設定で最大トークン数を増やしてください。',
       maxTokensReachedWithoutSettings:
         '最大出力長に達したため回答が途中で終了しました。続きは「生成を続ける」で生成できます。',
+      notSupportedDocument:
+        '選択しているモデルは PDF と Office ファイルを読めません。別のモデルを選ぶか、内容をテキストで添付してください。',
       notSupportedImage: '選択しているモデルは、画像を利用できません。',
       unsupportedFileFormat: '選択したファイル形式はサポートされていません。',
       emptyAnswer:

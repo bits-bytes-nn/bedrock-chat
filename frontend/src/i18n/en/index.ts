@@ -83,11 +83,20 @@ const translation = {
       },
       'gpt-6.1-sol': {
         label: 'GPT-6.1 Sol',
-        description: 'Latest OpenAI GPT-6.1 model for complex reasoning.',
+        description: 'OpenAI GPT-6.1 model for complex reasoning.',
       },
       'gpt-6.1-terra': {
         label: 'GPT-6.1 Terra',
         description: 'OpenAI GPT-6.1 model balancing capability and cost.',
+      },
+      'gpt-6.2-astra': {
+        label: 'GPT-6.2 Astra',
+        description:
+          'Latest OpenAI frontier model for complex, multistep work.',
+      },
+      'gpt-6.2-sol': {
+        label: 'GPT-6.2 Sol',
+        description: 'Latest fast, versatile OpenAI model for everyday work.',
       },
       'amazon-nova-2-lite': {
         label: 'Amazon Nova 2 Lite',
@@ -186,7 +195,7 @@ const translation = {
             },
             agentcore: {
               label: 'Amazon Bedrock AgentCore Web Search',
-              hint: 'Search on Amazon\'s web index, billed to the AWS account per query. No API key is required. https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/web-search-api.html',
+              hint: "Search on Amazon's web index, billed to the AWS account per query. No API key is required. https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/web-search-api.html",
             },
             firecrawl: {
               label: 'Firecrawl (For Business)',
@@ -990,6 +999,8 @@ How would you categorize this email?`,
         'The answer was cut off because it reached the maximum output length. Select Continue to Generate, or increase Max Tokens in the bot generation settings.',
       maxTokensReachedWithoutSettings:
         'The answer was cut off because it reached the maximum output length. Select Continue to Generate for the rest.',
+      notSupportedDocument:
+        'The selected model cannot read PDF and Office files. Choose another model, or attach the content as text.',
       notSupportedImage: 'The selected model does not support images.',
       unsupportedFileFormat: 'The selected file format is not supported.',
       emptyAnswer:

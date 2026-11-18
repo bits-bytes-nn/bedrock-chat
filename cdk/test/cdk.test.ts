@@ -14,6 +14,7 @@ import {
   getKnowledgeBaseType,
 } from "../lib/utils/bedrock-knowledge-base-args";
 import { SEARCH_API_ENGINES } from "../lib/utils/bedrock-policies";
+import { resolveWebSearchRegion } from "../lib/utils/parameter-models";
 import { BedrockCustomBotStack } from "../lib/bedrock-custom-bot-stack";
 import { BedrockRegionResourcesStack } from "../lib/bedrock-region-resources";
 import { ApiPublishmentStack } from "../lib/api-publishment-stack";
@@ -83,6 +84,7 @@ const newChatStack = (
     envName: "test",
     envPrefix: "test-",
     bedrockRegion: "us-east-1",
+    webSearchRegion: "us-east-1",
     crossRegionReferences: true,
     webAclId: "",
     identityProviders: [],
@@ -141,6 +143,7 @@ describe("Bedrock Chat Stack Test", () => {
         envName: "test",
         envPrefix: "test-",
         bedrockRegion: "us-east-1",
+        webSearchRegion: "us-east-1",
         crossRegionReferences: true,
         webAclId: "",
         identityProviders: [
@@ -224,6 +227,7 @@ describe("Bedrock Chat Stack Test", () => {
         envName: "test",
         envPrefix: "test-",
         bedrockRegion: "us-east-1",
+        webSearchRegion: "us-east-1",
         crossRegionReferences: true,
         webAclId: "",
         identityProviders: [
@@ -302,6 +306,7 @@ describe("Bedrock Chat Stack Test", () => {
       envName: "test",
       envPrefix: "test-",
       bedrockRegion: "us-east-1",
+      webSearchRegion: "us-east-1",
       crossRegionReferences: true,
       webAclId: "",
       identityProviders: [],
@@ -451,7 +456,20 @@ describe("Bedrock Chat Stack Test", () => {
     expect(tableTrust).toContain(":role/bedrock-chat/test-/*");
     expect(tableTrust).not.toContain("PrincipalTag");
 
-    template.resourceCountIs("AWS::CloudWatch::Alarm", 12);
+    template.resourceCountIs("AWS::CloudWatch::Alarm", 13);
+    // Failed searches leave the answer without them and are only logged.
+    template.hasResourceProperties("AWS::CloudWatch::Alarm", {
+      MetricName: "InternetSearchFailures",
+      Period: 3600,
+    });
+    template.hasOutput("BotRemovalHandlerName", {});
+    template.hasResourceProperties("AWS::CodeBuild::Project", {
+      Environment: Match.objectLike({
+        EnvironmentVariables: Match.arrayWith([
+          { Name: "WEB_SEARCH_REGION", Type: "PLAINTEXT", Value: "us-east-1" },
+        ]),
+      }),
+    });
     template.hasResourceProperties("AWS::CloudWatch::Alarm", {
       MetricName: "BotUsageUpdateFailures",
       Period: 3600,
@@ -945,6 +963,9 @@ describe("Bedrock Chat Stack Test", () => {
     // always can; the Region defaults to the Bedrock one.
     expect(canSearch(newChatStack(), "us-east-1")).toHaveLength(2);
     expect(
+      resolveWebSearchRegion({ webSearchRegion: "", bedrockRegion: "eu-west-1" })
+    ).toBe("eu-west-1");
+    expect(
       canSearch(newChatStack({ webSearchRegion: "ap-northeast-1" }), "ap-northeast-1")
     ).toHaveLength(2);
     // It needs no key.
@@ -983,6 +1004,7 @@ describe("Bedrock Chat Stack Test", () => {
       envName: "test",
       envPrefix: "test-",
       bedrockRegion: "us-east-1",
+      webSearchRegion: "us-east-1",
       crossRegionReferences: true,
       webAclId: "",
       identityProviders: [],
@@ -1070,6 +1092,7 @@ describe("Bedrock Chat Stack Test", () => {
       envName: "test",
       envPrefix: "test-",
       bedrockRegion: "us-east-1",
+      webSearchRegion: "us-east-1",
       crossRegionReferences: true,
       webAclId: "",
       identityProviders: [],
@@ -1133,6 +1156,7 @@ describe("Bedrock Chat Stack Test", () => {
       envName: "test",
       envPrefix: "test-",
       bedrockRegion: "us-east-1",
+      webSearchRegion: "us-east-1",
       crossRegionReferences: true,
       // Simulate WAF disabled: no ARN provided from bin
       webAclId: "",
@@ -1190,6 +1214,7 @@ describe("Bedrock Chat Stack Test", () => {
       envName: "test",
       envPrefix: "test-",
       bedrockRegion: "us-east-1",
+      webSearchRegion: "us-east-1",
       crossRegionReferences: true,
       webAclId: wafArn,
       identityProviders: [],
@@ -1453,18 +1478,25 @@ describe("Api Publishment Stack", () => {
     const template = Template.fromStack(stack);
 
     // The consumer answers with the bot, which may search with AgentCore.
-    template.hasResourceProperties("AWS::Lambda::Function", {
-      Environment: {
-        Variables: Match.objectLike({ WEB_SEARCH_REGION: "ap-northeast-1" }),
-      },
-    });
-    template.hasResourceProperties("AWS::IAM::Policy", {
-      PolicyDocument: {
-        Statement: Match.arrayWith([
-          Match.objectLike({ Action: "bedrock-agentcore:InvokeWebSearch" }),
-        ]),
-      },
-    });
+    const searchingConsumer = Object.values(
+      template.findResources("AWS::Lambda::Function", {
+        Properties: {
+          Environment: {
+            Variables: Match.objectLike({ WEB_SEARCH_REGION: "ap-northeast-1" }),
+          },
+        },
+      })
+    );
+    expect(searchingConsumer).toHaveLength(1);
+    expect(
+      roleStatementsOf(template, searchingConsumer[0]).some(
+        (statement) =>
+          statement.Action === "bedrock-agentcore:InvokeWebSearch" &&
+          JSON.stringify(statement.Resource).includes(
+            ":bedrock-agentcore:ap-northeast-1:aws:tool/web-search.v1"
+          )
+      )
+    ).toBe(true);
 
     // Both handler roles assume the chat stack's table access role, which trusts
     // roles under this path.

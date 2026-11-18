@@ -11,6 +11,8 @@ export interface ApiPublishCodebuildProps {
   readonly envName: string;
   readonly envPrefix: string;
   readonly bedrockRegion: string;
+  /** Region of AgentCore Web Search, which published bots may search with. */
+  readonly webSearchRegion: string;
   readonly enableBedrockGlobalInference: boolean;
   readonly enableBedrockCrossRegionInference: boolean;
   readonly sourceBucket: s3.Bucket;
@@ -39,6 +41,7 @@ export class ApiPublishCodebuild extends Construct {
         ENV_NAME: { value: props.envName },
         ENV_PREFIX: { value: props.envPrefix },
         BEDROCK_REGION: { value: props.bedrockRegion },
+        WEB_SEARCH_REGION: { value: props.webSearchRegion },
         ENABLE_BEDROCK_GLOBAL_INFERENCE: {
           value: props.enableBedrockGlobalInference.toString(),
         },

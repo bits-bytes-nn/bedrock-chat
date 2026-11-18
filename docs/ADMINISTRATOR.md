@@ -129,7 +129,7 @@ When you upgrade from upstream:
 - The usage analysis export and Athena query result buckets get an expiration of `usageAnalysisRetentionDays` (default 90), so older exports are deleted. Copy them first or raise the value.
 - `CreatingBotAllowed` keeps its members, who all joined automatically before (`autoJoinUserGroups` now defaults to `[]`). Review the group in Cognito.
 
-Published APIs keep the code and stack settings they were published with, including the default throttle, alarms, cost metric and metric namespace. Publish them again after upgrading.
+Published APIs keep the code and stack settings they were published with, including the default throttle, alarms, cost metric and metric namespace. Publish them again after upgrading. An API published before a search engine was added cannot load its bot once the bot uses that engine, for example AgentCore Web Search, so publish it again before switching the engine; publish again also after changing `webSearchRegion`.
 
 ## Knowledge sync recovery
 
@@ -139,7 +139,7 @@ A bot can be deleted during a sync. When the sync ends, it deletes the knowledge
 
 ## Bot removal recovery
 
-Deleting a bot removes its resources asynchronously: its knowledge base stack, published API, documents in shared knowledge bases, files, search API keys and the conversations of its API's clients. The removal handler retries a failed record five times for up to 12 hours, then sends it to the bot removal dead-letter queue, and the `BotRemovalFailures` alarm goes off ([Alarms and API Throttling](../README.md#alarms-and-api-throttling)).
+Deleting a bot removes its resources asynchronously: its knowledge base stack, published API, documents in shared knowledge bases, files, search API keys and the conversations of its API's clients. The removal handler retries a failed record up to five times, within 12 hours, then sends it to the bot removal dead-letter queue, and the `BotRemovalFailures` alarm goes off ([Alarms and API Throttling](../README.md#alarms-and-api-throttling)).
 
 The queue message records only the position in the DynamoDB stream, not the bot. To recover:
 
@@ -147,16 +147,29 @@ The queue message records only the position in the DynamoDB stream, not the bot.
 2. Fix the cause, for example a stack in `DELETE_FAILED` (delete it in CloudFormation in the Bedrock region) or a missing permission.
 3. Run the handler again for the bot. Every step is idempotent, so the steps that already succeeded do nothing:
 
+   The function name is the `BotRemovalHandlerName` output of `BedrockChatStack`. Run the commands in the Region of that stack (not the Bedrock region). A removal can take up to the function's 15-minute timeout, so the read timeout of the CLI is raised and its retries are turned off:
+
    ```sh
    cat > removal.json <<JSON
    {"Records": [{"dynamodb": {"Keys": {"PK": {"S": "<user id>"}, "SK": {"S": "BOT#<bot id>"}}}}]}
    JSON
-   aws lambda invoke --function-name <BotRemovalHandler function name> \
+   AWS_MAX_ATTEMPTS=1 aws lambda invoke --region <stack region> \
+     --function-name <BotRemovalHandlerName> --cli-read-timeout 900 \
      --cli-binary-format raw-in-base64-out --payload file://removal.json result.json
    ```
 
-   The command succeeds when `result.json` holds `null` and the output has no `FunctionError`.
-4. Delete the message from the dead-letter queue, so that the alarm clears.
+   The retry succeeded when the output has no `FunctionError`, `result.json` holds `null`, and the function's log for this run has neither `Failed to clean up bot` nor `Skipping event` (which means that the keys did not name a bot).
+4. Delete the message from the dead-letter queue, so that the alarm clears:
+
+   ```sh
+   QUEUE_URL=$(aws sqs list-queues --region <stack region> \
+     --queue-name-prefix BedrockChatStack-EmbeddingBotRemovalDeadLetterQueue \
+     --query 'QueueUrls[0]' --output text)
+   aws sqs receive-message --region <stack region> --queue-url "$QUEUE_URL" \
+     --attribute-names SentTimestamp --query 'Messages[].[ReceiptHandle,Body]'
+   aws sqs delete-message --region <stack region> --queue-url "$QUEUE_URL" \
+     --receipt-handle <ReceiptHandle>
+   ```
 
 ## Deleting a user's data
 
