@@ -85,7 +85,7 @@ const translation = {
             },
             agentcore: {
               label: 'Amazon Bedrock AgentCore Web Search',
-              hint: 'Pesquisa no índice da web da Amazon, cobrada na conta da AWS por consulta. Não requer chave de API. https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/web-search-api.html',
+              hint: 'Pesquisa no índice da web da Amazon, cobrada na conta da AWS por consulta. É executada na Região de pesquisa da implantação, que pode ser diferente da Região do modelo, e retorna até 10 resultados. Não requer chave de API. https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/web-search-api.html',
             },
             firecrawl: {
               label: 'Firecrawl (Para Negócios)',

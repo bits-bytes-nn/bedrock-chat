@@ -12,7 +12,10 @@ type Props = BaseProps & {
 const Help: React.FC<Props> = (props) => {
   return (
     <Tooltip {...props}>
-      <PiQuestionFill />
+      {/* Focusable, so that keyboard and touch users can open the message. */}
+      <button type="button" aria-label={props.message} className="align-middle">
+        <PiQuestionFill />
+      </button>
     </Tooltip>
   );
 };

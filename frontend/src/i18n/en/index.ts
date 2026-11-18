@@ -195,7 +195,7 @@ const translation = {
             },
             agentcore: {
               label: 'Amazon Bedrock AgentCore Web Search',
-              hint: "Search on Amazon's web index, billed to the AWS account per query. No API key is required. https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/web-search-api.html",
+              hint: "Search on Amazon's web index, billed to the AWS account per query. It runs in the deployment's web search Region, which can differ from the model Region, and returns up to 10 results. No API key is required. https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/web-search-api.html",
             },
             firecrawl: {
               label: 'Firecrawl (For Business)',
@@ -703,6 +703,8 @@ How would you categorize this email?`,
       star: 'Add to Starred Bots',
       unstar: 'Remove from Starred Bots',
       share: 'Share',
+      previewImage: 'Preview image',
+      showSource: 'Show source',
       openInNewTab: 'Open in a new tab',
       clear: 'Clear',
       backToConversationHistory: 'Back to Chat History',
@@ -1004,7 +1006,7 @@ How would you categorize this email?`,
       notSupportedImage: 'The selected model does not support images.',
       unsupportedFileFormat: 'The selected file format is not supported.',
       emptyAnswer:
-        'No answer was returned. The model may have blocked it with its content filter. Rephrase the message and try again.',
+        'No answer was returned. The model may have blocked it with its content filter. Edit the message or regenerate the answer.',
       totalFileSizeToSendExceeded:
         'The total file size must be no more than {{maxSize}}.',
       attachment: {

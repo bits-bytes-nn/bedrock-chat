@@ -164,6 +164,8 @@ const BotDiscoverPage: React.FC = () => {
             />
             {inputValue && (
               <button
+                type="button"
+                aria-label={t('button.clear')}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-dark-gray dark:text-gray hover:text-dark-gray"
                 onClick={handleClearSearch}>
                 <PiX size={20} />

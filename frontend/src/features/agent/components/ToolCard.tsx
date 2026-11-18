@@ -167,14 +167,13 @@ const ToolCard: React.FC<ToolCardProps> = ({
           </div>
         )}
         {document.sourceLink && (
-          <span
-            className="italic break-all line-clamp-1 cursor-pointer underline"
-            onClick={() =>
-              window.open(document.sourceLink, '_blank', 'noopener,noreferrer')
-            }
-          >
+          <a
+            className="italic break-all line-clamp-1 underline"
+            href={document.sourceLink}
+            target="_blank"
+            rel="noopener noreferrer">
             {document.sourceLink}
-          </span>
+          </a>
         )}
         {'text' in document.content && (
           <div className="break-all line-clamp-2 dark:text-aws-font-color-dark">
@@ -210,8 +209,10 @@ const ToolCard: React.FC<ToolCardProps> = ({
 
   return (
     <div className={twMerge('relative', className)}>
-      <div
-        className="flex cursor-pointer items-center justify-between p-2 dark:text-aws-font-color-dark hover:bg-light-gray dark:hover:bg-aws-font-color-dark/10"
+      <button
+        type="button"
+        aria-expanded={isExpanded}
+        className="flex w-full cursor-pointer items-center justify-between p-2 text-left dark:text-aws-font-color-dark hover:bg-light-gray dark:hover:bg-aws-font-color-dark/10"
         onClick={handleToggleExpand}>
         <div className="flex items-center text-base">
           {status === 'running' && (
@@ -230,16 +231,21 @@ const ToolCard: React.FC<ToolCardProps> = ({
             <PiCaretDown className="text-lg" />
           )}
         </div>
-      </div>
+      </button>
 
       <div
         className={twMerge(
           `origin-top overflow-hidden transition-transform duration-200 ease-in-out`,
-          isExpanded ? 'max-h-full scale-y-100 px-2 pb-2' : 'max-h-0 scale-y-0'
+          // Collapsed content stays out of the tab order.
+          isExpanded
+            ? 'max-h-full scale-y-100 px-2 pb-2'
+            : 'invisible max-h-0 scale-y-0'
         )}>
         {input && (
           <div>
-            <div
+            <button
+              type="button"
+              aria-expanded={isInputExpanded}
               className="mt-2 flex cursor-pointer items-center text-sm"
               onClick={handleToggleInputExpand}>
               <p className="font-bold dark:text-aws-font-color-dark">{t('agent.progressCard.toolInput')}</p>
@@ -248,13 +254,13 @@ const ToolCard: React.FC<ToolCardProps> = ({
               ) : (
                 <PiCaretUp className="ml-2" />
               )}
-            </div>
+            </button>
 
             <div
               className={twMerge(
                 `overflow-hidden transition-all duration-300 ease-in-out`,
                 'dark:text-aws-font-color-dark',
-                isInputExpanded ? 'max-h-full ' : 'max-h-0'
+                isInputExpanded ? 'max-h-full ' : 'invisible max-h-0'
               )}>
               <div className="ml-4 mt-2 text-sm">
                 <ul className="list-disc">
@@ -271,7 +277,9 @@ const ToolCard: React.FC<ToolCardProps> = ({
 
         {(status === 'success' || status === 'error') && displayDocuments && (
           <div>
-            <div
+            <button
+              type="button"
+              aria-expanded={isContentExpanded}
               className="mt-2 flex cursor-pointer items-center text-sm"
               onClick={handleToggleContentExpand}>
               <p className="font-bold dark:text-aws-font-color-dark">{t('agent.progressCard.toolOutput')}</p>
@@ -280,22 +288,25 @@ const ToolCard: React.FC<ToolCardProps> = ({
               ) : (
                 <PiCaretUp className="ml-2" />
               )}
-            </div>
+            </button>
 
             <div
               className={twMerge(
                 `overflow-hidden transition-all duration-300 ease-in-out`,
-                isContentExpanded ? 'max-h-full' : 'max-h-0'
+                isContentExpanded ? 'max-h-full' : 'invisible max-h-0'
               )}>
               <div className="flex flex-col ml-2 mt-2 text-sm space-y-1">
                 {displayDocuments.length == 1 && (
                   <div className="flex items-center space-x-2">
-                    <a
+                    <button
+                      type="button"
+                      aria-label={t('button.showSource')}
+                      title={t('button.showSource')}
                       className="flex items-center cursor-pointer text-aws-sea-blue-light dark:text-aws-link-dark hover:text-aws-sea-blue-hover-light dark:hover:text-aws-sea-blue-hover-dark"
                       onClick={() => setViewingRelatedDocument(displayDocuments[0])}
                     >
                       <PiLinkBold />
-                    </a>
+                    </button>
                     <div className="flex-1">
                       <ToolResultDocument relatedDocument={displayDocuments[0]} />
                     </div>
@@ -303,13 +314,16 @@ const ToolCard: React.FC<ToolCardProps> = ({
                 )}
                 {displayDocuments.length > 1 && displayDocuments.map((document, index) => (
                   <div key={document.sourceId} className="flex items-center space-x-2">
-                    <a
+                    <button
+                      type="button"
+                      aria-label={`${t('button.showSource')} ${index + 1}`}
+                      title={t('button.showSource')}
                       className="flex items-center cursor-pointer text-aws-sea-blue-light dark:text-aws-link-dark hover:text-aws-sea-blue-hover-light dark:hover:text-aws-sea-blue-hover-dark"
                       onClick={() => setViewingRelatedDocument(document)}
                     >
                       <div>{`[${index + 1}]`}</div>
                       <PiLinkBold />
-                    </a>
+                    </button>
                     <div className="flex-1">
                       <ToolResultDocument relatedDocument={document} />
                     </div>

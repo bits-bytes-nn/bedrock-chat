@@ -197,7 +197,7 @@ const translation: typeof en = {
             },
             agentcore: {
               label: 'Amazon Bedrock AgentCore Web Search',
-              hint: 'Amazon의 웹 인덱스로 검색하며, 질의 수에 따라 AWS 계정에 요금이 청구됩니다. API 키가 필요 없습니다. https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/web-search-api.html',
+              hint: 'Amazon의 웹 인덱스로 검색하며, 질의 수에 따라 AWS 계정에 요금이 청구됩니다. 배포의 웹 검색 리전에서 실행되며(모델 리전과 다를 수 있음), 결과는 최대 10개입니다. API 키가 필요 없습니다. https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/web-search-api.html',
             },
             firecrawl: {
               label: 'Firecrawl (비즈니스용)',
@@ -703,6 +703,8 @@ const translation: typeof en = {
       star: '즐겨찾기에 추가',
       unstar: '즐겨찾기에서 제거',
       share: '공유',
+      previewImage: '이미지 미리 보기',
+      showSource: '출처 보기',
       openInNewTab: '새 탭에서 열기',
       clear: '지우기',
       backToConversationHistory: '대화 기록으로 돌아가기',
@@ -1001,7 +1003,7 @@ const translation: typeof en = {
       notSupportedImage: '선택한 모델은 이미지를 지원하지 않습니다.',
       unsupportedFileFormat: '선택한 파일 형식은 지원되지 않습니다.',
       emptyAnswer:
-        '답변이 비어 있습니다. 모델의 콘텐츠 필터가 응답을 차단했을 수 있습니다. 질문을 바꿔 다시 시도하세요.',
+        '답변이 비어 있습니다. 모델의 콘텐츠 필터가 응답을 차단했을 수 있습니다. 메시지를 수정하거나 다시 생성하세요.',
       totalFileSizeToSendExceeded:
         '전체 파일 크기는 {{maxSize}} 이하여야 합니다.',
       attachment: {

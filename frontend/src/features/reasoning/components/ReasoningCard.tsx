@@ -17,8 +17,10 @@ const ReasoningCard: React.FC<ReasoningCardProps> = ({
 
   return (
     <div className={twMerge('relative', className)}>
-      <div
-        className="flex cursor-pointer items-center justify-between p-2 hover:bg-light-gray dark:text-aws-font-color-dark dark:hover:bg-aws-font-color-dark/10"
+      <button
+        type="button"
+        aria-expanded={isExpanded}
+        className="flex w-full cursor-pointer items-center justify-between p-2 text-left hover:bg-light-gray dark:text-aws-font-color-dark dark:hover:bg-aws-font-color-dark/10"
         onClick={() => setIsExpanded(!isExpanded)}>
         <div className="flex items-center text-base">
           <PiBrain className="mr-2 text-aws-aqua" />
@@ -31,7 +33,7 @@ const ReasoningCard: React.FC<ReasoningCardProps> = ({
             <PiCaretDown className="text-lg" />
           )}
         </div>
-      </div>
+      </button>
 
       <div
         className={twMerge(

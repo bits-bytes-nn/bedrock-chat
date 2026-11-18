@@ -66,6 +66,17 @@ class TestRegistryConsistency(unittest.TestCase):
                     not spec.supports_documents,
                 )
 
+    def test_frontend_offers_every_search_engine(self):
+        from app.routes.schemas.bot import type_search_engine
+
+        tools = (
+            FRONTEND / "features" / "agent" / "components" / "AvailableTools.tsx"
+        ).read_text()
+        block = re.search(r"SEARCH_ENGINES: SearchEngine\[\] = \[(.*?)\]", tools, re.S)
+        assert block is not None
+        offered = re.findall(r"'([^']+)'", block.group(1))
+        self.assertEqual(sorted(offered), sorted(get_args(type_search_engine)))
+
     def test_frontend_has_english_labels(self):
         english = (FRONTEND / "i18n" / "en" / "index.ts").read_text()
         missing = [model for model in MODELS if f"'{model}': {{" not in english]

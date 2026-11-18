@@ -17,8 +17,10 @@ const useConversation = () => {
     isLoadingConversations,
     conversationsError,
     mutateConversations: mutate,
+    // Refetches; writing the list held by this render back would undo renames
+    // and deletions made meanwhile.
     syncConversations: () => {
-      return mutate(conversations);
+      return mutate();
     },
     getTitle: (conversationId: string) => {
       return (

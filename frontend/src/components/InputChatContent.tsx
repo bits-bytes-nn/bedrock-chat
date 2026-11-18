@@ -638,7 +638,17 @@ const InputChatContent = forwardRef<HTMLElement, Props>(
                 <div key={idx} className="relative">
                   <img
                     src={imageFile}
+                    alt={t('button.previewImage')}
+                    role="button"
+                    tabIndex={0}
                     className="h-16 rounded-sm border border-aws-squid-ink-light bg-white dark:border-aws-squid-ink-dark"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        setPreviewImageUrl(imageFile);
+                        setIsOpenPreviewImage(true);
+                      }
+                    }}
                     onClick={() => {
                       setPreviewImageUrl(imageFile);
                       setIsOpenPreviewImage(true);
@@ -663,6 +673,7 @@ const InputChatContent = forwardRef<HTMLElement, Props>(
                 {previewImageUrl && (
                   <img
                     src={previewImageUrl}
+                    alt={t('button.previewImage')}
                     className="mx-auto max-h-[80vh] max-w-full rounded-md bg-white"
                   />
                 )}

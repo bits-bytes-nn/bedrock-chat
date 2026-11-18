@@ -62,3 +62,49 @@ describe('locales', () => {
     expect(flattenKeys(locale).filter((key) => !enKeys.has(key))).toEqual([]);
   });
 });
+
+/** The leaves with their text, keyed by dotted path. */
+const flattenTexts = (value: unknown, prefix = ''): [string, string][] => {
+  if (typeof value === 'string') {
+    return [[prefix, value]];
+  }
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+    return [];
+  }
+  return Object.entries(value).flatMap(([key, child]) =>
+    flattenTexts(child, prefix ? `${prefix}.${key}` : key)
+  );
+};
+
+/** The markup that the code fills in: components such as <Link> and variables. */
+const placeholders = (text: string): string[] =>
+  [...text.matchAll(/<\/?\w+>|\{\{\s*\w+\s*\}\}/g)]
+    .map((match) => match[0].replace(/\s/g, ''))
+    .sort();
+
+// Translations that leave out the English reason on purpose: the reason is an
+// English text from the model API (hooks/usePostMessageStreaming.ts).
+const OMITTED_PLACEHOLDERS = new Set([
+  'translation.error.predict.model_error',
+  'translation.error.predict.invalid_request',
+]);
+
+describe('placeholders', () => {
+  const english = new Map(flattenTexts(en));
+
+  // The maintained translations must keep the links and variables.
+  test.each(Object.entries({ ja, ko }))(
+    '%s keeps the placeholders of English',
+    (_, locale) => {
+      const different = flattenTexts(locale)
+        .filter(([key]) => english.has(key) && !OMITTED_PLACEHOLDERS.has(key))
+        .filter(
+          ([key, text]) =>
+            placeholders(text).join() !== placeholders(english.get(key)!).join()
+        )
+        .map(([key]) => key);
+      expect(different).toEqual([]);
+    }
+  );
+});
+

@@ -195,7 +195,7 @@ const translation: typeof en = {
             },
             agentcore: {
               label: 'Amazon Bedrock AgentCore Web Search',
-              hint: 'Amazonのウェブインデックスで検索します。クエリ数に応じてAWSアカウントに課金されます。APIキーは不要です。https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/web-search-api.html',
+              hint: 'Amazonのウェブインデックスで検索します。クエリ数に応じてAWSアカウントに課金されます。デプロイのウェブ検索リージョン（モデルのリージョンと異なる場合があります）で実行され、結果は最大10件です。APIキーは不要です。https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/web-search-api.html',
             },
             firecrawl: {
               label: 'Firecrawl (For Business)',
@@ -497,7 +497,7 @@ const translation: typeof en = {
         },
         on: {
           content:
-            'このボットは共有されているため、あなた以外のユーザーもアクセスできます。共有されているユーザーは「ボットを探す」から、このボットを検索して利用することができます。',
+            'このボットは共有されているため、あなた以外のユーザーもアクセスできます。共有されているユーザーは<Link>ボットを探す</Link>から、このボットを検索して利用することができます。',
           linkDescription:
             '以下の共有リンクを使ってボットと会話することもできます。',
         },
@@ -706,6 +706,8 @@ const translation: typeof en = {
       star: 'お気に入りに追加',
       unstar: 'お気に入りから削除',
       share: '共有',
+      previewImage: '画像をプレビュー',
+      showSource: '出典を表示',
       openInNewTab: '新しいタブで開く',
       clear: 'クリア',
       backToConversationHistory: 'チャット履歴に戻る',
@@ -1005,7 +1007,7 @@ const translation: typeof en = {
       notSupportedImage: '選択しているモデルは、画像を利用できません。',
       unsupportedFileFormat: '選択したファイル形式はサポートされていません。',
       emptyAnswer:
-        '回答がありません。モデルのコンテンツフィルターが応答をブロックした可能性があります。質問を変えて再度お試しください。',
+        '回答がありません。モデルのコンテンツフィルターが応答をブロックした可能性があります。メッセージを編集するか、再生成してください。',
       totalFileSizeToSendExceeded:
         'ファイルサイズの合計が{{maxSize}}を超えています。',
       attachment: {
