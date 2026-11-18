@@ -45,7 +45,7 @@ export const joinContinuationText = (
   answer: string,
   continuation: string
 ): string => {
-  if (!continuation) {
+  if (!continuation.trim()) {
     return answer;
   }
   const dropped = answer.replace(PARTIAL_WORD, '$1');

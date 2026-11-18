@@ -274,7 +274,7 @@ class TestChatFlow(unittest.TestCase):
         with patch.object(
             chat_usecase,
             "converse_with_strands",
-            return_value=answer("", "max_tokens"),
+            return_value=answer(" ", "max_tokens"),
         ):
             chat_usecase.chat(USER, self.continue_request("c12", answer_id))
         stored = find_conversation_by_id(USER.id, "c12")

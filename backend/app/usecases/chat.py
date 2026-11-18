@@ -533,7 +533,10 @@ def post_process_result(
         # Without new text, the word the model was to write again is kept.
         message.content = (
             join_continuation(drop_partial_word(cut_off.content), message.content)
-            if any(isinstance(c, TextContentModel) for c in message.content)
+            if any(
+                isinstance(c, TextContentModel) and c.body.strip()
+                for c in message.content
+            )
             else cut_off.content
         )
         if cut_off.thinking_log or message.thinking_log:
