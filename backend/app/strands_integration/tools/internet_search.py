@@ -170,7 +170,15 @@ def _retry_delay(response: requests.Response, attempt: int) -> float:
 
 class SearchApiError(RuntimeError):
     """A failed search API request. The text names only the engine and the status,
-    because the request URL can hold the query, so the model may see it."""
+    because the request URL can hold the query, so the model may see it.
+
+    `of_the_query` marks a query that the engine rejects, which the model can fix
+    and which is no service failure for the alarm.
+    """
+
+    def __init__(self, message: str, of_the_query: bool = False):
+        super().__init__(message)
+        self.of_the_query = of_the_query
 
 
 def _call_search_api(
@@ -260,7 +268,8 @@ def _search_with_agentcore(query: str, time_limit: str) -> list[dict[str, str]]:
         # Told to the model, which can search again with a shorter query.
         raise SearchApiError(
             f"AgentCore web search takes queries of at most "
-            f"{_WEB_SEARCH_MAX_QUERY_CHARS} characters"
+            f"{_WEB_SEARCH_MAX_QUERY_CHARS} characters",
+            of_the_query=True,
         )
     request: dict = {
         "webSearchId": "web-search.v1",
@@ -285,7 +294,10 @@ def _search_with_agentcore(query: str, time_limit: str) -> list[dict[str, str]]:
             e.response["Error"].get("Message", ""),
             e.response.get("ResponseMetadata", {}).get("RequestId", ""),
         )
-        raise SearchApiError(f"AgentCore web search failed: {code}") from None
+        raise SearchApiError(
+            f"AgentCore web search failed: {code}",
+            of_the_query=code == "ValidationException",
+        ) from None
     except BotoCoreError as e:
         raise SearchApiError(
             f"AgentCore web search failed: {type(e).__name__}"
@@ -470,7 +482,7 @@ def create_internet_search_tool(bot: BotModel | None) -> StrandsAgentTool:
 
         Args:
             query: The query to search for on the internet, at most 200 characters. Write it in the language of the pages you want: some engines ignore the locale.
-            locale: The country code and language code for the search. Must be `{language}-{country}` for example `ja-jp` (Japanese - Japan), `zh-cn` (Chinese - China), `en-ca` (English - Canada), `fr-ca` (French - Canada), `en-nz` (English - New Zealand), etc. If empty the default is `en-us`.
+            locale: The country code and language code for the search. Must be `{language}-{country}` for example `jp-jp` (Japanese - Japan), `zh-cn` (Chinese - China), `en-ca` (English - Canada), `fr-ca` (French - Canada), `en-nz` (English - New Zealand), etc. If empty the default is `en-us`.
             time_limit: Retrieve only the most recent results, for example `w` only returns the results from the last week. Units are 'd' (day), 'w' (week), 'm' (month), 'y' (year). Leave it empty to retrieve all results, including pages without a date; set it only for news and other recent events.
 
         Returns:
@@ -488,7 +500,8 @@ def create_internet_search_tool(bot: BotModel | None) -> StrandsAgentTool:
             # The status tells the model, and so the user, why: for example an
             # exhausted plan or a rejected key.
             logger.warning("Internet search failed: %s", e)
-            emit_metric("InternetSearchFailures", 1)
+            if not e.of_the_query:
+                emit_metric("InternetSearchFailures", 1)
             return {
                 "status": "error",
                 "content": [{"text": f"The internet search failed: {e}."}],

@@ -415,6 +415,19 @@ def test_failed_searches_raise_the_alarm_metric():
     emit.assert_called_once_with("InternetSearchFailures", 1)
 
 
+def test_queries_that_the_engine_rejects_are_no_service_failures():
+    from botocore.exceptions import ClientError
+
+    invalid = ClientError(
+        {"Error": {"Code": "ValidationException", "Message": "bad"}},
+        "InvokeWebSearch",
+    )
+    with patch.object(internet_search, "emit_metric") as emit:
+        search_with_agentcore(query="q" * 201)
+        search_with_agentcore(error=invalid, query="weather")
+    emit.assert_not_called()
+
+
 def test_agentcore_web_search_errors_name_only_the_code():
     from botocore.exceptions import ClientError
 

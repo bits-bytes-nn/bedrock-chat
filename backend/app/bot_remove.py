@@ -158,6 +158,8 @@ def handler(event: dict, context: Any) -> None:
 
     user_id = pk
     bot_id = decompose_sk(sk)
+    # Also names the bot of a removal that times out (docs/ADMINISTRATOR.md).
+    logger.info("Removing bot %s of user %s", bot_id, user_id)
 
     # Every step runs even if another fails, and the failure is raised at the end so
     # that the stream retries the record. Each step is idempotent. Stacks go first:

@@ -50,7 +50,7 @@ export class Embedding extends Construct {
   /** Bot removals that failed after the retries, which may leave stacks behind. */
   readonly removalDeadLetterQueue: sqs.Queue;
   /** Name of the function that removes a deleted bot's resources, for manual retries. */
-  removalHandlerName!: string;
+  readonly removalHandlerName: string;
 
   private _updateSyncStatusHandler: lambda.Function;
   private _bootstrapStateMachineHandler: IFunction;
@@ -68,7 +68,7 @@ export class Embedding extends Construct {
       retentionPeriod: Duration.days(14),
       enforceSSL: true,
     });
-    this.setupRemovalHandler(props);
+    this.removalHandlerName = this.setupRemovalHandler(props).functionName;
   }
 
   /** Log group of the handler that logs `Knowledge sync failed` for failed bots. */
@@ -661,7 +661,7 @@ export class Embedding extends Construct {
     });
   }
 
-  private setupRemovalHandler(props: EmbeddingProps) {
+  private setupRemovalHandler(props: EmbeddingProps): lambda.IFunction {
     const removeHandlerRole = new iam.Role(this, "RemovalHandlerRole", {
       path: props.database.tableAccessRolePath,
       assumedBy: new iam.ServicePrincipal("lambda.amazonaws.com"),
@@ -743,7 +743,6 @@ export class Embedding extends Construct {
       role: removeHandlerRole,
       logGroup: lambdaLogGroup(this, "BotRemovalHandlerLogGroup", removeHandlerRole),
     });
-    this.removalHandlerName = removalHandler.functionName;
     removalHandler.addEventSource(
       new DynamoEventSource(props.database.botTable, {
         startingPosition: lambda.StartingPosition.TRIM_HORIZON,
@@ -762,6 +761,7 @@ export class Embedding extends Construct {
         ],
       })
     );
+    return removalHandler;
   }
 
   private createIngestionTask(idSuffix: string, {

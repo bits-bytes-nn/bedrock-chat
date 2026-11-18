@@ -143,9 +143,10 @@ Deleting a bot removes its resources asynchronously: its knowledge base stack, p
 
 The queue message records only the position in the DynamoDB stream, not the bot. To recover:
 
-1. Find the bot in the logs of the `BotRemovalHandler` function: `Failed to clean up bot <bot id> of user <user id>`, with the error of the step that failed.
+1. Find the bot in the logs of the `BotRemovalHandler` function: `Failed to clean up bot <bot id> of user <user id>`, with the error of the step that failed. A removal that timed out logs no failure; its last `Removing bot <bot id> of user <user id>` is followed by `Task timed out`.
 2. Fix the cause, for example a stack in `DELETE_FAILED` (delete it in CloudFormation in the Bedrock region) or a missing permission.
-3. Run the handler again for the bot. Every step is idempotent, so the steps that already succeeded do nothing:
+3. Check that the bot item is really gone: the handler removes the resources of whatever bot the keys name, also of a bot that still exists. `aws dynamodb get-item --region <stack region> --table-name <BotTableNameV3 output> --key '{"PK": {"S": "<user id>"}, "SK": {"S": "BOT#<bot id>"}}'` must print nothing.
+4. Run the handler again for the bot. Every step is idempotent, so the steps that already succeeded do nothing:
 
    The function name is the `BotRemovalHandlerName` output of `BedrockChatStack`. Run the commands in the Region of that stack (not the Bedrock region). A removal can take up to the function's 15-minute timeout, so the read timeout of the CLI is raised and its retries are turned off:
 
@@ -159,12 +160,10 @@ The queue message records only the position in the DynamoDB stream, not the bot.
    ```
 
    The retry succeeded when the output has no `FunctionError`, `result.json` holds `null`, and the function's log for this run has neither `Failed to clean up bot` nor `Skipping event` (which means that the keys did not name a bot).
-4. Delete the message from the dead-letter queue, so that the alarm clears:
+5. Delete the message from the dead-letter queue, whose URL is the `BotRemovalDeadLetterQueueUrl` output, so that the alarm clears:
 
    ```sh
-   QUEUE_URL=$(aws sqs list-queues --region <stack region> \
-     --queue-name-prefix BedrockChatStack-EmbeddingBotRemovalDeadLetterQueue \
-     --query 'QueueUrls[0]' --output text)
+   QUEUE_URL=<BotRemovalDeadLetterQueueUrl>
    aws sqs receive-message --region <stack region> --queue-url "$QUEUE_URL" \
      --attribute-names SentTimestamp --query 'Messages[].[ReceiptHandle,Body]'
    aws sqs delete-message --region <stack region> --queue-url "$QUEUE_URL" \

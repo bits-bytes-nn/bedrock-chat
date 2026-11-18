@@ -14,7 +14,10 @@ import {
   getKnowledgeBaseType,
 } from "../lib/utils/bedrock-knowledge-base-args";
 import { SEARCH_API_ENGINES } from "../lib/utils/bedrock-policies";
-import { resolveWebSearchRegion } from "../lib/utils/parameter-models";
+import {
+  resolveWebSearchRegion,
+  webSearchRegionSchema,
+} from "../lib/utils/parameter-models";
 import { BedrockCustomBotStack } from "../lib/bedrock-custom-bot-stack";
 import { BedrockRegionResourcesStack } from "../lib/bedrock-region-resources";
 import { ApiPublishmentStack } from "../lib/api-publishment-stack";
@@ -463,6 +466,7 @@ describe("Bedrock Chat Stack Test", () => {
       Period: 3600,
     });
     template.hasOutput("BotRemovalHandlerName", {});
+    template.hasOutput("BotRemovalDeadLetterQueueUrl", {});
     template.hasResourceProperties("AWS::CodeBuild::Project", {
       Environment: Match.objectLike({
         EnvironmentVariables: Match.arrayWith([
@@ -965,6 +969,12 @@ describe("Bedrock Chat Stack Test", () => {
     expect(
       resolveWebSearchRegion({ webSearchRegion: "", bedrockRegion: "eu-west-1" })
     ).toBe("eu-west-1");
+    for (const region of ["", "ap-northeast-1", "us-gov-west-1", "eu-central-2"]) {
+      expect(webSearchRegionSchema.safeParse(region).success).toBe(true);
+    }
+    for (const region of ["*", "AP-NORTHEAST-1", "ap-northeast", "tokyo"]) {
+      expect(webSearchRegionSchema.safeParse(region).success).toBe(false);
+    }
     expect(
       canSearch(newChatStack({ webSearchRegion: "ap-northeast-1" }), "ap-northeast-1")
     ).toHaveLength(2);

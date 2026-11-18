@@ -143,9 +143,10 @@ upstream에서 업그레이드하는 경우:
 
 DLQ 메시지에는 DynamoDB 스트림의 위치만 있고 봇 정보는 없습니다. 복구 절차는 다음과 같습니다.
 
-1. `BotRemovalHandler` 함수의 로그에서 `Failed to clean up bot <봇 ID> of user <사용자 ID>`와 실패한 단계의 오류를 찾습니다.
+1. `BotRemovalHandler` 함수의 로그에서 `Failed to clean up bot <봇 ID> of user <사용자 ID>`와 실패한 단계의 오류를 찾습니다. 시간 초과로 끝난 삭제는 실패 로그가 없고, 마지막 `Removing bot <봇 ID> of user <사용자 ID>` 뒤에 `Task timed out`이 남습니다.
 2. 원인을 해결합니다. 예를 들어 `DELETE_FAILED` 상태의 스택은 Bedrock 리전의 CloudFormation에서 삭제하고, 권한이 없으면 권한을 추가합니다.
-3. 해당 봇에 대해 핸들러를 다시 실행합니다. 모든 단계가 멱등이므로 이미 끝난 단계는 아무 일도 하지 않습니다.
+3. 봇 항목이 실제로 지워졌는지 확인합니다. 핸들러는 키가 가리키는 봇의 리소스를 봇이 남아 있어도 지웁니다. `aws dynamodb get-item --region <스택 리전> --table-name <BotTableNameV3 출력값> --key '{"PK": {"S": "<사용자 ID>"}, "SK": {"S": "BOT#<봇 ID>"}}'`의 출력이 비어 있어야 합니다.
+4. 해당 봇에 대해 핸들러를 다시 실행합니다. 모든 단계가 멱등이므로 이미 끝난 단계는 아무 일도 하지 않습니다.
 
    함수 이름은 `BedrockChatStack`의 `BotRemovalHandlerName` 출력값입니다. 명령은 그 스택의 리전(Bedrock 리전 아님)에서 실행합니다. 삭제는 함수 제한 시간인 15분까지 걸릴 수 있으므로, CLI 읽기 제한 시간을 늘리고 재시도는 끕니다.
 
@@ -159,12 +160,10 @@ DLQ 메시지에는 DynamoDB 스트림의 위치만 있고 봇 정보는 없습�
    ```
 
    출력에 `FunctionError`가 없고, `result.json`이 `null`이며, 이번 실행의 함수 로그에 `Failed to clean up bot`과 `Skipping event`(키가 봇을 가리키지 않음)가 모두 없으면 성공입니다.
-4. 알람이 해제되도록 DLQ에서 메시지를 삭제합니다.
+5. 알람이 해제되도록 DLQ에서 메시지를 삭제합니다. DLQ URL은 `BotRemovalDeadLetterQueueUrl` 출력값입니다.
 
    ```sh
-   QUEUE_URL=$(aws sqs list-queues --region <스택 리전> \
-     --queue-name-prefix BedrockChatStack-EmbeddingBotRemovalDeadLetterQueue \
-     --query 'QueueUrls[0]' --output text)
+   QUEUE_URL=<BotRemovalDeadLetterQueueUrl>
    aws sqs receive-message --region <스택 리전> --queue-url "$QUEUE_URL" \
      --attribute-names SentTimestamp --query 'Messages[].[ReceiptHandle,Body]'
    aws sqs delete-message --region <스택 리전> --queue-url "$QUEUE_URL" \

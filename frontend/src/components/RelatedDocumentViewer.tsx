@@ -15,8 +15,11 @@ const RelatedDocumentViewer: React.FC<{
   const closeRef = useRef(props.onClick);
   closeRef.current = props.onClick;
 
-  // A dialog: it takes the focus once and closes with Escape.
+  // A dialog: it takes the focus once, gives it back when closed, and closes with
+  // Escape.
   useEffect(() => {
+    const opener =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
     panelRef.current?.focus();
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -24,7 +27,10 @@ const RelatedDocumentViewer: React.FC<{
       }
     };
     window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+      opener?.focus();
+    };
   }, []);
 
   const content = useMemo(() => (
@@ -78,7 +84,8 @@ const RelatedDocumentViewer: React.FC<{
             {t('bot.label.referenceLink')}:
             {sourceLink ? (
               <a
-                className="ml-1 underline"
+                // Opened from answers too, whose prose styles would darken it.
+                className="ml-1 text-aws-font-color-white-light underline dark:text-aws-font-color-white-dark"
                 href={sourceLink}
                 target="_blank"
                 rel="noopener noreferrer">

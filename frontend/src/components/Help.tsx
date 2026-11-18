@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { BaseProps } from '../@types/common';
 import { PiQuestionFill } from 'react-icons/pi';
 import Tooltip from './Tooltip';
@@ -10,10 +11,15 @@ type Props = BaseProps & {
 };
 
 const Help: React.FC<Props> = (props) => {
+  const { t } = useTranslation();
   return (
     <Tooltip {...props}>
       {/* Focusable, so that keyboard and touch users can open the message. */}
-      <button type="button" aria-label={props.message} className="align-middle">
+      <button
+        type="button"
+        aria-label={t('button.help')}
+        title={props.message}
+        className="align-middle">
         <PiQuestionFill />
       </button>
     </Tooltip>

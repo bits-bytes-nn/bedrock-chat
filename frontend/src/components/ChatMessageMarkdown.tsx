@@ -71,15 +71,14 @@ const RelatedDocumentLink: React.FC<{
         type="button"
         disabled={props.relatedDocument == null}
         className={twMerge(
-          'mx-0.5 inline',
+          'mx-0.5 inline font-medium underline',
           props.relatedDocument != null
             ? 'cursor-pointer text-aws-sea-blue-light dark:text-aws-link-dark hover:text-aws-sea-blue-hover-light dark:hover:text-aws-sea-blue-hover-dark'
             : 'cursor-not-allowed text-gray'
         )}
         onClick={() => {
-          if (props.relatedDocument != null) {
-            setRelatedDocument(props.linkId, props.relatedDocument);
-          }
+          // Disabled without a document.
+          setRelatedDocument(props.linkId, props.relatedDocument!);
         }}>
         {props.children}
       </button>

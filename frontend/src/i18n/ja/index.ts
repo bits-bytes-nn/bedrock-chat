@@ -706,6 +706,7 @@ const translation: typeof en = {
       star: 'お気に入りに追加',
       unstar: 'お気に入りから削除',
       share: '共有',
+      help: 'ヘルプ',
       previewImage: '画像をプレビュー',
       showSource: '出典を表示',
       openInNewTab: '新しいタブで開く',

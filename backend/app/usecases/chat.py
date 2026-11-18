@@ -321,9 +321,11 @@ def chat(
 ) -> tuple[ConversationModel, MessageModel]:
     user_msg_id, conversation, bot = prepare_conversation(user, chat_input)
     validate_model_is_available(chat_input.message.model, bot)
-    display_citation = (
-        bot is not None and bot.display_retrieved_chunks
-    ) or _search_engine(bot) in SEARCH_ENGINES_REQUIRING_CITATIONS
+    # Without tool use there is no internet search to cite.
+    display_citation = (bot is not None and bot.display_retrieved_chunks) or (
+        _search_engine(bot) in SEARCH_ENGINES_REQUIRING_CITATIONS
+        and is_tooluse_supported(chat_input.message.model)
+    )
 
     message_map = conversation.message_map
     instructions: list[str] = (

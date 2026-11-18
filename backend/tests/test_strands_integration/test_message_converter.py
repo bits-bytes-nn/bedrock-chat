@@ -155,7 +155,12 @@ def test_attachments_reach_models_without_document_blocks_as_text():
                 content_type="attachment", body=b"The code word", file_name="note.txt"
             ),
             AttachmentContentModel(
-                content_type="attachment", body=b"%PDF\xff\xfe", file_name="r%20e.pdf"
+                content_type="attachment", body=b"%PDF-1.4 ascii", file_name="r%20e.pdf"
+            ),
+            AttachmentContentModel(
+                content_type="attachment",
+                body="\ufeffa,b".encode("utf-8"),
+                file_name='x"<y.csv',
             ),
         ],
     )
@@ -163,7 +168,10 @@ def test_attachments_reach_models_without_document_blocks_as_text():
     blocks = gpt[0]["content"]
     assert not any("document" in block for block in blocks)
     assert blocks[1]["text"] == '<file name="note.txt">\nThe code word\n</file>'
+    # A PDF is never inlined, even when its bytes decode.
     assert "r e.pdf" in blocks[2]["text"] and "cannot read" in blocks[2]["text"]
+    # The byte order mark goes, and the name cannot close the tag.
+    assert blocks[3]["text"] == '<file name="x&quot;&lt;y.csv">\na,b\n</file>'
 
     claude = simple_message_models_to_strands_messages([message], "claude-v5.5-haiku")
-    assert sum("document" in block for block in claude[0]["content"]) == 2
+    assert sum("document" in block for block in claude[0]["content"]) == 3

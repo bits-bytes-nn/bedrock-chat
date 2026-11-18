@@ -179,8 +179,14 @@ const InputChatContent = forwardRef<HTMLElement, Props>(
     } = useModel();
 
     const extendedAcceptMediaType = useMemo(() => {
-      return [...acceptMediaType, ...SUPPORTED_FILE_EXTENSIONS];
-    }, [acceptMediaType]);
+      return [
+        ...acceptMediaType,
+        // The picker does not offer what the model cannot read.
+        ...SUPPORTED_FILE_EXTENSIONS.filter(
+          (extension) => !(disabledDocumentUpload && isDocumentFile(extension))
+        ),
+      ];
+    }, [acceptMediaType, disabledDocumentUpload]);
 
     const [content, setContent] = useState('');
     const { reasoningEnabled, onChangeReasoning } = props;

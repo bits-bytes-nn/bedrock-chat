@@ -28,13 +28,26 @@ describe('normalizeMathDelimiters', () => {
       `Area ${MATH}\\pi r^2${MATH} here`
     );
     expect(normalizeMathDelimiters('See\n\\[\nx^2\n\\]\nend')).toBe(
-      `See\n\n${MATH}\nx^2\n${MATH}\n\nend`
+      `See\n${MATH}\nx^2\n${MATH}\nend`
     );
   });
 
-  it('leaves code and single dollars alone', () => {
+  it('keeps the structure of lists, quotes and tables', () => {
+    // Only the delimiters change, with the indentation and prefixes around them.
+    expect(
+      normalizeMathDelimiters('1. Step:\n   \\[\n   a^2\n   \\]\n   done\n2. next')
+    ).toBe(`1. Step:\n   ${MATH}\n   a^2\n   ${MATH}\n   done\n2. next`);
+    expect(normalizeMathDelimiters('> a\n> \\[x\\]\n> b')).toBe(
+      `> a\n> ${MATH}x${MATH}\n> b`
+    );
+    expect(normalizeMathDelimiters('| \\[y\\] |')).toBe(`| ${MATH}y${MATH} |`);
+  });
+
+  it('leaves code, existing math and single dollars alone', () => {
     const text = 'Costs $5 and $6. `\\(a\\)`\n```\n\\[b\\]\n```';
     expect(normalizeMathDelimiters(text)).toBe(text);
+    const math = `${MATH}\\left\\[ x \\right\\]${MATH}`;
+    expect(normalizeMathDelimiters(math)).toBe(math);
   });
 });
 

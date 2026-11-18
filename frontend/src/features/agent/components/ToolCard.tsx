@@ -222,7 +222,7 @@ const ToolCard: React.FC<ToolCardProps> = ({
             <PiCheckCircle className="mr-2 text-aws-aqua" />
           )}
           {status === 'error' && <PiXCircle className="mr-2  text-red dark:text-red-400" />}
-          <h3 className="">{getAgentName(name, t)}</h3>
+          <span>{getAgentName(name, t)}</span>
         </div>
         <div>
           {isExpanded ? (

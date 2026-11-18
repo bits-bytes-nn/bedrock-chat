@@ -434,6 +434,9 @@ export class BedrockChatStack extends cdk.Stack {
     new CfnOutput(this, "BotRemovalHandlerName", {
       value: embedding.removalHandlerName,
     });
+    new CfnOutput(this, "BotRemovalDeadLetterQueueUrl", {
+      value: embedding.removalDeadLetterQueue.queueUrl,
+    });
     new CfnOutput(this, "FrontendURL", {
       value: frontend.getOrigin(),
     });
