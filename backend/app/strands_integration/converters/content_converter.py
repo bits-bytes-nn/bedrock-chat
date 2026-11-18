@@ -3,6 +3,7 @@ Content conversion utilities for Strands integration.
 """
 
 import html
+from pathlib import Path
 from urllib.parse import unquote
 
 from app.repositories.models.conversation import (
@@ -94,10 +95,10 @@ def attachment_content_model_to_text_blocks(
     """An attachment as text, for models without document blocks. A text file is
     inlined; other files, such as PDFs, are named so that the model can say why it
     does not answer from them."""
-    name = html.escape(unquote(content.file_name))
-    format, _ = content.format_and_name
+    file_name = unquote(content.file_name)
+    name = html.escape(file_name)
     text: str | None = None
-    if format not in BINARY_DOCUMENT_FORMATS:
+    if Path(file_name).suffix[1:].lower() not in BINARY_DOCUMENT_FORMATS:
         try:
             text = content.body.decode("utf-8-sig")
         except UnicodeDecodeError:

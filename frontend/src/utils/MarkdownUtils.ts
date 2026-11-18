@@ -12,12 +12,18 @@ const EXISTING_MATH = '\\$\\$[\\s\\S]*?(?:\\$\\$|$)';
 const splitOut = (markdown: string, pattern: string): string[] =>
   markdown.split(new RegExp(`(${pattern})`));
 
+/** A formula on one line; line breaks are spaces in LaTeX. */
+const oneLine = (math: string): string =>
+  math.replace(/[ \t]*\n[ \t>]*/g, ' ').trim();
+
 /**
  * Turns the LaTeX delimiters `\(…\)` and `\[…\]`, which models often write, into
- * the `$$` math of remark-math, outside of code. Only the delimiters change, so
- * that math inside lists, quotes and tables keeps their structure: on lines of
- * their own they make a math block, within a line inline math. A single `$` is
- * not math, so that prices stay text.
+ * the `$$` math of remark-math, outside of code. Each formula becomes one line of
+ * inline math, displayed large for `\[…\]`: a `$$` block would need its fences on
+ * lines of their own, and one left open would take the rest of the answer. So
+ * lists, quotes and tables keep their structure. Line breaks are spaces in LaTeX;
+ * the quote markers of continued lines go. A single `$` is not math, so that
+ * prices stay text.
  */
 export const normalizeMathDelimiters = (markdown: string): string =>
   splitOut(markdown, `${CODE}|${EXISTING_MATH}`)
@@ -27,7 +33,8 @@ export const normalizeMathDelimiters = (markdown: string): string =>
         : part
             .replace(
               /\\\[([\s\S]+?)\\\]/g,
-              (_, math: string) => MATH + math + MATH
+              (_, math: string) =>
+                `${MATH}\\displaystyle ${oneLine(math)}${MATH}`
             )
             .replace(/\\\((.+?)\\\)/g, (_, math: string) => MATH + math + MATH)
     )

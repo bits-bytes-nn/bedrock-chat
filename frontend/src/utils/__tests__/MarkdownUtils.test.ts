@@ -1,4 +1,9 @@
 import { describe, expect, it } from 'vitest';
+import { unified } from 'unified';
+import remarkParse from 'remark-parse';
+import remarkGfm from 'remark-gfm';
+import remarkBreaks from 'remark-breaks';
+import remarkMath from 'remark-math';
 import {
   endsInsideMath,
   isInlineImageSource,
@@ -6,6 +11,26 @@ import {
 } from '../MarkdownUtils';
 
 const MATH = '$$';
+
+type Node = { type: string; value?: string; children?: Node[] };
+
+/** The tree that ChatMessageMarkdown renders, from its remark plugins. */
+const parse = (markdown: string): Node =>
+  unified()
+    .use(remarkParse)
+    .use(remarkGfm)
+    .use(remarkBreaks)
+    .use(remarkMath, { singleDollarTextMath: false })
+    .parse(normalizeMathDelimiters(markdown)) as Node;
+
+/** The node types and values in document order, for structural checks. */
+const flatten = (node: Node): string[] => [
+  node.value === undefined ? node.type : `${node.type}:${node.value}`,
+  ...(node.children ?? []).flatMap(flatten),
+];
+
+const mathOf = (markdown: string): string[] =>
+  flatten(parse(markdown)).filter((entry) => entry.startsWith('inlineMath:'));
 
 describe('isInlineImageSource', () => {
   it('accepts embedded images', () => {
@@ -23,26 +48,47 @@ describe('isInlineImageSource', () => {
 });
 
 describe('normalizeMathDelimiters', () => {
-  it('turns LaTeX delimiters into remark-math math', () => {
-    expect(normalizeMathDelimiters('Area \\(\\pi r^2\\) here')).toBe(
-      `Area ${MATH}\\pi r^2${MATH} here`
-    );
-    expect(normalizeMathDelimiters('See\n\\[\nx^2\n\\]\nend')).toBe(
-      `See\n${MATH}\nx^2\n${MATH}\nend`
-    );
+  it('renders LaTeX delimiters as math', () => {
+    expect(mathOf('Area \\(\\pi r^2\\) here')).toEqual(['inlineMath:\\pi r^2']);
+    expect(mathOf('\\[ E = mc^2 \\]')).toEqual([
+      'inlineMath:\\displaystyle E = mc^2',
+    ]);
+  });
+
+  it.each([
+    ['closing on a content line', 'See\n\\[\nx\n+ y \\]\n\nNext **bold**'],
+    [
+      'content on the opening line',
+      '\\[ \\begin{aligned} a &= b \\\\\n c &= d \\end{aligned} \\]\n\nNext **bold**',
+    ],
+    [
+      'opening at the end of a line',
+      'where \\[\nx = 1\n\\]\nand\n\nNext **bold**',
+    ],
+  ])('never takes the text after the formula (%s)', (_, markdown) => {
+    const tree = flatten(parse(markdown));
+    expect(tree).not.toContain('math');
+    expect(tree).toContain('text:bold');
+    expect(
+      tree.filter((entry) => entry.startsWith('inlineMath:'))
+    ).toHaveLength(1);
   });
 
   it('keeps the structure of lists, quotes and tables', () => {
-    // Only the delimiters change, with the indentation and prefixes around them.
-    expect(
-      normalizeMathDelimiters(
-        '1. Step:\n   \\[\n   a^2\n   \\]\n   done\n2. next'
-      )
-    ).toBe(`1. Step:\n   ${MATH}\n   a^2\n   ${MATH}\n   done\n2. next`);
-    expect(normalizeMathDelimiters('> a\n> \\[x\\]\n> b')).toBe(
-      `> a\n> ${MATH}x${MATH}\n> b`
+    const list = flatten(
+      parse('1. Step:\n   \\[\n   a^2\n   \\]\n   done\n2. next')
     );
-    expect(normalizeMathDelimiters('| \\[y\\] |')).toBe(`| ${MATH}y${MATH} |`);
+    expect(list.filter((entry) => entry === 'listItem')).toHaveLength(2);
+    expect(list).toContain('inlineMath:\\displaystyle a^2');
+    expect(list).toContain('text:next');
+
+    const quote = flatten(parse('> a\n> \\[\n> x\n> \\]\n> b'));
+    expect(quote.filter((entry) => entry === 'blockquote')).toHaveLength(1);
+    expect(quote).toContain('inlineMath:\\displaystyle x');
+
+    const table = flatten(parse('| a |\n| - |\n| \\[y\\] |'));
+    expect(table).toContain('table');
+    expect(table).toContain('inlineMath:\\displaystyle y');
   });
 
   it('leaves code, existing math and single dollars alone', () => {
