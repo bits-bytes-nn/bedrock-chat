@@ -14,6 +14,7 @@ import {
   PiArrowsCounterClockwise,
   PiX,
   PiArrowFatLineRight,
+  PiStopFill,
 } from 'react-icons/pi';
 import { LuFilePlus2 } from 'react-icons/lu';
 import { useTranslation } from 'react-i18next';
@@ -72,6 +73,8 @@ type Props = BaseProps & {
   ) => void;
   onRegenerate: (enableReasoning: boolean) => void;
   continueGenerate: () => void;
+  /** Ends the answer being written; shown instead of Send while it is set. */
+  onStop?: () => void;
   supportReasoning: boolean;
   reasoningEnabled: boolean;
   onChangeReasoning: (enabled: boolean) => void;
@@ -631,12 +634,21 @@ const InputChatContent = forwardRef<HTMLElement, Props>(
                 />
               )}
             </div>
-            <ButtonSend
-              className="m-2 align-bottom"
-              disabled={disabledSend || props.disabled}
-              loading={props.isLoading}
-              onClick={sendContent}
-            />
+            {props.isLoading && props.onStop ? (
+              <ButtonIcon
+                className="m-2 align-bottom"
+                label={t('button.stop')}
+                onClick={props.onStop}>
+                <PiStopFill />
+              </ButtonIcon>
+            ) : (
+              <ButtonSend
+                className="m-2 align-bottom"
+                disabled={disabledSend || props.disabled}
+                loading={props.isLoading}
+                onClick={sendContent}
+              />
+            )}
           </div>
           {base64EncodedImages.length > 0 && (
             <div className="relative m-2 mr-24 flex flex-wrap gap-3">

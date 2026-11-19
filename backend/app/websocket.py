@@ -1,11 +1,12 @@
 import json
 import logging
 import os
+import time
 from datetime import datetime
 from decimal import Decimal as decimal
 from queue import Empty, SimpleQueue
 from threading import Thread
-from typing import Literal, TypedDict
+from typing import Callable, Literal, TypedDict
 
 import boto3
 import jwt
@@ -268,6 +269,7 @@ def process_chat_input(
     user: User,
     chat_input: ChatInput,
     notificator: NotificationSender,
+    should_stop: Callable[[], bool] | None = None,
 ) -> dict:
     """Process chat input and send the message to the client."""
     logger.info(
@@ -301,6 +303,7 @@ def process_chat_input(
             on_reasoning=lambda token: notificator.on_reasoning(
                 token=token,
             ),
+            should_stop=should_stop,
         )
 
         return {"statusCode": 200, "body": "Message sent."}
@@ -420,6 +423,23 @@ def handler(event, context):
                 }
             )
             return {"statusCode": 200, "body": "Session started."}
+        elif step == "STOP":
+            # Ends the answer of this session early; it keeps what was written.
+            try:
+                decoded = verify_token(token)
+            except jwt.PyJWTError:
+                logger.exception("Invalid token")
+                return _error(403, "Invalid token.", "unauthorized")
+            if _session_user_id(connection_id) != decoded["sub"]:
+                return _error(
+                    403, "The session belongs to another user.", "unauthorized"
+                )
+            table.update_item(
+                Key={"ConnectionId": connection_id, "MessagePartId": decimal(0)},
+                UpdateExpression="SET StopRequested = :stop",
+                ExpressionAttributeValues={":stop": True},
+            )
+            return {"statusCode": 200, "body": "Stop requested."}
         elif step == "END":
             try:
                 decoded = verify_token(token)
@@ -518,6 +538,40 @@ def _error(status_code: int, reason: str, code: type_error_code) -> dict:
     }
 
 
+# How often a running answer reads whether the user asked to stop it.
+STOP_CHECK_INTERVAL_SECONDS = 1.0
+
+
+def _stop_requested_checker(connection_id: str) -> Callable[[], bool]:
+    """Whether the user sent STOP on this connection. The answer runs in another
+    invocation than STOP, so the request is read from the session item, at most
+    once per STOP_CHECK_INTERVAL_SECONDS. A closed connection does not stop it:
+    a reload shows the answer once it is stored."""
+    checked_at = -STOP_CHECK_INTERVAL_SECONDS
+    stopped = False
+
+    def should_stop() -> bool:
+        nonlocal checked_at, stopped
+        now = time.monotonic()
+        if stopped or now - checked_at < STOP_CHECK_INTERVAL_SECONDS:
+            return stopped
+        checked_at = now
+        try:
+            item = table.get_item(
+                Key={"ConnectionId": connection_id, "MessagePartId": decimal(0)},
+                ConsistentRead=True,
+                ProjectionExpression="StopRequested",
+            ).get("Item")
+        except Exception:
+            # The answer goes on; the next check may succeed.
+            logger.exception("Reading the stop request failed")
+            return False
+        stopped = bool(item and item.get("StopRequested"))
+        return stopped
+
+    return should_stop
+
+
 def _session_user_id(connection_id: str) -> str | None:
     """Return the user who sent START on this connection, if any."""
     # Parts can arrive right after START, so read the latest write.
@@ -541,7 +595,10 @@ def _process_with_sender(
     notification_thread.start()
     try:
         return process_chat_input(
-            user=user, chat_input=chat_input, notificator=notificator
+            user=user,
+            chat_input=chat_input,
+            notificator=notificator,
+            should_stop=_stop_requested_checker(connection_id),
         )
     finally:
         notificator.finish()

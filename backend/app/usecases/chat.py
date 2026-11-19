@@ -318,6 +318,7 @@ def chat(
     on_thinking: Callable[[OnThinking], None] | None = None,
     on_tool_result: Callable[[ToolRunResult], None] | None = None,
     on_reasoning: Callable[[str], None] | None = None,
+    should_stop: Callable[[], bool] | None = None,
 ) -> tuple[ConversationModel, MessageModel]:
     user_msg_id, conversation, bot = prepare_conversation(user, chat_input)
     validate_model_is_available(chat_input.message.model, bot)
@@ -462,6 +463,7 @@ def chat(
         on_thinking=on_thinking,
         on_tool_result=on_tool_run_result,
         on_reasoning=on_reasoning,
+        should_stop=should_stop,
     )
 
     # Post handling: process the result and update conversation

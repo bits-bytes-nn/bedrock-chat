@@ -67,6 +67,7 @@ export const PostStreamingStatus = {
   REASONING: 'REASONING',
   ERROR: 'ERROR',
   END: 'END',
+  STOP: 'STOP',
 } as const;
 
 export const GUARDRAILS_FILTERS_THRESHOLD = {

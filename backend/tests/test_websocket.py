@@ -312,6 +312,29 @@ class TestHandler:
         chat_input = process.call_args.args[4]
         assert chat_input.message.content[0].body == "hello"
 
+    def stop(self, sub: str = "user"):
+        with patch.object(
+            websocket, "verify_token", return_value={**TOKEN, "sub": sub}
+        ):
+            return websocket.handler(frame({"step": "STOP", "token": "t"}), None)
+
+    def test_stop_reaches_the_running_answer_of_the_session(self):
+        self.start()
+        should_stop = websocket._stop_requested_checker("connection")
+        assert should_stop() is False
+
+        assert self.stop()["statusCode"] == 200
+
+        # Read at most once a second, so a new checker sees it at once.
+        assert websocket._stop_requested_checker("connection")() is True
+        # Another connection's answer goes on.
+        assert websocket._stop_requested_checker("other")() is False
+
+    def test_only_the_user_of_the_session_can_stop_it(self):
+        self.start()
+        assert self.stop(sub="someone-else")["statusCode"] == 403
+        assert websocket._stop_requested_checker("connection")() is False
+
     def test_rejects_parts_without_a_session(self):
         response = websocket.handler(
             frame({"step": "BODY", "index": 0, "part": "x"}), None

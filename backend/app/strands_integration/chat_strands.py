@@ -55,6 +55,7 @@ def converse_with_strands(
     on_thinking: Callable[[OnThinking], None] | None = None,
     on_tool_result: Callable[[ToolRunResult], None] | None = None,
     on_reasoning: Callable[[str], None] | None = None,
+    should_stop: Callable[[], bool] | None = None,
 ) -> OnStopInput:
     """
     Chat with Strands agents.
@@ -110,22 +111,29 @@ def converse_with_strands(
         ):
             thinking_log.append(strands_message_to_simple_message_model(message))
 
-    # The first streamed text or reasoning, for the time to first token.
+    # The first streamed text or reasoning, for the time to first token, and the
+    # streamed text, which is the answer when the user stops it.
     started = time.monotonic()
     first_output_at: list[float] = []
+    streamed: list[str] = []
 
-    def first_output(callback: Callable[[str], None] | None):
+    def streaming(callback: Callable[[str], None] | None, is_text: bool):
         def wrapped(text: str):
             if not first_output_at:
                 first_output_at.append(time.monotonic())
+            if is_text:
+                streamed.append(text)
             if callback:
                 callback(text)
+            # Strands stops at the next chunk and drops the message it was building.
+            if should_stop and should_stop():
+                agent.cancel()
 
         return wrapped
 
     agent.callback_handler = create_callback_handler(
-        on_stream=first_output(on_stream),
-        on_reasoning=first_output(on_reasoning),
+        on_stream=streaming(on_stream, is_text=True),
+        on_reasoning=streaming(on_reasoning, is_text=False),
         on_message=on_message,
     )
 
@@ -161,6 +169,14 @@ def converse_with_strands(
             raise
 
     stop_reason, result_message, metrics = run_agent(agent)
+    if stop_reason == "cancelled":
+        # Keep what the user saw. The stopped model call reports no usage, so its
+        # tokens are missing from the price.
+        text = "".join(streamed)
+        result_message = {
+            "role": "assistant",
+            "content": [{"text": text}] if text else [],
+        }
 
     # Convert Strands Message to MessageModel
     message = strands_message_to_message_model(
