@@ -139,21 +139,22 @@ upstream에서 업그레이드하는 경우:
 
 ## 답변 지표
 
-모든 채팅 답변은 `answer metrics: {...}` 한 줄을 로그에 남깁니다. 모델, 종료 이유, 첫 텍스트나 추론이 스트리밍되기까지의 시간(`ttft_ms`), 모델 턴 시간(`duration_ms`), 모델 호출 수, 입력·출력·캐시 토큰과 가격이 들어 있습니다. REST API, WebSocket, published API 핸들러가 모두 남깁니다. 모델별 지연·토큰·비용은 `BedrockChatStack`의 `WebSocketHandlerV2LogGroup*` 로그 그룹에서 CloudWatch Logs Insights로 다음 쿼리를 실행해 봅니다.
+모든 채팅 답변은 실패하거나 중지된 답변(`stop_reason`이 `error`, `cancelled`)까지 `answer metrics: {...}` 한 줄을 로그에 남깁니다. 모델, 종료 이유, 에이전트 실행 시작부터 첫 텍스트나 추론이 스트리밍되기까지의 시간(`ttft_ms`, 그 전에 실행된 도구 시간 포함), 도구를 포함한 전체 실행 시간(`duration_ms`), 모델 호출 수, 입력·출력·캐시 토큰과 가격이 들어 있습니다. 앱의 채팅은 `BedrockChatStack`의 `WebSocketHandlerV2LogGroup*`, REST API는 `BackendApiHandlerV2LogGroup*`, published API는 각 `ApiPublishmentStack*` 스택의 로그 그룹에 남습니다. 모델별 지연·토큰·비용은 이 로그 그룹들에서 CloudWatch Logs Insights로 다음 쿼리를 실행해 봅니다.
 
 ```
 filter @message like /answer metrics/
 | parse @message /"model": "(?<model>[^"]+)"/
 | parse @message /"ttft_ms": (?<ttft>\d+)/
 | parse @message /"duration_ms": (?<duration>\d+)/
-| parse @message /"output": (?<output>\d+), "cache_read_input": (?<cache_read>\d+), "cache_write_input": (?<cache_write>\d+), "price": (?<usd>[\d.e-]+)/
+| parse @message /"output": (?<output>\d+), "cache_read_input": (?<cache_read>\d+), "cache_write_input": (?<cache_write>\d+)/
+| parse @message /"usd_micros": (?<usd_micros>\d+)/
 | stats count(*) as answers, pct(ttft, 50) as ttft_p50, pct(ttft, 95) as ttft_p95,
     pct(duration, 50) as p50, pct(duration, 95) as p95, sum(output) as output_tokens,
-    sum(cache_read) as cache_read_tokens, sum(cache_write) as cache_write_tokens, sum(usd) as usd
+    sum(cache_read) as cache_read_tokens, sum(cache_write) as cache_write_tokens, sum(usd_micros) / 1000000 as usd
   by model
 ```
 
-가격은 `backend/app/model_registry.py`의 정가로 계산합니다. Claude는 캐시를 1시간 유지하며, 후속 메시지가 몇 분 간격으로 올 때 기본 5분보다 비용이 적습니다. 그 전제가 여전히 맞는지는 캐시 토큰 수로 확인합니다.
+가격은 `backend/app/model_registry.py`의 정가로 계산합니다. 중지된 모델 호출은 사용량을 보고하지 않으므로 중지된 답변에는 그 토큰이 빠집니다. Claude는 캐시를 1시간 유지합니다(`CLAUDE_CACHE_TTL`). 쓰기 단가가 5분 캐시의 입력 1.25배 대신 2배이므로, 후속 메시지가 5~60분 간격으로 자주 올 때 이득입니다. 배포에서 이 전제가 맞는지는 대화 메시지 간격과 캐시 토큰 수를 함께 보고 확인합니다.
 
 ## 봇 삭제 복구
 

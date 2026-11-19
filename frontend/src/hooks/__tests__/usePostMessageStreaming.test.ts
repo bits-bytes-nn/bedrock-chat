@@ -111,7 +111,10 @@ describe('usePostMessageStreaming', () => {
       step: 'STOP',
       token: 'header.pay+load/sig=',
     });
-    ws.receive('Stop requested.');
+    // Asked once; a failed stop leaves the answer streaming.
+    expect(usePostMessageStreaming.getState().stop).toBeNull();
+    ws.receive('Stop failed.');
+    ws.receive({ status: 'STREAMING', completion: 'more' });
     ws.receive({ status: 'STREAMING_END', stop_reason: 'cancelled' });
 
     await expect(promise).resolves.toBeUndefined();

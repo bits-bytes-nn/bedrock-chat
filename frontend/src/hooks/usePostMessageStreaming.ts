@@ -116,12 +116,15 @@ const usePostMessageStreaming = create<{
         );
 
         // The answer is generated after END; STOP ends it early.
+        // Once asked, the button goes back to the spinner until the answer ends.
         const allowStop = () =>
           set({
-            stop: () =>
+            stop: () => {
               ws.send(
                 JSON.stringify({ step: PostStreamingStatus.STOP, token: token })
-              ),
+              );
+              set({ stop: null });
+            },
           });
 
         const fail = (reason: string) => {
@@ -180,7 +183,11 @@ const usePostMessageStreaming = create<{
                 allowStop();
               }
               return;
-            } else if (message.data === 'Stop requested.') {
+            } else if (
+              message.data === 'Stop requested.' ||
+              // The answer then goes on; it is no error of the answer.
+              message.data === 'Stop failed.'
+            ) {
               return;
             }
 

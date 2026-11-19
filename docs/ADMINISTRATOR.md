@@ -139,21 +139,22 @@ A bot can be deleted during a sync. When the sync ends, it deletes the knowledge
 
 ## Answer metrics
 
-Every chat answer logs one line `answer metrics: {...}` with the model, the stop reason, the time to the first streamed text or reasoning (`ttft_ms`), the time of the model turn (`duration_ms`), the model calls, the input, output and cache tokens and the price. The REST API, WebSocket and published API handlers log it. To see latency, tokens and cost per model, run this in CloudWatch Logs Insights on the `WebSocketHandlerV2LogGroup*` log group of `BedrockChatStack`:
+Every chat answer, also a failed or stopped one (`stop_reason` `error` or `cancelled`), logs one line `answer metrics: {...}` with the model, the stop reason, the time from the start of the agent run to the first streamed text or reasoning (`ttft_ms`, after any tool runs before it), the time of the whole run with its tools (`duration_ms`), the model calls, the input, output and cache tokens and the price. Chats in the app log it in the `WebSocketHandlerV2LogGroup*` log group of `BedrockChatStack`, the REST API in `BackendApiHandlerV2LogGroup*`, and published APIs in their `ApiPublishmentStack*` stacks. To see latency, tokens and cost per model, run this in CloudWatch Logs Insights on those log groups:
 
 ```
 filter @message like /answer metrics/
 | parse @message /"model": "(?<model>[^"]+)"/
 | parse @message /"ttft_ms": (?<ttft>\d+)/
 | parse @message /"duration_ms": (?<duration>\d+)/
-| parse @message /"output": (?<output>\d+), "cache_read_input": (?<cache_read>\d+), "cache_write_input": (?<cache_write>\d+), "price": (?<usd>[\d.e-]+)/
+| parse @message /"output": (?<output>\d+), "cache_read_input": (?<cache_read>\d+), "cache_write_input": (?<cache_write>\d+)/
+| parse @message /"usd_micros": (?<usd_micros>\d+)/
 | stats count(*) as answers, pct(ttft, 50) as ttft_p50, pct(ttft, 95) as ttft_p95,
     pct(duration, 50) as p50, pct(duration, 95) as p95, sum(output) as output_tokens,
-    sum(cache_read) as cache_read_tokens, sum(cache_write) as cache_write_tokens, sum(usd) as usd
+    sum(cache_read) as cache_read_tokens, sum(cache_write) as cache_write_tokens, sum(usd_micros) / 1000000 as usd
   by model
 ```
 
-The price uses the list prices in `backend/app/model_registry.py`. Claude caches for an hour, which costs less than the default 5 minutes when follow-up messages come minutes apart; the cache token counts show whether that still holds.
+The price uses the list prices in `backend/app/model_registry.py`; a stopped model call reports no usage, so stopped answers miss its tokens. Claude caches for an hour (`CLAUDE_CACHE_TTL`): its writes cost 2x the input price instead of 1.25x for 5 minutes, which pays off when follow-up messages often come 5-60 minutes later. To check that for a deployment, compare the gaps between the messages of conversations with the cache token counts.
 
 ## Bot removal recovery
 

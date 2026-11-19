@@ -1,5 +1,7 @@
 """Stopping an answer keeps the text that was streamed."""
 
+import asyncio
+import threading
 from unittest.mock import MagicMock, patch
 
 from app.strands_integration import chat_strands
@@ -11,8 +13,9 @@ from strands.models.model import Model
 class StreamingModel(Model):
     """Streams the words one by one."""
 
-    def __init__(self, words: list[str]):
+    def __init__(self, words: list[str], first_delay: float = 0.0):
         self.words = words
+        self.first_delay = first_delay
 
     def update_config(self, **model_config):
         pass
@@ -25,8 +28,12 @@ class StreamingModel(Model):
 
     async def stream(self, messages, tool_specs=None, system_prompt=None, **kwargs):
         yield {"messageStart": {"role": "assistant"}}
+        # Time to the first token.
+        await asyncio.sleep(self.first_delay)
         yield {"contentBlockStart": {"start": {}}}
         for word in self.words:
+            # Slow enough for the stop watcher to look in between.
+            await asyncio.sleep(0.02)
             yield {"contentBlockDelta": {"delta": {"text": word}}}
         yield {"contentBlockStop": {}}
         yield {"messageStop": {"stopReason": "end_turn"}}
@@ -38,9 +45,9 @@ class StreamingModel(Model):
         }
 
 
-def answer(words: list[str], should_stop=None):
+def answer(words: list[str], should_stop=None, first_delay: float = 0.0):
     agent = Agent(
-        model=StreamingModel(words),
+        model=StreamingModel(words, first_delay),
         callback_handler=None,
         conversation_manager=NullConversationManager(),
     )
@@ -48,6 +55,7 @@ def answer(words: list[str], should_stop=None):
     chat_input.message.model = "claude-v5.5-haiku"
     streamed: list[str] = []
     with (
+        patch.object(chat_strands, "STOP_CHECK_INTERVAL_SECONDS", 0.01),
         patch.object(chat_strands, "create_strands_agent", return_value=agent),
         patch.object(
             chat_strands,
@@ -73,20 +81,26 @@ def answer(words: list[str], should_stop=None):
 
 
 def test_a_stopped_answer_keeps_the_streamed_text():
-    words = ["One ", "two ", "three ", "four ", "five"]
-    asked = []
+    words = [f"w{i} " for i in range(40)]
+    asked = threading.Event()
+    # The user asks to stop while the words stream.
+    threading.Timer(0.15, asked.set).start()
 
-    def should_stop() -> bool:
-        asked.append(True)
-        return len(asked) >= 2
-
-    result, streamed = answer(words, should_stop)
+    result, streamed = answer(words, asked.is_set)
 
     assert result["stop_reason"] == "cancelled"
     body = result["message"].content[0].body
-    # Strands stops at the next chunk after the request.
-    assert body == "".join(streamed) and body.startswith("One two")
-    assert len(streamed) < len(words)
+    # The stored answer is the text that the user saw.
+    assert body == "".join(streamed) and body.startswith("w0 ")
+    assert 0 < len(streamed) < len(words)
+
+
+def test_an_answer_stopped_before_any_text_says_so():
+    result, streamed = answer(["late"], lambda: True, first_delay=0.5)
+
+    assert result["stop_reason"] == "cancelled"
+    assert streamed == []
+    assert result["message"].content[0].body == chat_strands.STOPPED_BEFORE_TEXT
 
 
 def test_an_answer_without_a_stop_request_is_whole():

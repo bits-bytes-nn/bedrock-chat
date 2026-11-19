@@ -168,6 +168,15 @@ class TestCalculatePrice(unittest.TestCase):
         # Claude caches for an hour, whose writes cost twice the input price.
         self.assertAlmostEqual(price, 0.002 + 0.01 + 0.0001 + 0.004)
 
+    def test_claude_cache_writes_follow_the_cache_ttl(self):
+        from app import model_registry
+
+        spec = MODELS["claude-v5.5-sonnet"]
+        factor = model_registry._CACHE_WRITE_PRICE_FACTOR[
+            model_registry.CLAUDE_CACHE_TTL
+        ]
+        self.assertAlmostEqual(spec.price.cache_write_input, spec.price.input * factor)
+
     def test_uses_input_price_when_cache_prices_are_missing(self):
         price = calculate_price("gpt-oss-120b", 1000, 1000, 1000, 1000)
 

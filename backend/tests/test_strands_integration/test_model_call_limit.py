@@ -22,13 +22,17 @@ def test_the_answer_ends_with_a_note_after_the_limit():
     emit.assert_called_once_with("ModelCallLimitReached", 1)
 
 
-def test_a_failed_answer_still_counts_its_cost():
+def test_a_failed_answer_still_counts_its_cost(caplog):
+    import logging
+
+    caplog.set_level(logging.INFO)
     agent = MagicMock(tool_names=[])
     agent.side_effect = RuntimeError("throttled on the third tool round trip")
     agent.event_loop_metrics.accumulated_usage = {
         "inputTokens": 100_000,
         "outputTokens": 1_000,
     }
+    agent.event_loop_metrics.cycle_count = 3
     chat_input = MagicMock()
     chat_input.message.model = "claude-v5.5-haiku"
     with (
@@ -49,6 +53,12 @@ def test_a_failed_answer_still_counts_its_cost():
             )
 
     assert emit.call_args.args[0] > 0
+    # Failed answers count in the latency and cost figures too.
+    assert any(
+        '"stop_reason": "error"' in r.getMessage()
+        for r in caplog.records
+        if "answer metrics" in r.getMessage()
+    )
 
 
 def test_a_model_that_keeps_calling_tools_is_stopped():
@@ -110,7 +120,7 @@ def test_every_answer_logs_its_latency_tokens_and_price(caplog):
 
     agent = MagicMock(tool_names=[])
 
-    def answer(_messages):
+    def answer(_messages, cancel_signal=None):
         agent.callback_handler(data="Hi")
         return SimpleNamespace(
             stop_reason="end_turn",
@@ -151,3 +161,4 @@ def test_every_answer_logs_its_latency_tokens_and_price(caplog):
     assert isinstance(metrics["ttft_ms"], int)
     assert metrics["duration_ms"] >= metrics["ttft_ms"]
     assert (metrics["input"], metrics["output"], metrics["model_calls"]) == (10, 2, 1)
+    assert metrics["usd_micros"] == round(metrics["price"] * 1_000_000)

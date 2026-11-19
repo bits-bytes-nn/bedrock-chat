@@ -1,7 +1,6 @@
 import json
 import logging
 import os
-import time
 from datetime import datetime
 from decimal import Decimal as decimal
 from queue import Empty, SimpleQueue
@@ -424,21 +423,19 @@ def handler(event, context):
             )
             return {"statusCode": 200, "body": "Session started."}
         elif step == "STOP":
-            # Ends the answer of this session early; it keeps what was written.
+            # Ends the answer of this session early; it keeps what was written. A
+            # failure is not an ERROR frame, which would end the streamed answer.
             try:
-                decoded = verify_token(token)
-            except jwt.PyJWTError:
-                logger.exception("Invalid token")
-                return _error(403, "Invalid token.", "unauthorized")
-            if _session_user_id(connection_id) != decoded["sub"]:
-                return _error(
-                    403, "The session belongs to another user.", "unauthorized"
+                user_id = verify_token(token)["sub"]
+                table.update_item(
+                    Key={"ConnectionId": connection_id, "MessagePartId": decimal(0)},
+                    UpdateExpression="SET StopRequested = :stop",
+                    ConditionExpression="UserId = :user",
+                    ExpressionAttributeValues={":stop": True, ":user": user_id},
                 )
-            table.update_item(
-                Key={"ConnectionId": connection_id, "MessagePartId": decimal(0)},
-                UpdateExpression="SET StopRequested = :stop",
-                ExpressionAttributeValues={":stop": True},
-            )
+            except Exception:
+                logger.warning("Stop request rejected", exc_info=True)
+                return {"statusCode": 200, "body": "Stop failed."}
             return {"statusCode": 200, "body": "Stop requested."}
         elif step == "END":
             try:
@@ -456,6 +453,16 @@ def handler(event, context):
                 return _error(
                     403, "The session belongs to another user.", "unauthorized"
                 )
+
+            # STOP reads the session while the answer is written, which can take
+            # longer than the minutes that the parts need.
+            table.update_item(
+                Key={"ConnectionId": connection_id, "MessagePartId": decimal(0)},
+                UpdateExpression="SET expire = :expire",
+                ExpressionAttributeValues={
+                    ":expire": int(now.timestamp()) + ANSWER_SESSION_SECONDS
+                },
+            )
 
             # Concatenate the message parts
             message_parts = []
@@ -538,24 +545,19 @@ def _error(status_code: int, reason: str, code: type_error_code) -> dict:
     }
 
 
-# How often a running answer reads whether the user asked to stop it.
-STOP_CHECK_INTERVAL_SECONDS = 1.0
+# Longer than the handler's timeout, so that STOP finds the session of an answer.
+ANSWER_SESSION_SECONDS = 16 * 60
 
 
 def _stop_requested_checker(connection_id: str) -> Callable[[], bool]:
     """Whether the user sent STOP on this connection. The answer runs in another
-    invocation than STOP, so the request is read from the session item, at most
-    once per STOP_CHECK_INTERVAL_SECONDS. A closed connection does not stop it:
-    a reload shows the answer once it is stored."""
-    checked_at = -STOP_CHECK_INTERVAL_SECONDS
-    stopped = False
+    invocation than STOP, so the request is read from the session item; the chat
+    asks about once a second. A closed connection does not stop it: a reload shows
+    the answer once it is stored."""
+    failed = False
 
     def should_stop() -> bool:
-        nonlocal checked_at, stopped
-        now = time.monotonic()
-        if stopped or now - checked_at < STOP_CHECK_INTERVAL_SECONDS:
-            return stopped
-        checked_at = now
+        nonlocal failed
         try:
             item = table.get_item(
                 Key={"ConnectionId": connection_id, "MessagePartId": decimal(0)},
@@ -563,11 +565,12 @@ def _stop_requested_checker(connection_id: str) -> Callable[[], bool]:
                 ProjectionExpression="StopRequested",
             ).get("Item")
         except Exception:
-            # The answer goes on; the next check may succeed.
-            logger.exception("Reading the stop request failed")
+            # The answer goes on; the next check may succeed. Logged once.
+            if not failed:
+                logger.exception("Reading the stop request failed")
+            failed = True
             return False
-        stopped = bool(item and item.get("StopRequested"))
-        return stopped
+        return bool(item and item.get("StopRequested"))
 
     return should_stop
 

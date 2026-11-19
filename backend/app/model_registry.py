@@ -5,7 +5,7 @@ support was verified with Converse calls. Prices come from the AWS Price List AP
 the Bedrock model cards and are per 1,000 tokens for global cross-Region inference.
 """
 
-from dataclasses import dataclass, replace, field
+from dataclasses import dataclass, field, replace
 from typing import Literal
 
 from app.config import (
@@ -59,10 +59,12 @@ class ModelSpec:
 
 _ALL_CACHING: frozenset[CachingTarget] = frozenset({"system", "message", "tool"})
 
-# Most follow-up messages of chats come later than the default 5 minutes: in the
-# proto deployment, 75 of 150 within an hour came after 5 minutes. With an hour,
-# replaying its 220 answers of Claude Opus 5.5 costs about 11% less (2026-11).
-CLAUDE_CACHE_TTL = "1h"
+# How long Claude cache points live. Writes cost more for an hour (2x the input
+# price) than for 5 minutes (1.25x), and reads 0.1x either way, so an hour pays off
+# when enough follow-up messages come 5-60 minutes later
+# (https://docs.aws.amazon.com/bedrock/latest/userguide/prompt-caching.html).
+CLAUDE_CACHE_TTL: Literal["5m", "1h"] = "1h"
+_CACHE_WRITE_PRICE_FACTOR = {"5m": 1.25, "1h": 2.0}
 
 
 def _claude(
@@ -75,14 +77,17 @@ def _claude(
     """Claude 4.5 and later. Modern models (Opus 4.7 and later) reject sampling
     parameters.
 
-    Cache points live for CLAUDE_CACHE_TTL. Writes for an hour cost twice the
-    input price (https://docs.aws.amazon.com/bedrock/latest/userguide/prompt-caching.html,
-    Amazon Bedrock pricing), so the price passes the input, output and read rates.
+    Cache points live for CLAUDE_CACHE_TTL, whose write price follows from the
+    input price, so the price passes the input, output and read rates only.
     """
+    assert price.cache_write_input is None, "derived from CLAUDE_CACHE_TTL"
     return ModelSpec(
         bedrock_id=bedrock_id,
         provider="anthropic",
-        price=replace(price, cache_write_input=price.input * 2),
+        price=replace(
+            price,
+            cache_write_input=price.input * _CACHE_WRITE_PRICE_FACTOR[CLAUDE_CACHE_TTL],
+        ),
         default_max_tokens=16384,
         reasoning=reasoning,
         supports_temperature=not modern,
