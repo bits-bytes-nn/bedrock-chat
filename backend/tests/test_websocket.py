@@ -1,4 +1,5 @@
 import json
+import time
 import os
 import sys
 import unittest
@@ -311,6 +312,43 @@ class TestHandler:
         assert response["statusCode"] == 200
         chat_input = process.call_args.args[4]
         assert chat_input.message.content[0].body == "hello"
+
+    def stop(self, sub: str = "user"):
+        with patch.object(
+            websocket, "verify_token", return_value={**TOKEN, "sub": sub}
+        ):
+            return websocket.handler(frame({"step": "STOP", "token": "t"}), None)
+
+    def test_stop_reaches_the_running_answer_of_the_session(self):
+        self.start()
+        should_stop = websocket._stop_requested_checker("connection")
+        assert should_stop() is False
+
+        assert self.stop()["body"] == "Stop requested."
+
+        assert should_stop() is True
+        # Another connection's answer goes on.
+        assert websocket._stop_requested_checker("other")() is False
+
+    def test_only_the_user_of_the_session_can_stop_it(self):
+        self.start()
+        # Not an ERROR frame, which would end the answer on the page.
+        assert self.stop(sub="someone-else")["body"] == "Stop failed."
+        assert websocket._stop_requested_checker("connection")() is False
+
+    def test_stop_without_a_session_creates_no_item(self):
+        assert self.stop()["body"] == "Stop failed."
+        assert "Item" not in websocket.table.get_item(
+            Key={"ConnectionId": "connection", "MessagePartId": 0}
+        )
+
+    def test_the_session_outlives_the_answer(self):
+        self.start()
+        self.end()
+        item = websocket.table.get_item(
+            Key={"ConnectionId": "connection", "MessagePartId": 0}
+        )["Item"]
+        assert int(item["expire"]) - time.time() > 15 * 60
 
     def test_rejects_parts_without_a_session(self):
         response = websocket.handler(

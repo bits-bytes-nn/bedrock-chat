@@ -83,10 +83,13 @@ const usePostMessageStreaming = create<{
   errorDetail: string | null;
   /** Conversation that the error belongs to. */
   errorConversationId: string | null;
+  /** Ends the answer being generated, keeping what was written; null without one. */
+  stop: (() => void) | null;
 }>((set) => {
   return {
     errorDetail: null,
     errorConversationId: null,
+    stop: null,
     post: async ({ input, handleStreamingEvent }) => {
       set({
         errorDetail: null,
@@ -111,6 +114,18 @@ const usePostMessageStreaming = create<{
         const ws = new WebSocket(
           `${WS_ENDPOINT}?token=${encodeURIComponent(token ?? '')}`
         );
+
+        // The answer is generated after END; STOP ends it early.
+        // Once asked, the button goes back to the spinner until the answer ends.
+        const allowStop = () =>
+          set({
+            stop: () => {
+              ws.send(
+                JSON.stringify({ step: PostStreamingStatus.STOP, token: token })
+              );
+              set({ stop: null });
+            },
+          });
 
         const fail = (reason: string) => {
           // Closing the socket below triggers onclose, so report only the first failure.
@@ -165,7 +180,14 @@ const usePostMessageStreaming = create<{
                     token: token,
                   })
                 );
+                allowStop();
               }
+              return;
+            } else if (
+              message.data === 'Stop requested.' ||
+              // The answer then goes on; it is no error of the answer.
+              message.data === 'Stop failed.'
+            ) {
               return;
             }
 
@@ -252,6 +274,7 @@ const usePostMessageStreaming = create<{
           fail(i18next.t('error.predict.general'));
         };
         ws.onclose = (event) => {
+          set({ stop: null });
           if (streamEnded) {
             resolve();
             return;

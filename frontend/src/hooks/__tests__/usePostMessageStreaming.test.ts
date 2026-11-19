@@ -101,6 +101,26 @@ describe('usePostMessageStreaming', () => {
     expect(events.map((e) => e.type)).toEqual(['wakeup', 'text', 'goodbye']);
   });
 
+  test('can stop the answer once it is being written', async () => {
+    const { promise, ws } = await startPost();
+    const { stop } = usePostMessageStreaming.getState();
+    expect(stop).not.toBeNull();
+
+    stop!();
+    expect(ws.sent.at(-1)).toEqual({
+      step: 'STOP',
+      token: 'header.pay+load/sig=',
+    });
+    // Asked once; a failed stop leaves the answer streaming.
+    expect(usePostMessageStreaming.getState().stop).toBeNull();
+    ws.receive('Stop failed.');
+    ws.receive({ status: 'STREAMING', completion: 'more' });
+    ws.receive({ status: 'STREAMING_END', stop_reason: 'cancelled' });
+
+    await expect(promise).resolves.toBeUndefined();
+    expect(usePostMessageStreaming.getState().stop).toBeNull();
+  });
+
   test('keeps the error reason when the socket closes afterwards', async () => {
     const { promise, ws } = await startPost();
     ws.receive({ status: 'ERROR', reason: 'No access' });

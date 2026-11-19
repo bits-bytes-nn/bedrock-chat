@@ -168,7 +168,11 @@ const ChatPage: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { open: openSnackbar } = useSnackbar();
-  const { errorDetail, errorConversationId } = usePostMessageStreaming();
+  const {
+    errorDetail,
+    errorConversationId,
+    stop: stopAnswer,
+  } = usePostMessageStreaming();
   const { isAdmin } = useLoginUser();
   const { pinBot, unpinBot } = useBotPinning();
 
@@ -793,6 +797,7 @@ const ChatPage: React.FC = () => {
           isLoading={postingMessage}
           isNewChat={messages.length == 0}
           onSend={onSend}
+          onStop={isStreamingHere && stopAnswer ? stopAnswer : undefined}
           onRegenerate={onRegenerate}
           continueGenerate={onContinueGenerate}
           ref={focusInputRef}

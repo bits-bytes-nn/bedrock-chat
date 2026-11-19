@@ -5,7 +5,7 @@ support was verified with Converse calls. Prices come from the AWS Price List AP
 the Bedrock model cards and are per 1,000 tokens for global cross-Region inference.
 """
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Literal
 
 from app.config import (
@@ -59,6 +59,13 @@ class ModelSpec:
 
 _ALL_CACHING: frozenset[CachingTarget] = frozenset({"system", "message", "tool"})
 
+# How long Claude cache points live. Writes cost more for an hour (2x the input
+# price) than for 5 minutes (1.25x), and reads 0.1x either way, so an hour pays off
+# when enough follow-up messages come 5-60 minutes later
+# (https://docs.aws.amazon.com/bedrock/latest/userguide/prompt-caching.html).
+CLAUDE_CACHE_TTL: Literal["5m", "1h"] = "1h"
+_CACHE_WRITE_PRICE_FACTOR = {"5m": 1.25, "1h": 2.0}
+
 
 def _claude(
     bedrock_id: str,
@@ -68,11 +75,19 @@ def _claude(
     modern: bool = False,
 ) -> ModelSpec:
     """Claude 4.5 and later. Modern models (Opus 4.7 and later) reject sampling
-    parameters."""
+    parameters.
+
+    Cache points live for CLAUDE_CACHE_TTL, whose write price follows from the
+    input price, so the price passes the input, output and read rates only.
+    """
+    assert price.cache_write_input is None, "derived from CLAUDE_CACHE_TTL"
     return ModelSpec(
         bedrock_id=bedrock_id,
         provider="anthropic",
-        price=price,
+        price=replace(
+            price,
+            cache_write_input=price.input * _CACHE_WRITE_PRICE_FACTOR[CLAUDE_CACHE_TTL],
+        ),
         default_max_tokens=16384,
         reasoning=reasoning,
         supports_temperature=not modern,
@@ -132,8 +147,8 @@ def _gpt_oss(bedrock_id: str, price: ModelPrice) -> ModelSpec:
     )
 
 
-_OPUS_4_5_PRICE = ModelPrice(0.005, 0.025, 0.0005, 0.00625)
-_SONNET_4_PRICE = ModelPrice(0.003, 0.015, 0.0003, 0.00375)
+_OPUS_4_5_PRICE = ModelPrice(0.005, 0.025, 0.0005)
+_SONNET_4_PRICE = ModelPrice(0.003, 0.015, 0.0003)
 
 MODELS: dict[str, ModelSpec] = {
     "claude-v4.5-opus": _claude(
@@ -155,7 +170,7 @@ MODELS: dict[str, ModelSpec] = {
     ),
     "claude-v5.5-opus": _claude(
         "anthropic.claude-opus-5-5",
-        ModelPrice(0.004, 0.02, 0.0002, 0.005),
+        ModelPrice(0.004, 0.02, 0.0002),
         "adaptive",
         modern=True,
     ),
@@ -169,24 +184,24 @@ MODELS: dict[str, ModelSpec] = {
     ),
     "claude-v5-sonnet": _claude(
         "anthropic.claude-sonnet-5",
-        ModelPrice(0.002, 0.01, 0.0002, 0.0025),
+        ModelPrice(0.002, 0.01, 0.0002),
         "adaptive",
         modern=True,
     ),
     "claude-v5.5-sonnet": _claude(
         "anthropic.claude-sonnet-5-5",
-        ModelPrice(0.002, 0.01, 0.0001, 0.0025),
+        ModelPrice(0.002, 0.01, 0.0001),
         "adaptive",
         modern=True,
     ),
     "claude-v4.5-haiku": _claude(
         "anthropic.claude-haiku-4-5-20251001-v1:0",
-        ModelPrice(0.001, 0.005, 0.0001, 0.00125),
+        ModelPrice(0.001, 0.005, 0.0001),
         "budget",
     ),
     "claude-v5.5-haiku": _claude(
         "anthropic.claude-haiku-5-5",
-        ModelPrice(0.0001, 0.0005, 0.00001, 0.000125),
+        ModelPrice(0.0001, 0.0005, 0.00001),
         "adaptive",
         modern=True,
     ),

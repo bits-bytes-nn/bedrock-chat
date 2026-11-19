@@ -4,6 +4,8 @@ Main chat function for Strands integration.
 
 import json
 import logging
+import threading
+import time
 from typing import Callable
 
 from app.stream import ToolRunResult
@@ -40,6 +42,11 @@ from strands.types.exceptions import MaxTokensReachedException
 
 logger = logging.getLogger(__name__)
 
+# How often a running answer checks whether the user asked to stop it.
+STOP_CHECK_INTERVAL_SECONDS = 1.0
+# The answer stopped before any text: an empty one would read as blocked.
+STOPPED_BEFORE_TEXT = "(Stopped before the answer began.)"
+
 
 def converse_with_strands(
     bot: BotModel | None,
@@ -54,6 +61,7 @@ def converse_with_strands(
     on_thinking: Callable[[OnThinking], None] | None = None,
     on_tool_result: Callable[[ToolRunResult], None] | None = None,
     on_reasoning: Callable[[str], None] | None = None,
+    should_stop: Callable[[], bool] | None = None,
 ) -> OnStopInput:
     """
     Chat with Strands agents.
@@ -107,11 +115,32 @@ def converse_with_strands(
             "toolUse" in content or "toolResult" in content
             for content in message["content"]
         ):
+            # The text before a tool call shows as its thought; a stopped answer
+            # keeps the text of the last model call.
+            streamed.clear()
             thinking_log.append(strands_message_to_simple_message_model(message))
 
+    # The first streamed text or reasoning, for the time to first token, and the
+    # streamed text, which is the answer when the user stops it.
+    started = time.monotonic()
+    first_output_at: list[float] = []
+    streamed: list[str] = []
+
+    def streaming(callback: Callable[[str], None] | None, is_text: bool):
+        def wrapped(text: str):
+            # Signature and redacted reasoning events carry no text.
+            if text and not first_output_at:
+                first_output_at.append(time.monotonic())
+            if is_text:
+                streamed.append(text)
+            if callback:
+                callback(text)
+
+        return wrapped
+
     agent.callback_handler = create_callback_handler(
-        on_stream=on_stream,
-        on_reasoning=on_reasoning,
+        on_stream=streaming(on_stream, is_text=True),
+        on_reasoning=streaming(on_reasoning, is_text=False),
         on_message=on_message,
     )
 
@@ -125,9 +154,22 @@ def converse_with_strands(
         has_tools=bool(agent.tool_names),
     )
 
+    # Strands checks the signal while streaming, around tools and between model
+    # calls; it drops the message that it was building when stopped.
+    cancel = threading.Event()
+    done = threading.Event()
+
+    def watch_stop_request() -> None:
+        while should_stop and not done.wait(STOP_CHECK_INTERVAL_SECONDS):
+            if should_stop():
+                cancel.set()
+                return
+
+    threading.Thread(target=watch_stop_request, daemon=True).start()
+
     def run_agent(agent: Agent) -> tuple[StopReason, Message, EventLoopMetrics]:
         try:
-            result = agent(strands_messages)
+            result = agent(strands_messages, cancel_signal=cancel)
             return (
                 result.stop_reason,
                 result.message,
@@ -143,10 +185,29 @@ def converse_with_strands(
         except Exception:
             # The model calls before the failure are billed, and the cost is
             # otherwise emitted only for a finished answer.
-            emit_chat_cost(_price(chat_input.message.model, agent.event_loop_metrics))
+            price = _price(chat_input.message.model, agent.event_loop_metrics)
+            emit_chat_cost(price)
+            _log_answer_metrics(
+                chat_input.message.model,
+                "error",
+                agent.event_loop_metrics,
+                price,
+                started,
+                first_output_at,
+            )
             raise
 
-    stop_reason, result_message, metrics = run_agent(agent)
+    try:
+        stop_reason, result_message, metrics = run_agent(agent)
+    finally:
+        done.set()
+    if stop_reason == "cancelled":
+        # Keep the text that the user saw, or say that there was none. The stopped
+        # model call reports no usage, so its tokens are missing from the price.
+        result_message = {
+            "role": "assistant",
+            "content": [{"text": "".join(streamed) or STOPPED_BEFORE_TEXT}],
+        }
 
     # Convert Strands Message to MessageModel
     message = strands_message_to_message_model(
@@ -164,13 +225,9 @@ def converse_with_strands(
 
     price = _price(chat_input.message.model, metrics)
 
-    logger.info(f"token count: {json.dumps({
-            'input': input_tokens,
-            'output': output_tokens,
-            'cache_read_input': cache_read_input_tokens,
-            'cache_write_input': cache_write_input_tokens
-        })}")
-    logger.info(f"price: {price}")
+    _log_answer_metrics(
+        chat_input.message.model, stop_reason, metrics, price, started, first_output_at
+    )
 
     return OnStopInput(
         message=message,
@@ -191,4 +248,42 @@ def _price(model: type_model_name, metrics: EventLoopMetrics) -> float:
         output_tokens=usage.get("outputTokens", 0),
         cache_read_input_tokens=usage.get("cacheReadInputTokens", 0),
         cache_write_input_tokens=usage.get("cacheWriteInputTokens", 0),
+    )
+
+
+def _log_answer_metrics(
+    model: type_model_name,
+    stop_reason: str,
+    metrics: EventLoopMetrics,
+    price: float,
+    started: float,
+    first_output_at: list[float],
+) -> None:
+    """One line per answer, the source of the latency, token and cost figures
+    (docs/ADMINISTRATOR.md#answer-metrics). The times count from the start of the
+    agent run: `ttft_ms` to the first streamed text or reasoning, which follows
+    any tool runs before it, and `duration_ms` to its end, tools included."""
+    usage = metrics.accumulated_usage
+    logger.info(
+        "answer metrics: %s",
+        json.dumps(
+            {
+                "model": model,
+                "stop_reason": stop_reason,
+                "ttft_ms": (
+                    round((first_output_at[0] - started) * 1000)
+                    if first_output_at
+                    else None
+                ),
+                "duration_ms": round((time.monotonic() - started) * 1000),
+                "model_calls": metrics.cycle_count,
+                "input": usage.get("inputTokens", 0),
+                "output": usage.get("outputTokens", 0),
+                "cache_read_input": usage.get("cacheReadInputTokens", 0),
+                "cache_write_input": usage.get("cacheWriteInputTokens", 0),
+                "price": price,
+                # An integer, which sums safely in Logs Insights.
+                "usd_micros": round(price * 1_000_000),
+            }
+        ),
     )

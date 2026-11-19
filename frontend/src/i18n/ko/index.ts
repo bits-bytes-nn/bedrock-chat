@@ -704,6 +704,7 @@ const translation: typeof en = {
       unstar: '즐겨찾기에서 제거',
       share: '공유',
       help: '도움말',
+      stop: '중지',
       previewImage: '이미지 미리 보기',
       showSource: '출처 보기',
       openInNewTab: '새 탭에서 열기',
