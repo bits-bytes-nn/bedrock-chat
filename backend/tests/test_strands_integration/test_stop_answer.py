@@ -108,3 +108,31 @@ def test_an_answer_without_a_stop_request_is_whole():
 
     assert result["stop_reason"] == "end_turn"
     assert result["message"].content[0].body == "One two"
+
+
+def test_the_bedrock_stream_sees_the_stop_signal():
+    # Strands clears its own cancel signal when a stopped answer ends, so a stream
+    # that only had that one was read and billed to the end.
+    import threading
+
+    from app.strands_integration.agent.factory import StoppableBedrockModel
+    from strands.models import BedrockModel
+
+    seen: list = []
+
+    async def fake_stream(self, *args, cancel_signal=None, **kwargs):
+        seen.append(cancel_signal)
+        yield {"messageStart": {"role": "assistant"}}
+
+    model = StoppableBedrockModel.__new__(StoppableBedrockModel)
+    model.stop_signal = threading.Event()
+    agents_own = threading.Event()
+    with patch.object(BedrockModel, "stream", fake_stream):
+
+        async def consume():
+            async for _ in model.stream([], cancel_signal=agents_own):
+                pass
+
+        asyncio.run(consume())
+
+    assert seen == [model.stop_signal]

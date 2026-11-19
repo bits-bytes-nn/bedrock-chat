@@ -170,6 +170,7 @@ def converse_with_strands(
                 return
 
     threading.Thread(target=watch_stop_request, daemon=True).start()
+    agent.model.stop_signal = cancel  # type: ignore[attr-defined]
 
     def run_agent(agent: Agent) -> tuple[StopReason, Message, EventLoopMetrics]:
         try:
