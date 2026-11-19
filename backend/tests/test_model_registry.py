@@ -165,7 +165,8 @@ class TestCalculatePrice(unittest.TestCase):
     def test_calculates_price_per_thousand_tokens(self):
         price = calculate_price("claude-v5.5-sonnet", 1000, 1000, 1000, 1000)
 
-        self.assertAlmostEqual(price, 0.002 + 0.01 + 0.0001 + 0.0025)
+        # Claude caches for an hour, whose writes cost twice the input price.
+        self.assertAlmostEqual(price, 0.002 + 0.01 + 0.0001 + 0.004)
 
     def test_uses_input_price_when_cache_prices_are_missing(self):
         price = calculate_price("gpt-oss-120b", 1000, 1000, 1000, 1000)

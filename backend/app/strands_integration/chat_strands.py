@@ -4,6 +4,7 @@ Main chat function for Strands integration.
 
 import json
 import logging
+import time
 from typing import Callable
 
 from app.stream import ToolRunResult
@@ -109,9 +110,22 @@ def converse_with_strands(
         ):
             thinking_log.append(strands_message_to_simple_message_model(message))
 
+    # The first streamed text or reasoning, for the time to first token.
+    started = time.monotonic()
+    first_output_at: list[float] = []
+
+    def first_output(callback: Callable[[str], None] | None):
+        def wrapped(text: str):
+            if not first_output_at:
+                first_output_at.append(time.monotonic())
+            if callback:
+                callback(text)
+
+        return wrapped
+
     agent.callback_handler = create_callback_handler(
-        on_stream=on_stream,
-        on_reasoning=on_reasoning,
+        on_stream=first_output(on_stream),
+        on_reasoning=first_output(on_reasoning),
         on_message=on_message,
     )
 
@@ -164,13 +178,29 @@ def converse_with_strands(
 
     price = _price(chat_input.message.model, metrics)
 
-    logger.info(f"token count: {json.dumps({
-            'input': input_tokens,
-            'output': output_tokens,
-            'cache_read_input': cache_read_input_tokens,
-            'cache_write_input': cache_write_input_tokens
-        })}")
-    logger.info(f"price: {price}")
+    # One line per answer, the source of the latency, token and cost figures
+    # (docs/ADMINISTRATOR.md#answer-metrics).
+    logger.info(
+        "answer metrics: %s",
+        json.dumps(
+            {
+                "model": chat_input.message.model,
+                "stop_reason": stop_reason,
+                "ttft_ms": (
+                    round((first_output_at[0] - started) * 1000)
+                    if first_output_at
+                    else None
+                ),
+                "duration_ms": round((time.monotonic() - started) * 1000),
+                "model_calls": metrics.cycle_count,
+                "input": input_tokens,
+                "output": output_tokens,
+                "cache_read_input": cache_read_input_tokens,
+                "cache_write_input": cache_write_input_tokens,
+                "price": price,
+            }
+        ),
+    )
 
     return OnStopInput(
         message=message,

@@ -137,6 +137,24 @@ While a bot's knowledge sync is queued or running, its owner cannot save the bot
 
 A bot can be deleted during a sync. When the sync ends, it deletes the knowledge base stack it built for the deleted bot. If the delete request fails, the alarm for failed sync status updates goes off; a stack whose deletion fails later (`DELETE_FAILED`) raises no alarm ([Alarms and API Throttling](../README.md#alarms-and-api-throttling)); look for `BrChatKbStack*` stacks in the Bedrock region whose bot no longer exists and delete them.
 
+## Answer metrics
+
+Every chat answer logs one line `answer metrics: {...}` with the model, the stop reason, the time to the first streamed text or reasoning (`ttft_ms`), the time of the model turn (`duration_ms`), the model calls, the input, output and cache tokens and the price. The REST API, WebSocket and published API handlers log it. To see latency, tokens and cost per model, run this in CloudWatch Logs Insights on the `WebSocketHandlerV2LogGroup*` log group of `BedrockChatStack`:
+
+```
+filter @message like /answer metrics/
+| parse @message /"model": "(?<model>[^"]+)"/
+| parse @message /"ttft_ms": (?<ttft>\d+)/
+| parse @message /"duration_ms": (?<duration>\d+)/
+| parse @message /"output": (?<output>\d+), "cache_read_input": (?<cache_read>\d+), "cache_write_input": (?<cache_write>\d+), "price": (?<usd>[\d.e-]+)/
+| stats count(*) as answers, pct(ttft, 50) as ttft_p50, pct(ttft, 95) as ttft_p95,
+    pct(duration, 50) as p50, pct(duration, 95) as p95, sum(output) as output_tokens,
+    sum(cache_read) as cache_read_tokens, sum(cache_write) as cache_write_tokens, sum(usd) as usd
+  by model
+```
+
+The price uses the list prices in `backend/app/model_registry.py`. Claude caches for an hour, which costs less than the default 5 minutes when follow-up messages come minutes apart; the cache token counts show whether that still holds.
+
 ## Bot removal recovery
 
 Deleting a bot removes its resources asynchronously: its knowledge base stack, published API, documents in shared knowledge bases, files, search API keys and the conversations of its API's clients. The removal handler retries a failed record up to five times, within 12 hours, then sends it to the bot removal dead-letter queue, and the `BotRemovalFailures` alarm goes off ([Alarms and API Throttling](../README.md#alarms-and-api-throttling)).

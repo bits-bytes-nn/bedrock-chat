@@ -66,6 +66,18 @@ def test_claude_gets_the_cache_points_of_strands_without_deprecated_options():
     assert "cachePoint" in req["toolConfig"]["tools"][-1]
     # Only the last user message, so the point moves forward with the tool results.
     assert message_cache_points(req) == [0, 0, 1]
+    # Follow-up messages often come after the default 5 minutes.
+    points = [
+        block["cachePoint"]
+        for blocks in (
+            req["system"],
+            req["toolConfig"]["tools"],
+            *(m["content"] for m in req["messages"]),
+        )
+        for block in blocks
+        if "cachePoint" in block
+    ]
+    assert points and all(point.get("ttl") == "1h" for point in points)
 
 
 def test_nova_gets_its_cache_points_from_the_application():

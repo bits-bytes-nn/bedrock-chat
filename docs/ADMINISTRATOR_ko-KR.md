@@ -137,6 +137,24 @@ upstream에서 업그레이드하는 경우:
 
 동기화 중에도 봇을 삭제할 수 있습니다. 동기화가 끝나면 삭제된 봇을 위해 만든 지식 기반 스택을 삭제합니다. 삭제 요청이 실패하면 동기화 상태 업데이트 실패 알람이 울립니다. 요청 뒤 스택 삭제 자체가 실패(`DELETE_FAILED`)하면 알람이 울리지 않습니다([Alarms and API Throttling](../README.md#alarms-and-api-throttling)). Bedrock 리전에서 봇이 더 이상 없는 `BrChatKbStack*` 스택을 찾아 삭제하세요.
 
+## 답변 지표
+
+모든 채팅 답변은 `answer metrics: {...}` 한 줄을 로그에 남깁니다. 모델, 종료 이유, 첫 텍스트나 추론이 스트리밍되기까지의 시간(`ttft_ms`), 모델 턴 시간(`duration_ms`), 모델 호출 수, 입력·출력·캐시 토큰과 가격이 들어 있습니다. REST API, WebSocket, published API 핸들러가 모두 남깁니다. 모델별 지연·토큰·비용은 `BedrockChatStack`의 `WebSocketHandlerV2LogGroup*` 로그 그룹에서 CloudWatch Logs Insights로 다음 쿼리를 실행해 봅니다.
+
+```
+filter @message like /answer metrics/
+| parse @message /"model": "(?<model>[^"]+)"/
+| parse @message /"ttft_ms": (?<ttft>\d+)/
+| parse @message /"duration_ms": (?<duration>\d+)/
+| parse @message /"output": (?<output>\d+), "cache_read_input": (?<cache_read>\d+), "cache_write_input": (?<cache_write>\d+), "price": (?<usd>[\d.e-]+)/
+| stats count(*) as answers, pct(ttft, 50) as ttft_p50, pct(ttft, 95) as ttft_p95,
+    pct(duration, 50) as p50, pct(duration, 95) as p95, sum(output) as output_tokens,
+    sum(cache_read) as cache_read_tokens, sum(cache_write) as cache_write_tokens, sum(usd) as usd
+  by model
+```
+
+가격은 `backend/app/model_registry.py`의 정가로 계산합니다. Claude는 캐시를 1시간 유지하며, 후속 메시지가 몇 분 간격으로 올 때 기본 5분보다 비용이 적습니다. 그 전제가 여전히 맞는지는 캐시 토큰 수로 확인합니다.
+
 ## 봇 삭제 복구
 
 봇을 삭제하면 관련 리소스는 비동기로 지워집니다. 지식 베이스 스택, 게시된 API, 공유 지식 베이스의 문서, 파일, 검색 API 키, API 클라이언트의 대화가 대상입니다. 삭제 핸들러는 실패한 레코드를 12시간 안에서 최대 5번 다시 시도하고, 그래도 실패하면 봇 삭제 DLQ로 보냅니다. 이때 `BotRemovalFailures` 알람이 울립니다([Alarms and API Throttling](../README.md#alarms-and-api-throttling)).

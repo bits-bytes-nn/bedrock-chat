@@ -14,6 +14,7 @@ from app.repositories.models.conversation import type_model_name
 from app.repositories.models.custom_bot import GenerationParamsModel
 from app.repositories.models.custom_bot_guardrails import BedrockGuardrailsModel
 
+from app.model_registry import CLAUDE_CACHE_TTL
 from strands.models import BedrockModel, CacheConfig
 from strands.types.content import SystemContentBlock
 
@@ -99,7 +100,9 @@ def get_bedrock_model_config(
 
     # Other models get their cache points in get_system_prompt and the message converter.
     if prompt_caching_enabled and is_prompt_caching_automatic(model_name):
-        config["cache_config"] = CacheConfig(strategy="anthropic", tools_ttl=True)
+        config["cache_config"] = CacheConfig(
+            strategy="anthropic", ttl=CLAUDE_CACHE_TTL, tools_ttl=True
+        )
 
     if "additionalModelRequestFields" in converse_config:
         config["additional_request_fields"] = converse_config[
