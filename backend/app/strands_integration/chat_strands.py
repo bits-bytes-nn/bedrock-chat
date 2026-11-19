@@ -162,6 +162,10 @@ def converse_with_strands(
     def watch_stop_request() -> None:
         while should_stop and not done.wait(STOP_CHECK_INTERVAL_SECONDS):
             if should_stop():
+                logger.info(
+                    "Stopping the answer after %d ms",
+                    round((time.monotonic() - started) * 1000),
+                )
                 cancel.set()
                 return
 
