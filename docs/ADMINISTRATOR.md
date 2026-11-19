@@ -146,13 +146,16 @@ filter @message like /answer metrics/
 | parse @message /"model": "(?<model>[^"]+)"/
 | parse @message /"ttft_ms": (?<ttft>\d+)/
 | parse @message /"duration_ms": (?<duration>\d+)/
-| parse @message /"output": (?<output>\d+), "cache_read_input": (?<cache_read>\d+), "cache_write_input": (?<cache_write>\d+)/
-| parse @message /"usd_micros": (?<usd_micros>\d+)/
+| parse @message /"output": (?<out_tokens>\d+), "cache_read_input": (?<read_tokens>\d+), "cache_write_input": (?<write_tokens>\d+)/
+| parse @message /"usd_micros": (?<micros>\d+)/
 | stats count(*) as answers, pct(ttft, 50) as ttft_p50, pct(ttft, 95) as ttft_p95,
-    pct(duration, 50) as p50, pct(duration, 95) as p95, sum(output) as output_tokens,
-    sum(cache_read) as cache_read_tokens, sum(cache_write) as cache_write_tokens, sum(usd_micros) / 1000000 as usd
+    pct(duration, 50) as p50, pct(duration, 95) as p95, sum(out_tokens) as output_tokens,
+    sum(read_tokens) as cache_read_tokens, sum(write_tokens) as cache_write_tokens,
+    sum(micros) as usd_micros
   by model
 ```
+
+`usd_micros` is the price in millionths of a USD.
 
 The price uses the list prices in `backend/app/model_registry.py`; a stopped model call reports no usage, so stopped answers miss its tokens. Claude caches for an hour (`CLAUDE_CACHE_TTL`): its writes cost 2x the input price instead of 1.25x for 5 minutes, which pays off when follow-up messages often come 5-60 minutes later. To check that for a deployment, compare the gaps between the messages of conversations with the cache token counts.
 

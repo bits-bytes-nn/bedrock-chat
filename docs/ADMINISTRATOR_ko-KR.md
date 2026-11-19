@@ -146,13 +146,16 @@ filter @message like /answer metrics/
 | parse @message /"model": "(?<model>[^"]+)"/
 | parse @message /"ttft_ms": (?<ttft>\d+)/
 | parse @message /"duration_ms": (?<duration>\d+)/
-| parse @message /"output": (?<output>\d+), "cache_read_input": (?<cache_read>\d+), "cache_write_input": (?<cache_write>\d+)/
-| parse @message /"usd_micros": (?<usd_micros>\d+)/
+| parse @message /"output": (?<out_tokens>\d+), "cache_read_input": (?<read_tokens>\d+), "cache_write_input": (?<write_tokens>\d+)/
+| parse @message /"usd_micros": (?<micros>\d+)/
 | stats count(*) as answers, pct(ttft, 50) as ttft_p50, pct(ttft, 95) as ttft_p95,
-    pct(duration, 50) as p50, pct(duration, 95) as p95, sum(output) as output_tokens,
-    sum(cache_read) as cache_read_tokens, sum(cache_write) as cache_write_tokens, sum(usd_micros) / 1000000 as usd
+    pct(duration, 50) as p50, pct(duration, 95) as p95, sum(out_tokens) as output_tokens,
+    sum(read_tokens) as cache_read_tokens, sum(write_tokens) as cache_write_tokens,
+    sum(micros) as usd_micros
   by model
 ```
+
+`usd_micros`는 가격을 100만분의 1달러 단위로 나타냅니다.
 
 가격은 `backend/app/model_registry.py`의 정가로 계산합니다. 중지된 모델 호출은 사용량을 보고하지 않으므로 중지된 답변에는 그 토큰이 빠집니다. Claude는 캐시를 1시간 유지합니다(`CLAUDE_CACHE_TTL`). 쓰기 단가가 5분 캐시의 입력 1.25배 대신 2배이므로, 후속 메시지가 5~60분 간격으로 자주 올 때 이득입니다. 배포에서 이 전제가 맞는지는 대화 메시지 간격과 캐시 토큰 수를 함께 보고 확인합니다.
 
